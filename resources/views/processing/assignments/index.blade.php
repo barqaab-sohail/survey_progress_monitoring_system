@@ -1,0 +1,6 @@
+@extends('layouts.app')
+@section('title','Processing Assignments')
+@section('content')
+<div class="page-head"><div><h1>MDB Processing Assignments</h1><p>Internal and third-party assignment position.</p></div><a class="btn btn-primary" href="{{ route('processing.assignments.create') }}">Assign work</a></div>
+<div class="card table-wrap"><table class="table"><thead><tr><th>Date</th><th>Feeder</th><th>Organization</th><th>Assigned</th><th>Processed</th><th>Remaining</th><th>Target</th><th>Status</th><th>Drive</th></tr></thead><tbody>@forelse($assignments as $assignment)<tr><td>{{ $assignment->assignment_date->format('d M Y') }}</td><td>{{ $assignment->feeder->feeder_code }}</td><td>{{ $assignment->organization->name }}</td><td>{{ $assignment->assigned_quantity }}</td><td>{{ $assignment->processed_quantity }}</td><td>{{ $assignment->remaining_quantity }}</td><td>{{ $assignment->target_date?->format('d M Y') ?: '—' }}</td><td><span class="status status-{{ $assignment->status->value }}">{{ strtoupper($assignment->status->value) }}</span></td><td>@if($assignment->drive_url)<a target="_blank" rel="noopener" href="{{ $assignment->drive_url }}">Open</a>@else—@endif</td></tr>@empty<tr><td colspan="9" class="empty">No processing assignments.</td></tr>@endforelse</tbody></table></div>{{ $assignments->links() }}
+@endsection

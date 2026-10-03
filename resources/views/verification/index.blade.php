@@ -1,0 +1,7 @@
+@extends('layouts.app')
+@section('title','Pending Survey Verification')
+@section('content')
+<div class="page-head"><div><h1>Survey Pending Verification</h1><p>Review supporting Drive data before verifying the reported quantity.</p></div><span class="status status-pending">{{ $items->total() }} PENDING</span></div>
+@forelse($items as $item)<article class="card"><div class="page-head"><div><h3 style="margin:0">{{ $item->feeder->feeder_code }} · {{ $item->feeder->feeder_name }}</h3><p>{{ $item->entry->entry_date->format('d M Y') }} · {{ $item->entry->team->name }} · {{ $item->entry->enteredBy->name }}</p></div><div class="kpi-value">{{ $item->transformers_surveyed }}</div></div>@if($item->remarks)<p>{{ $item->remarks }}</p>@endif<div class="actions">@if($item->drive_url)<a target="_blank" rel="noopener" class="btn btn-light" href="{{ $item->drive_url }}">Open Drive data</a>@endif<form method="POST" action="{{ route('verification.verify',$item) }}">@csrf<button class="btn btn-success">Verify</button></form></div><form method="POST" action="{{ route('verification.return',$item) }}" style="margin-top:14px">@csrf<div class="form-grid"><div class="field"><label>Return reason</label><input name="reason" minlength="5" maxlength="2000" placeholder="Required only when returning"></div><div class="field" style="align-self:end"><button class="btn btn-danger" type="submit">Return for correction</button></div></div></form></article>@empty<div class="card empty">No survey entries are awaiting verification.</div>@endforelse
+{{ $items->links() }}
+@endsection
