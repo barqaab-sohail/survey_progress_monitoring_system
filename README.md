@@ -23,58 +23,282 @@ The central principle is **minimum data entry, maximum management visibility**. 
 
 The complete architecture, ERD, table catalog, permission matrix, calculations, screen map, and delivery sequence are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## Runtime requirements
+## Deploy on another computer
 
-Production target:
+Use this section for a new Windows/XAMPP computer, a Linux server, or a fresh clone from GitHub. The Git repository contains the application code and database migrations, but it does **not** contain `.env`, MySQL records, passwords/secrets, or the HAZECO workbook uploaded on another computer.
 
-- PHP 8.3 or newer with Ctype, cURL, DOM, Fileinfo, Filter, Hash, Mbstring, OpenSSL, PCRE, PDO, Session, Tokenizer, and XML
+### 1. Install the prerequisites
+
+- Git
+- 64-bit PHP 8.2 or newer
+- Composer 2
 - MySQL 8.0+ or MariaDB 10.6+
-- Composer 2.7+
-- Apache 2.4 or Nginx
+- Apache 2.4 or Nginx for a permanent installation
 
-This repository currently uses Laravel 12 because the supplied XAMPP runtime is PHP 8.2.12. Laravel 13 is the current major and requires PHP 8.3. Upgrade PHP first, run the full suite, then move `laravel/framework` to `^13.0` as the initial deployment gate. No domain design depends on Laravel 12-specific behavior.
+Enable these PHP extensions: `dom`, `fileinfo`, `filter`, `gd`, `iconv`, `intl`, `json`, `libxml`, `openssl`, `pdo_mysql`, `session`, `simplexml`, `tokenizer`, `xml`, `xmlreader`, `xmlwriter`, `zip`, and `zlib`. XAMPP already includes most of them; enable missing extensions in the `php.ini` used by both Apache and the command line.
 
-Node is not required at runtime: the Phase 1 interface ships a small, dependency-free CSS/JavaScript shell. The Laravel Vite scaffold remains available for future asset expansion.
+Node.js is not required to run the current interface because its application CSS and JavaScript are committed under `public/`. Install Node only when rebuilding Vite-managed assets.
 
-## Local installation
+### 2. Clone the repository and install PHP packages
+
+Replace `<repository-url>` with the GitHub repository URL:
 
 ```bash
+git clone <repository-url> survey_progress_monitoring_system
+cd survey_progress_monitoring_system
 composer install
-copy .env.example .env
+```
+
+Create the environment file.
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
 php artisan key:generate
 ```
 
-For quick evaluation without MySQL, change `DB_CONNECTION=sqlite`, remove the other `DB_*` values, and create the local file:
+Linux/macOS:
 
 ```bash
-php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
-php artisan migrate:fresh --seed
-php artisan serve
+cp .env.example .env
+php artisan key:generate
 ```
 
-Open `http://127.0.0.1:8000`.
+Never commit `.env` to GitHub. For an exact transfer of an existing live installation, securely copy its `APP_KEY` instead of generating a different one.
 
-### MySQL configuration
+### 3. Create the MySQL database
 
-Create an empty utf8mb4 database, then update `.env`:
+Run the following as a MySQL administrator and replace the password:
+
+```sql
+CREATE DATABASE hazeco_td_losses CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'hazeco_app'@'localhost' IDENTIFIED BY 'replace-with-a-strong-password';
+GRANT ALL PRIVILEGES ON hazeco_td_losses.* TO 'hazeco_app'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+Update the database and application settings in `.env`:
 
 ```dotenv
+APP_NAME="HAZECO T&D Losses"
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://127.0.0.1:8000
+APP_TIMEZONE=Asia/Karachi
+
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=hazeco_td_losses
 DB_USERNAME=hazeco_app
-DB_PASSWORD=use-a-strong-secret
+DB_PASSWORD=replace-with-a-strong-password
+
+SESSION_DRIVER=database
+CACHE_STORE=database
+QUEUE_CONNECTION=database
 ```
 
-Then run:
+For a local XAMPP installation, `DB_USERNAME=root` and a blank `DB_PASSWORD` may work with the default MySQL configuration. Create a dedicated user before exposing the application to a network.
+
+After changing `.env`, clear any old cached configuration:
+
+```bash
+php artisan optimize:clear
+```
+
+### 4. Choose how to load data
+
+Choose **one** of the following paths.
+
+#### Option A: clean installation
+
+Use this for a new database. The seeder creates the roles, permissions, initial organizations, project, teams, and development users:
 
 ```bash
 php artisan migrate --force
 php artisan db:seed --force
 ```
 
-Do not run the development seeder in a live environment after real data exists.
+Run `db:seed` only once on an empty database; the main seeder is not intended to be rerun over live data. It does not include the HAZECO feeder workbook.
+
+Import the feeder workbook after seeding. Either sign in at `/admin`, open **HT Data Imports**, and upload the `.xlsx` file, or use:
+
+```bash
+php artisan hazeco:import-ht-data "/absolute/path/HT GIS Status Feederwise.xlsx" --project=HAZECO-TDL --user=admin@hazeco.test
+```
+
+On Windows, an absolute path can look like this:
+
+```powershell
+php artisan hazeco:import-ht-data "C:\Users\YourName\Downloads\HT GIS Status Feederwise.xlsx" --project=HAZECO-TDL --user=admin@hazeco.test
+```
+
+Optional sample dashboard data can be loaded for demonstration and removed before entering live progress:
+
+```bash
+php artisan hazeco:dashboard-demo load
+php artisan hazeco:dashboard-demo remove
+```
+
+#### Option B: transfer the current database
+
+Use this when the new computer must contain the same users, feeder baselines, survey entries, MDB records, permissions, and audit history as the old computer.
+
+Export on the old computer:
+
+```bash
+mysqldump --single-transaction --routines --triggers -u hazeco_app -p hazeco_td_losses > hazeco_td_losses.sql
+```
+
+Import on the new computer after creating the empty database:
+
+```bash
+mysql -u hazeco_app -p hazeco_td_losses < hazeco_td_losses.sql
+php artisan migrate --force
+```
+
+With XAMPP, the executables are normally `C:\xampp\mysql\bin\mysqldump.exe` and `C:\xampp\mysql\bin\mysql.exe`. Do **not** run `db:seed` after restoring this backup. Transfer any required files under `storage/app` separately; engineering files referenced by Google Drive links are not stored in this repository.
+
+Keep SQL backups outside the public web directory and never commit them to GitHub.
+
+### 5. Start and verify the application
+
+For a quick local test:
+
+```bash
+php artisan serve
+```
+
+Open these addresses:
+
+- Application: `http://127.0.0.1:8000`
+- Filament administration: `http://127.0.0.1:8000/admin`
+- Laravel health check: `http://127.0.0.1:8000/up`
+- API health check: `http://127.0.0.1:8000/api/v1/health`
+
+For a clean seeded installation, sign in initially with `admin@hazeco.test` and `Password123!`, then immediately change the password. Seeded credentials are for first-time setup only.
+
+Run the deployment checks:
+
+```bash
+php artisan about
+php artisan migrate:status
+php artisan test
+composer check-platform-reqs
+```
+
+### 6. Configure Apache/XAMPP
+
+The web server document root must point to the repository's `public` directory, never to the repository root. Example XAMPP virtual host:
+
+```apache
+<VirtualHost *:80>
+    ServerName hazeco.test
+    DocumentRoot "C:/xampp/htdocs/survey_progress_monitoring_system/public"
+
+    <Directory "C:/xampp/htdocs/survey_progress_monitoring_system/public">
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+```
+
+Enable Apache `mod_rewrite`, restart Apache, and add this line to the Windows hosts file at `C:\Windows\System32\drivers\etc\hosts`:
+
+```text
+127.0.0.1 hazeco.test
+```
+
+Then set `APP_URL=http://hazeco.test`, run `php artisan optimize:clear`, and open `http://hazeco.test`.
+
+### 7. Production finishing steps
+
+Use HTTPS and production values:
+
+```dotenv
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://your-domain.example
+SESSION_SECURE_COOKIE=true
+LOG_LEVEL=warning
+```
+
+Install and optimize the release:
+
+```bash
+composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+php artisan migrate --force
+php artisan filament:assets
+php artisan optimize
+php artisan filament:optimize
+```
+
+On Linux, make only Laravel's runtime directories writable by the web-server user:
+
+```bash
+sudo chown -R www-data:www-data storage bootstrap/cache
+sudo chmod -R ug+rwX storage bootstrap/cache
+```
+
+Run the database queue worker under Supervisor or systemd:
+
+```bash
+php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+```
+
+Schedule Laravel every minute:
+
+```cron
+* * * * * cd /var/www/hazeco && php artisan schedule:run >> /dev/null 2>&1
+```
+
+### Updating an existing installation from GitHub
+
+Back up MySQL first, then run from the project directory:
+
+```bash
+php artisan down
+git pull --ff-only
+composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+php artisan migrate --force
+php artisan filament:assets
+php artisan optimize
+php artisan queue:restart
+php artisan up
+```
+
+If `git pull --ff-only` reports local changes, review and preserve them instead of forcing or resetting the deployment directory. Keep machine-specific settings in `.env`, which is intentionally ignored by Git.
+
+### Common deployment problems
+
+| Problem | Check or command |
+|---|---|
+| `No application encryption key` | Run `php artisan key:generate` for a fresh installation. |
+| `could not find driver` | Enable `pdo_mysql` in the active CLI and Apache `php.ini`. |
+| Database/session/cache table error | Confirm `.env`, then run `php artisan migrate --force`. |
+| CSS or Filament interface missing | Run `php artisan filament:assets` and hard-refresh the browser. |
+| Changes to `.env` are ignored | Run `php artisan optimize:clear`; optimize again in production. |
+| HTTP 500 on Linux | Check `storage/logs/laravel.log` and permissions on `storage` and `bootstrap/cache`. |
+| Apache shows a directory or 404 | Point `DocumentRoot` to `public` and enable `mod_rewrite`. |
+| New installation has no feeders | Import the HAZECO workbook or restore the old MySQL backup. |
+
+## Runtime requirements
+
+Production target:
+
+- PHP 8.2 or newer with the extensions listed in the deployment section
+- MySQL 8.0+ or MariaDB 10.6+
+- Composer 2.7+
+- Apache 2.4 or Nginx
+
+This repository uses Laravel 12, Filament 5, Filament Shield, and MySQL. Install the versions locked in `composer.lock`; do not change framework versions during deployment.
+
+Node is not required at runtime: the Phase 1 interface ships a small, dependency-free CSS/JavaScript shell. The Laravel Vite scaffold remains available for future asset expansion.
+
+## Local installation
+
+Follow [Deploy on another computer](#deploy-on-another-computer). This project is configured for MySQL. Use the clean-install path for a new database or the backup/restore path when the new computer must retain existing project records.
 
 ## Development users
 
@@ -101,7 +325,7 @@ Open `http://127.0.0.1:8000/admin` and sign in with an authorized active account
 
 The legacy administration screens remain at `/legacy-admin` during the transition. Filament is the primary backend.
 
-The supplied `HT GIS Status Feederwise.xlsx` has been loaded into MySQL: 153 feeder rows, 2 circles, 7 divisions, 34 subdivisions, and 66 grid stations. Three source feeder codes were blank, so their stable internal codes are marked `PENDING-*`. The workbook contains load and consumer totals but no transformer baseline; imported feeders therefore start at `total_transformers = 0` with `baseline_pending = true` until an authorized user enters the verified baseline.
+The source `HT GIS Status Feederwise.xlsx` imports 153 feeder rows, 2 circles, 7 divisions, 34 subdivisions, and 66 grid stations. Three source feeder codes are blank, so their stable internal codes are marked `PENDING-*`. The workbook contains load and consumer totals but no transformer baseline; imported feeders therefore start at `total_transformers = 0` with `baseline_pending = true` until an authorized user enters the verified baseline. The workbook and imported MySQL rows are not automatically included in a Git clone.
 
 ## Management decision dashboard
 
@@ -114,7 +338,7 @@ The application landing page now opens with a management-first visual summary:
 - circle-level priorities and highest-backlog feeders;
 - a 7/14/30-day production trend and period totals.
 
-Eighteen imported feeders currently contain clearly flagged sample baselines and sample survey/MDB transactions for demonstration. A blue notice remains visible while sample data is active. Manage it with:
+The optional demo command adds clearly flagged sample baselines and sample survey/MDB transactions to 18 imported feeders. A blue notice remains visible while sample data is active. Manage it with:
 
 ```bash
 php artisan hazeco:dashboard-demo load
@@ -216,7 +440,7 @@ Example development URL configuration:
 
 ## Production deployment
 
-1. Provision PHP 8.3+, MySQL, HTTPS, a dedicated least-privilege database user, and a non-root application user.
+1. Provision PHP 8.2+, MySQL, HTTPS, a dedicated least-privilege database user, and a non-root application user.
 2. Deploy to a release directory; make `storage` and `bootstrap/cache` writable by the web user.
 3. Set production secrets in the environment. Use `APP_ENV=production`, `APP_DEBUG=false`, `SESSION_SECURE_COOKIE=true`, and the public HTTPS `APP_URL`.
 4. Run `composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction` and `php artisan migrate --force`.
