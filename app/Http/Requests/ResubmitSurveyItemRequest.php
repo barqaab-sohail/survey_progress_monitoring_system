@@ -15,8 +15,13 @@ class ResubmitSurveyItemRequest extends FormRequest
     {
         return [
             'transformers_surveyed' => ['required', 'integer', 'min:1'],
-            'drive_url' => ['nullable', 'url:http,https', 'max:2000'],
+            'drive_url' => ['required', 'url:http,https', 'max:2000'],
             'remarks' => ['nullable', 'string', 'max:1000'],
         ];
+    }
+
+    public function attributes(): array
+    {
+        return ['drive_url' => 'survey Google Drive URL'];
     }
 }

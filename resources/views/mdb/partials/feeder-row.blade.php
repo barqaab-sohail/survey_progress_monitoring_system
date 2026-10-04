@@ -11,7 +11,7 @@
             </select>
         </div>
         <div class="field"><label>MDB files created</label><input data-quantity inputmode="numeric" type="number" min="1" name="items[{{ $index }}][mdb_files_created]" value="{{ $item['mdb_files_created'] ?? '' }}" required></div>
-        <div class="field"><label>MDB Drive link</label><input type="url" name="items[{{ $index }}][drive_url]" value="{{ $item['drive_url'] ?? '' }}" maxlength="2000"></div>
+        <div class="field"><label>MDB Google Drive URL <small>(required)</small></label><input type="url" name="items[{{ $index }}][drive_url]" value="{{ $item['drive_url'] ?? '' }}" placeholder="https://drive.google.com/drive/folders/..." maxlength="2000" required></div>
         <div class="field"><label>Remarks</label><input name="items[{{ $index }}][remarks]" value="{{ $item['remarks'] ?? '' }}" maxlength="1000"></div>
     </div>
 </div>

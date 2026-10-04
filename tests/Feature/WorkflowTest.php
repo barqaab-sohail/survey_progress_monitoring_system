@@ -99,7 +99,7 @@ class WorkflowTest extends TestCase
 
         $this->actingAs($this->surveyUser)->post('/survey', [
             'entry_date' => today()->toDateString(),
-            'items' => [['feeder_id' => $this->feeder->id, 'transformers_surveyed' => 1]],
+            'items' => [['feeder_id' => $this->feeder->id, 'transformers_surveyed' => 1, 'drive_url' => 'https://drive.google.com/drive/folders/survey-evidence']],
         ])->assertSessionHasErrors('items');
         $this->assertDatabaseCount('survey_daily_entries', 0);
     }
@@ -126,7 +126,11 @@ class WorkflowTest extends TestCase
             ->assertSee('https://example.com/first')->assertSee('https://example.com/second')
             ->assertSee('First row notes')->assertSee('Second row notes')
             ->assertSee('name="items[1][feeder_id]"', false);
-        $this->assertSame(2, substr_count($response->getContent(), 'value="'.$this->feeder->id.'" selected'));
+        $document = new \DOMDocument;
+        $document->loadHTML($response->getContent(), LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
+        $selectedFeeders = (new \DOMXPath($document))->query('//select[starts-with(@name, "items[") and contains(@name, "[feeder_id]")]/option[@selected]');
+        $this->assertSame([(string) $this->feeder->id, (string) $this->feeder->id],
+            array_map(fn ($option) => $option->getAttribute('value'), iterator_to_array($selectedFeeders)));
         $this->assertDatabaseCount('survey_daily_entries', 0);
     }
 
@@ -135,7 +139,7 @@ class WorkflowTest extends TestCase
         $data = [
             'entry_date' => today()->toDateString(),
             'remarks' => 'Keep these notes',
-            'items' => [['feeder_id' => $this->feeder->id, 'transformers_surveyed' => 101, 'remarks' => 'Over baseline']],
+            'items' => [['feeder_id' => $this->feeder->id, 'transformers_surveyed' => 101, 'drive_url' => 'https://drive.google.com/drive/folders/survey-evidence', 'remarks' => 'Over baseline']],
         ];
         $this->actingAs($this->surveyUser)->from('/survey/create')->post('/survey', $data)
             ->assertRedirect('/survey/create')->assertSessionHasErrors('items');
@@ -286,7 +290,7 @@ class WorkflowTest extends TestCase
     public function test_survey_entry_is_editable_only_by_owner_before_verification(): void
     {
         $service = app(SurveyProgressService::class);
-        $data = ['entry_date' => today()->toDateString(), 'remarks' => 'Original', 'items' => [['feeder_id' => (string) $this->feeder->id, 'transformers_surveyed' => 80]]];
+        $data = ['entry_date' => today()->toDateString(), 'remarks' => 'Original', 'items' => [['feeder_id' => (string) $this->feeder->id, 'transformers_surveyed' => 80, 'drive_url' => 'https://drive.google.com/drive/folders/survey-evidence']]];
         $entry = $service->create($this->surveyUser, $this->surveyTeam, $data);
         $item = $entry->items->first();
         $this->actingAs($this->surveyUser)->get('/survey')->assertSee(route('survey.edit', $entry), false);
@@ -315,7 +319,7 @@ class WorkflowTest extends TestCase
     public function test_survey_edit_rejects_over_baseline_and_retains_input(): void
     {
         $service = app(SurveyProgressService::class);
-        $data = ['entry_date' => today()->toDateString(), 'items' => [['feeder_id' => $this->feeder->id, 'transformers_surveyed' => 60]]];
+        $data = ['entry_date' => today()->toDateString(), 'items' => [['feeder_id' => $this->feeder->id, 'transformers_surveyed' => 60, 'drive_url' => 'https://drive.google.com/drive/folders/survey-evidence']]];
         $entry = $service->create($this->surveyUser, $this->surveyTeam, $data);
         $service->create($this->surveyUser, $this->surveyTeam, ['entry_date' => today()->toDateString(), 'items' => [['feeder_id' => $this->feeder->id, 'transformers_surveyed' => 30]]]);
         $data['items'][0]['transformers_surveyed'] = 71;
@@ -329,7 +333,7 @@ class WorkflowTest extends TestCase
     {
         $this->verifiedSurvey(70);
         $service = app(MdbCreationService::class);
-        $data = ['entry_date' => today()->toDateString(), 'items' => [['feeder_id' => (string) $this->feeder->id, 'mdb_files_created' => 40]]];
+        $data = ['entry_date' => today()->toDateString(), 'items' => [['feeder_id' => (string) $this->feeder->id, 'mdb_files_created' => 40, 'drive_url' => 'https://drive.google.com/drive/folders/mdb-evidence']]];
         $entry = $service->create($this->mdbUser, $this->mdbTeam, $data);
         $item = $entry->items->first();
         $service->create($this->mdbUser, $this->mdbTeam, ['entry_date' => today()->toDateString(), 'items' => [['feeder_id' => $this->feeder->id, 'mdb_files_created' => 20]]]);

@@ -19,8 +19,13 @@ class StoreMdbEntryRequest extends FormRequest
             'items' => ['required', 'array', 'min:1', 'max:25'],
             'items.*.feeder_id' => ['required', 'integer', 'exists:feeders,id', 'distinct'],
             'items.*.mdb_files_created' => ['required', 'integer', 'min:1'],
-            'items.*.drive_url' => ['nullable', 'url:http,https', 'max:2000'],
+            'items.*.drive_url' => ['required', 'url:http,https', 'max:2000'],
             'items.*.remarks' => ['nullable', 'string', 'max:1000'],
         ];
+    }
+
+    public function attributes(): array
+    {
+        return ['items.*.drive_url' => 'MDB Google Drive URL'];
     }
 }

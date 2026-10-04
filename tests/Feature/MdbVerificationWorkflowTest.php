@@ -27,6 +27,8 @@ class MdbVerificationWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
+    private const DRIVE_URL = 'https://drive.google.com/drive/folders/mdb-verification-evidence';
+
     private Organization $internal;
     private Organization $thirdParty;
     private User $admin;
@@ -147,7 +149,7 @@ class MdbVerificationWorkflowTest extends TestCase
         FeederAssignment::create(['feeder_id' => $otherFeeder->id, 'survey_team_id' => $this->surveyTeam->id, 'assigned_by' => $this->admin->id, 'start_date' => today(), 'status' => 'active']);
         $this->verifySurvey($otherFeeder, 30);
         $data = $this->mdbData(40);
-        $data['items'][] = ['feeder_id' => $otherFeeder->id, 'mdb_files_created' => 20];
+        $data['items'][] = ['feeder_id' => $otherFeeder->id, 'mdb_files_created' => 20, 'drive_url' => self::DRIVE_URL];
         $entry = app(MdbCreationService::class)->create($this->mdbAuthor, $this->mdbTeam, $data);
         $item = $entry->items->first();
         $this->actingAs($this->mdbAuthor)->get(route('mdb.edit', $entry))->assertOk();
@@ -171,7 +173,7 @@ class MdbVerificationWorkflowTest extends TestCase
         $otherAuthor = User::factory()->create(['organization_id' => $this->internal->id, 'role' => UserRole::MdbTeamUser]);
         $this->mdbTeam->members()->attach($otherAuthor->id);
         $this->actingAs($otherAuthor)->get('/mdb/returned')->assertOk()->assertDontSee('Private correction for the author.');
-        $this->put('/mdb/items/'.$item->id.'/resubmit', ['mdb_files_created' => 30])->assertForbidden();
+        $this->put('/mdb/items/'.$item->id.'/resubmit', ['mdb_files_created' => 30, 'drive_url' => self::DRIVE_URL])->assertForbidden();
         $this->get(route('mdb.edit', $entry))->assertForbidden();
         $this->assertSame(SurveyItemStatus::Returned, $item->fresh()->status);
         $this->assertSame(40, $item->fresh()->mdb_files_created);
@@ -199,7 +201,7 @@ class MdbVerificationWorkflowTest extends TestCase
             $this->get($path)->assertForbidden();
         }
         $this->post('/mdb', $this->mdbData(1))->assertForbidden();
-        $this->post('/survey', ['entry_date' => today()->toDateString(), 'items' => [['feeder_id' => $this->feeder->id, 'transformers_surveyed' => 1]]])->assertForbidden();
+        $this->post('/survey', ['entry_date' => today()->toDateString(), 'items' => [['feeder_id' => $this->feeder->id, 'transformers_surveyed' => 1, 'drive_url' => self::DRIVE_URL]]])->assertForbidden();
         foreach (['/processing/entries', '/processing/entries/create', '/processing/assignments', '/processing/assignments/create'] as $path) {
             $this->get($path)->assertNotFound();
         }
@@ -256,7 +258,7 @@ class MdbVerificationWorkflowTest extends TestCase
         $this->assertDatabaseCount('mdb_verification_histories', 1);
         $this->assertSame('Replace the attached MDB file.', $item->fresh()->return_reason);
 
-        $correction = ['correction_item_id' => $item->id, 'mdb_files_created' => 35];
+        $correction = ['correction_item_id' => $item->id, 'mdb_files_created' => 35, 'drive_url' => self::DRIVE_URL];
         $this->actingAs($this->mdbAuthor)->put('/mdb/items/'.$item->id.'/resubmit', $correction)->assertRedirect();
         $correction['mdb_files_created'] = 30;
         $this->put('/mdb/items/'.$item->id.'/resubmit', $correction)->assertForbidden();
@@ -366,7 +368,7 @@ class MdbVerificationWorkflowTest extends TestCase
 
     private function mdbData(int $quantity): array
     {
-        return ['entry_date' => today()->toDateString(), 'items' => [['feeder_id' => $this->feeder->id, 'mdb_files_created' => $quantity]]];
+        return ['entry_date' => today()->toDateString(), 'items' => [['feeder_id' => $this->feeder->id, 'mdb_files_created' => $quantity, 'drive_url' => self::DRIVE_URL]]];
     }
 
     private function createMdb(int $quantity, array $row = []): MdbDailyEntry

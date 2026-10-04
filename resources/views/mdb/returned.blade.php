@@ -11,7 +11,7 @@
 <input type="hidden" name="correction_item_id" value="{{ $item->id }}">
 <div class="form-grid">
     <div class="field"><label>MDB files created</label><input type="number" inputmode="numeric" min="1" name="mdb_files_created" value="{{ $restore ? old('mdb_files_created', $item->mdb_files_created) : $item->mdb_files_created }}" required></div>
-    <div class="field"><label>MDB Drive link</label><input type="url" name="drive_url" value="{{ $restore ? old('drive_url', $item->drive_url) : $item->drive_url }}" maxlength="2000"></div>
+    <div class="field"><label>MDB Google Drive URL <small>(required)</small></label><input type="url" name="drive_url" value="{{ $restore ? old('drive_url', $item->drive_url) : $item->drive_url }}" placeholder="https://drive.google.com/drive/folders/..." maxlength="2000" required></div>
     <div class="field"><label>Remarks</label><input name="remarks" value="{{ $restore ? old('remarks', $item->remarks) : $item->remarks }}" maxlength="1000"></div>
 </div>
 <div class="form-footer"><span></span><button class="btn btn-primary" type="submit">Resubmit for verification</button></div>

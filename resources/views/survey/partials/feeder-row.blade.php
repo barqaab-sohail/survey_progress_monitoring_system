@@ -12,7 +12,7 @@
             </select>
         </div>
         <div class="field"><label>Transformers surveyed today</label><input data-quantity inputmode="numeric" type="number" min="1" name="items[{{ $index }}][transformers_surveyed]" value="{{ $item['transformers_surveyed'] ?? '' }}" required></div>
-        <div class="field"><label>Survey Drive link <small>(optional)</small></label><input type="url" name="items[{{ $index }}][drive_url]" value="{{ $item['drive_url'] ?? '' }}" placeholder="Uses feeder default when blank"></div>
+        <div class="field"><label>Survey Google Drive URL <small>(required)</small></label><input type="url" name="items[{{ $index }}][drive_url]" value="{{ $item['drive_url'] ?? '' }}" placeholder="https://drive.google.com/drive/folders/..." maxlength="2000" required></div>
         <div class="field"><label>Remarks <small>(optional)</small></label><input name="items[{{ $index }}][remarks]" value="{{ $item['remarks'] ?? '' }}" maxlength="1000"></div>
     </div>
 </div>

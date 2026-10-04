@@ -11,7 +11,7 @@
 <input type="hidden" name="correction_item_id" value="{{ $item->id }}">
 <div class="form-grid">
     <div class="field"><label>Correct quantity</label><input type="number" inputmode="numeric" min="1" name="transformers_surveyed" value="{{ $restore ? old('transformers_surveyed', $item->transformers_surveyed) : $item->transformers_surveyed }}" required></div>
-    <div class="field"><label>Survey Drive link</label><input type="url" name="drive_url" value="{{ $restore ? old('drive_url', $item->drive_url) : $item->drive_url }}"></div>
+    <div class="field"><label>Survey Google Drive URL <small>(required)</small></label><input type="url" name="drive_url" value="{{ $restore ? old('drive_url', $item->drive_url) : $item->drive_url }}" placeholder="https://drive.google.com/drive/folders/..." maxlength="2000" required></div>
     <div class="field"><label>Remarks</label><input name="remarks" value="{{ $restore ? old('remarks', $item->remarks) : $item->remarks }}"></div>
 </div>
 <div class="form-footer"><span></span><button class="btn btn-primary" type="submit">Resubmit</button></div>

@@ -11,6 +11,7 @@ use App\Models\SurveyDailyEntry;
 use App\Models\SurveyDailyEntryItem;
 use App\Models\SurveyTeam;
 use App\Services\SurveyProgressService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -28,10 +29,11 @@ class SurveyEntryController extends Controller
 
     public function create(Request $request): View
     {
-        $team = $this->teamFor($request);
+        $availableTeams = $this->availableTeamsFor($request);
+        $team = $this->teamFor($request, $availableTeams);
         $feeders = Feeder::active()->whereHas('assignments', fn($query) => $query->where('survey_team_id', $team->id)->where('status', 'active'))->orderBy('feeder_code')->get();
 
-        return view('survey.create', compact('team', 'feeders'));
+        return view('survey.create', compact('team', 'feeders', 'availableTeams'));
     }
 
     public function store(StoreSurveyEntryRequest $request, SurveyProgressService $service): RedirectResponse
@@ -75,15 +77,35 @@ class SurveyEntryController extends Controller
         return redirect()->route('survey.returned')->with('success', 'Survey item corrected and resubmitted.');
     }
 
-    private function teamFor(Request $request): SurveyTeam
+    private function availableTeamsFor(Request $request): Collection
     {
-        $team = $request->user()->surveyTeams()->first();
-        if ($team) {
+        return SurveyTeam::query()->where('status', 'active')
+            ->whereHas('project', fn($query) => $query->where('status', 'active'))
+            ->unless($request->user()->hasRole(UserRole::SuperAdmin->value),
+                fn($query) => $query->whereHas('members', fn($members) => $members->where('users.id', $request->user()->id)))
+            ->with('project')->orderBy('id')->get();
+    }
+
+    private function teamFor(Request $request, ?Collection $availableTeams = null): SurveyTeam
+    {
+        $data = $request->validate(['survey_team_id' => ['nullable', 'integer']]);
+        $availableTeams ??= $this->availableTeamsFor($request);
+        abort_if($availableTeams->isEmpty(), 403, 'You are not assigned to a survey team.');
+
+        $selectedId = $data['survey_team_id'] ?? null;
+        if ($selectedId === null && $request->isMethod('GET')) {
+            $oldId = $request->old('survey_team_id');
+            if (is_scalar($oldId) && filter_var($oldId, FILTER_VALIDATE_INT) !== false) {
+                $selectedId = $oldId;
+            }
+        }
+        if ($selectedId !== null) {
+            $team = $availableTeams->firstWhere('id', (int) $selectedId);
+            abort_unless($team, 403, 'The selected survey team is not active or assigned to you.');
+
             return $team;
         }
 
-        abort_unless($request->user()->hasRole(UserRole::SuperAdmin->value), 403, 'You are not assigned to a survey team.');
-
-        return SurveyTeam::firstOrFail();
+        return $availableTeams->first();
     }
 }

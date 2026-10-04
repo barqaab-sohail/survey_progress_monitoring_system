@@ -361,6 +361,16 @@ Run `remove` before live progress entry. It deletes only records marked `[SAMPLE
 
 Critical writes use database transactions and row locks. Returned MDB quantities remain reserved against verified survey capacity while corrections are pending. Review actions and corrections preserve an audit trail.
 
+Each feeder row in a survey or MDB entry requires a Google Drive URL when creating, editing, or correcting a returned item. Empty or invalid URLs prevent submission; entered dates, quantities, remarks, and links remain available for correction. Links must use HTTP or HTTPS and contain no more than 2,000 characters.
+
+### Assign all feeders to one surveyor
+
+In **Administration → Teams & Assignments**, create or choose an active survey team in the required project. Under **Assign member**, choose **Survey**, select the team by name and the surveyor's account, and mark **Survey team leader**. The account must already have the Survey Team Leader role. A team containing only that surveyor gives that person access to its feeders.
+
+Under **Assign survey feeders**, select that team and **All active feeders in this project**, enter the assignment dates, and click **Assign feeders**. The action covers the project's current active feeders. Existing active assignments to the same team are skipped, so repeating it after another Excel import adds only newly available feeders. Other teams' assignments and earlier survey records are preserved. You can still choose **One feeder**. Assignments require an active team and project, and individual feeders must belong to that project.
+
+On **Add Daily Survey**, users belonging to multiple teams select the intended **Survey team** and click **Load feeders** before entering quantities. Only their active memberships in active projects are available; a Super Admin may select any active team. Validation errors retain the selected team and entered form values. Each survey entry remains linked to one team.
+
 ## Roles
 
 - **Super Admin:** all administration, master data, operational correction, dashboard, audit, and reports.
