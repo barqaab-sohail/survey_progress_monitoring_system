@@ -2,11 +2,12 @@
 
 namespace App\Providers;
 
+use App\Support\ProjectBranding;
 use BezhanSalleh\FilamentShield\Facades\FilamentShield;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -16,14 +17,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(ProjectBranding::class);
     }
 
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
+    public function boot(ProjectBranding $branding): void
     {
+        config(['app.name' => $branding->projectName()]);
+
         FilamentShield::enforcePolicies();
 
         RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)

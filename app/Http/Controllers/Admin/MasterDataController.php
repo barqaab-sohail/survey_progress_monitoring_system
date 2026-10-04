@@ -67,7 +67,7 @@ class MasterDataController extends Controller
         return response()->streamDownload(function () use ($headers) {
             $out = fopen('php://output', 'wb');
             fputcsv($out, $headers);
-            fputcsv($out, ['HAZECO-TDL', 'HAZECO T&D Losses Project', 'HC-N', 'North Circle', 'HC-N-D1', 'North Division 1', 'HC-N-D1-SD1', 'North Sub-Division', 'GS-01', 'Grid Station 1', 'F-01', 'Feeder 01', 145, 'https://drive.google.com/example', '', '', 'yes', 'active']);
+            fputcsv($out, ['HAZECO-TDL', 'HAZECO Transmission and Distribution Losses Calculation Project', 'HC-N', 'North Circle', 'HC-N-D1', 'North Division 1', 'HC-N-D1-SD1', 'North Sub-Division', 'GS-01', 'Grid Station 1', 'F-01', 'Feeder 01', 145, 'https://drive.google.com/example', '', '', 'yes', 'active']);
             fclose($out);
         }, 'hazeco-feeder-import-template.csv', ['Content-Type' => 'text/csv']);
     }

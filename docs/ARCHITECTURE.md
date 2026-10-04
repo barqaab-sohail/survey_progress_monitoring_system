@@ -4,7 +4,7 @@
 
 The application is a modular Laravel monolith with server-rendered, mobile-first Blade screens. Controllers handle HTTP concerns, Form Requests validate input, policies/middleware authorize it, and transaction services own quantity rules. Eloquent models and MySQL are the source of truth. The same services can later be called by `/api/v1` controllers for Flutter without redesigning the database.
 
-Phase 1 stores links to engineering files, never the files themselves. Transactional quantities remain append-only after verification; corrections are privileged, reasoned changes captured by audit records.
+Survey/MDB engineering evidence remains in Drive and the application stores its links. Uploaded Excel and KMZ master-data sources are retained on Laravel's private disk for import audit. Transactional quantities remain append-only after verification; corrections are privileged, reasoned changes captured by audit records.
 
 ### Runtime decision and identified contradictions
 
@@ -32,7 +32,7 @@ API v1 routes (future Sanctum) --------------------+
                                    Audit events / notifications / queue
 ```
 
-Modules are Auth, Administration, Master Data, Survey, Survey Verification, MDB Creation, MDB Processing, Dashboard, Reporting, and Audit.
+Modules are Auth, Administration, Excel/KMZ Master Data, Transformer GIS Reference, Survey, Survey Verification, MDB Creation, MDB Processing, Dashboard, Reporting, and Audit.
 
 ## 3. ERD
 
@@ -44,6 +44,9 @@ erDiagram
     DIVISIONS ||--o{ SUB_DIVISIONS : contains
     SUB_DIVISIONS ||--o{ GRID_STATIONS : contains
     GRID_STATIONS ||--o{ FEEDERS : contains
+    FEEDERS ||--o{ TRANSFORMERS : contains
+    FEEDERS ||--o{ TRANSFORMER_KMZ_IMPORTS : imported_for
+    TRANSFORMER_KMZ_IMPORTS ||--o{ TRANSFORMERS : sources
     PROJECTS ||--o{ SURVEY_TEAMS : owns
     PROJECTS ||--o{ MDB_TEAMS : owns
     ORGANIZATIONS ||--o{ PROCESSING_TEAMS : owns
@@ -80,6 +83,8 @@ All tables have unsigned bigint primary keys and timestamps unless stated. Forei
 | sub_divisions | project_id, division_id, code, name | Database FK integrity |
 | grid_stations | project_id, sub_division_id, code, name | Database FK integrity |
 | feeders | all hierarchy FKs, code, name, total_transformers, three Drive URLs, processing_required, status | Baseline and report anchor |
+| transformer_kmz_imports | feeder_id, importer, file/path/hash, source feeder/substation, status and counts, errors | Import audit; each file validates atomically |
+| transformers | feeder_id, import_id, equipment code/capacity, pole/conductor details, consumer counts, GPS, raw attributes | Unique transformer code per linked feeder; synchronized from KMZ |
 | survey_teams | project_id, name, code, status | Operational team |
 | survey_team_members | survey_team_id, user_id, is_leader | Unique membership |
 | mdb_teams | project_id, name, code, status | Creation/verification team |
@@ -104,6 +109,7 @@ Derived totals are not stored. Database summaries can be rebuilt from item rows.
 
 - Hierarchy ownership is Project → Circle → Division → Sub-Division → Grid Station → Feeder.
 - A survey user sees feeders through active `feeder_assignments` to their survey team.
+- Survey users see transformer GIS records only for those actively assigned feeders; MDB users see the shared transformer reference across imported feeders.
 - MDB users see submitted survey rows and verified capacity project-wide, subject to their project team.
 - Processing users see active assignments whose `organization_id` equals their user organization. This predicate is always server-side.
 - Managers, viewers, and administrators can see all project totals; only permitted operational roles may mutate records.
@@ -128,7 +134,7 @@ Authorization is enforced by role middleware plus record-level policies/scopes. 
 ## 7. Workflow and states
 
 ```text
-Master baseline -> feeder assigned -> survey row SUBMITTED
+Excel feeder master -> explicitly linked, validated KMZ transformer baseline -> feeder assigned -> survey row SUBMITTED
     -> VERIFIED -> capacity becomes available to MDB
     -> RETURNED -> team edits -> SUBMITTED (history retained)
 
@@ -151,6 +157,8 @@ Survey headers are `SUBMITTED`, `PARTIALLY_VERIFIED`, `VERIFIED`, or `RETURNED` 
 8. Critical writes run in transactions and lock the feeder or assignment row with `SELECT ... FOR UPDATE`, preventing simultaneous oversubscription.
 9. Dates cannot be unreasonably future-dated; display and reporting use the project timezone.
 10. Verified/created/processed rows are never deleted by ordinary users.
+11. A KMZ must have one source feeder, unique transformer numbers, valid capacity/GPS data, and consistent coordinate fields; each feeder file imports in one transaction.
+12. Re-import synchronizes a feeder's transformer set but cannot lower its baseline below survey or MDB quantities already recorded.
 
 ## 9. Dashboard calculations
 
@@ -181,6 +189,7 @@ Feeder status precedence: Completed; Processing Running; MDB Creation Running; V
 - MDB Creation: Add Daily MDB; history; backlog.
 - MDB Processing: Assign Work; My Assignments; Add Daily Progress; organization performance; backlog.
 - Master Data: hierarchy overview; feeders; CSV import; teams; assignments.
+- Transformer GIS: Filament bulk KMZ import/history and searchable Survey/MDB reference details with map links.
 - Administration: users; organizations; audit log; settings.
 - Reports: daily, overall, geography, teams, returned, creation/processing/backlogs; CSV and print/PDF-friendly output.
 
@@ -233,5 +242,4 @@ tests/Unit                calculations/status rules
 - Queue worker runs under a process supervisor; scheduler invokes `php artisan schedule:run` each minute.
 - MySQL uses utf8mb4 and regular encrypted backups. Restore drills are part of release operations.
 - `config:cache`, `route:cache`, and `view:cache` are built at deploy time. Database migrations run before traffic is shifted.
-- Large files remain in Google Drive. Only validated HTTPS URLs/IDs are stored; a storage-link adapter can later integrate the Drive API.
-
+- Large survey/MDB evidence remains in Google Drive. Validated KMZ master sources are retained on the private local disk; a storage-link adapter can later integrate the Drive API.

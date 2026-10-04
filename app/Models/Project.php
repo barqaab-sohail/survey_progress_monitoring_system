@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Project extends Model
 {
-    protected $fillable = ['code', 'name', 'timezone', 'processing_required', 'status'];
+    protected $fillable = ['code', 'name', 'logo_path', 'favicon_path', 'timezone', 'processing_required', 'status'];
 
     protected function casts(): array
     {

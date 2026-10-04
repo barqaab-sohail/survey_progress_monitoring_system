@@ -13,7 +13,8 @@ class ShieldPermissionSeeder extends Seeder
     {
         $subjects = [
             'Circle', 'Division', 'Feeder', 'GridStation', 'HtDataImport',
-            'Organization', 'Project', 'Role', 'SubDivision', 'User',
+            'Organization', 'Project', 'Role', 'SubDivision', 'Transformer',
+            'TransformerKmzImport', 'User',
         ];
         $abilities = [
             'ViewAny', 'View', 'Create', 'Update', 'Delete', 'DeleteAny',

@@ -1,7 +1,8 @@
+@php($branding = app(\App\Support\ProjectBranding::class))
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Reset password · HAZECO T&D Losses</title><link rel="stylesheet" href="{{ asset('css/app.css') }}"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Reset password · {{ $branding->projectName() }}</title><link rel="icon" type="image/png" href="{{ $branding->faviconUrl() }}"><link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20261004-1"></head>
 <body><main class="auth-page">
-<section class="auth-brand"><div class="brand-mark">T&D</div><h1>Choose a<br>new password.</h1><p>This link can reset only the account associated with the email that received it.</p></section>
+<section class="auth-brand"><div class="brand-mark brand-logo-mark"><img src="{{ $branding->faviconUrl() }}" alt=""></div><h1>Choose a<br>new password.</h1><p>{{ $branding->projectName() }}<br>This link can reset only the account associated with the email that received it.</p></section>
 <section class="auth-form"><form class="auth-box" method="POST" action="{{ route('password.update') }}">
 @csrf
 <input type="hidden" name="token" value="{{ $token }}">

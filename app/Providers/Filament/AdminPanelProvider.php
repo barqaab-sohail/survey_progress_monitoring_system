@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Support\ProjectBranding;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -31,7 +32,10 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->renderHook(PanelsRenderHook::AUTH_LOGIN_FORM_AFTER, fn () => view('auth.password-reset-link'))
-            ->brandName('HAZECO Control Centre')
+            ->brandName(fn (): string => app(ProjectBranding::class)->projectName())
+            ->brandLogo(fn (): string => app(ProjectBranding::class)->logoUrl())
+            ->brandLogoHeight('4rem')
+            ->favicon(fn (): string => app(ProjectBranding::class)->faviconUrl())
             ->navigationItems([
                 NavigationItem::make('Master Data & Import')
                     ->group('Administration')

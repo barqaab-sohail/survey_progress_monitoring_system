@@ -1,11 +1,11 @@
 {
-  "name": "HAZECO T&D Losses Progress",
+  "name": "HAZECO Transmission and Distribution Losses Calculation Project",
   "short_name": "HAZECO T&D",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f4f7fa",
-  "theme_color": "#0b1f3a",
+  "theme_color": "#075c38",
   "icons": [
-    {"src": "/icons/hazeco-td.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+    {"src": "/branding/barqaab-favicon.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any maskable"}
   ]
 }

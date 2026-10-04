@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', isset($entry) ? 'Edit Daily MDB Creation' : 'Add Daily MDB Creation')
 @section('content')
-<div class="page-head"><div><h1>{{ isset($entry) ? 'Edit Daily MDB Creation' : 'Daily MDB Creation' }}</h1><p>{{ isset($entry) ? 'Correct this entry before third-party review. Original feeder rows are retained.' : 'Only verified survey capacity is available. Saved MDB entries go directly to third-party verification.' }}</p></div><a class="btn btn-light" href="{{ route('mdb.index') }}">View history</a></div>
+<div class="page-head"><div><h1>{{ isset($entry) ? 'Edit Daily MDB Creation' : 'Daily MDB Creation' }}</h1><p>{{ isset($entry) ? 'Correct this entry before third-party review. Original feeder rows are retained.' : 'Only verified survey capacity is available. Saved MDB entries go directly to third-party verification.' }}</p></div><div class="actions"><a class="btn btn-light" href="{{ route('transformers.index') }}">Transformer GIS Data</a><a class="btn btn-light" href="{{ route('mdb.index') }}">View history</a></div></div>
 <form class="card" method="POST" action="{{ isset($entry) ? route('mdb.update', $entry) : route('mdb.store') }}">
 @csrf
 @isset($entry) @method('PUT') @endisset

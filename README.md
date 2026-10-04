@@ -10,6 +10,7 @@ The central principle is **minimum data entry, maximum management visibility**. 
 - Active third-party organizations for MDB review access
 - Project → Circle → Division → Sub-Division → Grid Station → Feeder master hierarchy
 - Native HAZECO XLSX import with imported/updated/rejected counts, row errors, and repeatable updates
+- Transactional bulk KMZ import for transformer GIS points, explicitly linked to the Excel feeder master
 - Survey teams, MDB teams, memberships, and feeder assignments
 - Multi-feeder daily survey entry, row-level verification, return, correction, and resubmission history
 - MDB creation limited to verified survey capacity
@@ -81,7 +82,7 @@ FLUSH PRIVILEGES;
 Update the database and application settings in `.env`:
 
 ```dotenv
-APP_NAME="HAZECO T&D Losses"
+APP_NAME="HAZECO Transmission and Distribution Losses Calculation Project"
 APP_ENV=local
 APP_DEBUG=true
 APP_URL=http://127.0.0.1:8000
@@ -118,6 +119,7 @@ Use this for a new database. The seeder creates the roles, permissions, initial 
 ```bash
 php artisan migrate --force
 php artisan db:seed --force
+php artisan storage:link
 ```
 
 Run `db:seed` only once on an empty database; the main seeder is not intended to be rerun over live data. It does not include the HAZECO feeder workbook.
@@ -156,9 +158,10 @@ Import on the new computer after creating the empty database:
 ```bash
 mysql -u hazeco_app -p hazeco_td_losses < hazeco_td_losses.sql
 php artisan migrate --force
+php artisan db:seed --class=ShieldPermissionSeeder --force
 ```
 
-With XAMPP, the executables are normally `C:\xampp\mysql\bin\mysqldump.exe` and `C:\xampp\mysql\bin\mysql.exe`. Do **not** run `db:seed` after restoring this backup. Transfer any required files under `storage/app` separately; engineering files referenced by Google Drive links are not stored in this repository.
+With XAMPP, the executables are normally `C:\xampp\mysql\bin\mysqldump.exe` and `C:\xampp\mysql\bin\mysql.exe`. Do **not** run the full `DatabaseSeeder` after restoring this backup; the specific permission seeder above is idempotent and adds permissions introduced by newer releases. Transfer any required files under `storage/app` separately; engineering files referenced by Google Drive links are not stored in this repository.
 
 Keep SQL backups outside the public web directory and never commit them to GitHub.
 
@@ -229,6 +232,7 @@ Install and optimize the release:
 ```bash
 composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 php artisan migrate --force
+php artisan storage:link
 php artisan filament:assets
 php artisan optimize
 php artisan filament:optimize
@@ -262,6 +266,7 @@ php artisan down
 git pull --ff-only
 composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 php artisan migrate --force
+php artisan db:seed --class=ShieldPermissionSeeder --force
 php artisan filament:assets
 php artisan optimize
 php artisan queue:restart
@@ -269,6 +274,8 @@ php artisan up
 ```
 
 If `git pull --ff-only` reports local changes, review and preserve them instead of forcing or resetting the deployment directory. Keep machine-specific settings in `.env`, which is intentionally ignored by Git.
+
+`ShieldPermissionSeeder` is safe to run during an upgrade: it adds newly introduced Filament resource permissions and refreshes the Super Admin permissions. Do not run the full `DatabaseSeeder` over a populated live database.
 
 ### Common deployment problems
 
@@ -284,6 +291,7 @@ If `git pull --ff-only` reports local changes, review and preserve them instead 
 | Apache shows a directory or 404 | Point `DocumentRoot` to `public` and enable `mod_rewrite`. |
 | Login redirects to `/public/` and shows `GET /` supports only `HEAD` | Run `php artisan route:clear` for immediate recovery. Deploy `app/Http/Middleware/PreserveSubdirectoryRootRoute.php` and its registration in `bootstrap/app.php` before rebuilding the route cache. |
 | New installation has no feeders | Import the HAZECO workbook or restore the old MySQL backup. |
+| Transformer KMZ menus are missing after an upgrade | Run `php artisan db:seed --class=ShieldPermissionSeeder --force`, then sign in again. |
 
 Laravel's cached matcher removes the trailing slash from a directory installation's root, such as `/public/`. Symfony then loses the request's base path and the cached root route fails, although the dashboard correctly supports both `GET` and `HEAD`. `PreserveSubdirectoryRootRoute` makes that existing cached dashboard route available through Laravel's dynamic-route fallback for directory-root requests. The original authentication, active-account checks, and allowed methods still apply; ordinary routes keep using the compiled cache. This also covers the dashboard opened after signing in with a reset password. No additional password reset is needed. Verify by opening `/public/` as a guest (redirect to `/public/login`) and signing in (dashboard loads), including after `php artisan route:cache`.
 
@@ -339,6 +347,7 @@ Open `http://127.0.0.1:8000/admin` and sign in with an authorized active account
 - create and update users, organizations, projects, and the full feeder hierarchy;
 - add or update HT feeder records and verified transformer baselines;
 - upload the native HAZECO feeder workbook under **HT Data Imports**;
+- bulk-upload client transformer files under **Transformer KMZ Imports** and review the resulting **Transformers**;
 - manage granular resource permissions under **Shield → Roles**.
 
 The legacy administration screens remain at `/legacy-admin` during the transition. Filament is the primary backend.
@@ -417,6 +426,24 @@ php artisan hazeco:import-ht-data "C:/path/to/HT GIS Status Feederwise.xlsx" --u
 ```
 
 Imports preserve source serial, feeder code/name, load, consumer count, grid, circle, division, subdivision, nature, file hash, timestamps, and row-level errors.
+
+## Transformer KMZ import
+
+Import the Excel feeder master first. Then open **Filament Administration → Transformer KMZ Imports**, choose **Bulk import KMZ files**, and add one row for every feeder file. For each row, select the exact existing Excel feeder and attach that feeder's `.kmz` file. The source feeder name inside the KMZ is kept separately for audit; the importer deliberately does not use fuzzy name matching.
+
+Each file is validated in full before its feeder data changes. Only point placemarks whose `Equipment Type` is `Transformer` are imported; line sections, poles, substations, reclosers, and capacitors are excluded. Transformer number, capacity, coordinates, duplicate codes, coordinate-field agreement, one-source-feeder consistency, archive size, and KML structure are checked. A failed file changes no transformer or feeder baseline records. Other valid files in the same batch may still complete and have their own import history.
+
+A successful re-import synchronizes that feeder to the current KMZ: existing transformer codes update, new codes insert, and codes no longer in the file are removed. The feeder's transformer baseline is updated to the validated count, but an import is rejected if that count is below survey or MDB quantities already recorded in the workflow. Use the import history to review source feeder/substation, file SHA-256, created/updated/removed counts, and any failure message.
+
+Survey Team Leaders can open **Transformer GIS Data** for their actively assigned feeders. MDB users can use the same screen across imported feeders. It includes transformer/pole details, consumer counts, GPS waypoint, and a map link. Filament access remains controlled by the `Transformer` and `TransformerKmzImport` Shield permissions.
+
+Validate a KMZ without changing MySQL before upload:
+
+```bash
+php artisan hazeco:inspect-kmz "/absolute/path/Feeder Name.kmz"
+```
+
+The command reports the source feeder/substation and counts for all placemarks, point placemarks, and validated transformers. Uploaded source files are stored on Laravel's private `local` disk under `storage/app/private/transformer-kmz-imports`; include that directory in file backups when import-source retention is required.
 
 ## Google Drive
 

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', isset($entry) ? 'Edit Daily Survey' : 'Add Daily Survey')
 @section('content')
-<div class="page-head"><div><h1>{{ isset($entry) ? 'Edit Daily Survey Progress' : 'Add Daily Survey Progress' }}</h1><p>{{ $team->name }} · {{ isset($entry) ? 'Correct this entry before verification. Original feeder rows are retained.' : "enter only today's completed quantities." }}</p></div><a class="btn btn-light" href="{{ route('survey.index') }}">View history</a></div>
+<div class="page-head"><div><h1>{{ isset($entry) ? 'Edit Daily Survey Progress' : 'Add Daily Survey Progress' }}</h1><p>{{ $team->name }} · {{ isset($entry) ? 'Correct this entry before verification. Original feeder rows are retained.' : "enter only today's completed quantities." }}</p></div><div class="actions"><a class="btn btn-light" href="{{ route('transformers.index') }}">Transformer GIS Data</a><a class="btn btn-light" href="{{ route('survey.index') }}">View history</a></div></div>
 @if(!isset($entry))
 <form class="card" method="GET" action="{{ route('survey.create') }}">
 <div class="form-grid"><div class="field"><label for="survey_team_id">Survey team</label><select id="survey_team_id" name="survey_team_id" required>

@@ -14,6 +14,7 @@ use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SurveyEntryController;
 use App\Http\Controllers\SurveyVerificationController;
+use App\Http\Controllers\TransformerController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -28,6 +29,11 @@ Route::middleware('guest')->group(function () {
 Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/', DashboardController::class)->name('dashboard');
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
+
+    Route::middleware('role:survey_team_leader,mdb_team_user,super_admin,project_manager')->prefix('transformer-gis')->name('transformers.')->group(function () {
+        Route::get('/', [TransformerController::class, 'index'])->name('index');
+        Route::get('/{transformer}', [TransformerController::class, 'show'])->name('show');
+    });
 
     Route::middleware('role:survey_team_leader,super_admin')->prefix('survey')->name('survey.')->group(function () {
         Route::get('/', [SurveyEntryController::class, 'index'])->name('index');

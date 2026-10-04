@@ -1,3 +1,4 @@
+@php($branding = app(\App\Support\ProjectBranding::class))
 <!doctype html>
 <html lang="en">
 <head>
@@ -6,15 +7,17 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#0b1f3a">
     <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
-    <title>@yield('title', 'Dashboard') · HAZECO T&D Losses</title>
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20261003-4">
+    <title>@yield('title', 'Dashboard') · {{ $branding->projectName() }}</title>
+    <link rel="icon" type="image/png" href="{{ $branding->faviconUrl() }}">
+    <link rel="apple-touch-icon" href="{{ $branding->faviconUrl() }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20261004-2">
 </head>
 <body>
 <div class="shell">
     <header class="topbar">
         <a class="brand" href="{{ route('dashboard') }}">
-            <span class="brand-mark">T&D</span>
-            <span>HAZECO Progress <small>{{ auth()->user()->hasRole('survey_team_leader') ? 'Survey Operations' : 'Survey · MDB · Verification' }}</small></span>
+            <span class="brand-mark brand-logo-mark"><img src="{{ $branding->faviconUrl() }}" alt=""></span>
+            <span class="brand-copy"><strong>{{ $branding->projectName() }}</strong><small>{{ auth()->user()->hasRole('survey_team_leader') ? 'Survey Operations' : 'Survey · MDB · Verification' }}</small></span>
         </a>
         <button class="btn btn-sm logout-btn nav-toggle" type="button" aria-label="Open navigation" onclick="document.querySelector('.sidebar').classList.toggle('open')">Menu</button>
         <div class="user-area">
@@ -37,6 +40,10 @@
                 <a class="nav-link {{ request()->routeIs('mdb.create') ? 'active' : '' }}" href="{{ route('mdb.create') }}">Add Daily MDB</a>
                 <a class="nav-link {{ request()->routeIs('mdb.index') ? 'active' : '' }}" href="{{ route('mdb.index') }}">MDB History</a>
                 <a class="nav-link {{ request()->routeIs('mdb.returned') ? 'active' : '' }}" href="{{ route('mdb.returned') }}">Returned MDB Entries</a>
+            @endif
+            @if(auth()->user()->hasAnyRole(['survey_team_leader','mdb_team_user','super_admin','project_manager']))
+                <div class="nav-label">Reference data</div>
+                <a class="nav-link {{ request()->routeIs('transformers.*') ? 'active' : '' }}" href="{{ route('transformers.index') }}">Transformer GIS Data</a>
             @endif
             @if(auth()->user()->hasAnyRole(['project_manager','super_admin']))
                 <div class="nav-label">Control centre</div>

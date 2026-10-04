@@ -19,6 +19,7 @@ use App\Services\DashboardService;
 use App\Services\MdbCreationService;
 use App\Services\MdbProcessingService;
 use App\Services\SurveyProgressService;
+use App\Support\ProjectBranding;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -156,6 +157,33 @@ class WorkflowTest extends TestCase
         $this->surveyUser->update(['status' => 'inactive']);
         $this->post('/login', ['email' => $this->surveyUser->email, 'password' => 'password'])->assertSessionHasErrors('email');
         $this->assertGuest();
+    }
+
+    public function test_project_branding_is_database_driven_and_editable_in_filament(): void
+    {
+        $project = Project::findOrFail($this->feeder->project_id);
+        $project->update([
+            'name' => 'Custom HAZECO Project Name',
+            'logo_path' => 'branding/custom-logo.png',
+            'favicon_path' => 'branding/custom-favicon.png',
+        ]);
+        app()->forgetInstance(ProjectBranding::class);
+
+        $this->get('/login')
+            ->assertOk()
+            ->assertSee('Custom HAZECO Project Name')
+            ->assertSee('/storage/branding/custom-logo.png', false)
+            ->assertSee('/storage/branding/custom-favicon.png', false);
+        $this->get('/admin/login')
+            ->assertOk()
+            ->assertSee('Custom HAZECO Project Name')
+            ->assertSee('/storage/branding/custom-logo.png', false)
+            ->assertSee('/storage/branding/custom-favicon.png', false);
+
+        $this->actingAs($this->admin)->get("/admin/projects/{$project->id}/edit")
+            ->assertOk()
+            ->assertSee('Project logo')
+            ->assertSee('Browser favicon');
     }
 
     public function test_survey_leader_dashboard_excludes_unassigned_feeders(): void

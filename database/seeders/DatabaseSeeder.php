@@ -52,7 +52,7 @@ class DatabaseSeeder extends Seeder
 
         $project = Project::create([
             'code' => 'HAZECO-TDL',
-            'name' => 'HAZECO T&D Losses Project',
+            'name' => 'HAZECO Transmission and Distribution Losses Calculation Project',
             'timezone' => 'Asia/Karachi',
             'processing_required' => true,
             'status' => RecordStatus::Active,

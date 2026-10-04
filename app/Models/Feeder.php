@@ -75,6 +75,16 @@ class Feeder extends Model
         return $this->hasMany(FeederAssignment::class);
     }
 
+    public function transformers(): HasMany
+    {
+        return $this->hasMany(Transformer::class);
+    }
+
+    public function transformerKmzImports(): HasMany
+    {
+        return $this->hasMany(TransformerKmzImport::class);
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', RecordStatus::Active->value);
