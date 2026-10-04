@@ -7,12 +7,13 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationItem;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets\AccountWidget;
 use Filament\View\PanelsRenderHook;
+use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -31,6 +32,38 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->renderHook(PanelsRenderHook::AUTH_LOGIN_FORM_AFTER, fn () => view('auth.password-reset-link'))
             ->brandName('HAZECO Control Centre')
+            ->navigationItems([
+                NavigationItem::make('Master Data & Import')
+                    ->group('Administration')
+                    ->icon('heroicon-o-arrow-up-tray')
+                    ->url(fn (): string => route('admin.master.index'))
+                    ->visible(fn (): bool => auth()->user()?->hasRole('super_admin') ?? false)
+                    ->sort(1),
+                NavigationItem::make('Teams & Assignments')
+                    ->group('Administration')
+                    ->icon('heroicon-o-user-group')
+                    ->url(fn (): string => route('admin.teams.index'))
+                    ->visible(fn (): bool => auth()->user()?->hasRole('super_admin') ?? false)
+                    ->sort(2),
+                NavigationItem::make('Users')
+                    ->group('Administration')
+                    ->icon('heroicon-o-users')
+                    ->url(fn (): string => route('admin.users.index'))
+                    ->visible(fn (): bool => auth()->user()?->hasRole('super_admin') ?? false)
+                    ->sort(3),
+                NavigationItem::make('Organizations')
+                    ->group('Administration')
+                    ->icon('heroicon-o-building-office')
+                    ->url(fn (): string => route('admin.organizations.index'))
+                    ->visible(fn (): bool => auth()->user()?->hasRole('super_admin') ?? false)
+                    ->sort(4),
+                NavigationItem::make('Audit Log')
+                    ->group('Administration')
+                    ->icon('heroicon-o-clipboard-document-list')
+                    ->url(fn (): string => route('admin.audit.index'))
+                    ->visible(fn (): bool => auth()->user()?->hasRole('super_admin') ?? false)
+                    ->sort(5),
+            ])
             ->colors([
                 'primary' => Color::Amber,
             ])
