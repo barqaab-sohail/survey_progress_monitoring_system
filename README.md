@@ -277,6 +277,7 @@ If `git pull --ff-only` reports local changes, review and preserve them instead 
 | `No application encryption key` | Run `php artisan key:generate` for a fresh installation. |
 | `could not find driver` | Enable `pdo_mysql` in the active CLI and Apache `php.ini`. |
 | Database/session/cache table error | Confirm `.env`, then run `php artisan migrate --force`. |
+| MDB login fails with `Unknown column 'status'` | Deploy and apply `2026_10_04_000100_add_mdb_verification_workflow.php`; the newer dashboard requires MDB review fields in the database. See the upgrade steps below. |
 | CSS or Filament interface missing | Run `php artisan filament:assets` and hard-refresh the browser. |
 | Changes to `.env` are ignored | Run `php artisan optimize:clear`; optimize again in production. |
 | HTTP 500 on Linux | Check `storage/logs/laravel.log` and permissions on `storage` and `bootstrap/cache`. |
@@ -285,6 +286,21 @@ If `git pull --ff-only` reports local changes, review and preserve them instead 
 | New installation has no feeders | Import the HAZECO workbook or restore the old MySQL backup. |
 
 Laravel's cached matcher removes the trailing slash from a directory installation's root, such as `/public/`. Symfony then loses the request's base path and the cached root route fails, although the dashboard correctly supports both `GET` and `HEAD`. `PreserveSubdirectoryRootRoute` makes that existing cached dashboard route available through Laravel's dynamic-route fallback for directory-root requests. The original authentication, active-account checks, and allowed methods still apply; ordinary routes keep using the compiled cache. This also covers the dashboard opened after signing in with a reset password. No additional password reset is needed. Verify by opening `/public/` as a guest (redirect to `/public/login`) and signing in (dashboard loads), including after `php artisan route:cache`.
+
+### Upgrade the MDB verification database
+
+An MDB user signing in loads dashboard totals for submitted, verified, and returned MDB files. The original `mdb_daily_entry_items` table has no `status` column; `database/migrations/2026_10_04_000100_add_mdb_verification_workflow.php` adds it with a `submitted` default, nullable review fields, and the `mdb_verification_histories` table. Deploying the updated PHP files without applying this database migration causes MySQL error `42S22 / 1054` on the dashboard, even though authentication succeeds. Clearing caches alone cannot add missing columns.
+
+On production, ensure that migration file is uploaded and take a database backup. From the folder containing `artisan`, run:
+
+```bash
+php artisan optimize:clear
+php artisan migrate:status
+php artisan migrate --force
+php artisan migrate:status
+```
+
+The MDB verification migration must show **Ran** for the database used by the website. Existing feeder, survey, and MDB IDs, quantities, links, and timestamps are preserved; legacy MDB items become submitted for review. Sign in as the MDB user and confirm the dashboard loads, then check the third-party MDB review queue. Run the usual release optimization after verifying the upgrade. Do not use `migrate:fresh`, `migrate:refresh`, `migrate:reset`, or `db:seed` on a populated production database. If the migration already shows **Ran** while `status` is absent, check that the CLI and website use the same `.env` and database, especially after restoring an older database backup, before applying any repair.
 
 ## Runtime requirements
 
