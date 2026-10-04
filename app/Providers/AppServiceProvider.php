@@ -36,8 +36,16 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('password-reset-submit', fn (Request $request) => Limit::perMinute(10)
             ->by('reset-submit:'.$request->ip()));
 
-        // Use the configured application address rather than an untrusted request host.
-        ResetPassword::createUrlUsing(fn ($user, string $token) => rtrim(config('app.url'), '/')
-            .route('password.reset', ['token' => $token, 'email' => $user->getEmailForPasswordReset()], false));
+        // Keep the trusted origin while preserving a deployment subdirectory or index.php.
+        ResetPassword::createUrlUsing(function ($user, string $token): string {
+            $appUrl = rtrim((string) config('app.url'), '/');
+            $configuredPath = trim((string) (parse_url($appUrl, PHP_URL_PATH) ?? ''), '/');
+            $basePath = $configuredPath === '' ? request()->getBaseUrl() : '';
+
+            return $appUrl.$basePath.route('password.reset', [
+                'token' => $token,
+                'email' => $user->getEmailForPasswordReset(),
+            ], false);
+        });
     }
 }

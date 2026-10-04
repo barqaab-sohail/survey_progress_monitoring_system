@@ -281,7 +281,10 @@ If `git pull --ff-only` reports local changes, review and preserve them instead 
 | Changes to `.env` are ignored | Run `php artisan optimize:clear`; optimize again in production. |
 | HTTP 500 on Linux | Check `storage/logs/laravel.log` and permissions on `storage` and `bootstrap/cache`. |
 | Apache shows a directory or 404 | Point `DocumentRoot` to `public` and enable `mod_rewrite`. |
+| Login redirects to `/public/` and shows `GET /` supports only `HEAD` | Run `php artisan route:clear` for immediate recovery. Deploy `app/Http/Middleware/PreserveSubdirectoryRootRoute.php` and its registration in `bootstrap/app.php` before rebuilding the route cache. |
 | New installation has no feeders | Import the HAZECO workbook or restore the old MySQL backup. |
+
+Laravel's cached matcher removes the trailing slash from a directory installation's root, such as `/public/`. Symfony then loses the request's base path and the cached root route fails, although the dashboard correctly supports both `GET` and `HEAD`. `PreserveSubdirectoryRootRoute` makes that existing cached dashboard route available through Laravel's dynamic-route fallback for directory-root requests. The original authentication, active-account checks, and allowed methods still apply; ordinary routes keep using the compiled cache. This also covers the dashboard opened after signing in with a reset password. No additional password reset is needed. Verify by opening `/public/` as a guest (redirect to `/public/login`) and signing in (dashboard loads), including after `php artisan route:cache`.
 
 ## Runtime requirements
 
@@ -374,6 +377,8 @@ Use **Forgot password?** on the sign-in page. Reset links are sent only to email
 Successful resets rotate remembered-login credentials and remove the account's database sessions. Passwords are never included in the reset audit log. Requests are rate limited, and a new link for the same account cannot be generated more than once per minute.
 
 Configure an outgoing mail service before expecting inbox delivery. `MAIL_MAILER=log` cannot deliver reset emails; the form reports that email delivery is unconfigured and does not generate a reset token. For SMTP, set `MAIL_MAILER=smtp` and the SMTP `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_SCHEME`, and `MAIL_FROM_ADDRESS` values in `.env`. Keep credentials out of Git. Set `APP_URL` to the full URL where the application is accessible, including its subdirectory if applicable; reset emails deliberately use that configured address. Then run `php artisan config:clear`. Registered account emails must be real inbox addresses.
+
+If the application opens under `/public/login`, its base URL includes `/public`. For the current HTTPS HAZECO deployment, use `APP_URL=https://hazeco.barqaab.pk/public`, run `php artisan optimize:clear` on the production server, and request a new reset email. A web-server 404 for `/reset-password/...` while `/public/forgot-password` works means the link is missing the application base path; it is not a password-token validation error. Reset links also preserve the current request's deployment path when `APP_URL` contains only an origin. An explicit path in `APP_URL` takes precedence and is not duplicated. The preferred permanent deployment still points the web-server document root to Laravel's `public` directory, allowing root-level URLs with a matching `APP_URL`.
 
 ## HAZECO HT workbook import
 

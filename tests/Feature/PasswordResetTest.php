@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
@@ -225,6 +226,31 @@ class PasswordResetTest extends TestCase
         $this->assertSame($this->user->email, $query['email']);
     }
 
+    public function test_reset_email_includes_the_public_base_path_for_a_host_only_application_url(): void
+    {
+        $this->assertDeploymentResetLink('https://survey.example.test', '/public', '/public');
+    }
+
+    public function test_reset_email_includes_the_public_index_php_entry_path(): void
+    {
+        $this->assertDeploymentResetLink('https://survey.example.test', '/public/index.php', '/public/index.php');
+    }
+
+    public function test_reset_email_does_not_duplicate_an_explicit_public_application_path(): void
+    {
+        $this->assertDeploymentResetLink('https://survey.example.test/public/', '/public', '/public');
+    }
+
+    public function test_explicit_application_path_takes_precedence_over_the_current_index_php_path(): void
+    {
+        $this->assertDeploymentResetLink('https://survey.example.test/public', '/public/index.php', '/public');
+    }
+
+    public function test_reset_email_keeps_a_subdirectory_index_php_entry_path(): void
+    {
+        $this->assertDeploymentResetLink('https://survey.example.test', '/survey/index.php', '/survey/index.php');
+    }
+
     public function test_email_rate_limit_applies_across_different_request_ips(): void
     {
         $this->requestToken($this->user);
@@ -323,6 +349,30 @@ class PasswordResetTest extends TestCase
         Notification::assertSentTo($user, ResetPassword::class);
 
         return Notification::sent($user, ResetPassword::class)->last()->token;
+    }
+
+    private function assertDeploymentResetLink(string $applicationUrl, string $requestBase, string $expectedLinkBase): void
+    {
+        config(['app.url' => $applicationUrl]);
+        $scriptName = str_ends_with($requestBase, '/index.php') ? $requestBase : $requestBase.'/index.php';
+        $request = Request::create('https://attacker.example.test'.$requestBase.'/forgot-password', 'POST', [], [], [], [
+            'SCRIPT_FILENAME' => '/var/www/survey/public/index.php',
+            'SCRIPT_NAME' => $scriptName,
+            'PHP_SELF' => $scriptName,
+        ]);
+        $this->app->instance('request', $request);
+        app('url')->setRequest($request);
+        $this->assertSame($requestBase, $request->getBaseUrl());
+
+        $notification = new ResetPassword('deployment-test-token');
+        $mail = $notification->toMail($this->user);
+        $this->assertSame('https', parse_url($mail->actionUrl, PHP_URL_SCHEME));
+        $this->assertSame('survey.example.test', parse_url($mail->actionUrl, PHP_URL_HOST));
+        $this->assertSame($expectedLinkBase.'/reset-password/deployment-test-token', parse_url($mail->actionUrl, PHP_URL_PATH));
+        parse_str(parse_url($mail->actionUrl, PHP_URL_QUERY), $query);
+        $this->assertSame($this->user->email, $query['email']);
+        Notification::assertNothingSent();
+        $this->assertDatabaseCount('password_reset_tokens', 0);
     }
 
     private function resetData(string $token): array
