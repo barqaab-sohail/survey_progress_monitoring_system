@@ -62,8 +62,6 @@ class FeedersTable
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                IconColumn::make('processing_required')
-                    ->boolean(),
                 TextColumn::make('status')
                     ->badge()
                     ->searchable(),

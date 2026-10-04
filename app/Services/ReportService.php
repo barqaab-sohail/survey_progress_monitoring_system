@@ -5,8 +5,7 @@ namespace App\Services;
 use App\Enums\SurveyItemStatus;
 use App\Models\Feeder;
 use App\Models\MdbDailyEntryItem;
-use App\Models\MdbProcessingAssignment;
-use App\Models\MdbProcessingDailyEntryItem;
+use App\Models\MdbVerificationHistory;
 use App\Models\SurveyDailyEntryItem;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,11 +25,11 @@ class ReportService
         'pending_verification' => 'Pending Survey Verification',
         'mdb_creation' => 'MDB Creation Report',
         'mdb_creation_backlog' => 'MDB Creation Backlog',
-        'mdb_processing' => 'MDB Processing Report',
-        'mdb_processing_backlog' => 'MDB Processing Backlog',
-        'third_party' => 'Third-Party Processing Performance',
-        'assignment_status' => 'Processing Assignment Status',
+        'mdb_verification' => 'MDB Verification Report',
+        'mdb_verification_backlog' => 'Pending and Returned MDB Files',
+        'third_party' => 'Third-Party Verification Performance',
         'returned_survey' => 'Returned Survey Report',
+        'returned_mdb' => 'Returned MDB Report',
     ];
 
     public function __construct(private readonly DashboardService $dashboard) {}
@@ -45,11 +44,11 @@ class ReportService
             'pending_verification' => $this->pendingVerification($filters),
             'mdb_creation' => $this->mdbCreation($filters),
             'mdb_creation_backlog' => $this->mdbBacklog($filters),
-            'mdb_processing' => $this->mdbProcessing($filters),
-            'mdb_processing_backlog' => $this->processingBacklog($filters),
-            'third_party' => $this->thirdParty(),
-            'assignment_status' => $this->assignmentStatus($filters),
+            'mdb_verification' => $this->mdbVerification($filters),
+            'mdb_verification_backlog' => $this->verificationBacklog($filters),
+            'third_party' => $this->thirdParty($filters),
             'returned_survey' => $this->returnedSurvey($filters),
+            'returned_mdb' => $this->returnedMdb($filters),
             default => $this->overall($filters),
         };
 
@@ -64,21 +63,21 @@ class ReportService
         $survey = DB::table('survey_daily_entry_items as i')->join('survey_daily_entries as e', 'e.id', '=', 'i.survey_daily_entry_id')->whereBetween('e.entry_date', [$from->toDateString(), $to->toDateString()])->whereIn('i.feeder_id', $ids)->whereIn('i.status', ['submitted', 'verified'])->select('e.entry_date')->selectRaw('SUM(i.transformers_surveyed) total')->groupBy('e.entry_date')->pluck('total', 'entry_date');
         $verified = DB::table('survey_daily_entry_items')->whereBetween('verified_at', [$from, $to->copy()->endOfDay()])->whereIn('feeder_id', $ids)->where('status', 'verified')->selectRaw('DATE(verified_at) day')->selectRaw('SUM(transformers_surveyed) total')->groupBy(DB::raw('DATE(verified_at)'))->pluck('total', 'day');
         $mdb = DB::table('mdb_daily_entry_items as i')->join('mdb_daily_entries as e', 'e.id', '=', 'i.mdb_daily_entry_id')->whereBetween('e.entry_date', [$from->toDateString(), $to->toDateString()])->whereIn('i.feeder_id', $ids)->select('e.entry_date')->selectRaw('SUM(i.mdb_files_created) total')->groupBy('e.entry_date')->pluck('total', 'entry_date');
-        $processed = DB::table('mdb_processing_daily_entry_items as i')->join('mdb_processing_daily_entries as e', 'e.id', '=', 'i.mdb_processing_daily_entry_id')->join('mdb_processing_assignments as a', 'a.id', '=', 'i.mdb_processing_assignment_id')->whereBetween('e.entry_date', [$from->toDateString(), $to->toDateString()])->whereIn('a.feeder_id', $ids)->select('e.entry_date')->selectRaw('SUM(i.mdb_processed) total')->groupBy('e.entry_date')->pluck('total', 'entry_date');
+        $mdbVerified = DB::table('mdb_daily_entry_items')->whereBetween('verified_at', [$from, $to->copy()->endOfDay()])->whereIn('feeder_id', $ids)->where('status', 'verified')->selectRaw('DATE(verified_at) day')->selectRaw('SUM(mdb_files_created) total')->groupBy(DB::raw('DATE(verified_at)'))->pluck('total', 'day');
         $rows = collect();
         for ($date = $from->copy(); $date->lte($to); $date->addDay()) {
             $key = $date->toDateString();
-            $rows->push([$date->format('d M Y'), (int) ($survey[$key] ?? 0), (int) ($verified[$key] ?? 0), (int) ($mdb[$key] ?? 0), (int) ($processed[$key] ?? 0)]);
+            $rows->push([$date->format('d M Y'), (int) ($survey[$key] ?? 0), (int) ($verified[$key] ?? 0), (int) ($mdb[$key] ?? 0), (int) ($mdbVerified[$key] ?? 0)]);
         }
 
-        return ['headers' => ['Date', 'Survey Reported', 'Survey Verified', 'MDB Created', 'MDB Processed'], 'rows' => $rows];
+        return ['headers' => ['Date', 'Survey Reported', 'Survey Verified', 'MDB Created', 'MDB Verified'], 'rows' => $rows];
     }
 
     private function overall(array $filters): array
     {
         $summary = $this->dashboard->summaryFor($this->progress($filters));
-        $headers = ['Total Transformers', 'Survey Reported', 'Survey Verified', 'Survey Pending', 'Verification Pending', 'MDB Created', 'Creation Backlog', 'MDB Assigned', 'MDB Processed', 'Processing Backlog', 'Unassigned MDB'];
-        $keys = ['total_transformers', 'survey_reported', 'survey_verified', 'survey_pending', 'verification_pending', 'mdb_created', 'mdb_creation_backlog', 'mdb_assigned', 'mdb_processed', 'mdb_processing_backlog', 'unassigned_mdb'];
+        $headers = ['Total Transformers', 'Survey Reported', 'Survey Verified', 'Survey Pending', 'Survey Verification Pending', 'MDB Created', 'Creation Backlog', 'MDB Verified', 'MDB Verification Pending', 'MDB Returned'];
+        $keys = ['total_transformers', 'survey_reported', 'survey_verified', 'survey_pending', 'verification_pending', 'mdb_created', 'mdb_creation_backlog', 'mdb_verified', 'mdb_verification_pending', 'mdb_returned'];
 
         return ['headers' => $headers, 'rows' => [array_map(fn ($key) => $summary[$key], $keys)]];
     }
@@ -124,9 +123,9 @@ class ReportService
 
     private function mdbCreation(array $filters): array
     {
-        $rows = MdbDailyEntryItem::query()->whereIn('feeder_id', $this->filteredFeeders($filters)->pluck('id'))->whereHas('entry', fn (Builder $q) => $q->whereBetween('entry_date', [$filters['from'], $filters['to']]))->with(['entry.enteredBy', 'feeder'])->get()->map(fn ($i) => [$i->entry->entry_date->format('d M Y'), $i->feeder->feeder_code, $i->mdb_files_created, $i->entry->enteredBy->name, $i->drive_url ?: '—', $i->remarks ?: '—']);
+        $rows = MdbDailyEntryItem::query()->whereIn('feeder_id', $this->filteredFeeders($filters)->pluck('id'))->whereHas('entry', fn (Builder $q) => $q->whereBetween('entry_date', [$filters['from'], $filters['to']]))->with(['entry.enteredBy', 'feeder'])->get()->map(fn ($i) => [$i->entry->entry_date->format('d M Y'), $i->feeder->feeder_code, $i->mdb_files_created, strtoupper($i->status->value), $i->entry->enteredBy->name, $i->drive_url ?: '—', $i->remarks ?: '—']);
 
-        return ['headers' => ['Date', 'Feeder', 'MDB Created', 'Entered By', 'Drive URL', 'Remarks'], 'rows' => $rows];
+        return ['headers' => ['Date', 'Feeder', 'MDB Created', 'Verification Status', 'Entered By', 'Drive URL', 'Remarks'], 'rows' => $rows];
     }
 
     private function mdbBacklog(array $filters): array
@@ -136,36 +135,48 @@ class ReportService
         return ['headers' => ['Feeder', 'Grid Station', 'Survey Verified', 'MDB Created', 'Creation Backlog'], 'rows' => $rows];
     }
 
-    private function mdbProcessing(array $filters): array
+    private function mdbVerification(array $filters): array
     {
-        $rows = MdbProcessingDailyEntryItem::query()->whereHas('entry', fn (Builder $q) => $q->whereBetween('entry_date', [$filters['from'], $filters['to']]))
-            ->whereHas('assignment', fn (Builder $q) => $q->whereIn('feeder_id', $this->filteredFeeders($filters)->pluck('id'))->when($filters['organization_id'] ?? null, fn ($x, $id) => $x->where('organization_id', $id)))
-            ->with(['entry.enteredBy', 'assignment.feeder', 'assignment.organization'])->get()->map(fn ($i) => [$i->entry->entry_date->format('d M Y'), $i->assignment->feeder->feeder_code, $i->assignment->organization->name, $i->mdb_processed, $i->entry->enteredBy->name, $i->output_drive_url ?: '—', $i->remarks ?: '—']);
+        $rows = $this->mdbReviewHistory($filters)->with(['item.feeder', 'actor.organization'])->orderBy('acted_at')->get()
+            ->map(fn ($h) => [$h->acted_at->format('d M Y h:i A'), $h->item->feeder->feeder_code, $h->quantity_snapshot, strtoupper($h->action), $h->actor->name, $h->actor->organization?->name ?: '?', $h->comment ?: '?', $h->item->drive_url ?: '?']);
 
-        return ['headers' => ['Date', 'Feeder', 'Organization', 'MDB Processed', 'Entered By', 'Output URL', 'Remarks'], 'rows' => $rows];
+        return ['headers' => ['Reviewed At', 'Feeder', 'MDB Files', 'Action', 'Reviewed By', 'Organization', 'Comment', 'Drive URL'], 'rows' => $rows];
     }
 
-    private function processingBacklog(array $filters): array
+    private function verificationBacklog(array $filters): array
     {
-        $rows = $this->progress($filters)->where('mdb_processing_backlog', '>', 0)->map(fn ($f) => [$f->feeder_code, $f->gridStation?->name, $f->mdb_created, $f->mdb_assigned, $f->unassigned_mdb, $f->mdb_processed, $f->mdb_processing_backlog])->values();
+        $rows = $this->progress($filters)->where('mdb_verification_backlog', '>', 0)->map(fn ($f) => [$f->feeder_code, $f->gridStation?->name, $f->mdb_created, $f->mdb_verified, $f->mdb_verification_pending, $f->mdb_returned])->values();
 
-        return ['headers' => ['Feeder', 'Grid Station', 'MDB Created', 'Assigned', 'Unassigned', 'Processed', 'Processing Backlog'], 'rows' => $rows];
+        return ['headers' => ['Feeder', 'Grid Station', 'MDB Created', 'MDB Verified', 'Awaiting Verification', 'Returned for Correction'], 'rows' => $rows];
     }
 
-    private function thirdParty(): array
+    private function thirdParty(array $filters): array
     {
-        $rows = $this->dashboard->processingOrganizationPerformance()->where('type', 'third_party')->map(fn ($r) => [$r->name, $r->assigned, $r->processed, $r->remaining, $r->today, $r->this_week, $r->this_month, $r->completion.'%'])->values();
+        $rows = $this->mdbReviewHistory($filters)
+            ->whereHas('actor.organization', fn (Builder $q) => $q->where('type', 'third_party'))
+            ->with('actor.organization')->get()->groupBy(fn ($h) => $h->actor->organization_id)
+            ->map(fn ($items) => [$items->first()->actor->organization->name, (int) $items->where('action', 'verified')->sum('quantity_snapshot'), (int) $items->where('action', 'returned')->sum('quantity_snapshot')])->values();
 
-        return ['headers' => ['Organization', 'Assigned', 'Processed', 'Remaining', 'Today', 'This Week', 'This Month', 'Completion'], 'rows' => $rows];
+        return ['headers' => ['Organization', 'MDB Files Verified', 'MDB Files Returned'], 'rows' => $rows];
     }
 
-    private function assignmentStatus(array $filters): array
+    private function mdbReviewHistory(array $filters): Builder
     {
-        $rows = MdbProcessingAssignment::query()->whereIn('feeder_id', $this->filteredFeeders($filters)->pluck('id'))->whereBetween('assignment_date', [$filters['from'], $filters['to']])
-            ->when($filters['organization_id'] ?? null, fn (Builder $q, $id) => $q->where('organization_id', $id))->when($filters['assignment_status'] ?? null, fn (Builder $q, $status) => $q->where('status', $status))
-            ->with(['feeder', 'organization', 'progressItems'])->get()->map(fn ($a) => [$a->assignment_date->format('d M Y'), $a->feeder->feeder_code, $a->organization->name, $a->assigned_quantity, $a->processed_quantity, $a->remaining_quantity, $a->target_date?->format('d M Y') ?: '—', strtoupper($a->status->value)]);
+        return MdbVerificationHistory::query()->whereIn('action', ['verified', 'returned'])
+            ->whereBetween('acted_at', [Carbon::parse($filters['from'])->startOfDay(), Carbon::parse($filters['to'])->endOfDay()])
+            ->whereHas('item', fn (Builder $q) => $q->whereIn('feeder_id', $this->filteredFeeders($filters)->pluck('id')))
+            ->when($filters['organization_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('actor', fn (Builder $u) => $u->where('organization_id', $id)));
+    }
 
-        return ['headers' => ['Assignment Date', 'Feeder', 'Organization', 'Assigned', 'Processed', 'Remaining', 'Target Date', 'Status'], 'rows' => $rows];
+    private function returnedMdb(array $filters): array
+    {
+        $rows = MdbDailyEntryItem::query()->where('status', 'returned')->whereIn('feeder_id', $this->filteredFeeders($filters)->pluck('id'))
+            ->whereHas('entry', fn (Builder $q) => $q->whereBetween('entry_date', [$filters['from'], $filters['to']]))
+            ->when($filters['organization_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('history', fn (Builder $h) => $h->where('action', 'returned')->whereHas('actor', fn (Builder $u) => $u->where('organization_id', $id))))
+            ->with(['entry.enteredBy', 'feeder'])->get()
+            ->map(fn ($i) => [$i->entry->entry_date->format('d M Y'), $i->feeder->feeder_code, $i->mdb_files_created, $i->entry->enteredBy->name, $i->return_reason, $i->updated_at->format('d M Y h:i A'), $i->drive_url ?: '?']);
+
+        return ['headers' => ['Entry Date', 'Feeder', 'MDB Files', 'Submitted By', 'Return Reason', 'Returned At', 'Drive URL'], 'rows' => $rows];
     }
 
     private function returnedSurvey(array $filters): array
@@ -192,17 +203,16 @@ class ReportService
             ->when($filters['division_id'] ?? null, fn (Builder $q, $id) => $q->where('division_id', $id))
             ->when($filters['grid_station_id'] ?? null, fn (Builder $q, $id) => $q->where('grid_station_id', $id))
             ->when($filters['feeder_id'] ?? null, fn (Builder $q, $id) => $q->whereKey($id))
-            ->when($filters['organization_id'] ?? null, fn (Builder $q, $id) => $q->whereHas('processingAssignments', fn (Builder $a) => $a->where('organization_id', $id)))
             ->get(['id']);
     }
 
     private function progressHeaders(string $first): array
     {
-        return [$first, 'Total', 'Survey Reported', 'Survey Verified', 'Survey Pending', 'Verification Pending', 'MDB Created', 'Creation Backlog', 'MDB Assigned', 'MDB Processed', 'Processing Backlog'];
+        return [$first, 'Total', 'Survey Reported', 'Survey Verified', 'Survey Pending', 'Survey Verification Pending', 'MDB Created', 'Creation Backlog', 'MDB Verified', 'MDB Verification Pending', 'MDB Returned'];
     }
 
     private function progressRow(string $label, Collection $items): array
     {
-        return [$label, ...array_map(fn ($key) => (int) $items->sum($key), ['total_transformers', 'survey_reported', 'survey_verified', 'survey_pending', 'verification_pending', 'mdb_created', 'mdb_creation_backlog', 'mdb_assigned', 'mdb_processed', 'mdb_processing_backlog'])];
+        return [$label, ...array_map(fn ($key) => (int) $items->sum($key), ['total_transformers', 'survey_reported', 'survey_verified', 'survey_pending', 'verification_pending', 'mdb_created', 'mdb_creation_backlog', 'mdb_verified', 'mdb_verification_pending', 'mdb_returned'])];
     }
 }

@@ -84,11 +84,6 @@ class FeederForm
                 Textarea::make('mdb_drive_url')
                     ->default(null)
                     ->columnSpanFull(),
-                Textarea::make('processing_drive_url')
-                    ->default(null)
-                    ->columnSpanFull(),
-                Toggle::make('processing_required')
-                    ->default(true),
                 Select::make('status')
                     ->options(RecordStatus::class)
                     ->default('active')

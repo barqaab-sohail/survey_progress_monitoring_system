@@ -7,7 +7,6 @@ use App\Enums\RecordStatus;
 use App\Enums\UserRole;
 use App\Models\MdbTeam;
 use App\Models\Organization;
-use App\Models\ProcessingTeam;
 use App\Models\Project;
 use App\Models\SurveyTeam;
 use App\Models\User;
@@ -48,7 +47,6 @@ class DatabaseSeeder extends Seeder
         $this->user($internal, 'Project Manager', 'manager@hazeco.test', UserRole::ProjectManager, $password, '2');
         $surveyLead = $this->user($internal, 'Survey Team Leader', 'survey@hazeco.test', UserRole::SurveyTeamLeader, $password, '3');
         $mdbUser = $this->user($internal, 'MDB User', 'mdb@hazeco.test', UserRole::MdbTeamUser, $password, '4');
-        $internalProcessor = $this->user($internal, 'Internal Processor', 'processor@hazeco.test', UserRole::MdbProcessingUser, $password, '5');
         $externalProcessor = $this->user($thirdParty, 'Third-Party Processor', 'thirdparty@hazeco.test', UserRole::MdbProcessingUser, $password, '6');
         $this->user($internal, 'Management Viewer', 'viewer@hazeco.test', UserRole::ManagementViewer, $password, '7');
 
@@ -64,10 +62,6 @@ class DatabaseSeeder extends Seeder
         $surveyTeam->members()->attach($surveyLead->id, ['is_leader' => true]);
         $mdbTeam = MdbTeam::create(['project_id' => $project->id, 'code' => 'MDB-01', 'name' => 'MDB Team 01', 'status' => RecordStatus::Active]);
         $mdbTeam->members()->attach($mdbUser->id);
-        $internalTeam = ProcessingTeam::create(['project_id' => $project->id, 'organization_id' => $internal->id, 'code' => 'PROC-INT', 'name' => 'Internal MDB Processing Team', 'status' => RecordStatus::Active]);
-        $internalTeam->members()->attach($internalProcessor->id);
-        $externalTeam = ProcessingTeam::create(['project_id' => $project->id, 'organization_id' => $thirdParty->id, 'code' => 'PROC-EXT-A', 'name' => 'Third Party A Processing Team', 'status' => RecordStatus::Active]);
-        $externalTeam->members()->attach($externalProcessor->id);
 
         $admin->syncRoles([UserRole::SuperAdmin->value]);
         $this->call(ShieldPermissionSeeder::class);

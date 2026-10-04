@@ -4,17 +4,23 @@ namespace App\Http\Controllers;
 
 use App\Enums\SurveyItemStatus;
 use App\Http\Requests\StoreMdbEntryRequest;
+use App\Http\Requests\ResubmitMdbItemRequest;
 use App\Models\Feeder;
 use App\Models\MdbDailyEntry;
+use App\Models\MdbDailyEntryItem;
 use App\Services\MdbCreationService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use App\Enums\UserRole;
 use Illuminate\View\View;
 
 class MdbEntryController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $entries = MdbDailyEntry::with(['team', 'enteredBy', 'items.feeder'])->latest('entry_date')->paginate(20);
+        $entries = MdbDailyEntry::query()
+            ->unless($request->user()->hasRole(UserRole::SuperAdmin->value), fn ($query) => $query->where('entered_by', $request->user()->id))
+            ->with(['team', 'enteredBy', 'items.feeder'])->latest('entry_date')->paginate(20);
 
         return view('mdb.index', compact('entries'));
     }
@@ -31,6 +37,40 @@ class MdbEntryController extends Controller
         $team = $request->user()->mdbTeams()->first();
         $service->create($request->user(), $team, $request->validated());
 
-        return redirect()->route('mdb.index')->with('success', 'MDB creation progress saved.');
+        return redirect()->route('mdb.index')->with('success', 'MDB creation saved and submitted for third-party verification.');
+    }
+
+    public function edit(MdbDailyEntry $entry): View
+    {
+        $this->authorize('update', $entry);
+        abort_unless($entry->canBeEdited(), 403, 'MDB editing is locked after review. Returned items must be corrected and resubmitted.');
+        $entry->load('items.feeder');
+        $feeders = $entry->items->pluck('feeder');
+
+        return view('mdb.create', compact('feeders', 'entry'));
+    }
+
+    public function update(StoreMdbEntryRequest $request, MdbDailyEntry $entry, MdbCreationService $service): RedirectResponse
+    {
+        $this->authorize('update', $entry);
+        $service->update($request->user(), $entry, $request->validated());
+
+        return redirect()->route('mdb.index')->with('success', 'MDB creation entry updated.');
+    }
+
+    public function returned(Request $request): View
+    {
+        $items = MdbDailyEntryItem::where('status', SurveyItemStatus::Returned->value)
+            ->unless($request->user()->hasRole(UserRole::SuperAdmin->value), fn ($query) => $query->whereHas('entry', fn ($entry) => $entry->where('entered_by', $request->user()->id)))
+            ->with(['entry', 'feeder'])->latest()->paginate(20);
+
+        return view('mdb.returned', compact('items'));
+    }
+
+    public function resubmit(ResubmitMdbItemRequest $request, MdbDailyEntryItem $item, MdbCreationService $service): RedirectResponse
+    {
+        $service->resubmit($request->user(), $item, $request->validated());
+
+        return redirect()->route('mdb.returned')->with('success', 'MDB item corrected and resubmitted for third-party verification.');
     }
 }

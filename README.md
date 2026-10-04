@@ -1,20 +1,20 @@
 # HAZECO T&D Losses Progress Monitoring System
 
-Responsive Laravel web application for monitoring the HAZECO baseline through field survey, verification, MDB creation, assignment, and MDB processing/analysis.
+Responsive Laravel web application for monitoring the HAZECO baseline through field survey, survey verification, MDB creation, and third-party MDB verification.
 
 The central principle is **minimum data entry, maximum management visibility**. Engineering files remain in Google Drive; this system stores quantities, responsibility, dates, workflow state, and secure links.
 
 ## What is included
 
 - Secure session authentication, active-account checks, login throttling, six roles, and Filament Shield permissions
-- Organizations with strict third-party assignment isolation
+- Active third-party organizations for MDB review access
 - Project → Circle → Division → Sub-Division → Grid Station → Feeder master hierarchy
 - Native HAZECO XLSX import with imported/updated/rejected counts, row errors, and repeatable updates
-- Survey teams, MDB teams, processing teams, memberships, and feeder assignments
+- Survey teams, MDB teams, memberships, and feeder assignments
 - Multi-feeder daily survey entry, row-level verification, return, correction, and resubmission history
 - MDB creation limited to verified survey capacity
-- Internal/third-party processing assignments limited to unreserved created MDB capacity
-- Processing progress limited by both assignment quantity and created MDB quantity
+- MDB entries appear automatically in the third-party verification queue
+- Third-party verification, required return reasons, MDB corrections and resubmission history
 - Management and third-party dashboards, KPIs, backlog formulas, feeder status, daily trend, today/week/month totals
 - Audit log, database notifications for returned surveys, CSV/Excel-compatible export, and print/PDF report output
 - Mobile-first operational forms, responsive analytical views, and safe PWA shell readiness
@@ -309,9 +309,8 @@ All seeded accounts use `Password123!` locally. Change or remove them before dep
 | Super Admin | `admin@hazeco.test` |
 | Project Manager | `manager@hazeco.test` |
 | Survey Team Leader | `survey@hazeco.test` |
-| MDB Team User | `mdb@hazeco.test` |
-| Internal Processing User | `processor@hazeco.test` |
-| Third-Party Processing User | `thirdparty@hazeco.test` |
+| MDB User | `mdb@hazeco.test` |
+| Third-Party Processor | `thirdparty@hazeco.test` |
 | Management Viewer | `viewer@hazeco.test` |
 
 ## Filament control centre
@@ -353,20 +352,28 @@ Run `remove` before live progress entry. It deletes only records marked `[SAMPLE
 2. Survey Team Leader submits one daily header with one or more feeder quantities.
 3. MDB Team opens Drive evidence and verifies each row or returns it with a required reason.
 4. Only verified survey quantity becomes available for MDB creation.
-5. Project Manager or Super Admin assigns unreserved created MDB work to an internal or third-party organization.
-6. Processing users record progress only against their organization’s assignments.
+5. Saved MDB entries appear directly in the third-party review queue; the MDB user may edit before review.
+6. Third-Party Processor verifies MDB files or returns an item with a required reason. The MDB user corrects and resubmits returned items; verified records are locked.
 7. Management dashboard totals and backlogs are derived directly from transaction rows.
 
-Critical writes use database transactions and row locks. Concurrent requests therefore cannot oversurvey a baseline, create MDB beyond verified capacity, double-assign created MDB, or over-process an assignment.
+Critical writes use database transactions and row locks. Returned MDB quantities remain reserved against verified survey capacity while corrections are pending. Review actions and corrections preserve an audit trail.
 
 ## Roles
 
 - **Super Admin:** all administration, master data, operational correction, dashboard, audit, and reports.
-- **Project Manager:** global dashboard/reports and processing assignment.
+- **Project Manager:** global dashboard and reports.
 - **Survey Team Leader:** assigned feeders, own submissions, returned corrections.
-- **MDB Team User:** pending verification and MDB creation.
-- **MDB Processing User:** only its organization’s assignments and processing history.
+- **MDB User:** verify or return survey entries, create MDB entries, edit before review, and correct returned MDB items.
+- **Third-Party Processor:** verify or return MDB items and view MDB review history; no survey/MDB creation or processing-progress entry.
 - **Management Viewer:** read-only management dashboard and reports.
+
+## Forgot password
+
+Use **Forgot password?** on the sign-in page. Reset links are sent only to email addresses belonging to active accounts already in the `users` database table. Unregistered or inactive email addresses show an error and receive no reset email. Repeated requests within the account cooldown also show an error. A registered email address alone cannot reset the password: the owner must use the emailed token, which expires after 60 minutes and can be used once.
+
+Successful resets rotate remembered-login credentials and remove the account's database sessions. Passwords are never included in the reset audit log. Requests are rate limited, and a new link for the same account cannot be generated more than once per minute.
+
+Configure an outgoing mail service before expecting inbox delivery. `MAIL_MAILER=log` cannot deliver reset emails; the form reports that email delivery is unconfigured and does not generate a reset token. For SMTP, set `MAIL_MAILER=smtp` and the SMTP `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_SCHEME`, and `MAIL_FROM_ADDRESS` values in `.env`. Keep credentials out of Git. Set `APP_URL` to the full URL where the application is accessible, including its subdirectory if applicable; reset emails deliberately use that configured address. Then run `php artisan config:clear`. Registered account emails must be real inbox addresses.
 
 ## HAZECO HT workbook import
 
@@ -419,7 +426,7 @@ php artisan view:cache
 vendor/bin/pint --test
 ```
 
-Tests use in-memory SQLite and cover authentication/roles, Filament access, native XLSX imports and idempotent updates, survey limits, return/resubmission, verification, MDB capacity, assignment reservation, processing limits, organization isolation, and dashboard/backlog calculations.
+Tests require in-memory SQLite and cover authentication/roles, Filament access, native XLSX imports, survey limits and corrections, MDB review/correction/resubmission, quantity reservations, immutable verified records, and dashboard/report calculations. Clear the configuration cache before testing. On Windows/XAMPP, if SQLite is not enabled in php.ini, run `php -d extension=pdo_sqlite vendor/phpunit/phpunit/phpunit`.
 
 ## Apache / XAMPP setup
 

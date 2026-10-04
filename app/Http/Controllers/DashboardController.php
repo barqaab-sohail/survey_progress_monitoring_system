@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
 use App\Models\FeederAssignment;
-use App\Models\MdbProcessingAssignment;
+use App\Models\MdbDailyEntryItem;
+use App\Enums\OrganizationType;
+use App\Enums\SurveyItemStatus;
+use App\Enums\RecordStatus;
 use App\Services\DashboardService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,10 +18,11 @@ class DashboardController extends Controller
     {
         if ($request->user()->hasRole(UserRole::MdbProcessingUser->value)) {
             $organization = $request->user()->organization;
-            abort_unless($organization, 403, 'A processing user must belong to an organization.');
-            $assignments = MdbProcessingAssignment::where('organization_id', $organization->id)->with(['feeder', 'progressItems'])->latest('assignment_date')->get();
+            abort_unless($organization && $organization->type === OrganizationType::ThirdParty && $organization->status === RecordStatus::Active, 403, 'MDB verification requires an active third-party organization.');
+            $reviewItems = MdbDailyEntryItem::where('status', SurveyItemStatus::Submitted->value)
+                ->with(['entry.enteredBy', 'feeder'])->oldest()->take(12)->get();
 
-            return view('dashboard.processing', ['summary' => $dashboard->organizationSummary($organization), 'assignments' => $assignments]);
+            return view('dashboard.mdb-review', ['summary' => $dashboard->mdbReviewSummary($organization->id), 'reviewItems' => $reviewItems]);
         }
 
         if ($request->user()->hasRole(UserRole::SurveyTeamLeader->value)) {
@@ -80,6 +84,7 @@ class DashboardController extends Controller
                 ['label' => 'Survey reported', 'value' => $summary['survey_reported'], 'percent' => $summary['percentages']['survey_reported'], 'color' => '#2563eb'],
                 ['label' => 'Survey verified', 'value' => $summary['survey_verified'], 'percent' => $summary['percentages']['survey_verified'], 'color' => '#0891b2'],
                 ['label' => 'MDB created', 'value' => $summary['mdb_created'], 'percent' => $summary['percentages']['mdb_created'], 'color' => '#16a34a'],
+                ['label' => 'MDB verified', 'value' => $summary['mdb_verified'], 'percent' => $summary['percentages']['mdb_verified'], 'color' => '#7c3aed'],
             ],
             'survey' => [
                 ['label' => 'Verified', 'value' => $summary['survey_verified'], 'color' => '#16a34a'],

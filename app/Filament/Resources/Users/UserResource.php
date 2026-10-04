@@ -10,6 +10,8 @@ use App\Filament\Resources\Users\Schemas\UserForm;
 use App\Filament\Resources\Users\Schemas\UserInfolist;
 use App\Filament\Resources\Users\Tables\UsersTable;
 use App\Models\User;
+use App\Enums\UserRole;
+use Illuminate\Database\Eloquent\Builder;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -21,6 +23,13 @@ class UserResource extends Resource
     protected static ?string $model = User::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->where(fn (Builder $query) => $query
+            ->where('role', '!=', UserRole::MdbProcessingUser->value)
+            ->orWhereDoesntHave('organization', fn (Builder $organization) => $organization->where('type', 'internal')));
+    }
 
     public static function form(Schema $schema): Schema
     {

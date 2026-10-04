@@ -3,12 +3,19 @@
 namespace App\Models;
 
 use App\Enums\SurveyEntryStatus;
+use App\Enums\SurveyItemStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SurveyDailyEntry extends Model
 {
+    public function canBeEdited(): bool
+    {
+        return $this->items()->exists()
+            && ! $this->items()->where('status', '!=', SurveyItemStatus::Submitted->value)->exists();
+    }
+
     protected $fillable = ['entry_date', 'survey_team_id', 'entered_by', 'status', 'remarks', 'submitted_at'];
 
     protected function casts(): array

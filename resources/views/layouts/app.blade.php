@@ -14,7 +14,7 @@
     <header class="topbar">
         <a class="brand" href="{{ route('dashboard') }}">
             <span class="brand-mark">T&D</span>
-            <span>HAZECO Progress <small>{{ auth()->user()->hasRole('survey_team_leader') ? 'Survey Operations' : 'Survey · MDB · Processing' }}</small></span>
+            <span>HAZECO Progress <small>{{ auth()->user()->hasRole('survey_team_leader') ? 'Survey Operations' : 'Survey · MDB · Verification' }}</small></span>
         </a>
         <button class="btn btn-sm logout-btn nav-toggle" type="button" aria-label="Open navigation" onclick="document.querySelector('.sidebar').classList.toggle('open')">Menu</button>
         <div class="user-area">
@@ -33,21 +33,19 @@
             @endif
             @if(auth()->user()->hasAnyRole(['mdb_team_user','super_admin']))
                 <div class="nav-label">MDB workflow</div>
-                <a class="nav-link {{ request()->routeIs('verification.*') ? 'active' : '' }}" href="{{ route('verification.index') }}">Pending Verification</a>
+                <a class="nav-link {{ request()->routeIs('verification.*') ? 'active' : '' }}" href="{{ route('verification.index') }}">Verify Survey Entries</a>
                 <a class="nav-link {{ request()->routeIs('mdb.create') ? 'active' : '' }}" href="{{ route('mdb.create') }}">Add Daily MDB</a>
                 <a class="nav-link {{ request()->routeIs('mdb.index') ? 'active' : '' }}" href="{{ route('mdb.index') }}">MDB History</a>
+                <a class="nav-link {{ request()->routeIs('mdb.returned') ? 'active' : '' }}" href="{{ route('mdb.returned') }}">Returned MDB Entries</a>
             @endif
             @if(auth()->user()->hasAnyRole(['project_manager','super_admin']))
-                <div class="nav-label">Processing management</div>
-                <a class="nav-link {{ request()->routeIs('processing.assignments.create') ? 'active' : '' }}" href="{{ route('processing.assignments.create') }}">Assign Work</a>
-                <a class="nav-link {{ request()->routeIs('processing.assignments.index') ? 'active' : '' }}" href="{{ route('processing.assignments.index') }}">All Assignments</a>
                 <div class="nav-label">Control centre</div>
                 <a class="nav-link" href="{{ url('/admin') }}">Filament Administration</a>
             @endif
             @if(auth()->user()->hasAnyRole(['mdb_processing_user','super_admin']))
-                <div class="nav-label">My processing</div>
-                <a class="nav-link {{ request()->routeIs('processing.entries.create') ? 'active' : '' }}" href="{{ route('processing.entries.create') }}">Add Today's Progress</a>
-                <a class="nav-link {{ request()->routeIs('processing.entries.index') ? 'active' : '' }}" href="{{ route('processing.entries.index') }}">Processing History</a>
+                <div class="nav-label">MDB verification</div>
+                <a class="nav-link {{ request()->routeIs('mdb-verification.index') ? 'active' : '' }}" href="{{ route('mdb-verification.index') }}">Verify MDB Files</a>
+                <a class="nav-link {{ request()->routeIs('mdb-verification.history') ? 'active' : '' }}" href="{{ route('mdb-verification.history') }}">MDB Review History</a>
             @endif
             @if(auth()->user()->hasRole('super_admin'))
                 <div class="nav-label">Administration</div>

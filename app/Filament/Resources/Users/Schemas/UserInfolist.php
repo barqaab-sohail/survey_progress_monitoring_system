@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Enums\UserRole;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 
@@ -20,6 +21,7 @@ class UserInfolist
                 TextEntry::make('phone')
                     ->placeholder('-'),
                 TextEntry::make('role')
+                    ->formatStateUsing(fn ($state) => $state instanceof UserRole ? $state->label() : $state)
                     ->badge(),
                 TextEntry::make('status')
                     ->badge(),

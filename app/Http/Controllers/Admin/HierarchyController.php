@@ -29,8 +29,7 @@ class HierarchyController extends Controller
 
     public function project(Request $request, AuditService $audit): RedirectResponse
     {
-        $data = $request->validate(['code' => ['required', 'string', 'max:50', 'unique:projects,code'], 'name' => ['required', 'string', 'max:255'], 'timezone' => ['required', 'timezone'], 'processing_required' => ['nullable', 'boolean']]);
-        $data['processing_required'] = $request->boolean('processing_required');
+        $data = $request->validate(['code' => ['required', 'string', 'max:50', 'unique:projects,code'], 'name' => ['required', 'string', 'max:255'], 'timezone' => ['required', 'timezone']]);
         $project = Project::create($data + ['status' => 'active']);
         $audit->record($request->user(), 'project.created', $project, new: $project->toArray());
 

@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Projects\Schemas;
 
-use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 
@@ -15,8 +14,6 @@ class ProjectInfolist
                 TextEntry::make('code'),
                 TextEntry::make('name'),
                 TextEntry::make('timezone'),
-                IconEntry::make('processing_required')
-                    ->boolean(),
                 TextEntry::make('status')
                     ->badge(),
                 TextEntry::make('created_at')

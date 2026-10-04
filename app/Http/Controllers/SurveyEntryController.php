@@ -20,7 +20,7 @@ class SurveyEntryController extends Controller
     public function index(Request $request): View
     {
         $entries = SurveyDailyEntry::query()
-            ->unless($request->user()->hasRole(UserRole::SuperAdmin->value), fn ($query) => $query->where('entered_by', $request->user()->id))
+            ->unless($request->user()->hasRole(UserRole::SuperAdmin->value), fn($query) => $query->where('entered_by', $request->user()->id))
             ->with(['team', 'items.feeder'])->latest('entry_date')->paginate(20);
 
         return view('survey.index', compact('entries'));
@@ -29,7 +29,7 @@ class SurveyEntryController extends Controller
     public function create(Request $request): View
     {
         $team = $this->teamFor($request);
-        $feeders = Feeder::active()->whereHas('assignments', fn ($query) => $query->where('survey_team_id', $team->id)->where('status', 'active'))->orderBy('feeder_code')->get();
+        $feeders = Feeder::active()->whereHas('assignments', fn($query) => $query->where('survey_team_id', $team->id)->where('status', 'active'))->orderBy('feeder_code')->get();
 
         return view('survey.create', compact('team', 'feeders'));
     }
@@ -42,9 +42,28 @@ class SurveyEntryController extends Controller
         return redirect()->route('survey.index')->with('success', 'Daily survey progress submitted for verification.');
     }
 
+    public function edit(SurveyDailyEntry $entry): View
+    {
+        $this->authorize('update', $entry);
+        abort_unless($entry->canBeEdited(), 403, 'Survey editing is locked once verification begins.');
+        $entry->load('items.feeder', 'team');
+        $team = $entry->team;
+        $feeders = $entry->items->pluck('feeder');
+
+        return view('survey.create', compact('team', 'feeders', 'entry'));
+    }
+
+    public function updateEntry(StoreSurveyEntryRequest $request, SurveyDailyEntry $entry, SurveyProgressService $service): RedirectResponse
+    {
+        $this->authorize('update', $entry);
+        $service->update($request->user(), $entry, $request->validated());
+
+        return redirect()->route('survey.index')->with('success', 'Survey entry updated before verification.');
+    }
+
     public function returned(Request $request): View
     {
-        $items = SurveyDailyEntryItem::where('status', SurveyItemStatus::Returned->value)->whereHas('entry', fn ($query) => $query->where('entered_by', $request->user()->id))->with(['entry', 'feeder'])->latest()->paginate(20);
+        $items = SurveyDailyEntryItem::where('status', SurveyItemStatus::Returned->value)->whereHas('entry', fn($query) => $query->where('entered_by', $request->user()->id))->with(['entry', 'feeder'])->latest()->paginate(20);
 
         return view('survey.returned', compact('items'));
     }

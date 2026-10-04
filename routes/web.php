@@ -9,8 +9,8 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MdbEntryController;
-use App\Http\Controllers\ProcessingAssignmentController;
-use App\Http\Controllers\ProcessingEntryController;
+use App\Http\Controllers\MdbVerificationController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SurveyEntryController;
 use App\Http\Controllers\SurveyVerificationController;
@@ -19,6 +19,10 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'create'])->name('login');
     Route::post('/login', [AuthController::class, 'store'])->middleware('throttle:login')->name('login.store');
+    Route::get('/forgot-password', [PasswordResetController::class, 'request'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'email'])->middleware('throttle:password-reset')->name('password.email');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'form'])->name('password.reset');
+    Route::post('/reset-password', [PasswordResetController::class, 'update'])->middleware('throttle:password-reset-submit')->name('password.update');
 });
 
 Route::middleware(['auth', 'active'])->group(function () {
@@ -29,6 +33,8 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/', [SurveyEntryController::class, 'index'])->name('index');
         Route::get('/create', [SurveyEntryController::class, 'create'])->name('create');
         Route::post('/', [SurveyEntryController::class, 'store'])->name('store');
+        Route::get('/entries/{entry}/edit', [SurveyEntryController::class, 'edit'])->name('edit');
+        Route::put('/entries/{entry}', [SurveyEntryController::class, 'updateEntry'])->name('update');
         Route::get('/returned', [SurveyEntryController::class, 'returned'])->name('returned');
         Route::put('/items/{item}/resubmit', [SurveyEntryController::class, 'update'])->name('resubmit');
     });
@@ -43,18 +49,17 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/', [MdbEntryController::class, 'index'])->name('index');
         Route::get('/create', [MdbEntryController::class, 'create'])->name('create');
         Route::post('/', [MdbEntryController::class, 'store'])->name('store');
+        Route::get('/entries/{entry}/edit', [MdbEntryController::class, 'edit'])->name('edit');
+        Route::put('/entries/{entry}', [MdbEntryController::class, 'update'])->name('update');
+        Route::get('/returned', [MdbEntryController::class, 'returned'])->name('returned');
+        Route::put('/items/{item}/resubmit', [MdbEntryController::class, 'resubmit'])->name('resubmit');
     });
 
-    Route::middleware('role:project_manager,super_admin')->prefix('processing/assignments')->name('processing.assignments.')->group(function () {
-        Route::get('/', [ProcessingAssignmentController::class, 'index'])->name('index');
-        Route::get('/create', [ProcessingAssignmentController::class, 'create'])->name('create');
-        Route::post('/', [ProcessingAssignmentController::class, 'store'])->name('store');
-    });
-
-    Route::middleware('role:mdb_processing_user,super_admin')->prefix('processing/entries')->name('processing.entries.')->group(function () {
-        Route::get('/', [ProcessingEntryController::class, 'index'])->name('index');
-        Route::get('/create', [ProcessingEntryController::class, 'create'])->name('create');
-        Route::post('/', [ProcessingEntryController::class, 'store'])->name('store');
+    Route::middleware('role:mdb_processing_user,super_admin')->prefix('mdb-verification')->name('mdb-verification.')->group(function () {
+        Route::get('/', [MdbVerificationController::class, 'index'])->name('index');
+        Route::get('/history', [MdbVerificationController::class, 'history'])->name('history');
+        Route::post('/items/{item}/verify', [MdbVerificationController::class, 'verify'])->name('verify');
+        Route::post('/items/{item}/return', [MdbVerificationController::class, 'return'])->name('return');
     });
 
     Route::middleware('role:super_admin,project_manager,management_viewer')->prefix('reports')->name('reports.')->group(function () {

@@ -25,6 +25,7 @@ class UsersTable
                 TextColumn::make('phone')
                     ->searchable(),
                 TextColumn::make('role')
+                    ->formatStateUsing(fn ($state) => $state instanceof UserRole ? $state->label() : $state)
                     ->badge()
                     ->searchable(),
                 TextColumn::make('status')

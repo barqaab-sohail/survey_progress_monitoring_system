@@ -2,11 +2,8 @@
 
 namespace App\Services;
 
-use App\Enums\AssignmentStatus;
 use App\Enums\SurveyItemStatus;
 use App\Models\Feeder;
-use App\Models\MdbProcessingAssignment;
-use App\Models\MdbProcessingDailyEntryItem;
 use App\Models\Organization;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -56,35 +53,38 @@ class DashboardService
             ->selectRaw("SUM(CASE WHEN status = 'verified' THEN transformers_surveyed ELSE 0 END) AS survey_verified")
             ->selectRaw("SUM(CASE WHEN status = 'submitted' THEN transformers_surveyed ELSE 0 END) AS verification_pending")
             ->groupBy('feeder_id');
-        $mdb = DB::table('mdb_daily_entry_items')->select('feeder_id')->selectRaw('SUM(mdb_files_created) AS mdb_created')->groupBy('feeder_id');
-        $assigned = DB::table('mdb_processing_assignments')
-            ->select('feeder_id')->selectRaw('SUM(assigned_quantity) AS mdb_assigned')
-            ->whereIn('status', [AssignmentStatus::Active->value, AssignmentStatus::Completed->value])->groupBy('feeder_id');
-        $processed = DB::table('mdb_processing_daily_entry_items as pi')
-            ->join('mdb_processing_assignments as pa', 'pa.id', '=', 'pi.mdb_processing_assignment_id')
-            ->select('pa.feeder_id')->selectRaw('SUM(pi.mdb_processed) AS mdb_processed')->groupBy('pa.feeder_id');
+        $mdb = DB::table('mdb_daily_entry_items')
+            ->select('feeder_id')
+            ->selectRaw('SUM(mdb_files_created) AS mdb_created')
+            ->selectRaw("SUM(CASE WHEN status = 'verified' THEN mdb_files_created ELSE 0 END) AS mdb_verified")
+            ->selectRaw("SUM(CASE WHEN status = 'submitted' THEN mdb_files_created ELSE 0 END) AS mdb_verification_pending")
+            ->selectRaw("SUM(CASE WHEN status = 'returned' THEN mdb_files_created ELSE 0 END) AS mdb_returned")
+            ->groupBy('feeder_id');
 
         return Feeder::query()
             ->with(['gridStation:id,name', 'circle:id,name', 'division:id,name'])
             ->when($projectId, fn (Builder $query) => $query->where('project_id', $projectId))
             ->leftJoinSub($survey, 'survey_totals', 'survey_totals.feeder_id', '=', 'feeders.id')
             ->leftJoinSub($mdb, 'mdb_totals', 'mdb_totals.feeder_id', '=', 'feeders.id')
-            ->leftJoinSub($assigned, 'assignment_totals', 'assignment_totals.feeder_id', '=', 'feeders.id')
-            ->leftJoinSub($processed, 'processing_totals', 'processing_totals.feeder_id', '=', 'feeders.id')
             ->select('feeders.*')
             ->selectRaw('COALESCE(survey_reported, 0) AS survey_reported')
             ->selectRaw('COALESCE(survey_verified, 0) AS survey_verified')
             ->selectRaw('COALESCE(verification_pending, 0) AS verification_pending')
             ->selectRaw('COALESCE(mdb_created, 0) AS mdb_created')
-            ->selectRaw('COALESCE(mdb_assigned, 0) AS mdb_assigned')
-            ->selectRaw('COALESCE(mdb_processed, 0) AS mdb_processed')
+            ->selectRaw('COALESCE(mdb_verified, 0) AS mdb_verified')
+            ->selectRaw('COALESCE(mdb_verification_pending, 0) AS mdb_verification_pending')
+            ->selectRaw('COALESCE(mdb_returned, 0) AS mdb_returned')
             ->orderBy('feeders.feeder_code')
             ->get()
             ->map(function (Feeder $feeder) {
                 $feeder->survey_pending = max($feeder->total_transformers - $feeder->survey_reported, 0);
                 $feeder->mdb_creation_backlog = max($feeder->survey_verified - $feeder->mdb_created, 0);
-                $feeder->mdb_processing_backlog = max($feeder->mdb_created - $feeder->mdb_processed, 0);
-                $feeder->unassigned_mdb = max($feeder->mdb_created - $feeder->mdb_assigned, 0);
+                $feeder->mdb_verification_backlog = max($feeder->mdb_created - $feeder->mdb_verified, 0);
+                // Retain service keys used by older integrations while counting the current workflow.
+                $feeder->mdb_processed = $feeder->mdb_verified;
+                $feeder->mdb_processing_backlog = $feeder->mdb_verification_backlog;
+                $feeder->mdb_assigned = $feeder->mdb_created;
+                $feeder->unassigned_mdb = 0;
                 $feeder->progress_status = $this->statusFor($feeder);
 
                 return $feeder;
@@ -122,7 +122,7 @@ class DashboardService
     public function summaryFor(Collection $feeders): array
     {
         $eligible = $feeders->filter(fn (Feeder $feeder) => ! $feeder->baseline_pending && $feeder->total_transformers > 0);
-        $keys = ['total_transformers', 'survey_reported', 'survey_verified', 'survey_pending', 'verification_pending', 'mdb_created', 'mdb_creation_backlog', 'mdb_assigned', 'mdb_processed', 'mdb_processing_backlog', 'unassigned_mdb'];
+        $keys = ['total_transformers', 'survey_reported', 'survey_verified', 'survey_pending', 'verification_pending', 'mdb_created', 'mdb_creation_backlog', 'mdb_verified', 'mdb_verification_pending', 'mdb_returned', 'mdb_verification_backlog', 'mdb_assigned', 'mdb_processed', 'mdb_processing_backlog', 'unassigned_mdb'];
         $summary = collect($keys)->mapWithKeys(fn ($key) => [$key => (int) $eligible->sum($key)])->all();
         $summary += [
             'total_feeders' => $feeders->count(),
@@ -137,6 +137,7 @@ class DashboardService
             'survey_verified' => round($summary['survey_verified'] / $baseline * 100, 1),
             'mdb_created' => round($summary['mdb_created'] / $baseline * 100, 1),
             'mdb_eligible' => round($summary['mdb_created'] / $verified * 100, 1),
+            'mdb_verified' => round($summary['mdb_verified'] / $baseline * 100, 1),
             'mdb_processed' => round($summary['mdb_processed'] / $baseline * 100, 1),
         ];
 
@@ -170,10 +171,22 @@ class DashboardService
         $surveyScore = $surveyDays ?? ($summary['survey_pending'] > 0 ? PHP_INT_MAX : 0);
         $mdbScore = $mdbDays ?? ($summary['mdb_creation_backlog'] > 0 ? PHP_INT_MAX : 0);
 
-        if ($summary['survey_pending'] === 0 && $summary['mdb_creation_backlog'] === 0) {
+        if ($summary['survey_pending'] === 0 && $summary['mdb_creation_backlog'] === 0 && $summary['verification_pending'] > 0) {
+            $focus = 'Complete survey verification';
+            $tone = 'warning';
+            $reason = number_format($summary['verification_pending']).' reported surveys are waiting for the MDB user to verify them.';
+        } elseif ($summary['survey_pending'] === 0 && $summary['mdb_creation_backlog'] === 0 && $summary['mdb_returned'] > 0) {
+            $focus = 'Correct returned MDB files';
+            $tone = 'danger';
+            $reason = number_format($summary['mdb_returned']).' MDB files were returned and need correction by the MDB user.';
+        } elseif ($summary['survey_pending'] === 0 && $summary['mdb_creation_backlog'] === 0 && $summary['mdb_verification_pending'] > 0) {
+            $focus = 'Complete MDB verification';
+            $tone = 'warning';
+            $reason = number_format($summary['mdb_verification_pending']).' MDB files are waiting for third-party verification.';
+        } elseif ($summary['survey_pending'] === 0 && $summary['mdb_creation_backlog'] === 0) {
             $focus = 'Maintain current staffing';
             $tone = 'success';
-            $reason = 'There is no current survey or MDB creation backlog for baselined feeders.';
+            $reason = 'Survey, MDB creation and MDB verification are complete for baselined feeders.';
         } elseif ($mdbScore > $surveyScore) {
             $focus = 'Add MDB creation resources';
             $tone = 'danger';
@@ -236,15 +249,19 @@ class DashboardService
     {
         $surveyTotals = $this->surveyPeriodTotals($from, $to, $feederIds);
         $mdb = DB::table('mdb_daily_entry_items as i')->join('mdb_daily_entries as e', 'e.id', '=', 'i.mdb_daily_entry_id')->whereBetween('e.entry_date', [$from->toDateString(), $to->toDateString()]);
-        $processed = DB::table('mdb_processing_daily_entry_items as i')->join('mdb_processing_daily_entries as e', 'e.id', '=', 'i.mdb_processing_daily_entry_id')->join('mdb_processing_assignments as a', 'a.id', '=', 'i.mdb_processing_assignment_id')->whereBetween('e.entry_date', [$from->toDateString(), $to->toDateString()]);
+        $verified = DB::table('mdb_daily_entry_items')->where('status', 'verified')
+            ->whereBetween('verified_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()]);
         if ($feederIds !== null) {
             $mdb->whereIn('i.feeder_id', $feederIds);
-            $processed->whereIn('a.feeder_id', $feederIds);
+            $verified->whereIn('feeder_id', $feederIds);
         }
+
+        $verifiedQuantity = (int) $verified->sum('mdb_files_created');
 
         return $surveyTotals + [
             'mdb_created' => (int) $mdb->sum('i.mdb_files_created'),
-            'mdb_processed' => (int) $processed->sum('i.mdb_processed'),
+            'mdb_verified' => $verifiedQuantity,
+            'mdb_processed' => $verifiedQuantity,
         ];
     }
 
@@ -276,32 +293,43 @@ class DashboardService
             ->whereDate('e.entry_date', '>=', $start)->whereIn('i.status', [SurveyItemStatus::Submitted->value, SurveyItemStatus::Verified->value]);
         $mdb = DB::table('mdb_daily_entry_items as i')->join('mdb_daily_entries as e', 'e.id', '=', 'i.mdb_daily_entry_id')
             ->whereDate('e.entry_date', '>=', $start);
-        $processing = DB::table('mdb_processing_daily_entry_items as i')->join('mdb_processing_daily_entries as e', 'e.id', '=', 'i.mdb_processing_daily_entry_id')
-            ->join('mdb_processing_assignments as a', 'a.id', '=', 'i.mdb_processing_assignment_id')->whereDate('e.entry_date', '>=', $start);
+        $verified = DB::table('mdb_daily_entry_items')->where('status', 'verified')->whereDate('verified_at', '>=', $start);
         if ($feederIds !== null) {
             $survey->whereIn('i.feeder_id', $feederIds);
             $mdb->whereIn('i.feeder_id', $feederIds);
-            $processing->whereIn('a.feeder_id', $feederIds);
+            $verified->whereIn('feeder_id', $feederIds);
         }
         $survey = $survey->select('e.entry_date')->selectRaw('SUM(i.transformers_surveyed) total')->groupBy('e.entry_date')->pluck('total', 'entry_date');
         $mdb = $mdb->select('e.entry_date')->selectRaw('SUM(i.mdb_files_created) total')->groupBy('e.entry_date')->pluck('total', 'entry_date');
-        $processing = $processing->select('e.entry_date')->selectRaw('SUM(i.mdb_processed) total')->groupBy('e.entry_date')->pluck('total', 'entry_date');
+        $verified = $verified->selectRaw('DATE(verified_at) day')->selectRaw('SUM(mdb_files_created) total')->groupBy(DB::raw('DATE(verified_at)'))->pluck('total', 'day');
 
-        return collect(range(0, $days - 1))->map(function ($offset) use ($start, $survey, $mdb, $processing) {
+        return collect(range(0, $days - 1))->map(function ($offset) use ($start, $survey, $mdb, $verified) {
             $date = $start->copy()->addDays($offset)->toDateString();
 
-            return ['date' => $date, 'survey' => (int) ($survey[$date] ?? 0), 'mdb' => (int) ($mdb[$date] ?? 0), 'processed' => (int) ($processing[$date] ?? 0)];
+            return ['date' => $date, 'survey' => (int) ($survey[$date] ?? 0), 'mdb' => (int) ($mdb[$date] ?? 0), 'verified' => (int) ($verified[$date] ?? 0), 'processed' => (int) ($verified[$date] ?? 0)];
         });
+    }
+
+    public function mdbReviewSummary(?int $organizationId = null): array
+    {
+        $totals = DB::table('mdb_daily_entry_items')
+            ->selectRaw('COALESCE(SUM(mdb_files_created), 0) total_created')
+            ->selectRaw("COALESCE(SUM(CASE WHEN status = 'submitted' THEN mdb_files_created ELSE 0 END), 0) submitted")
+            ->selectRaw("COALESCE(SUM(CASE WHEN status = 'verified' THEN mdb_files_created ELSE 0 END), 0) verified")
+            ->selectRaw("COALESCE(SUM(CASE WHEN status = 'returned' THEN mdb_files_created ELSE 0 END), 0) returned")
+            ->selectRaw("SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) pending_rows")
+            ->first();
+        $verifiedToday = DB::table('mdb_daily_entry_items as i')->where('i.status', 'verified')->whereDate('i.verified_at', today());
+        if ($organizationId !== null) {
+            $verifiedToday->join('users as u', 'u.id', '=', 'i.verified_by')->where('u.organization_id', $organizationId);
+        }
+
+        return array_map('intval', (array) $totals) + ['verified_today' => (int) $verifiedToday->sum('i.mdb_files_created')];
     }
 
     public function organizationSummary(Organization $organization): array
     {
-        $assignments = MdbProcessingAssignment::query()->where('organization_id', $organization->id)->withSum('progressItems', 'mdb_processed')->get();
-        $assigned = (int) $assignments->sum('assigned_quantity');
-        $processed = (int) $assignments->sum('progress_items_sum_mdb_processed');
-        $today = (int) MdbProcessingDailyEntryItem::query()->whereHas('entry', fn (Builder $query) => $query->where('organization_id', $organization->id)->whereDate('entry_date', today()))->sum('mdb_processed');
-
-        return compact('assigned', 'processed', 'today') + ['remaining' => max($assigned - $processed, 0), 'completion' => $assigned ? round($processed / $assigned * 100, 1) : 0];
+        return $this->mdbReviewSummary($organization->id);
     }
 
     public function surveyTeamPerformance(): Collection
@@ -346,25 +374,20 @@ class DashboardService
         $today = today()->toDateString();
         $week = today()->startOfWeek()->toDateString();
         $month = today()->startOfMonth()->toDateString();
-        $assigned = DB::table('mdb_processing_assignments')->whereIn('status', [AssignmentStatus::Active->value, AssignmentStatus::Completed->value])
-            ->select('organization_id')->selectRaw('SUM(assigned_quantity) assigned')->groupBy('organization_id');
-        $processed = DB::table('mdb_processing_daily_entries as e')->join('mdb_processing_daily_entry_items as i', 'i.mdb_processing_daily_entry_id', '=', 'e.id')
-            ->select('e.organization_id')->selectRaw('SUM(i.mdb_processed) processed')
-            ->selectRaw('SUM(CASE WHEN e.entry_date = ? THEN i.mdb_processed ELSE 0 END) today', [$today])
-            ->selectRaw('SUM(CASE WHEN e.entry_date >= ? THEN i.mdb_processed ELSE 0 END) this_week', [$week])
-            ->selectRaw('SUM(CASE WHEN e.entry_date >= ? THEN i.mdb_processed ELSE 0 END) this_month', [$month])
-            ->groupBy('e.organization_id');
+        $reviews = DB::table('mdb_verification_histories as h')->join('users as u', 'u.id', '=', 'h.acted_by')
+            ->select('u.organization_id')
+            ->selectRaw("SUM(CASE WHEN h.action = 'verified' THEN h.quantity_snapshot ELSE 0 END) verified")
+            ->selectRaw("SUM(CASE WHEN h.action = 'returned' THEN h.quantity_snapshot ELSE 0 END) returned")
+            ->selectRaw("SUM(CASE WHEN h.action = 'verified' AND DATE(h.acted_at) = ? THEN h.quantity_snapshot ELSE 0 END) today", [$today])
+            ->selectRaw("SUM(CASE WHEN h.action = 'verified' AND DATE(h.acted_at) >= ? THEN h.quantity_snapshot ELSE 0 END) this_week", [$week])
+            ->selectRaw("SUM(CASE WHEN h.action = 'verified' AND DATE(h.acted_at) >= ? THEN h.quantity_snapshot ELSE 0 END) this_month", [$month])
+            ->groupBy('u.organization_id');
 
-        return DB::table('organizations as o')->leftJoinSub($assigned, 'a', 'a.organization_id', '=', 'o.id')->leftJoinSub($processed, 'p', 'p.organization_id', '=', 'o.id')
-            ->whereNull('o.deleted_at')->select('o.id', 'o.name', 'o.type')
-            ->selectRaw('COALESCE(a.assigned, 0) assigned')->selectRaw('COALESCE(p.processed, 0) processed')
+        return DB::table('organizations as o')->leftJoinSub($reviews, 'p', 'p.organization_id', '=', 'o.id')
+            ->whereNull('o.deleted_at')->where('o.type', 'third_party')->where('o.status', 'active')->select('o.id', 'o.name', 'o.type')
+            ->selectRaw('COALESCE(p.verified, 0) verified')->selectRaw('COALESCE(p.returned, 0) returned')
             ->selectRaw('COALESCE(p.today, 0) today')->selectRaw('COALESCE(p.this_week, 0) this_week')->selectRaw('COALESCE(p.this_month, 0) this_month')
-            ->orderBy('o.name')->get()->map(function ($row) {
-                $row->remaining = max($row->assigned - $row->processed, 0);
-                $row->completion = $row->assigned ? round($row->processed / $row->assigned * 100, 1) : 0;
-
-                return $row;
-            });
+            ->orderBy('o.name')->get();
     }
 
     private function statusFor(Feeder $feeder): string
@@ -375,11 +398,12 @@ class DashboardService
 
         $complete = $feeder->survey_verified >= $feeder->total_transformers
             && $feeder->mdb_created >= $feeder->total_transformers
-            && (! $feeder->processing_required || $feeder->mdb_processed >= $feeder->total_transformers);
+            && $feeder->mdb_verified >= $feeder->total_transformers;
 
         return match (true) {
             $complete => 'COMPLETED',
-            $feeder->mdb_processed > 0 || $feeder->mdb_assigned > 0 => 'MDB PROCESSING RUNNING',
+            $feeder->mdb_returned > 0 => 'MDB RETURNED',
+            $feeder->mdb_verification_pending > 0 => 'MDB VERIFICATION PENDING',
             $feeder->mdb_created > 0 || $feeder->survey_verified > 0 => 'MDB CREATION RUNNING',
             $feeder->verification_pending > 0 => 'VERIFICATION PENDING',
             $feeder->survey_reported > 0 => 'SURVEY RUNNING',

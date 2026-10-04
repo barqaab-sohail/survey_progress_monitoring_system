@@ -47,8 +47,7 @@ class ReportController extends Controller
             'circle_id' => ['nullable', 'exists:circles,id'], 'division_id' => ['nullable', 'exists:divisions,id'],
             'grid_station_id' => ['nullable', 'exists:grid_stations,id'], 'feeder_id' => ['nullable', 'exists:feeders,id'],
             'survey_team_id' => ['nullable', 'exists:survey_teams,id'], 'organization_id' => ['nullable', 'exists:organizations,id'],
-            'progress_status' => ['nullable', Rule::in(['NOT STARTED', 'SURVEY RUNNING', 'VERIFICATION PENDING', 'MDB CREATION RUNNING', 'MDB PROCESSING RUNNING', 'COMPLETED'])],
-            'assignment_status' => ['nullable', Rule::in(['active', 'completed', 'cancelled'])],
+            'progress_status' => ['nullable', Rule::in(['BASELINE PENDING', 'NOT STARTED', 'SURVEY RUNNING', 'VERIFICATION PENDING', 'MDB CREATION RUNNING', 'MDB VERIFICATION PENDING', 'MDB RETURNED', 'COMPLETED'])],
         ]);
         $type = $data['report'] ?? 'overall';
         $data['from'] = $data['from'] ?? today()->startOfMonth()->toDateString();
@@ -66,7 +65,7 @@ class ReportController extends Controller
             'reportTypes' => ReportService::TYPES,
             'circles' => Circle::orderBy('name')->get(), 'divisions' => Division::orderBy('name')->get(),
             'grids' => GridStation::orderBy('name')->get(), 'feeders' => Feeder::orderBy('feeder_code')->get(),
-            'surveyTeams' => SurveyTeam::orderBy('name')->get(), 'organizations' => Organization::orderBy('name')->get(),
+            'surveyTeams' => SurveyTeam::orderBy('name')->get(), 'organizations' => Organization::where('type', 'third_party')->orderBy('name')->get(),
         ];
     }
 }

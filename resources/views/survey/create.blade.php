@@ -1,12 +1,26 @@
 @extends('layouts.app')
-@section('title','Add Daily Survey')
+@section('title', isset($entry) ? 'Edit Daily Survey' : 'Add Daily Survey')
 @section('content')
-<div class="page-head"><div><h1>Add Daily Survey Progress</h1><p>{{ $team->name }} · enter only today's completed quantities.</p></div><a class="btn btn-light" href="{{ route('survey.index') }}">View history</a></div>
-<form class="card" method="POST" action="{{ route('survey.store') }}">@csrf
-<div class="form-grid"><div class="field"><label for="entry_date">Date</label><input id="entry_date" type="date" name="entry_date" max="{{ today()->toDateString() }}" value="{{ old('entry_date',today()->toDateString()) }}" required></div><div class="field"><label for="remarks">Overall remarks <small>(optional)</small></label><input id="remarks" name="remarks" value="{{ old('remarks') }}" maxlength="2000"></div></div>
-<div class="section-title"><h2>Feeders surveyed</h2><button class="btn btn-sm btn-light" type="button" data-add-row>+ Add feeder</button></div>
-<div data-row-list><div class="row-card"><div class="row-card-head"><strong data-row-number>Feeder 1</strong><button type="button" class="btn btn-sm btn-light" data-remove-row>Remove</button></div><div class="form-grid"><div class="field"><label>Feeder</label><select name="items[0][feeder_id]" required><option value="">Select assigned feeder</option>@foreach($feeders as $feeder)<option value="{{ $feeder->id }}">{{ $feeder->feeder_code }} — {{ $feeder->feeder_name }} ({{ $feeder->total_transformers }})</option>@endforeach</select></div><div class="field"><label>Transformers surveyed today</label><input data-quantity inputmode="numeric" type="number" min="1" name="items[0][transformers_surveyed]" required></div><div class="field"><label>Survey Drive link <small>(optional)</small></label><input type="url" name="items[0][drive_url]" placeholder="Uses feeder default when blank"></div><div class="field"><label>Remarks <small>(optional)</small></label><input name="items[0][remarks]" maxlength="1000"></div></div></div></div>
-<div class="form-footer"><strong class="form-total">Total today: <span data-total>0</span></strong><button class="btn btn-primary" type="submit">Submit for verification</button></div></form>
-<template id="row-template"><div class="row-card"><div class="row-card-head"><strong data-row-number></strong><button type="button" class="btn btn-sm btn-light" data-remove-row>Remove</button></div><div class="form-grid"><div class="field"><label>Feeder</label><select name="items[0][feeder_id]" required><option value="">Select assigned feeder</option>@foreach($feeders as $feeder)<option value="{{ $feeder->id }}">{{ $feeder->feeder_code }} — {{ $feeder->feeder_name }} ({{ $feeder->total_transformers }})</option>@endforeach</select></div><div class="field"><label>Transformers surveyed today</label><input data-quantity inputmode="numeric" type="number" min="1" name="items[0][transformers_surveyed]" required></div><div class="field"><label>Survey Drive link</label><input type="url" name="items[0][drive_url]"></div><div class="field"><label>Remarks</label><input name="items[0][remarks]" maxlength="1000"></div></div></div></template>
+<div class="page-head"><div><h1>{{ isset($entry) ? 'Edit Daily Survey Progress' : 'Add Daily Survey Progress' }}</h1><p>{{ $team->name }} · {{ isset($entry) ? 'Correct this entry before verification. Original feeder rows are retained.' : "enter only today's completed quantities." }}</p></div><a class="btn btn-light" href="{{ route('survey.index') }}">View history</a></div>
+@if($feeders->isEmpty())
+<div class="card" role="alert"><h2>No feeders assigned</h2><p>Excel import adds feeder master data. An administrator must assign feeders to {{ $team->name }} in Teams &amp; Assignments before you can add survey progress.</p>@if(auth()->user()->hasRole(\App\Enums\UserRole::SuperAdmin->value))<a class="btn btn-primary" href="{{ route('admin.teams.index') }}">Assign survey feeders</a>@endif</div>
+@else
+@if($feeders->contains(fn ($feeder) => $feeder->baseline_pending || $feeder->total_transformers < 1))
+<div class="card" role="alert"><p>Feeders marked "baseline pending" need verified transformer totals before survey progress can be submitted. Ask an administrator to update their totals in Feeder Master Data.</p></div>
+@endif
+<form class="card" method="POST" action="{{ isset($entry) ? route('survey.update', $entry) : route('survey.store') }}">@csrf
+@isset($entry) @method('PUT') @endisset
+<div class="form-grid"><div class="field"><label for="entry_date">Date</label><input id="entry_date" type="date" name="entry_date" max="{{ today()->toDateString() }}" value="{{ old('entry_date', isset($entry) ? $entry->entry_date->toDateString() : today()->toDateString()) }}" required></div><div class="field"><label for="remarks">Overall remarks <small>(optional)</small></label><input id="remarks" name="remarks" value="{{ old('remarks', $entry->remarks ?? '') }}" maxlength="2000"></div></div>
+<div class="section-title"><h2>Feeders surveyed</h2>@if(!isset($entry))<button class="btn btn-sm btn-light" type="button" data-add-row>+ Add feeder</button>@endif</div>
+<div data-row-list>
+@foreach(old('items', isset($entry) ? $entry->items->toArray() : [[]]) as $item)
+@include('survey.partials.feeder-row', ['index' => $loop->index, 'item' => $item])
+@endforeach
+</div>
+<div class="form-footer"><strong class="form-total">Total for entry: <span data-total>0</span></strong><button class="btn btn-primary" type="submit">{{ isset($entry) ? 'Save changes' : 'Submit for verification' }}</button></div></form>
+<template id="row-template">@include('survey.partials.feeder-row', ['index' => 0, 'item' => []])</template>
+@endif
 @endsection
+@if($feeders->isNotEmpty())
 @push('scripts')@include('components.entry-repeater-script')@endpush
+@endif

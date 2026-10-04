@@ -40,10 +40,9 @@ class MasterDataController extends Controller
 
         $data = $request->validate([
             'feeder_name' => ['required', 'string', 'max:255'], 'total_transformers' => ['required', 'integer', 'min:1'],
-            'survey_drive_url' => ['nullable', 'url:http,https'], 'mdb_drive_url' => ['nullable', 'url:http,https'], 'processing_drive_url' => ['nullable', 'url:http,https'],
-            'processing_required' => ['nullable', 'boolean'], 'status' => ['required', 'in:active,inactive'],
+            'survey_drive_url' => ['nullable', 'url:http,https'], 'mdb_drive_url' => ['nullable', 'url:http,https'],
+            'status' => ['required', 'in:active,inactive'],
         ]);
-        $data['processing_required'] = $request->boolean('processing_required');
         $data['baseline_pending'] = false;
         $data['demo_baseline'] = false;
         $old = $feeder->toArray();

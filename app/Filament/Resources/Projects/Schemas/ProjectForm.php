@@ -5,7 +5,6 @@ namespace App\Filament\Resources\Projects\Schemas;
 use App\Enums\RecordStatus;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 
 class ProjectForm
@@ -21,8 +20,6 @@ class ProjectForm
                 TextInput::make('timezone')
                     ->required()
                     ->default('Asia/Karachi'),
-                Toggle::make('processing_required')
-                    ->required(),
                 Select::make('status')
                     ->options(RecordStatus::class)
                     ->default('active')

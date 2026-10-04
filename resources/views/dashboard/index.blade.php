@@ -39,7 +39,8 @@
         <span class="visual-action-label">Management action</span>
         <div class="action-icon">!</div>
         <h2>{{ $decision['focus'] }}</h2>
-        <div class="action-backlog"><span>Largest active constraint</span><strong>{{ number_format(max($summary['survey_pending'], $summary['mdb_creation_backlog'])) }}</strong></div>
+        <p>{{ $decision['reason'] }}</p>
+        <div class="action-backlog"><span>Largest active constraint</span><strong>{{ number_format(max($summary['survey_pending'], $summary['mdb_creation_backlog'], $summary['mdb_verification_pending'], $summary['mdb_returned'])) }}</strong></div>
         <div class="action-days">
             <div><strong>{{ $decision['survey_clear_days'] ?? '—' }}</strong><span>days<br>survey</span></div>
             <div class="versus">VS</div>
@@ -68,35 +69,42 @@
     </article>
 </section>
 
+<div class="section-title"><div><span class="eyebrow">Final review</span><h2>MDB verification status</h2></div></div>
+<section class="grid kpi-grid">
+    @foreach(['mdb_created' => ['MDB files created', ''], 'mdb_verified' => ['Verified by third party', 'accent-green'], 'mdb_verification_pending' => ['Awaiting verification', 'accent-amber'], 'mdb_returned' => ['Returned to MDB user', 'accent-red']] as $key => [$label, $accent])
+    <div class="card kpi {{ $accent }}"><i class="kpi-accent"></i><div class="kpi-label">{{ $label }}</div><div class="kpi-value">{{ number_format($summary[$key]) }}</div></div>
+    @endforeach
+</section>
+
 <div class="section-title"><div><span class="eyebrow">Geographic allocation</span><h2>Circle-level resource priorities</h2></div></div>
 <div class="card graph-card wide-graph-card">
-    <div class="graph-key"><span><i class="survey-key"></i>Survey pending</span><span><i class="mdb-key"></i>MDB pending</span><small>Longer bar = greater need for resources</small></div>
+    <div class="graph-key"><span><i class="survey-key"></i>Survey pending</span><span><i class="mdb-key"></i>MDB creation pending</span><small>Longer bar = greater need for resources</small></div>
     <canvas id="circleBacklogChart" class="management-chart comparison-chart" aria-label="Survey and MDB backlog by circle"></canvas>
 </div>
 <details class="detail-panel compact-detail">
     <summary><span><strong>View exact circle values</strong><small>Baseline coverage and completion percentages</small></span><b>Expand</b></summary>
-    <div class="card table-wrap priority-table-wrap"><table class="table management-table"><thead><tr><th>Circle</th><th>Baseline coverage</th><th>Survey completed</th><th>Survey pending</th><th>MDB created / eligible</th><th>MDB pending</th><th>Suggested focus</th></tr></thead><tbody>@foreach($circleProgress as $row)<tr><td><strong>{{ $row->name }}</strong><small>{{ $row->feeders }} feeders total</small></td><td>{{ $row->baselined_feeders }} / {{ $row->feeders }}</td><td>{{ number_format($row->survey_reported) }} ({{ $row->survey_percentage }}%)</td><td>{{ number_format($row->survey_pending) }}</td><td>{{ number_format($row->mdb_created) }} / {{ number_format($row->survey_verified) }}</td><td>{{ number_format($row->mdb_backlog) }}</td><td>{{ $row->focus }}</td></tr>@endforeach</tbody></table></div>
+    <div class="card table-wrap priority-table-wrap"><table class="table management-table"><thead><tr><th>Circle</th><th>Baseline coverage</th><th>Survey completed</th><th>Survey pending</th><th>MDB created / eligible</th><th>MDB creation pending</th><th>Suggested focus</th></tr></thead><tbody>@foreach($circleProgress as $row)<tr><td><strong>{{ $row->name }}</strong><small>{{ $row->feeders }} feeders total</small></td><td>{{ $row->baselined_feeders }} / {{ $row->feeders }}</td><td>{{ number_format($row->survey_reported) }} ({{ $row->survey_percentage }}%)</td><td>{{ number_format($row->survey_pending) }}</td><td>{{ number_format($row->mdb_created) }} / {{ number_format($row->survey_verified) }}</td><td>{{ number_format($row->mdb_backlog) }}</td><td>{{ $row->focus }}</td></tr>@endforeach</tbody></table></div>
 </details>
 
 <div class="section-title"><div><span class="eyebrow">Immediate attention</span><h2>Highest-backlog feeders</h2></div><span class="muted">Ranked by survey + MDB backlog</span></div>
 <div class="card graph-card wide-graph-card">
-    <div class="graph-key"><span><i class="survey-key"></i>Survey pending</span><span><i class="mdb-key"></i>MDB pending</span><small>Top eight feeders requiring attention</small></div>
+    <div class="graph-key"><span><i class="survey-key"></i>Survey pending</span><span><i class="mdb-key"></i>MDB creation pending</span><small>Top eight feeders requiring attention</small></div>
     <canvas id="feederBacklogChart" class="management-chart feeder-chart" aria-label="Highest survey and MDB feeder backlogs"></canvas>
 </div>
 
 <div class="section-title"><div><span class="eyebrow">Recent production</span><h2>Daily output trend</h2></div><div class="actions no-print"><a class="btn btn-sm btn-light" href="?days=7">7 days</a><a class="btn btn-sm btn-light" href="?days=14">14 days</a><a class="btn btn-sm btn-light" href="?days=30">30 days</a></div></div>
-<div class="card trend-card"><canvas id="trendChart" class="chart" aria-label="Daily survey, MDB creation and processing trend"></canvas><div class="legend"><span><i style="background:#1358a2"></i>Survey</span><span><i style="background:#16835b"></i>MDB created</span><span><i style="background:#c77800"></i>Processed</span></div></div>
+<div class="card trend-card"><canvas id="trendChart" class="chart" aria-label="Daily survey, MDB creation and verification trend"></canvas><div class="legend"><span><i style="background:#1358a2"></i>Survey</span><span><i style="background:#16835b"></i>MDB created</span><span><i style="background:#c77800"></i>MDB verified</span></div></div>
 
 <section class="grid period-grid">
 @foreach(['Today'=>$today,'This week'=>$week,'This month'=>$month] as $period=>$totals)
-    <div class="card period-card"><h3>{{ $period }}</h3><div class="mini-stats">@foreach(['survey_reported'=>'Survey','survey_verified'=>'Verified','mdb_created'=>'MDB created','mdb_processed'=>'Processed'] as $key=>$label)<div class="mini-stat"><span>{{ $label }}</span><strong>{{ number_format($totals[$key]) }}</strong></div>@endforeach</div></div>
+    <div class="card period-card"><h3>{{ $period }}</h3><div class="mini-stats">@foreach(['survey_reported'=>'Survey','survey_verified'=>'Survey verified','mdb_created'=>'MDB created','mdb_verified'=>'MDB verified'] as $key=>$label)<div class="mini-stat"><span>{{ $label }}</span><strong>{{ number_format($totals[$key]) }}</strong></div>@endforeach</div></div>
 @endforeach
 </section>
 
 <details class="detail-panel" id="feeder-progress">
     <summary><span><strong>Feeder-wise detailed progress</strong><small>{{ $feeders->count() }} feeders · open for operational detail</small></span><b>Expand</b></summary>
-    <div class="card desktop-table table-wrap"><table class="table"><thead><tr><th>Feeder</th><th>Grid station</th><th>Total</th><th>Survey</th><th>Verified</th><th>Survey pending</th><th>Verification</th><th>MDB</th><th>MDB backlog</th><th>Status</th></tr></thead><tbody>@forelse($feeders as $feeder)<tr><td><strong>{{ $feeder->feeder_code }}</strong><br><small>{{ $feeder->feeder_name }}</small></td><td>{{ $feeder->gridStation?->name }}</td><td>{{ $feeder->total_transformers }}</td><td>{{ $feeder->survey_reported }}</td><td>{{ $feeder->survey_verified }}</td><td>{{ $feeder->survey_pending }}</td><td>{{ $feeder->verification_pending }}</td><td>{{ $feeder->mdb_created }}</td><td>{{ $feeder->mdb_creation_backlog }}</td><td><span class="status {{ $feeder->progress_status==='COMPLETED'?'status-completed':'' }}">{{ $feeder->progress_status }}</span></td></tr>@empty<tr><td colspan="10" class="empty">No feeder master data has been loaded.</td></tr>@endforelse</tbody></table></div>
-    <div class="mobile-cards">@foreach($feeders as $feeder)<article class="mobile-record"><h3>{{ $feeder->feeder_code }}</h3><span class="muted">{{ $feeder->feeder_name }} · {{ $feeder->gridStation?->name }}</span><dl><div><dt>Total</dt><dd>{{ $feeder->total_transformers }}</dd></div><div><dt>Surveyed</dt><dd>{{ $feeder->survey_reported }}</dd></div><div><dt>Verified</dt><dd>{{ $feeder->survey_verified }}</dd></div><div><dt>Survey pending</dt><dd>{{ $feeder->survey_pending }}</dd></div><div><dt>MDB created</dt><dd>{{ $feeder->mdb_created }}</dd></div><div><dt>MDB pending</dt><dd>{{ $feeder->mdb_creation_backlog }}</dd></div></dl><span class="status">{{ $feeder->progress_status }}</span></article>@endforeach</div>
+    <div class="card desktop-table table-wrap"><table class="table"><thead><tr><th>Feeder</th><th>Grid station</th><th>Total</th><th>Survey</th><th>Verified</th><th>Survey pending</th><th>Survey verification pending</th><th>MDB created</th><th>MDB creation backlog</th><th>MDB verified</th><th>MDB verification pending</th><th>MDB returned</th><th>Status</th></tr></thead><tbody>@forelse($feeders as $feeder)<tr><td><strong>{{ $feeder->feeder_code }}</strong><br><small>{{ $feeder->feeder_name }}</small></td><td>{{ $feeder->gridStation?->name }}</td><td>{{ $feeder->total_transformers }}</td><td>{{ $feeder->survey_reported }}</td><td>{{ $feeder->survey_verified }}</td><td>{{ $feeder->survey_pending }}</td><td>{{ $feeder->verification_pending }}</td><td>{{ $feeder->mdb_created }}</td><td>{{ $feeder->mdb_creation_backlog }}</td><td>{{ $feeder->mdb_verified }}</td><td>{{ $feeder->mdb_verification_pending }}</td><td>{{ $feeder->mdb_returned }}</td><td><span class="status {{ $feeder->progress_status==='COMPLETED'?'status-completed':'' }}">{{ $feeder->progress_status }}</span></td></tr>@empty<tr><td colspan="13" class="empty">No feeder master data has been loaded.</td></tr>@endforelse</tbody></table></div>
+    <div class="mobile-cards">@foreach($feeders as $feeder)<article class="mobile-record"><h3>{{ $feeder->feeder_code }}</h3><span class="muted">{{ $feeder->feeder_name }} · {{ $feeder->gridStation?->name }}</span><dl><div><dt>Total</dt><dd>{{ $feeder->total_transformers }}</dd></div><div><dt>Surveyed</dt><dd>{{ $feeder->survey_reported }}</dd></div><div><dt>Verified</dt><dd>{{ $feeder->survey_verified }}</dd></div><div><dt>Survey pending</dt><dd>{{ $feeder->survey_pending }}</dd></div><div><dt>MDB created</dt><dd>{{ $feeder->mdb_created }}</dd></div><div><dt>MDB creation pending</dt><dd>{{ $feeder->mdb_creation_backlog }}</dd></div><div><dt>MDB verified</dt><dd>{{ $feeder->mdb_verified }}</dd></div><div><dt>MDB verification pending</dt><dd>{{ $feeder->mdb_verification_pending }}</dd></div><div><dt>MDB returned</dt><dd>{{ $feeder->mdb_returned }}</dd></div></dl><span class="status">{{ $feeder->progress_status }}</span></article>@endforeach</div>
 </details>
 
 @if($surveyPerformance->isNotEmpty() || $mdbPerformance->isNotEmpty() || $processingPerformance->isNotEmpty())
@@ -106,8 +114,8 @@
     <div class="card table-wrap"><table class="table"><thead><tr><th>Survey team</th><th>Reported today</th><th>Verified today</th><th>Returned rows</th><th>This week</th><th>This month</th><th>Overall</th></tr></thead><tbody>@foreach($surveyPerformance as $row)<tr><td><strong>{{ $row->name }}</strong></td><td>{{ $row->reported_today }}</td><td>{{ $row->verified_today }}</td><td>{{ $row->returned }}</td><td>{{ $row->this_week }}</td><td>{{ $row->this_month }}</td><td>{{ $row->overall }}</td></tr>@endforeach</tbody></table></div>
     <div class="section-title"><h2>MDB team production</h2></div>
     <div class="card table-wrap"><table class="table"><thead><tr><th>MDB user</th><th>Today</th><th>This week</th><th>This month</th><th>Overall</th></tr></thead><tbody>@foreach($mdbPerformance as $row)<tr><td><strong>{{ $row->name }}</strong></td><td>{{ $row->today }}</td><td>{{ $row->this_week }}</td><td>{{ $row->this_month }}</td><td>{{ $row->overall }}</td></tr>@endforeach</tbody></table></div>
-    <div class="section-title"><h2>Processing organization performance</h2></div>
-    <div class="card table-wrap"><table class="table"><thead><tr><th>Organization</th><th>Type</th><th>Assigned</th><th>Processed</th><th>Remaining</th><th>Today</th><th>This week</th><th>This month</th><th>Completion</th></tr></thead><tbody>@foreach($processingPerformance as $row)<tr><td><strong>{{ $row->name }}</strong></td><td>{{ strtoupper(str_replace('_',' ',$row->type)) }}</td><td>{{ $row->assigned }}</td><td>{{ $row->processed }}</td><td>{{ $row->remaining }}</td><td>{{ $row->today }}</td><td>{{ $row->this_week }}</td><td>{{ $row->this_month }}</td><td>{{ $row->completion }}%</td></tr>@endforeach</tbody></table></div>
+    <div class="section-title"><h2>Third-party MDB verification performance</h2></div>
+    <div class="card table-wrap"><table class="table"><thead><tr><th>Organization</th><th>Files verified</th><th>Files returned</th><th>Verified today</th><th>Verified this week</th><th>Verified this month</th></tr></thead><tbody>@foreach($processingPerformance as $row)<tr><td><strong>{{ $row->name }}</strong></td><td>{{ $row->verified }}</td><td>{{ $row->returned }}</td><td>{{ $row->today }}</td><td>{{ $row->this_week }}</td><td>{{ $row->this_month }}</td></tr>@endforeach</tbody></table></div>
 </details>
 @endif
 </div>

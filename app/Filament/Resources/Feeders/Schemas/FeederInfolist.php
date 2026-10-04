@@ -57,11 +57,6 @@ class FeederInfolist
                 TextEntry::make('mdb_drive_url')
                     ->placeholder('-')
                     ->columnSpanFull(),
-                TextEntry::make('processing_drive_url')
-                    ->placeholder('-')
-                    ->columnSpanFull(),
-                IconEntry::make('processing_required')
-                    ->boolean(),
                 TextEntry::make('status')
                     ->badge(),
                 TextEntry::make('created_at')

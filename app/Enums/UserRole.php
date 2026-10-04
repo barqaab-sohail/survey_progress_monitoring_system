@@ -17,8 +17,8 @@ enum UserRole: string
             self::SuperAdmin => 'Super Admin',
             self::ProjectManager => 'Project Manager',
             self::SurveyTeamLeader => 'Survey Team Leader',
-            self::MdbTeamUser => 'MDB Team User',
-            self::MdbProcessingUser => 'MDB Processing User',
+            self::MdbTeamUser => 'MDB User',
+            self::MdbProcessingUser => 'Third-Party Processor',
             self::ManagementViewer => 'Management / Viewer',
         };
     }
