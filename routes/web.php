@@ -18,6 +18,9 @@ use App\Http\Controllers\SurveyVerificationController;
 use App\Http\Controllers\TransformerController;
 use Illuminate\Support\Facades\Route;
 
+Route::view('/privacy-policy', 'legal.privacy-policy')->name('privacy-policy');
+Route::view('/terms-of-service', 'legal.terms-of-service')->name('terms-of-service');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'create'])->name('login');
     Route::post('/login', [AuthController::class, 'store'])->middleware('throttle:login')->name('login.store');

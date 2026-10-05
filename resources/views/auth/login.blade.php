@@ -64,6 +64,7 @@
             </div>
             <button class="btn btn-primary auth-submit" type="submit">Sign in to dashboard <span aria-hidden="true">→</span></button>
             <p class="auth-security-note">Authorized users only · Activity is securely recorded.</p>
+            <p class="auth-security-note"><a href="{{ route('privacy-policy') }}">Privacy Policy</a> | <a href="{{ route('terms-of-service') }}">Terms of Service</a></p>
         </form>
     </section>
 </main>
