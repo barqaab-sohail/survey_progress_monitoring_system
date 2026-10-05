@@ -45,6 +45,7 @@ class User extends Authenticatable implements FilamentUser
     protected $hidden = [
         'password',
         'remember_token',
+        'google_drive_token',
     ];
 
     /**
@@ -57,6 +58,7 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'google_drive_token' => 'encrypted:array',
             'role' => UserRole::class,
             'status' => RecordStatus::class,
         ];

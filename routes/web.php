@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\TeamController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GoogleDriveController;
 use App\Http\Controllers\MdbEntryController;
 use App\Http\Controllers\MdbVerificationController;
 use App\Http\Controllers\PasswordResetController;
@@ -28,6 +29,10 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/', DashboardController::class)->name('dashboard');
+    Route::get('/google-drive', [GoogleDriveController::class, 'index'])->name('google-drive.index');
+    Route::post('/auth/google', [GoogleDriveController::class, 'connect'])->middleware('throttle:10,1')->name('google-drive.connect');
+    Route::get('/auth/google/callback', [GoogleDriveController::class, 'callback'])->name('google-drive.callback');
+    Route::delete('/google-drive', [GoogleDriveController::class, 'disconnect'])->name('google-drive.disconnect');
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
 
     Route::middleware('role:survey_team_leader,mdb_team_user,super_admin,project_manager')->prefix('transformer-gis')->name('transformers.')->group(function () {

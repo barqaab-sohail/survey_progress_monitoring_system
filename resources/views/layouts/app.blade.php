@@ -27,6 +27,9 @@
     </header>
     <div class="workspace">
         <aside class="sidebar">
+            @if(config('services.google_drive.enabled'))
+                <a class="nav-link {{ request()->routeIs('google-drive.*') ? 'active' : '' }}" href="{{ route('google-drive.index') }}">Google Drive</a>
+            @endif
             <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">Overview Dashboard</a>
             @if(auth()->user()->hasAnyRole(['survey_team_leader','super_admin']))
                 <div class="nav-label">Survey</div>

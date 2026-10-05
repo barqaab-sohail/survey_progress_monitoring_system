@@ -447,17 +447,23 @@ The command reports the source feeder/substation and counts for all placemarks, 
 
 ## Google Drive
 
-Phase 1 stores validated HTTPS URLs only. Configure survey, MDB, and processing folder URLs at feeder level so daily users rarely paste a link. Optional per-entry URLs override the feeder default.
+Survey and MDB entries store validated HTTPS evidence URLs. Google Drive OAuth connection is available for signed-in active users at `/google-drive`; it does not change existing evidence links or upload files automatically.
 
-Placeholders are available in `.env`:
+Enable the Google Drive API in your Google Cloud project, configure the consent screen (add test users while in testing), and create an OAuth client of type **Web application**. Add this exact **Authorized redirect URI** in Google Cloud:
+
+`https://hazeco.barqaab.pk/auth/google/callback`
+
+Set these values in the production `.env`:
 
 ```dotenv
-GOOGLE_DRIVE_ENABLED=false
-GOOGLE_DRIVE_CLIENT_ID=
-GOOGLE_DRIVE_CLIENT_SECRET=
+APP_URL=https://hazeco.barqaab.pk
+GOOGLE_DRIVE_ENABLED=true
+GOOGLE_DRIVE_CLIENT_ID=your-google-client-id
+GOOGLE_DRIVE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_DRIVE_REDIRECT_URI=https://hazeco.barqaab.pk/auth/google/callback
 ```
 
-No Drive API credentials are required until direct folder/API integration is implemented.
+Deploy the application with the subdomain document root pointing to `public`, then run `php artisan migrate --force`, `php artisan config:clear`, and `php artisan route:clear`. Sign in and open **Google Drive** to authorize your account. Authorization requests use `drive.file` scope and offline access. Tokens are encrypted with `APP_KEY` and excluded from user serialization; retain the production key across deployments. Disconnect removes the locally stored credentials; users can also revoke permission in their Google account. Existing arbitrary Drive links are not granted API access by this limited scope.
 
 ## Queue and scheduler
 
