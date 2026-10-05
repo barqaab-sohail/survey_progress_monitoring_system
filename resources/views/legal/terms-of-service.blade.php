@@ -1,7 +1,7 @@
 @extends('layouts.legal')
 @section('title', 'Terms of Service')
 @section('content')
-<p>These terms govern the HAZECO Transmission and Distribution Losses Calculation Project monitoring portal at hazeco.barqaab.pk, operated for project activities by BARQAAB Consulting Services. By using the portal, you agree to these terms. If you do not agree, do not use the service.</p>
+<p>These terms govern HAZECO Survey App at hazeco.barqaab.pk, operated for project activities by BARQAAB Consulting Services for the HAZECO Transmission and Distribution Losses Calculation Project. By using the portal, you agree to these terms. If you do not agree, do not use the service.</p>
 <h2>Purpose and authorized access</h2>
 <p>The portal supports survey reporting, MDB creation and verification, feeder and GIS reference data, and management reports. Operational access requires an account approved by the project administrator. Public access to these terms and the Privacy Policy does not authorize access to project records.</p>
 <h2>Your account</h2>

@@ -11,6 +11,11 @@ class ProjectBranding
 {
     public const DEFAULT_NAME = 'HAZECO Transmission and Distribution Losses Calculation Project';
 
+    public function appName(): string
+    {
+        return 'HAZECO Survey App';
+    }
+
     private bool $resolved = false;
 
     private ?Project $project = null;

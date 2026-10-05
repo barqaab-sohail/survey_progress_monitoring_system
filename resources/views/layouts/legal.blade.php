@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title') | {{ $branding->projectName() }}</title>
+    <title>@yield('title') | {{ $branding->appName() }}</title>
     <link rel="icon" type="image/png" href="{{ $branding->faviconUrl() }}">
     <style>
         * { box-sizing: border-box; }
@@ -28,7 +28,7 @@
 </head>
 <body>
 <header><div class="container">
-    <div class="identity"><img src="{{ $branding->logoUrl() }}" alt="BARQAAB project logo"><strong>{{ $branding->projectName() }}</strong></div>
+    <div class="identity"><img src="{{ $branding->logoUrl() }}" alt="BARQAAB project logo"><div><strong>{{ $branding->appName() }}</strong><br>{{ $branding->projectName() }}</div></div>
     <nav aria-label="Public navigation">
         <a href="{{ route('login') }}">Sign in</a>
         <a href="{{ route('privacy-policy') }}">Privacy Policy</a>

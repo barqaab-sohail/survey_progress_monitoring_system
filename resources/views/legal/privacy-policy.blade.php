@@ -1,7 +1,7 @@
 @extends('layouts.legal')
 @section('title', 'Privacy Policy')
 @section('content')
-<p>This policy explains how the HAZECO Transmission and Distribution Losses Calculation Project monitoring portal at hazeco.barqaab.pk handles information. The portal is operated for project activities by BARQAAB Consulting Services.</p>
+<p>This policy explains how HAZECO Survey App at hazeco.barqaab.pk handles information. The application supports the HAZECO Transmission and Distribution Losses Calculation Project and is operated for project activities by BARQAAB Consulting Services.</p>
 <h2>Information we collect and use</h2>
 <p>We store account details including name, email, phone number where provided, organization, role, status, and a hashed password. Project records include team and feeder assignments, survey quantities, MDB records, verification decisions, remarks, evidence links, and uploaded master data or GIS files. Sessions, request logs, and audit records support operation and security.</p>
 <p>We use this information to authenticate authorized users, manage assignments, record progress, review evidence, produce reports, maintain an audit history, provide support, and protect the portal from misuse.</p>

@@ -16,4 +16,15 @@ class PublicLegalPagesTest extends TestCase
             ->assertSee('Terms of Service')->assertSee(route('privacy-policy'));
         $this->assertGuest();
     }
+
+    public function test_public_branding_matches_google_consent_screen(): void
+    {
+        $this->get('/')->assertRedirect(route('login'));
+        $this->get('/login')->assertOk()
+            ->assertSee('<h1>HAZECO Survey App</h1>', false)
+            ->assertSee('<h2>HAZECO Survey App</h2>', false)
+            ->assertSee(route('privacy-policy'));
+        $this->get('/privacy-policy')->assertOk()->assertSee('HAZECO Survey App');
+        $this->get('/terms-of-service')->assertOk()->assertSee('HAZECO Survey App');
+    }
 }

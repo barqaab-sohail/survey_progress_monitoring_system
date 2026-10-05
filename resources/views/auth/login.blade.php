@@ -5,7 +5,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#075c38">
-    <title>Sign in · {{ $branding->projectName() }}</title>
+    <title>HAZECO Survey App | Sign in</title>
+    <meta name="application-name" content="{{ $branding->appName() }}">
     <link rel="icon" type="image/png" href="{{ $branding->faviconUrl() }}">
     <link rel="apple-touch-icon" href="{{ $branding->faviconUrl() }}">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20261004-1">
@@ -20,7 +21,8 @@
         </div>
         <div class="auth-brand-copy">
             <span class="auth-kicker">HAZECO project monitoring portal</span>
-            <h1>{{ $branding->projectName() }}</h1>
+            <h1>{{ $branding->appName() }}</h1>
+            <p>{{ $branding->projectName() }}</p>
             <p>One secure operational view for field survey, verification, MDB creation, and management decisions.</p>
             <div class="auth-feature-row" aria-label="Portal capabilities">
                 <span>Survey progress</span>
@@ -36,7 +38,7 @@
             @csrf
             <div class="auth-mobile-logo"><img src="{{ $branding->logoUrl() }}" alt="BARQAAB project logo"></div>
             <span class="eyebrow">Secure project access</span>
-            <h2>Welcome back</h2>
+            <h2>{{ $branding->appName() }}</h2>
             <p class="muted">Enter your authorized project account details.</p>
 
             @if($errors->any())<div class="alert alert-danger" role="alert">{{ $errors->first() }}</div>@endif
