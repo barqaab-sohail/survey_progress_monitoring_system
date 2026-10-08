@@ -75,6 +75,8 @@ class ListTransformerKmzImports extends ListRecords
                     $completed = 0;
                     $failed = [];
                     $transformers = 0;
+                    $warnings = [];
+                    $synchronized = 0;
                     foreach ($rows as $row) {
                         $path = (string) ($row['stored_path'] ?? '');
                         $import = TransformerKmzImport::create([
@@ -89,15 +91,25 @@ class ListTransformerKmzImports extends ListRecords
                             $result = app(TransformerKmzImportService::class)->import($import, Storage::disk('local')->path($path));
                             $completed++;
                             $transformers += $result->transformer_count;
+                            $synchronized += $result->created_rows + $result->updated_rows;
+                            if ($result->errors) {
+                                $warnings[] = $import->file_name.': Transformer count saved; details could not be imported.';
+                            }
                         } catch (Throwable $exception) {
                             $failed[] = $import->file_name.': '.$exception->getMessage();
                         }
                     }
 
                     $notification = Notification::make()
-                        ->title("{$completed} KMZ file(s) imported; {$transformers} transformers synchronized")
-                        ->body($failed === [] ? 'All files passed validation.' : implode("\n", array_slice($failed, 0, 5)));
-                    $failed === [] ? $notification->success()->send() : $notification->danger()->persistent()->send();
+                        ->title("{$completed} KMZ file(s) imported; {$transformers} transformers counted; {$synchronized} records synchronized")
+                        ->body(($failed === [] && $warnings === []) ? 'All files passed validation.' : implode("\n", array_slice(array_merge($failed, $warnings), 0, 5)));
+                    if ($failed !== []) {
+                        $notification->danger()->persistent()->send();
+                    } elseif ($warnings !== []) {
+                        $notification->warning()->persistent()->send();
+                    } else {
+                        $notification->success()->send();
+                    }
                 }),
         ];
     }

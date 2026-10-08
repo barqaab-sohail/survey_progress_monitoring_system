@@ -550,3 +550,19 @@ Recommended future endpoints:
 - `GET /api/v1/processing-assignments`
 - `POST /api/v1/processing-entries`
 - `GET /api/v1/dashboard/summary`
+
+## Dashboard action queues and entry recovery
+
+Dashboard queue cards open baseline, survey, survey review, MDB creation, MDB review, and returned MDB work. Survey team leaders see only active assignments; management roles receive read-only queue views with actions shown to authorized operators. Review screens accept `feeder_id` and `overdue=1` filters and preserve those filters while paginating.
+
+Pending review rows show age since creation or latest resubmission, ordered oldest first. The overdue threshold is seven elapsed days; changing the engineering entry date does not reset review age.
+
+Daily survey and MDB forms show currently available capacity, searchable feeder options, field errors, and duplicate-feeder checks. Drafts are saved in browser session storage per user, team, and entry, can be restored explicitly for up to 24 hours, and are removed after a successful save. Closing the tab ends draft recovery; drafts are not server records or offline submissions. Server transactions still check authorization, review state, and capacity at submission.
+
+## Android LT field-survey collection
+
+The companion Android app in [mobile/field_survey](mobile/field_survey) collects the LT survey fields referenced in B2308.pdf. It supports assigned feeder/transformer references, offline drafts, repeated S/E survey rows, consumer and solar details, optional GPS/photos, and retry-safe synchronization. The existing daily survey progress and MDB quantities are unchanged by detailed-field sync.
+
+Apply the additive `2026_10_07_000300_create_field_survey_tables` migration and clear cached routes when upgrading. Survey-team-leader accounts and Super Admin can sign in from the phone. Management roles can review synced records through **Field Surveys** in the web navigation; attachments remain private.
+
+See [Android setup and delivery](docs/mobile/DELIVERY.md), [app build/install instructions](mobile/field_survey/README.md), [API contract](docs/mobile/API_CONTRACT.md), and [paper field mapping](docs/mobile/FORM_MAPPING.md). The PDF's handwritten MEPCO examples are not imported or used as defaults.

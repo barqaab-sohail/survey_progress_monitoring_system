@@ -8,6 +8,7 @@ use App\Models\MdbDailyEntryItem;
 use App\Models\MdbVerificationHistory;
 use App\Policies\MdbDailyEntryItemPolicy;
 use App\Services\MdbCreationService;
+use App\Support\ReviewAging;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,11 +18,13 @@ class MdbVerificationController extends Controller
     public function index(Request $request): View
     {
         abort_unless(app(MdbDailyEntryItemPolicy::class)->verifyAny($request->user()), 403);
-        $items = MdbDailyEntryItem::where('status', SurveyItemStatus::Submitted->value)
-            ->with(['entry.team', 'entry.enteredBy', 'feeder'])
-            ->oldest()->paginate(30);
+        $filters = $request->validate(['feeder_id' => ['nullable', 'integer', 'exists:feeders,id'], 'overdue' => ['nullable', 'boolean']]);
+        $query = ReviewAging::query(MdbDailyEntryItem::where('status', SurveyItemStatus::Submitted->value), $filters);
+        $aging = ReviewAging::summary($query);
+        $items = $query->with(['entry.team', 'entry.enteredBy', 'feeder'])
+            ->orderByRaw('COALESCE(resubmitted_at, created_at)')->orderBy('id')->paginate(30)->withQueryString();
 
-        return view('mdb-verification.index', compact('items'));
+        return view('mdb-verification.index', compact('items', 'aging'));
     }
 
     public function history(Request $request): View

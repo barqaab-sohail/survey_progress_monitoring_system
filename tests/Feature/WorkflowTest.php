@@ -9,6 +9,7 @@ use App\Models\Division;
 use App\Models\Feeder;
 use App\Models\FeederAssignment;
 use App\Models\GridStation;
+use App\Models\MdbDailyEntry;
 use App\Models\MdbTeam;
 use App\Models\Organization;
 use App\Models\Project;
@@ -412,5 +413,69 @@ class WorkflowTest extends TestCase
     {
         $this->verifiedSurvey($verified);
         app(MdbCreationService::class)->create($this->mdbUser, $this->mdbTeam, ['entry_date' => today()->toDateString(), 'items' => [['feeder_id' => $this->feeder->id, 'mdb_files_created' => $created]]]);
+    }
+
+    public function test_dashboard_queues_filter_stages_and_respect_survey_assignments(): void
+    {
+        $entry = app(SurveyProgressService::class)->create($this->surveyUser, $this->surveyTeam, [
+            'entry_date' => today()->toDateString(),
+            'items' => [['feeder_id' => $this->feeder->id, 'transformers_surveyed' => 10, 'drive_url' => 'https://drive.google.com/drive/folders/test']],
+        ]);
+        $this->actingAs($this->admin)->get('/')->assertOk()->assertSee('View queue');
+        $this->get('/progress-queue?stage=verification')->assertOk()->assertSee('F-01')->assertSee('10');
+        $this->get('/progress-queue?stage=mdb_creation')->assertOk()->assertSee('No work matches this queue.');
+        $this->actingAs($this->surveyUser)->get('/progress-queue?stage=mdb_verification')->assertForbidden();
+        $this->get('/progress-queue?stage=verification')->assertOk()->assertSee('F-01');
+        $this->surveyTeam->members()->detach($this->surveyUser->id);
+        $this->get('/progress-queue?stage=verification')->assertOk()->assertDontSee('F-01');
+        $this->actingAs($this->processor)->get('/progress-queue?stage=survey')->assertForbidden();
+    }
+
+    public function test_review_age_uses_resubmission_and_queue_filters(): void
+    {
+        $this->travelTo(now()->startOfDay());
+        $entry = app(SurveyProgressService::class)->create($this->surveyUser, $this->surveyTeam, [
+            'entry_date' => today()->toDateString(),
+            'items' => [['feeder_id' => $this->feeder->id, 'transformers_surveyed' => 10, 'drive_url' => 'https://drive.google.com/drive/folders/test']],
+        ]);
+        $item = $entry->items()->first();
+        $item->forceFill(['created_at' => now()->subDays(9)])->save();
+        $this->actingAs($this->mdbUser)->get('/verification?overdue=1&feeder_id='.$this->feeder->id)
+            ->assertOk()->assertSee('9 days waiting')->assertViewHas('aging', fn ($aging) => $aging['overdue'] === 1);
+        $item->update(['resubmitted_at' => now()->subDay()]);
+        $this->get('/verification?overdue=1')->assertOk()->assertSee('No survey entries are awaiting verification.');
+        $this->get('/verification')->assertOk()->assertSee('1 days waiting')->assertViewHas('aging', fn ($aging) => $aging['overdue'] === 0);
+        $this->get('/verification?feeder_id=invalid')->assertSessionHasErrors('feeder_id');
+        $otherFeeder = $this->feeder->replicate();
+        $otherFeeder->feeder_code = 'F-02';
+        $otherFeeder->save();
+        $this->get('/verification?feeder_id='.$otherFeeder->id)->assertOk()->assertDontSee('F-01')->assertSee('No survey entries are awaiting verification.');
+
+        $mdb = app(MdbCreationService::class);
+        app(SurveyProgressService::class)->verify($this->mdbUser, $item->fresh());
+        $mdb->create($this->mdbUser, $this->mdbTeam, ['entry_date' => today()->toDateString(), 'items' => [['feeder_id' => $this->feeder->id, 'mdb_files_created' => 5, 'drive_url' => 'https://drive.google.com/test']]]);
+        $this->actingAs($this->processor)->get('/mdb-verification?feeder_id='.$this->feeder->id)->assertOk()->assertSee('F-01');
+        $this->get('/mdb-verification?overdue=1')->assertOk()->assertSee('No MDB entries are awaiting verification.');
+        $this->get('/mdb-verification?feeder_id='.$otherFeeder->id)->assertOk()->assertDontSee('F-01');
+        $this->get('/progress-queue?stage=mdb_verification&feeder_id='.$otherFeeder->id)->assertOk()->assertSee('No work matches this queue.');
+        $this->external->update(['status' => 'inactive']);
+        $this->actingAs($this->processor->fresh());
+        $this->get('/progress-queue?stage=mdb_verification')->assertForbidden();
+
+        $this->travelBack();
+    }
+
+    public function test_daily_forms_show_capacity_and_clear_only_successful_drafts(): void
+    {
+        $service = app(SurveyProgressService::class);
+        $entry = $service->create($this->surveyUser, $this->surveyTeam, ['entry_date' => today()->toDateString(), 'items' => [['feeder_id' => $this->feeder->id, 'transformers_surveyed' => 20, 'drive_url' => 'https://drive.google.com/test']]]);
+        $this->actingAs($this->surveyUser)->get('/survey/create')->assertOk()->assertSee('data-capacity="80"', false)->assertSee('data-draft-key', false)->assertSee('js/entry-form.js');
+        $this->get('/survey/entries/'.$entry->id.'/edit')->assertOk()->assertSee('data-capacity="100"', false);
+        $this->post('/survey', ['survey_team_id' => $this->surveyTeam->id, 'entry_date' => today()->toDateString(), 'items' => [['feeder_id' => $this->feeder->id, 'transformers_surveyed' => 81, 'drive_url' => 'https://drive.google.com/test']]])->assertSessionHasErrors('items')->assertSessionMissing('cleared_draft');
+        $service->verify($this->mdbUser, $entry->items()->first());
+        $this->actingAs($this->mdbUser)->get('/mdb/create')->assertOk()->assertSee('data-capacity="20"', false);
+        $this->post('/mdb', ['entry_date' => today()->toDateString(), 'items' => [['feeder_id' => $this->feeder->id, 'mdb_files_created' => 5, 'drive_url' => 'https://drive.google.com/test']]])->assertSessionHas('cleared_draft', 'entry:'.$this->mdbUser->id.':mdb:create:default');
+        $mdbEntry = MdbDailyEntry::latest('id')->first();
+        $this->get('/mdb/entries/'.$mdbEntry->id.'/edit')->assertOk()->assertSee('data-capacity="20"', false);
     }
 }

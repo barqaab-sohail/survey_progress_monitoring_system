@@ -7,17 +7,18 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#0b1f3a">
     <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
-    <title>@yield('title', 'Dashboard') · {{ $branding->projectName() }}</title>
+    <title>@yield('title', 'Dashboard') Â· {{ $branding->projectName() }}</title>
     <link rel="icon" type="image/png" href="{{ $branding->faviconUrl() }}">
     <link rel="apple-touch-icon" href="{{ $branding->faviconUrl() }}">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20261004-2">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20261007-2">
+    @stack('styles')
 </head>
 <body>
 <div class="shell">
     <header class="topbar">
         <a class="brand" href="{{ route('dashboard') }}">
             <span class="brand-mark brand-logo-mark"><img src="{{ $branding->faviconUrl() }}" alt=""></span>
-            <span class="brand-copy"><strong>{{ $branding->projectName() }}</strong><small>{{ auth()->user()->hasRole('survey_team_leader') ? 'Survey Operations' : 'Survey · MDB · Verification' }}</small></span>
+            <span class="brand-copy"><strong>{{ $branding->projectName() }}</strong><small>{{ auth()->user()->hasRole('survey_team_leader') ? 'Survey Operations' : 'Survey Â· MDB Â· Verification' }}</small></span>
         </a>
         <button class="btn btn-sm logout-btn nav-toggle" type="button" aria-label="Open navigation" onclick="document.querySelector('.sidebar').classList.toggle('open')">Menu</button>
         <div class="user-area">
@@ -31,6 +32,9 @@
                 <a class="nav-link {{ request()->routeIs('google-drive.*') ? 'active' : '' }}" href="{{ route('google-drive.index') }}">Google Drive</a>
             @endif
             <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">Overview Dashboard</a>
+            @if(auth()->user()->hasAnyRole(['survey_team_leader','super_admin','project_manager','management_viewer']))
+                <a class="nav-link {{ request()->routeIs('field-surveys.*') ? 'active' : '' }}" href="{{ route('field-surveys.index') }}">Mobile Field Surveys</a>
+            @endif
             @if(auth()->user()->hasAnyRole(['survey_team_leader','super_admin']))
                 <div class="nav-label">Survey</div>
                 <a class="nav-link {{ request()->routeIs('survey.create') ? 'active' : '' }}" href="{{ route('survey.create') }}">Add Daily Survey</a>
@@ -43,6 +47,9 @@
                 <a class="nav-link {{ request()->routeIs('mdb.create') ? 'active' : '' }}" href="{{ route('mdb.create') }}">Add Daily MDB</a>
                 <a class="nav-link {{ request()->routeIs('mdb.index') ? 'active' : '' }}" href="{{ route('mdb.index') }}">MDB History</a>
                 <a class="nav-link {{ request()->routeIs('mdb.returned') ? 'active' : '' }}" href="{{ route('mdb.returned') }}">Returned MDB Entries</a>
+            @endif
+            @if(auth()->user()->hasRole('super_admin'))
+                <a class="nav-link {{ request()->routeIs('mdb-builder.*') ? 'active' : '' }}" href="{{ route('mdb-builder.index') }}">Create Transformer MDB</a>
             @endif
             @if(auth()->user()->hasAnyRole(['survey_team_leader','mdb_team_user','super_admin','project_manager']))
                 <div class="nav-label">Reference data</div>
@@ -82,6 +89,9 @@
 document.addEventListener('click', e => { if (innerWidth <= 820 && !e.target.closest('.sidebar') && !e.target.closest('.nav-toggle')) document.querySelector('.sidebar')?.classList.remove('open'); });
 if ('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('{{ asset('service-worker.js') }}'));
 </script>
+@if(session('cleared_draft'))
+<script>try { sessionStorage.removeItem(@json(session('cleared_draft'))); } catch (_) {}</script>
+@endif
 @stack('scripts')
 </body>
 </html>

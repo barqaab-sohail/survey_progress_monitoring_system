@@ -2,9 +2,10 @@
 @section('title', isset($entry) ? 'Edit Daily MDB Creation' : 'Add Daily MDB Creation')
 @section('content')
 <div class="page-head"><div><h1>{{ isset($entry) ? 'Edit Daily MDB Creation' : 'Daily MDB Creation' }}</h1><p>{{ isset($entry) ? 'Correct this entry before third-party review. Original feeder rows are retained.' : 'Only verified survey capacity is available. Saved MDB entries go directly to third-party verification.' }}</p></div><div class="actions"><a class="btn btn-light" href="{{ route('transformers.index') }}">Transformer GIS Data</a><a class="btn btn-light" href="{{ route('mdb.index') }}">View history</a></div></div>
-<form class="card" method="POST" action="{{ isset($entry) ? route('mdb.update', $entry) : route('mdb.store') }}">
+<form class="card" data-entry-form data-draft-key="{{ 'entry:'.auth()->id().':mdb:'.(isset($entry) ? 'edit:'.$entry->id : 'create:'.'default') }}" data-has-errors="{{ $errors->any() ? 1 : 0 }}" method="POST" action="{{ isset($entry) ? route('mdb.update', $entry) : route('mdb.store') }}">
 @csrf
 @isset($entry) @method('PUT') @endisset
+<div class="draft-tools" data-draft-tools><span data-draft-status role="status">Draft recovery is available in this browser tab.</span><button class="btn btn-sm btn-light" type="button" data-restore-draft hidden>Restore draft</button><button class="btn btn-sm btn-light" type="button" data-discard-draft>Discard saved draft</button></div>
 <div class="form-grid">
     <div class="field"><label>Date</label><input type="date" name="entry_date" max="{{ today()->toDateString() }}" value="{{ old('entry_date', isset($entry) ? $entry->entry_date->toDateString() : today()->toDateString()) }}" required></div>
     <div class="field"><label>Overall remarks</label><input name="remarks" value="{{ old('remarks', $entry->remarks ?? '') }}" maxlength="2000"></div>

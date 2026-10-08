@@ -13,7 +13,7 @@
 </div>
 <section class="grid kpi-grid">
     @foreach(['submitted' => ['Awaiting verification', ''], 'verified' => ['MDB files verified', 'accent-green'], 'returned' => ['Returned for correction', 'accent-red'], 'verified_today' => ['Verified today by your organization', 'accent-amber']] as $key => [$label, $accent])
-    <div class="card kpi {{ $accent }}"><i class="kpi-accent"></i><div class="kpi-label">{{ $label }}</div><div class="kpi-value">{{ number_format($summary[$key]) }}</div></div>
+    <div class="card kpi {{ $accent }}"><i class="kpi-accent"></i><div class="kpi-label">{{ $label }}</div>@if(in_array($key, ['submitted', 'returned']))<a class="kpi-value" href="{{ $key === 'submitted' ? route('mdb-verification.index') : route('progress.queue', ['stage' => 'mdb_returned']) }}">{{ number_format($summary[$key]) }}</a>@else<div class="kpi-value">{{ number_format($summary[$key]) }}</div>@endif</div>
     @endforeach
 </section>
 <div class="section-title"><h2>MDB files awaiting verification</h2><span>{{ number_format($summary['pending_rows']) }} submitted feeder rows</span></div>

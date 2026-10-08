@@ -3,15 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Enums\SurveyItemStatus;
-use App\Http\Requests\StoreMdbEntryRequest;
+use App\Enums\UserRole;
 use App\Http\Requests\ResubmitMdbItemRequest;
+use App\Http\Requests\StoreMdbEntryRequest;
 use App\Models\Feeder;
 use App\Models\MdbDailyEntry;
 use App\Models\MdbDailyEntryItem;
 use App\Services\MdbCreationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use App\Enums\UserRole;
 use Illuminate\View\View;
 
 class MdbEntryController extends Controller
@@ -37,7 +37,7 @@ class MdbEntryController extends Controller
         $team = $request->user()->mdbTeams()->first();
         $service->create($request->user(), $team, $request->validated());
 
-        return redirect()->route('mdb.index')->with('success', 'MDB creation saved and submitted for third-party verification.');
+        return redirect()->route('mdb.index')->with('cleared_draft', 'entry:'.$request->user()->id.':mdb:create:default')->with('success', 'MDB creation saved and submitted for third-party verification.');
     }
 
     public function edit(MdbDailyEntry $entry): View
@@ -46,6 +46,10 @@ class MdbEntryController extends Controller
         abort_unless($entry->canBeEdited(), 403, 'MDB editing is locked after review. Returned items must be corrected and resubmitted.');
         $entry->load('items.feeder');
         $feeders = $entry->items->pluck('feeder');
+        $feeders->each(function ($f) use ($entry) {
+            $f->loadSum(['surveyItems as verified_quantity' => fn ($q) => $q->where('status', 'verified')], 'transformers_surveyed');
+            $f->loadSum(['mdbItems as created_quantity' => fn ($q) => $q->where('mdb_daily_entry_id', '!=', $entry->id)], 'mdb_files_created');
+        });
 
         return view('mdb.create', compact('feeders', 'entry'));
     }
@@ -55,7 +59,7 @@ class MdbEntryController extends Controller
         $this->authorize('update', $entry);
         $service->update($request->user(), $entry, $request->validated());
 
-        return redirect()->route('mdb.index')->with('success', 'MDB creation entry updated.');
+        return redirect()->route('mdb.index')->with('cleared_draft', 'entry:'.$request->user()->id.':mdb:edit:'.$entry->id)->with('success', 'MDB creation entry updated.');
     }
 
     public function returned(Request $request): View

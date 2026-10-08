@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Survey Dashboard')
 @section('content')
+@include('components.dashboard-queues')
 <div class="page-head survey-page-head">
     <div>
         <span class="eyebrow">Field survey operations</span>

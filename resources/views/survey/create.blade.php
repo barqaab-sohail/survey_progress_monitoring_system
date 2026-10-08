@@ -17,8 +17,9 @@
 @if($feeders->contains(fn ($feeder) => $feeder->baseline_pending || $feeder->total_transformers < 1))
 <div class="card" role="alert"><p>Feeders marked "baseline pending" need verified transformer totals before survey progress can be submitted. Ask an administrator to update their totals in Feeder Master Data.</p></div>
 @endif
-<form class="card" method="POST" action="{{ isset($entry) ? route('survey.update', $entry) : route('survey.store') }}">@csrf
+<form class="card" data-entry-form data-draft-key="{{ 'entry:'.auth()->id().':survey:'.(isset($entry) ? 'edit:'.$entry->id : 'create:'.$team->id) }}" data-has-errors="{{ $errors->any() ? 1 : 0 }}" method="POST" action="{{ isset($entry) ? route('survey.update', $entry) : route('survey.store') }}">@csrf
 @isset($entry) @method('PUT') @endisset
+<div class="draft-tools" data-draft-tools><span data-draft-status role="status">Draft recovery is available in this browser tab.</span><button class="btn btn-sm btn-light" type="button" data-restore-draft hidden>Restore draft</button><button class="btn btn-sm btn-light" type="button" data-discard-draft>Discard saved draft</button></div>
 @if(!isset($entry))<input type="hidden" name="survey_team_id" value="{{ $team->id }}">@endif
 <div class="form-grid"><div class="field"><label for="entry_date">Date</label><input id="entry_date" type="date" name="entry_date" max="{{ today()->toDateString() }}" value="{{ old('entry_date', isset($entry) ? $entry->entry_date->toDateString() : today()->toDateString()) }}" required></div><div class="field"><label for="remarks">Overall remarks <small>(optional)</small></label><input id="remarks" name="remarks" value="{{ old('remarks', $entry->remarks ?? '') }}" maxlength="2000"></div></div>
 <div class="section-title"><h2>Feeders surveyed</h2>@if(!isset($entry))<button class="btn btn-sm btn-light" type="button" data-add-row>+ Add feeder</button>@endif</div>

@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title','Management Dashboard')
 @section('content')
+@include('components.dashboard-queues')
 <div class="management-dashboard">
 <div class="page-head management-page-head">
     <div>

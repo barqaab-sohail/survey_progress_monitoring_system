@@ -37,7 +37,7 @@ class TransformerKmzImportService
 
             DB::transaction(function () use ($import, $inspection): void {
                 $feeder = Feeder::query()->lockForUpdate()->findOrFail($import->feeder_id);
-                $this->guardWorkflowTotals($feeder, count($inspection['transformers']));
+                $this->guardWorkflowTotals($feeder, $inspection['transformer_count']);
 
                 $created = 0;
                 $updated = 0;
@@ -57,13 +57,13 @@ class TransformerKmzImportService
                     $transformer->save();
                 }
 
-                $removed = Transformer::query()
+                $removed = $inspection['count_only'] ? 0 : Transformer::query()
                     ->where('feeder_id', $feeder->id)
                     ->whereNotIn('transformer_code', $codes)
                     ->delete();
 
                 $feeder->update([
-                    'total_transformers' => count($codes),
+                    'total_transformers' => $inspection['transformer_count'],
                     'baseline_pending' => false,
                     'demo_baseline' => false,
                 ]);
@@ -74,11 +74,11 @@ class TransformerKmzImportService
                     'status' => 'completed',
                     'total_placemarks' => $inspection['total_placemarks'],
                     'point_placemarks' => $inspection['point_placemarks'],
-                    'transformer_count' => count($codes),
+                    'transformer_count' => $inspection['transformer_count'],
                     'created_rows' => $created,
                     'updated_rows' => $updated,
                     'removed_rows' => $removed,
-                    'errors' => null,
+                    'errors' => $inspection['warnings'] ?: null,
                     'imported_at' => now(),
                 ]);
             });
@@ -98,7 +98,7 @@ class TransformerKmzImportService
     /**
      * Inspect and validate a KMZ without writing transformer data.
      *
-     * @return array{source_feeder_name:string,source_substation_name:?string,total_placemarks:int,point_placemarks:int,transformers:array<int,array<string,mixed>>}
+     * @return array{source_feeder_name:?string,source_substation_name:?string,total_placemarks:int,point_placemarks:int,transformer_count:int,count_only:bool,warnings:array,transformers:array<int,array<string,mixed>>}
      */
     public function inspect(string $absolutePath): array
     {
@@ -117,6 +117,8 @@ class TransformerKmzImportService
         $sourceSubstations = [];
         $seenCodes = [];
         $pointCount = 0;
+        $transformerCount = 0;
+        $warnings = [];
 
         foreach ($placemarks as $placemark) {
             if (! $placemark instanceof DOMElement) {
@@ -135,86 +137,100 @@ class TransformerKmzImportService
                 continue;
             }
 
-            [$longitude, $latitude, $altitude] = $this->coordinates($coordinateNode->textContent);
-            $sourceFeeder = $this->required($raw, 'feeder', 'source feeder');
+            $transformerCount++;
+            $sourceFeeder = $this->value($raw, 'feeder');
+            if ($sourceFeeder !== null) {
+                $sourceFeeders[mb_strtolower($sourceFeeder)] = $sourceFeeder;
+            }
             $sourceSubstation = $this->value($raw, 'substation');
-            $code = $this->required($raw, 'equipmentnumber', 'transformer/equipment number');
-            $codeKey = mb_strtoupper($code);
+            $code = $this->value($raw, 'equipmentnumber');
+            $codeKey = $code === null ? null : mb_strtoupper($code);
 
             if (isset($seenCodes[$codeKey])) {
                 throw new RuntimeException("Duplicate transformer number '{$code}' in the KMZ.");
             }
-            $seenCodes[$codeKey] = true;
-            $sourceFeeders[mb_strtolower($sourceFeeder)] = $sourceFeeder;
+            if ($codeKey !== null) {
+                $seenCodes[$codeKey] = true;
+            }
             if ($sourceSubstation !== null) {
                 $sourceSubstations[mb_strtolower($sourceSubstation)] = $sourceSubstation;
             }
 
-            $this->validateAttributeCoordinates($raw, $longitude, $latitude, $code);
-            $capacity = $this->number($this->required($raw, 'equipmentsize', "capacity for {$code}"));
-            if ($capacity === null || $capacity <= 0) {
-                throw new RuntimeException("Transformer '{$code}' has an invalid capacity.");
-            }
+            try {
+                [$longitude, $latitude, $altitude] = $this->coordinates($coordinateNode->textContent);
+                $sourceFeeder = $this->required($raw, 'feeder', 'source feeder');
+                $code = $this->required($raw, 'equipmentnumber', 'transformer/equipment number');
+                $this->validateAttributeCoordinates($raw, $longitude, $latitude, $code);
+                $capacity = $this->number($this->required($raw, 'equipmentsize', "capacity for {$code}"));
+                if ($capacity === null || $capacity <= 0) {
+                    throw new RuntimeException("Transformer '{$code}' has an invalid capacity.");
+                }
 
-            $transformers[] = [
-                'source_feature_id' => trim($placemark->getAttribute('id')) ?: null,
-                'transformer_code' => $code,
-                'gps_waypoint_number' => $this->value($raw, 'gpswaypointnumber'),
-                'source_substation_name' => $sourceSubstation,
-                'source_feeder_name' => $sourceFeeder,
-                'line_voltage' => $this->value($raw, 'linevoltage'),
-                'feeders_on_pole' => $this->unsignedInteger($raw, 'feedersonpole'),
-                'pole_number' => $this->value($raw, 'polenumber'),
-                'pole_phase' => $this->value($raw, 'polephase'),
-                'pole_use' => $this->value($raw, 'poleuse'),
-                'pole_height' => $this->number($this->value($raw, 'polehight') ?? $this->value($raw, 'poleheight')),
-                'pole_type' => $this->value($raw, 'poletype'),
-                'conductor_phase_r' => $this->value($raw, 'conductorsizephaser'),
-                'conductor_phase_y' => $this->value($raw, 'conductorsizephasey'),
-                'conductor_phase_b' => $this->value($raw, 'conductorsizephaseb'),
-                'conductor_neutral' => $this->value($raw, 'conductorsizeneutral'),
-                'capacity_kva' => $capacity,
-                'equipment_unit' => $this->unsignedInteger($raw, 'equipmentunit'),
-                'equipment_phase' => $this->value($raw, 'equipmentphase'),
-                'equipment_use' => $this->value($raw, 'equipmentuse'),
-                'equipment_status' => $this->value($raw, 'equipmentstatus'),
-                'equipment_make' => $this->value($raw, 'equipmentmake'),
-                'equipment_name' => $this->value($raw, 'equipmentname'),
-                'equipment_location' => $this->value($raw, 'equipmentlocation'),
-                'equipment_mounting' => $this->value($raw, 'equipmentmounting'),
-                'end_type' => $this->value($raw, 'endtype'),
-                'residential_single' => $this->unsignedInteger($raw, 'residentialconsumersingle') ?? 0,
-                'residential_three' => $this->unsignedInteger($raw, 'residentialconsumerthree') ?? 0,
-                'residential_total' => $this->unsignedInteger($raw, 'residentialconsumer') ?? 0,
-                'small_commercial' => $this->unsignedInteger($raw, 'smallcommercialconsumer') ?? 0,
-                'large_commercial' => $this->unsignedInteger($raw, 'largecommercialconsumer') ?? 0,
-                'small_industries' => $this->unsignedInteger($raw, 'smallindustries') ?? 0,
-                'large_industries' => $this->unsignedInteger($raw, 'largeindustries') ?? 0,
-                'public_use' => $this->unsignedInteger($raw, 'publicuse') ?? 0,
-                'agricultural' => $this->unsignedInteger($raw, 'agriculturalconsumer') ?? 0,
-                'street_lights' => $this->unsignedInteger($raw, 'streetlight') ?? 0,
-                'remarks' => $this->value($raw, 'remarks'),
-                'source_picture_path' => $this->value($raw, 'transformerpicturepath'),
-                'longitude' => $longitude,
-                'latitude' => $latitude,
-                'altitude' => $altitude,
-                'raw_attributes' => $raw,
-            ];
+                $transformers[] = [
+                    'source_feature_id' => trim($placemark->getAttribute('id')) ?: null,
+                    'transformer_code' => $code,
+                    'gps_waypoint_number' => $this->value($raw, 'gpswaypointnumber'),
+                    'source_substation_name' => $sourceSubstation,
+                    'source_feeder_name' => $sourceFeeder,
+                    'line_voltage' => $this->value($raw, 'linevoltage'),
+                    'feeders_on_pole' => $this->unsignedInteger($raw, 'feedersonpole'),
+                    'pole_number' => $this->value($raw, 'polenumber'),
+                    'pole_phase' => $this->value($raw, 'polephase'),
+                    'pole_use' => $this->value($raw, 'poleuse'),
+                    'pole_height' => $this->number($this->value($raw, 'polehight') ?? $this->value($raw, 'poleheight')),
+                    'pole_type' => $this->value($raw, 'poletype'),
+                    'conductor_phase_r' => $this->value($raw, 'conductorsizephaser'),
+                    'conductor_phase_y' => $this->value($raw, 'conductorsizephasey'),
+                    'conductor_phase_b' => $this->value($raw, 'conductorsizephaseb'),
+                    'conductor_neutral' => $this->value($raw, 'conductorsizeneutral'),
+                    'capacity_kva' => $capacity,
+                    'equipment_unit' => $this->unsignedInteger($raw, 'equipmentunit'),
+                    'equipment_phase' => $this->value($raw, 'equipmentphase'),
+                    'equipment_use' => $this->value($raw, 'equipmentuse'),
+                    'equipment_status' => $this->value($raw, 'equipmentstatus'),
+                    'equipment_make' => $this->value($raw, 'equipmentmake'),
+                    'equipment_name' => $this->value($raw, 'equipmentname'),
+                    'equipment_location' => $this->value($raw, 'equipmentlocation'),
+                    'equipment_mounting' => $this->value($raw, 'equipmentmounting'),
+                    'end_type' => $this->value($raw, 'endtype'),
+                    'residential_single' => $this->unsignedInteger($raw, 'residentialconsumersingle') ?? 0,
+                    'residential_three' => $this->unsignedInteger($raw, 'residentialconsumerthree') ?? 0,
+                    'residential_total' => $this->unsignedInteger($raw, 'residentialconsumer') ?? 0,
+                    'small_commercial' => $this->unsignedInteger($raw, 'smallcommercialconsumer') ?? 0,
+                    'large_commercial' => $this->unsignedInteger($raw, 'largecommercialconsumer') ?? 0,
+                    'small_industries' => $this->unsignedInteger($raw, 'smallindustries') ?? 0,
+                    'large_industries' => $this->unsignedInteger($raw, 'largeindustries') ?? 0,
+                    'public_use' => $this->unsignedInteger($raw, 'publicuse') ?? 0,
+                    'agricultural' => $this->unsignedInteger($raw, 'agriculturalconsumer') ?? 0,
+                    'street_lights' => $this->unsignedInteger($raw, 'streetlight') ?? 0,
+                    'remarks' => $this->value($raw, 'remarks'),
+                    'source_picture_path' => $this->value($raw, 'transformerpicturepath'),
+                    'longitude' => $longitude,
+                    'latitude' => $latitude,
+                    'altitude' => $altitude,
+                    'raw_attributes' => $raw,
+                ];
+            } catch (RuntimeException $exception) {
+                $warnings[] = ['message' => $exception->getMessage()];
+            }
         }
 
-        if ($transformers === []) {
+        if ($transformerCount === 0) {
             throw new RuntimeException('No valid transformer point records were found in the KMZ.');
         }
-        if (count($sourceFeeders) !== 1) {
+        if (count($sourceFeeders) > 1) {
             throw new RuntimeException('A KMZ must contain transformer records for exactly one source feeder.');
         }
 
         return [
-            'source_feeder_name' => array_values($sourceFeeders)[0],
+            'source_feeder_name' => array_values($sourceFeeders)[0] ?? null,
             'source_substation_name' => count($sourceSubstations) === 1 ? array_values($sourceSubstations)[0] : null,
             'total_placemarks' => $placemarks->length,
             'point_placemarks' => $pointCount,
-            'transformers' => $transformers,
+            'transformer_count' => $transformerCount,
+            'count_only' => $warnings !== [],
+            'warnings' => $warnings === [] ? [] : array_merge([['message' => 'Transformer count imported only; existing transformer details were preserved.']], $warnings),
+            'transformers' => $warnings === [] ? $transformers : [],
         ];
     }
 
@@ -296,6 +312,25 @@ class TransformerKmzImportService
             $key = $this->key($label);
             if ($key !== '') {
                 $attributes[$key] = $value;
+            }
+        }
+
+        $aliases = [
+            'equiptype' => 'equipmenttype', 'equipsize' => 'equipmentsize',
+            'equipunit' => 'equipmentunit', 'equipuse' => 'equipmentuse',
+            'equipmake' => 'equipmentmake', 'gpsno' => 'gpswaypointnumber',
+            'consizea' => 'conductorsizephaser', 'consizeb' => 'conductorsizephasey',
+            'consizec' => 'conductorsizephaseb', 'consizen' => 'conductorsizeneutral',
+            'rscon1' => 'residentialconsumersingle', 'rscon3' => 'residentialconsumerthree',
+            'rscon' => 'residentialconsumer', 'sccon' => 'smallcommercialconsumer',
+            'lccon' => 'largecommercialconsumer', 'sicon' => 'smallindustries',
+            'licon' => 'largeindustries', 'pbcon' => 'publicuse',
+            'agcon' => 'agriculturalconsumer', 'stcon' => 'streetlight',
+            'picpath' => 'transformerpicturepath',
+        ];
+        foreach ($aliases as $alias => $canonical) {
+            if (isset($attributes[$alias]) && ! isset($attributes[$canonical])) {
+                $attributes[$canonical] = $attributes[$alias];
             }
         }
 

@@ -1,0 +1,17 @@
+#mdb-form label:not(.mdb-check),.mdb-copy-form label{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:13px;font-weight:650;color:var(--ink)}
+#mdb-form .grid>*{min-width:0}
+#mdb-form input:not([type=checkbox]):not([type=hidden]),#mdb-form select,#mdb-form textarea,.mdb-copy-form select{width:100%;min-width:0;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#fff;color:var(--ink);font:inherit;line-height:1.4}
+#mdb-form input:focus,#mdb-form select:focus,#mdb-form textarea:focus,.mdb-copy-form select:focus{outline:2px solid #94bce6;outline-offset:1px}
+#mdb-form small{display:block;color:var(--muted);font-size:12px;line-height:1.5;font-weight:400}
+#mdb-form input[type=file]{padding:8px;overflow:hidden;font-size:13px}
+#mdb-form .mdb-paper-table input:not([type=checkbox]):not([type=hidden]){min-width:80px;width:110px;padding:8px;font-size:13px}
+#mdb-form .mdb-paper-table input[type=date]:not([type=checkbox]):not([type=hidden]){width:155px}
+#mdb-form .mdb-paper-table select{width:60px;padding:8px;font-size:13px}
+.mdb-paper-table [data-gpx-link]{min-width:160px;font-size:12px}
+.mdb-paper-table td{vertical-align:top}
+.mdb-paper-table tr:nth-child(4n+1),.mdb-paper-table tr:nth-child(4n+2){background:#f5f8fc}
+.mdb-check{display:flex;gap:10px;align-items:center;margin:16px 0;font-size:14px;line-height:1.5}
+.mdb-check input{width:18px;height:18px;flex:0 0 auto}
+.mdb-copy-form{align-items:end}
+@media(max-width:560px){#mdb-form .grid{grid-template-columns:minmax(0,1fr)!important}.mdb-copy-form{display:block}.mdb-copy-form button{margin-top:12px}#mdb-form .section-title{flex-wrap:wrap}}
+@media(max-width:820px){.sidebar:not(.open){transform:translateX(-100%);visibility:hidden;pointer-events:none}.sidebar.open{transform:none;visibility:visible;pointer-events:auto}}

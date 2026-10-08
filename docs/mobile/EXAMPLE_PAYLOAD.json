@@ -1,0 +1,82 @@
+{
+  "client_uuid": "00000000-0000-4000-8000-000000000001",
+  "base_revision": 0,
+  "survey_team_id": 1,
+  "feeder_id": 1,
+  "transformer_id": null,
+  "transformer_code": "TEST-TF-001",
+  "survey_date": "2026-10-07",
+  "status": "submitted",
+  "header": {
+    "substation": "Test grid",
+    "division": "Test division",
+    "sub_division": "Test subdivision",
+    "sub_division_code": "TEST-SD",
+    "capacity_kva": 100,
+    "transformer_make": "Test make",
+    "mounting": "S.Pole",
+    "duty": "General Duty",
+    "inspectors": "Test collector",
+    "location": "Test location"
+  },
+  "rows": [
+    {
+      "se": "S",
+      "group": "01",
+      "date": "2026-10-07",
+      "gps_waypoint": "WP-001",
+      "latitude": null,
+      "longitude": null,
+      "gps_accuracy_m": null,
+      "phase": "RYB",
+      "conductor_r": "A",
+      "conductor_y": "A",
+      "conductor_b": "A",
+      "conductor_neutral": "A",
+      "equipment_type": "SP",
+      "pole_class": "PCO",
+      "pole_height_ft": 31,
+      "consumers": {
+        "rs": 5,
+        "rl": 1,
+        "sc": 0,
+        "lc": 0,
+        "si": 0,
+        "li": 0,
+        "pb": 0,
+        "ag": 0,
+        "st": 0
+      },
+      "intersection": "",
+      "remarks": ""
+    },
+    {
+      "se": "E",
+      "group": "01",
+      "date": "2026-10-07",
+      "gps_waypoint": "WP-002",
+      "latitude": null,
+      "longitude": null,
+      "gps_accuracy_m": null,
+      "phase": "RYB",
+      "conductor_r": "A",
+      "conductor_y": "A",
+      "conductor_b": "A",
+      "conductor_neutral": "A",
+      "equipment_type": "SP",
+      "pole_class": "PCO",
+      "pole_height_ft": 31,
+      "consumers": {},
+      "intersection": "",
+      "remarks": ""
+    }
+  ],
+  "solar": [
+    {
+      "consumer_reference": "TEST-REF-001",
+      "installed_pv_kw": 5.5,
+      "remarks": "Synthetic test only"
+    }
+  ],
+  "remarks": "Synthetic interoperability test - no real survey data"
+}

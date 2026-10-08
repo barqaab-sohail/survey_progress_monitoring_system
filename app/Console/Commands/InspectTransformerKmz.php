@@ -34,6 +34,8 @@ class InspectTransformerKmz extends Command
             ['Source substation', $result['source_substation_name'] ?? 'Multiple / not supplied'],
             ['All placemarks', $result['total_placemarks']],
             ['Point placemarks', $result['point_placemarks']],
+            ['Transformer count', $result['transformer_count']],
+            ['Count only', $result['count_only'] ? 'Yes' : 'No'],
             ['Validated transformers', count($result['transformers'])],
         ]);
         $this->info('KMZ validation passed. No database records were changed.');

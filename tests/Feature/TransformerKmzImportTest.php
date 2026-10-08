@@ -113,6 +113,44 @@ class TransformerKmzImportTest extends TestCase
         $this->assertDatabaseHas('transformers', ['transformer_code' => 'T-001', 'capacity_kva' => 100]);
     }
 
+    public function test_abbreviated_kmz_fields_import_transformer_details(): void
+    {
+        $fields = $this->transformerFields('T-ALIAS', '25', '73.1', '34.2');
+        unset($fields['Equipment Type'], $fields['Equipment Size'], $fields['GPS Waypoint Number']);
+        $fields += ['Equip_Type' => 'Transformer', 'Equip_Size' => '50', 'GPS_No' => '123'];
+        $result = app(TransformerKmzImportService::class)->inspect($this->kmz([
+            $this->point('alias', $fields, '73.1,34.2,0'),
+        ]));
+        $this->assertFalse($result['count_only']);
+        $this->assertSame(1, $result['transformer_count']);
+        $this->assertSame(50.0, $result['transformers'][0]['capacity_kva']);
+        $this->assertSame('123', $result['transformers'][0]['gps_waypoint_number']);
+    }
+
+    public function test_incomplete_records_save_count_without_replacing_existing_details(): void
+    {
+        Transformer::create($this->databaseTransformer('EXISTING'));
+        $file = $this->kmz([
+            $this->point('incomplete', ['Equip_Type' => 'Transformer', 'Feeder' => 'SOURCE_A'], '73.1,34.2,0'),
+            $this->point('complete', $this->transformerFields('NEW', '25', '73.1', '34.2'), '73.1,34.2,0'),
+            $this->point('pole', ['Equip_Type' => 'Pole'], '73.1,34.2,0'),
+        ]);
+        $import = TransformerKmzImport::create([
+            'feeder_id' => $this->feeder->id, 'file_name' => 'incomplete.kmz',
+            'stored_path' => 'incomplete.kmz', 'status' => 'pending',
+        ]);
+        $result = app(TransformerKmzImportService::class)->import($import, $file);
+        $this->assertSame('completed', $result->status);
+        $this->assertSame(2, $result->transformer_count);
+        $this->assertSame(0, $result->created_rows);
+        $this->assertSame(0, $result->removed_rows);
+        $this->assertNotEmpty($result->errors);
+        $this->assertSame(2, $this->feeder->fresh()->total_transformers);
+        $this->assertFalse($this->feeder->fresh()->baseline_pending);
+        $this->assertDatabaseCount('transformers', 1);
+        $this->assertDatabaseHas('transformers', ['transformer_code' => 'EXISTING']);
+    }
+
     public function test_invalid_kmz_is_rejected_without_changing_existing_transformers(): void
     {
         Transformer::create($this->databaseTransformer('EXISTING-1'));

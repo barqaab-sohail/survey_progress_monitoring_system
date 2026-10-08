@@ -8,14 +8,17 @@ use App\Http\Controllers\Admin\TeamController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FieldSurveyController;
 use App\Http\Controllers\GoogleDriveController;
 use App\Http\Controllers\MdbEntryController;
 use App\Http\Controllers\MdbVerificationController;
 use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\ProgressQueueController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SurveyEntryController;
 use App\Http\Controllers\SurveyVerificationController;
 use App\Http\Controllers\TransformerController;
+use App\Http\Controllers\TransformerMdbBuilderController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/privacy-policy', 'legal.privacy-policy')->name('privacy-policy');
@@ -32,6 +35,22 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/', DashboardController::class)->name('dashboard');
+    Route::middleware('role:super_admin')->prefix('mdb-builder')->name('mdb-builder.')->group(function () {
+        Route::get('/', [TransformerMdbBuilderController::class, 'index'])->name('index');
+        Route::get('/create', [TransformerMdbBuilderController::class, 'create'])->name('create');
+        Route::post('/', [TransformerMdbBuilderController::class, 'store'])->name('store');
+        Route::get('/{project}/edit', [TransformerMdbBuilderController::class, 'edit'])->name('edit');
+        Route::put('/{project}', [TransformerMdbBuilderController::class, 'update'])->name('update');
+        Route::get('/{project}/preview', [TransformerMdbBuilderController::class, 'preview'])->name('preview');
+        Route::post('/{project}/export', [TransformerMdbBuilderController::class, 'export'])->middleware('throttle:10,1')->name('export');
+        Route::get('/{project}/source/{kind}', [TransformerMdbBuilderController::class, 'source'])->where('kind', 'pdf|gpx')->name('source');
+    });
+    Route::middleware('role:survey_team_leader,super_admin,project_manager,management_viewer')->prefix('field-surveys')->name('field-surveys.')->group(function () {
+        Route::get('/', [FieldSurveyController::class, 'index'])->name('index');
+        Route::get('/attachments/{clientUuid}', [FieldSurveyController::class, 'download'])->whereUuid('clientUuid')->name('attachment');
+        Route::get('/{clientUuid}', [FieldSurveyController::class, 'show'])->whereUuid('clientUuid')->name('show');
+    });
+    Route::get('/progress-queue', ProgressQueueController::class)->middleware('role:super_admin,project_manager,management_viewer,survey_team_leader,mdb_team_user,mdb_processing_user')->name('progress.queue');
     Route::get('/google-drive', [GoogleDriveController::class, 'index'])->name('google-drive.index');
     Route::post('/auth/google', [GoogleDriveController::class, 'connect'])->middleware('throttle:10,1')->name('google-drive.connect');
     Route::get('/auth/google/callback', [GoogleDriveController::class, 'callback'])->name('google-drive.callback');

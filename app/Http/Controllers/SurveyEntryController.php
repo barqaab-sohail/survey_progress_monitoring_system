@@ -21,7 +21,7 @@ class SurveyEntryController extends Controller
     public function index(Request $request): View
     {
         $entries = SurveyDailyEntry::query()
-            ->unless($request->user()->hasRole(UserRole::SuperAdmin->value), fn($query) => $query->where('entered_by', $request->user()->id))
+            ->unless($request->user()->hasRole(UserRole::SuperAdmin->value), fn ($query) => $query->where('entered_by', $request->user()->id))
             ->with(['team', 'items.feeder'])->latest('entry_date')->paginate(20);
 
         return view('survey.index', compact('entries'));
@@ -31,7 +31,7 @@ class SurveyEntryController extends Controller
     {
         $availableTeams = $this->availableTeamsFor($request);
         $team = $this->teamFor($request, $availableTeams);
-        $feeders = Feeder::active()->whereHas('assignments', fn($query) => $query->where('survey_team_id', $team->id)->where('status', 'active'))->orderBy('feeder_code')->get();
+        $feeders = Feeder::active()->whereHas('assignments', fn ($query) => $query->where('survey_team_id', $team->id)->where('status', 'active'))->withSum(['surveyItems as reserved_quantity' => fn ($q) => $q->whereIn('status', ['submitted', 'verified'])], 'transformers_surveyed')->orderBy('feeder_code')->get();
 
         return view('survey.create', compact('team', 'feeders', 'availableTeams'));
     }
@@ -41,7 +41,7 @@ class SurveyEntryController extends Controller
         $team = $this->teamFor($request);
         $service->create($request->user(), $team, $request->validated());
 
-        return redirect()->route('survey.index')->with('success', 'Daily survey progress submitted for verification.');
+        return redirect()->route('survey.index')->with('cleared_draft', 'entry:'.$request->user()->id.':survey:create:'.$team->id)->with('success', 'Daily survey progress submitted for verification.');
     }
 
     public function edit(SurveyDailyEntry $entry): View
@@ -51,6 +51,7 @@ class SurveyEntryController extends Controller
         $entry->load('items.feeder', 'team');
         $team = $entry->team;
         $feeders = $entry->items->pluck('feeder');
+        $feeders->each(fn ($f) => $f->loadSum(['surveyItems as reserved_quantity' => fn ($q) => $q->whereIn('status', ['submitted', 'verified'])->where('survey_daily_entry_id', '!=', $entry->id)], 'transformers_surveyed'));
 
         return view('survey.create', compact('team', 'feeders', 'entry'));
     }
@@ -60,12 +61,12 @@ class SurveyEntryController extends Controller
         $this->authorize('update', $entry);
         $service->update($request->user(), $entry, $request->validated());
 
-        return redirect()->route('survey.index')->with('success', 'Survey entry updated before verification.');
+        return redirect()->route('survey.index')->with('cleared_draft', 'entry:'.$request->user()->id.':survey:edit:'.$entry->id)->with('success', 'Survey entry updated before verification.');
     }
 
     public function returned(Request $request): View
     {
-        $items = SurveyDailyEntryItem::where('status', SurveyItemStatus::Returned->value)->whereHas('entry', fn($query) => $query->where('entered_by', $request->user()->id))->with(['entry', 'feeder'])->latest()->paginate(20);
+        $items = SurveyDailyEntryItem::where('status', SurveyItemStatus::Returned->value)->whereHas('entry', fn ($query) => $query->where('entered_by', $request->user()->id))->with(['entry', 'feeder'])->latest()->paginate(20);
 
         return view('survey.returned', compact('items'));
     }
@@ -80,9 +81,9 @@ class SurveyEntryController extends Controller
     private function availableTeamsFor(Request $request): Collection
     {
         return SurveyTeam::query()->where('status', 'active')
-            ->whereHas('project', fn($query) => $query->where('status', 'active'))
+            ->whereHas('project', fn ($query) => $query->where('status', 'active'))
             ->unless($request->user()->hasRole(UserRole::SuperAdmin->value),
-                fn($query) => $query->whereHas('members', fn($members) => $members->where('users.id', $request->user()->id)))
+                fn ($query) => $query->whereHas('members', fn ($members) => $members->where('users.id', $request->user()->id)))
             ->with('project')->orderBy('id')->get();
     }
 
