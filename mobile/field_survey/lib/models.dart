@@ -107,7 +107,7 @@ class SurveyRecord {
     'pole_class': '',
     'pole_height_ft': '',
     'consumers': <String, dynamic>{},
-    'intersection': '',
+    'intersection': false,
     'remarks': '',
   };
 
@@ -117,6 +117,8 @@ class SurveyRecord {
     final header = result['header'] as Json;
     header['capacity_kva'] = parseNumber(header['capacity_kva']);
     for (final row in (result['rows'] as List).cast<Json>()) {
+      row['phase'] = phaseFromConductors(row);
+      row['intersection'] = isIntersection(row['intersection']);
       for (final key in [
         'latitude',
         'longitude',
@@ -145,6 +147,37 @@ num? parseNumber(dynamic value) {
   if (value == null || value.toString().trim().isEmpty) return null;
   return num.tryParse(value.toString());
 }
+
+bool isIntersection(dynamic value) =>
+    value == true ||
+    [
+      '1',
+      'true',
+      'yes',
+      'on',
+      'int',
+      'intersection',
+      '✓',
+      '✔',
+      'x',
+      '×',
+      '+',
+    ].contains((value ?? '').toString().trim().toLowerCase());
+
+String phaseFromConductors(Json row) => ['r', 'y', 'b']
+    .where(
+      (key) => ![
+        '',
+        '+',
+        '-',
+        '–',
+        '—',
+        'x',
+        '×',
+      ].contains((row['conductor_$key'] ?? '').toString().trim().toLowerCase()),
+    )
+    .map((key) => key.toUpperCase())
+    .join();
 
 const consumerLabels = <String, String>{
   'rs': 'RS · 1-phase residential',
@@ -291,7 +324,6 @@ class SurveyValidation {
         'conductor_neutral': 100,
         'equipment_type': 50,
         'pole_class': 50,
-        'intersection': 100,
         'remarks': 1000,
       }.entries) {
         text('$prefix.${entry.key}', row[entry.key], entry.value);

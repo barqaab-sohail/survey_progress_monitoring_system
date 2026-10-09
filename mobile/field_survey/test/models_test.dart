@@ -23,6 +23,34 @@ SurveyRecord readySurvey() {
 }
 
 void main() {
+  test('phase follows R Y B conductor presence and ignores neutral', () {
+    for (var mask = 0; mask < 8; mask++) {
+      final row = SurveyRecord.newRow('2026-01-01');
+      var expected = '';
+      for (var i = 0; i < 3; i++) {
+        final key = ['r', 'y', 'b'][i];
+        if (mask & (1 << i) != 0) {
+          row['conductor_$key'] = ' GN ';
+          expected += key.toUpperCase();
+        }
+      }
+      row['conductor_neutral'] = 'A';
+      expect(phaseFromConductors(row), expected);
+    }
+    final record = readySurvey();
+    record.rows.first.addAll({
+      'phase': '3',
+      'conductor_r': 'A',
+      'conductor_y': 'W',
+      'conductor_b': '+',
+      'conductor_neutral': 'GN',
+    });
+    expect(record.payload(submitted: true)['rows'][0]['phase'], 'RY');
+    record.rows.first['conductor_y'] = '  ';
+    expect(record.payload(submitted: true)['rows'][0]['phase'], 'R');
+    record.rows.first['conductor_r'] = '×';
+    expect(record.payload(submitted: true)['rows'][0]['phase'], '');
+  });
   test(
     'blank draft is valid locally; submitting requires paper essentials',
     () {
@@ -40,7 +68,7 @@ void main() {
     () {
       final record = readySurvey();
       record.rows.first['consumers'] = {'rs': '0', 'rl': '', 'ag': '12'};
-      record.rows.first['intersection'] = '0003';
+      record.rows.first['intersection'] = true;
       record.rows.add(
         SurveyRecord.newRow(record.data['survey_date'])
           ..['gps_waypoint'] = '0005'
@@ -50,7 +78,7 @@ void main() {
       expect(payload['transformer_code'], '001234');
       expect(payload['rows'], hasLength(2));
       expect(payload['rows'][0]['consumers'], {'rs': 0, 'ag': 12});
-      expect(payload['rows'][0]['intersection'], '0003');
+      expect(payload['rows'][0]['intersection'], isTrue);
       expect(payload['rows'][1]['gps_waypoint'], '0005');
       expect(payload['header']['capacity_kva'], 100);
       expect(record.rows.first['consumers']['rl'], '');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\IntersectionFlag;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -27,6 +28,14 @@ class SaveTransformerMdbRequest extends FormRequest
         }
         if (! is_array($data) || array_is_list($data)) {
             throw ValidationException::withMessages(['payload' => 'Survey form data must be an object.']);
+        }
+        if (isset($data['rows']) && is_array($data['rows'])) {
+            foreach ($data['rows'] as &$row) {
+                if (is_array($row) && array_key_exists('intersection', $row)) {
+                    $row['intersection'] = IntersectionFlag::normalize($row['intersection']);
+                }
+            }
+            unset($row);
         }
         $this->merge($data);
     }

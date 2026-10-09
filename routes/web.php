@@ -1,18 +1,23 @@
 <?php
 
+require __DIR__.'/mdb-workflow.php';
+
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\HierarchyController;
 use App\Http\Controllers\Admin\MasterDataController;
 use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\Admin\TeamController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Api\FieldSurveyApiController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FieldSurveyController;
+use App\Http\Controllers\FieldSurveyTestController;
 use App\Http\Controllers\GoogleDriveController;
 use App\Http\Controllers\MdbEntryController;
 use App\Http\Controllers\MdbVerificationController;
 use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProgressQueueController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SurveyEntryController;
@@ -34,6 +39,16 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', 'active'])->group(function () {
+    Route::middleware('role:super_admin')->prefix('field-survey-test')->name('field-survey-test.')->group(function () {
+        Route::get('/', [FieldSurveyTestController::class, 'index'])->name('index');
+        Route::get('/bootstrap', [FieldSurveyApiController::class, 'bootstrap'])->name('bootstrap');
+        Route::get('/records', [FieldSurveyTestController::class, 'records'])->name('records');
+        Route::post('/sync', [FieldSurveyTestController::class, 'sync'])->name('sync');
+        Route::post('/{clientUuid}/attachments', [FieldSurveyTestController::class, 'attach'])->whereUuid('clientUuid')->name('attach');
+        Route::get('/attachments/{clientUuid}', [FieldSurveyTestController::class, 'download'])->whereUuid('clientUuid')->name('download');
+    });
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/', DashboardController::class)->name('dashboard');
     Route::middleware('role:super_admin')->prefix('mdb-builder')->name('mdb-builder.')->group(function () {
         Route::get('/', [TransformerMdbBuilderController::class, 'index'])->name('index');

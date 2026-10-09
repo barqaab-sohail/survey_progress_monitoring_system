@@ -1,0 +1,2 @@
+# PROJ projection worker dependency, tested with Python 3.13.
+pyproj==3.8.0

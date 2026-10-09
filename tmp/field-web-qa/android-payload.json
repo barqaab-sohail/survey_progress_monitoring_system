@@ -1,0 +1,54 @@
+{
+  "client_uuid": "1aa41fa3-cf06-4a6e-8d3f-fe8dacad291f",
+  "base_revision": 1,
+  "survey_team_id": 1,
+  "feeder_id": 1,
+  "transformer_id": null,
+  "transformer_code": "WEB-TEST-0001",
+  "survey_date": "2026-10-08",
+  "status": "submitted",
+  "header": {
+    "substation": "Test grid",
+    "division": "Test division",
+    "sub_division": "Test subdivision",
+    "sub_division_code": "SM-SD",
+    "transformer_make": "",
+    "inspectors": "Web Test Admin",
+    "location": "",
+    "capacity_kva": 100,
+    "mounting": "D.Pole",
+    "duty": "General Duty"
+  },
+  "rows": [
+    {
+      "se": "S",
+      "group": "01",
+      "date": "2026-10-08",
+      "gps_waypoint": "0008",
+      "latitude": 33.9,
+      "longitude": 73.4,
+      "gps_accuracy_m": 12,
+      "phase": "R",
+      "conductor_r": "A",
+      "conductor_y": "",
+      "conductor_b": "+",
+      "conductor_neutral": "A",
+      "equipment_type": "",
+      "pole_class": "",
+      "pole_height_ft": null,
+      "consumers": {
+        "rs": 5
+      },
+      "intersection": true,
+      "remarks": ""
+    }
+  ],
+  "solar": [
+    {
+      "consumer_reference": "0000123",
+      "installed_pv_kw": 5.5,
+      "remarks": ""
+    }
+  ],
+  "remarks": ""
+}

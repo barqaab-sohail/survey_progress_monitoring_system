@@ -10,7 +10,7 @@
     let submitting = false;
     let pdfUrl = null;
     const read = element => element.type === 'checkbox' ? element.checked : element.value.trim() === '' ? null : element.value.trim();
-    const set = (element, value) => { if (element.type === 'checkbox') element.checked = value === true || value === 1 || value === '1'; else element.value = value ?? ''; };
+    const set = (element, value) => { if (element.type === 'checkbox') element.checked = value === true || ['1','true','yes','on','int','intersection','?','?','x','?','+'].includes(String(value ?? '').trim().toLowerCase()); else element.value = value ?? ''; };
     function changed() { dirty = true; document.getElementById('mdb-save-state').textContent = 'Unsaved changes. Save before reviewing the network.'; }
     function matches(row) {
         const name = row.querySelector('[data-row="gps_waypoint"]').value.trim();

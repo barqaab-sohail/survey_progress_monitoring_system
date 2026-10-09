@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Support\ConductorPhase;
+use App\Support\IntersectionFlag;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -45,7 +47,7 @@ class SyncFieldSurveyRequest extends FormRequest
             'rows.*.pole_class' => ['nullable', 'string', 'max:50'],
             'rows.*.pole_height_ft' => ['nullable', 'numeric', 'between:0,1000000'],
             'rows.*.consumers' => ['sometimes', 'array:rs,rl,sc,lc,si,li,pb,ag,st'],
-            'rows.*.intersection' => ['nullable', 'string', 'max:100'],
+            'rows.*.intersection' => ['nullable', 'boolean'],
             'rows.*.remarks' => ['nullable', 'string', 'max:1000'],
             'solar' => ['present', 'array', 'max:100'],
             'solar.*' => ['array:consumer_reference,installed_pv_kw,remarks'],
@@ -70,5 +72,18 @@ class SyncFieldSurveyRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         abort_if(strlen($this->getContent()) > 2 * 1024 * 1024, 413, 'Survey payload exceeds 2 MB.');
+        $rows = $this->input('rows');
+        if (is_array($rows)) {
+            foreach ($rows as &$row) {
+                if (is_array($row)) {
+                    $row['phase'] = ConductorPhase::fromRow($row);
+                    if (array_key_exists('intersection', $row)) {
+                        $row['intersection'] = IntersectionFlag::normalize($row['intersection']);
+                    }
+                }
+            }
+            unset($row);
+            $this->merge(['rows' => $rows]);
+        }
     }
 }

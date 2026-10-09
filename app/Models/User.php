@@ -6,6 +6,7 @@ use App\Enums\RecordStatus;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -14,10 +15,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, HasAvatar
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, Notifiable;
@@ -35,6 +37,7 @@ class User extends Authenticatable implements FilamentUser
         'role',
         'status',
         'password',
+        'profile_photo_path',
     ];
 
     /**
@@ -86,10 +89,22 @@ class User extends Authenticatable implements FilamentUser
 
     protected static function booted(): void
     {
+        static::updated(function (User $user): void {
+            if ($user->wasChanged('profile_photo_path') && $old = $user->getRawOriginal('profile_photo_path')) {
+                Storage::disk('public')->delete($old);
+            }
+        });
+        static::deleted(function (User $user): void {
+            if ($user->profile_photo_path) {
+                Storage::disk('public')->delete($user->profile_photo_path);
+            }
+        });
         static::saved(function (User $user): void {
-            if ($user->role && Schema::hasTable(config('permission.table_names.roles', 'roles'))) {
+            if ($user->role && ($user->wasRecentlyCreated || $user->wasChanged('role')) && Schema::hasTable(config('permission.table_names.roles', 'roles'))) {
                 $role = Role::findOrCreate($user->role->value, $user->getDefaultGuardName());
-                $user->syncRoles([$role]);
+                $primaryRoles = array_map(fn (UserRole $item) => $item->value, UserRole::cases());
+                $additionalRoles = $user->roles()->whereNotIn('name', $primaryRoles)->pluck('name')->all();
+                $user->syncRoles(array_merge([$role->name], $additionalRoles));
             }
         });
     }
@@ -107,5 +122,15 @@ class User extends Authenticatable implements FilamentUser
     public function isActive(): bool
     {
         return $this->status === RecordStatus::Active;
+    }
+
+    public function getProfilePhotoUrlAttribute(): ?string
+    {
+        return $this->profile_photo_path ? asset('storage/'.$this->profile_photo_path) : null;
+    }
+
+    public function getFilamentAvatarUrl(): ?string
+    {
+        return $this->profile_photo_url;
     }
 }

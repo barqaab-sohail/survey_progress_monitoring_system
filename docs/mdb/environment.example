@@ -1,0 +1,27 @@
+# Copy relevant values into the intended deployment environment; no secrets here.
+APP_TIMEZONE=Asia/Karachi
+QUEUE_CONNECTION=database
+DB_QUEUE_RETRY_AFTER=420
+CACHE_STORE=database
+FILESYSTEM_DISK=local
+MDB_WORKFLOW_DISK=local
+MDB_WORKFLOW_QUEUE=mdb
+# Leave unset until the survey pole-height unit is confirmed; row entry also has an explicit unit selector.
+# MDB_ENTRY_POLE_HEIGHT_UNIT=ft
+MDB_SOURCE_PYTHON=python
+MDB_PDF_MAX_MB=100
+MDB_PROJECTION_PYTHON=python
+MDB_PROJECTION_TIMEOUT=30
+
+# Explicitly choose disabled, windows, or http after worker provisioning.
+MDB_EXPORT_DRIVER=disabled
+MDB_EXPORT_TIMEOUT=180
+MDB_EXPORT_MAX_BYTES=104857600
+# Windows: configure the PowerShell bitness matching installed DAO/ACE.
+# MDB_EXPORT_POWERSHELL=C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe
+# HTTP: fixed authorized HTTPS worker origin and a deployment-managed secret.
+# MDB_EXPORT_WORKER_URL=https://authorized-worker.example
+# MDB_EXPORT_WORKER_SECRET=<provide through the deployment secret store>
+
+# Engineering values are entered and approved per project in the module.
+# No frequency, voltage, CRS, demand or equipment parameters are supplied here.

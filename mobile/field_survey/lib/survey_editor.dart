@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'field_controller.dart';
 import 'models.dart';
@@ -949,13 +948,12 @@ class RowEditor extends StatefulWidget {
 
 class _RowEditorState extends State<RowEditor> {
   Json get row => widget.record.rows[widget.index];
-  bool locating = false, allowPop = false;
-  int gpsGeneration = 0;
-  String? gpsError;
+  bool allowPop = false;
   String get prefix => 'rows.${widget.index}';
   Map<String, String> get errors =>
       SurveyValidation.errors(widget.record, submitting: widget.showRequired);
   void changed() {
+    row['phase'] = phaseFromConductors(row);
     widget.onChanged();
     setState(() {});
   }
@@ -983,64 +981,13 @@ class _RowEditorState extends State<RowEditor> {
     }
   }
 
-  Future<void> gps() async {
-    setState(() {
-      locating = true;
-      gpsError = null;
-    });
-    try {
-      if (!await Geolocator.isLocationServiceEnabled()) {
-        throw const FormatException('Turn on phone location, then try again.');
-      }
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.deniedForever) {
-        throw const FormatException(
-          'Location permission is blocked. Allow location in the phone app settings.',
-        );
-      }
-      if (permission == LocationPermission.denied) {
-        throw const FormatException(
-          'Location permission was not granted. You can still enter the waypoint manually.',
-        );
-      }
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 30),
-        ),
-      );
-      if (!mounted) return;
-      row['latitude'] = position.latitude;
-      row['longitude'] = position.longitude;
-      row['gps_accuracy_m'] = position.accuracy;
-      gpsGeneration++;
-      changed();
-    } on FormatException catch (e) {
-      if (mounted) setState(() => gpsError = e.message);
-    } on Object {
-      if (mounted) {
-        setState(
-          () => gpsError =
-              'Unable to get a GPS fix. Move outdoors or enter coordinates manually.',
-        );
-      }
-    } finally {
-      if (mounted) setState(() => locating = false);
-    }
-  }
-
   Widget field(
     String key,
     String label, {
     bool number = false,
     String? helper,
   }) => EntryField(
-    key: ValueKey(
-      '$key:${key == 'latitude' || key == 'longitude' ? gpsGeneration : ''}',
-    ),
+    key: ValueKey(key),
     label: label,
     value: row[key],
     enabled: widget.editable,
@@ -1049,7 +996,6 @@ class _RowEditorState extends State<RowEditor> {
     error: errors['$prefix.$key'],
     onChanged: (value) {
       row[key] = value;
-      if (key == 'latitude' || key == 'longitude') row['gps_accuracy_m'] = null;
       changed();
     },
   );
@@ -1105,51 +1051,18 @@ class _RowEditorState extends State<RowEditor> {
                 'gps_waypoint',
                 'GPS waypoint identifier',
                 helper:
-                    'The printed GPS WP code; a phone GPS fix does not fill this identifier.',
+                    'Enter the waypoint identifier used to link the GPX file.',
               ),
-              field(
-                'phase',
-                'Phase',
-                helper: 'Enter the phase code recorded in the field.',
+              TextFormField(
+                key: ValueKey('phase:${phaseFromConductors(row)}'),
+                initialValue: phaseFromConductors(row),
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Phase',
+                  helperText:
+                      'Automatic from R, Y and B conductors. Neutral is excluded.',
+                ),
               ),
-            ],
-          ),
-          SectionCard(
-            title: 'Phone GPS',
-            subtitle:
-                'Optional. Accuracy indicates the uncertainty of the phone fix.',
-            children: [
-              if (widget.editable)
-                FilledButton.tonalIcon(
-                  onPressed: locating ? null : gps,
-                  icon: const Icon(Icons.my_location),
-                  label: Text(
-                    locating ? 'Waiting for GPS…' : 'Capture current GPS',
-                  ),
-                ),
-              if (gpsError != null)
-                Text(
-                  gpsError!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              field('latitude', 'Latitude', number: true),
-              field('longitude', 'Longitude', number: true),
-              Text(
-                row['gps_accuracy_m'] == null
-                    ? 'No accuracy recorded'
-                    : 'Accuracy ±${parseNumber(row['gps_accuracy_m'])?.toStringAsFixed(1) ?? row['gps_accuracy_m']} m',
-              ),
-              if (widget.editable && row['gps_accuracy_m'] != null)
-                TextButton(
-                  onPressed: () {
-                    row['latitude'] = null;
-                    row['longitude'] = null;
-                    row['gps_accuracy_m'] = null;
-                    gpsGeneration++;
-                    changed();
-                  },
-                  child: const Text('Clear phone GPS fix'),
-                ),
             ],
           ),
           SectionCard(
@@ -1179,6 +1092,21 @@ class _RowEditorState extends State<RowEditor> {
           SectionCard(
             title: 'Equipment / pole',
             children: [
+              CheckboxListTile(
+                title: const Text('Intersection'),
+                subtitle: const Text(
+                  'Check when this observation is at an intersection.',
+                ),
+                value: isIntersection(row['intersection']),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                onChanged: widget.editable
+                    ? (value) {
+                        row['intersection'] = value ?? false;
+                        changed();
+                      }
+                    : null,
+              ),
               field('equipment_type', 'Equipment type'),
               ChoiceField(
                 label: 'Pole class',
@@ -1220,12 +1148,6 @@ class _RowEditorState extends State<RowEditor> {
                     changed();
                   },
                 ),
-              ),
-              field(
-                'intersection',
-                'Int (separate field)',
-                helper:
-                    'Preserves the printed Int column; confirm its meaning with the survey lead.',
               ),
               EntryField(
                 label: 'Row remarks',

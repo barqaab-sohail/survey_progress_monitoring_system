@@ -37,6 +37,12 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogoHeight('4rem')
             ->favicon(fn (): string => app(ProjectBranding::class)->faviconUrl())
             ->navigationItems([
+                NavigationItem::make('Android Survey Web Test')
+                    ->group('Administration')
+                    ->icon('heroicon-o-device-phone-mobile')
+                    ->url(fn (): string => route('field-survey-test.index'))
+                    ->visible(fn (): bool => auth()->user()?->hasRole('super_admin') ?? false)
+                    ->sort(0),
                 NavigationItem::make('Master Data & Import')
                     ->group('Administration')
                     ->icon('heroicon-o-arrow-up-tray')

@@ -2,11 +2,17 @@
 
 namespace App\Providers;
 
+use App\Models\Mdb\SurveyBatch;
+use App\Policies\SurveyBatchPolicy;
+use App\Services\Mdb\Exporter;
+use App\Services\Mdb\ExporterFactory;
+use App\Services\Mdb\WorkflowAccess;
 use App\Support\ProjectBranding;
 use BezhanSalleh\FilamentShield\Facades\FilamentShield;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -18,6 +24,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(ProjectBranding::class);
+        $this->app->singleton(Exporter::class, fn () => ExporterFactory::make());
     }
 
     /**
@@ -25,6 +32,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(ProjectBranding $branding): void
     {
+        Gate::policy(SurveyBatch::class, SurveyBatchPolicy::class);
+        foreach (WorkflowAccess::ABILITIES as $ability) {
+            Gate::define('mdb-workflow.'.$ability, fn ($user) => app(WorkflowAccess::class)->allows($user, $ability));
+        }
         config(['app.name' => $branding->projectName()]);
 
         FilamentShield::enforcePolicies();

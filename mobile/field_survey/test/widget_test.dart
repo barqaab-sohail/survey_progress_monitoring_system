@@ -5,7 +5,7 @@ import 'models_test.dart' show readySurvey;
 
 void main() {
   testWidgets(
-    'row form saves leading zeros and a multi-character GPS coordinate without losing focus',
+    'row form retains waypoint entry and excludes phone GPS controls',
     (tester) async {
       final record = readySurvey();
       var changed = 0;
@@ -24,19 +24,23 @@ void main() {
       await tester.enterText(group, '0007');
       await tester.pump();
       expect(record.rows.first['group'], '0007');
-      await tester.scrollUntilVisible(
-        find.text('Latitude'),
-        350,
-        scrollable: find.byType(Scrollable).first,
+      final waypoint = find.widgetWithText(
+        TextFormField,
+        'GPS waypoint identifier',
       );
-      final latitude = find.widgetWithText(TextFormField, 'Latitude');
-      await tester.enterText(latitude, '3');
+      await tester.enterText(waypoint, '0');
       await tester.pump();
-      final stateBefore = tester.state<FormFieldState>(latitude);
-      await tester.enterText(latitude, '33.25');
+      final stateBefore = tester.state<FormFieldState>(waypoint);
+      await tester.enterText(waypoint, '0008');
       await tester.pump();
-      expect(tester.state<FormFieldState>(latitude), same(stateBefore));
-      expect(record.rows.first['latitude'], '33.25');
+      expect(tester.state<FormFieldState>(waypoint), same(stateBefore));
+      expect(record.rows.first['gps_waypoint'], '0008');
+      expect(find.text('Phone GPS'), findsNothing);
+      expect(find.text('Capture current GPS'), findsNothing);
+      expect(find.widgetWithText(TextFormField, 'Latitude'), findsNothing);
+      expect(find.widgetWithText(TextFormField, 'Longitude'), findsNothing);
+      expect(record.rows.first['latitude'], isNull);
+      expect(record.rows.first['longitude'], isNull);
       expect(changed, greaterThanOrEqualTo(3));
     },
   );
@@ -75,11 +79,20 @@ void main() {
       await tester.enterText(residential, '0');
       await tester.pump();
       await tester.scrollUntilVisible(
-        find.text('Int (separate field)'),
-        450,
+        find.text('Intersection'),
+        -450,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.text('Int (separate field)'), findsOneWidget);
+      expect(find.text('Intersection'), findsOneWidget);
+      await tester.drag(find.byType(ListView), const Offset(0, 200));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.pump();
+      expect(record.rows.first['intersection'], isTrue);
+      expect(record.rows.first['consumers']['rs'], '0');
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.pump();
+      expect(record.rows.first['intersection'], isFalse);
     },
   );
 }

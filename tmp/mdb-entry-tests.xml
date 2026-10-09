@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="E:\xampp\htdocs\survey_progress_monitoring_system\phpunit.xml" tests="9" assertions="110" errors="1" failures="0" skipped="0" time="5.041040">
+    <testsuite name="Feature" tests="9" assertions="110" errors="1" failures="0" skipped="0" time="5.041040">
+      <testsuite name="Tests\Feature\MdbOperatorEntryTest" file="E:\xampp\htdocs\survey_progress_monitoring_system\tests\Feature\MdbOperatorEntryTest.php" tests="9" assertions="110" errors="1" failures="0" skipped="0" time="5.041040">
+        <testcase name="test_draft_missing_waypoint_and_none_states_survive_reload_and_duplicate_clicks_are_idempotent" file="E:\xampp\htdocs\survey_progress_monitoring_system\tests\Feature\MdbOperatorEntryTest.php" line="71" class="Tests\Feature\MdbOperatorEntryTest" classname="Tests.Feature.MdbOperatorEntryTest" assertions="19" time="1.196309"/>
+        <testcase name="test_paired_rows_preserve_individual_poles_pv_decimal_references_and_count_each_entry_once" file="E:\xampp\htdocs\survey_progress_monitoring_system\tests\Feature\MdbOperatorEntryTest.php" line="87" class="Tests\Feature\MdbOperatorEntryTest" classname="Tests.Feature.MdbOperatorEntryTest" assertions="21" time="0.247387"/>
+        <testcase name="test_continuation_and_header_corrections_keep_one_transformer_and_new_transformer_is_separate" file="E:\xampp\htdocs\survey_progress_monitoring_system\tests\Feature\MdbOperatorEntryTest.php" line="107" class="Tests\Feature\MdbOperatorEntryTest" classname="Tests.Feature.MdbOperatorEntryTest" assertions="12" time="0.260591"/>
+        <testcase name="test_confirmation_and_complete_pairs_are_required_for_review_but_not_draft_entry" file="E:\xampp\htdocs\survey_progress_monitoring_system\tests\Feature\MdbOperatorEntryTest.php" line="122" class="Tests\Feature\MdbOperatorEntryTest" classname="Tests.Feature.MdbOperatorEntryTest" assertions="11" time="0.279828"/>
+        <testcase name="test_row_edit_preserves_first_entry_invalidates_approval_and_retries_once" file="E:\xampp\htdocs\survey_progress_monitoring_system\tests\Feature\MdbOperatorEntryTest.php" line="133" class="Tests\Feature\MdbOperatorEntryTest" classname="Tests.Feature.MdbOperatorEntryTest" assertions="12" time="0.281871"/>
+        <testcase name="test_delete_requires_confirmation_leaves_the_other_endpoint_in_the_same_pair" file="E:\xampp\htdocs\survey_progress_monitoring_system\tests\Feature\MdbOperatorEntryTest.php" line="143" class="Tests\Feature\MdbOperatorEntryTest" classname="Tests.Feature.MdbOperatorEntryTest" assertions="8" time="0.235863"/>
+        <testcase name="test_foreign_rows_sources_and_copy_provenance_cannot_cross_transformers" file="E:\xampp\htdocs\survey_progress_monitoring_system\tests\Feature\MdbOperatorEntryTest.php" line="152" class="Tests\Feature\MdbOperatorEntryTest" classname="Tests.Feature.MdbOperatorEntryTest" assertions="4" time="0.205127"/>
+        <testcase name="test_operator_markup_places_pdf_above_header_and_rows_and_preserves_existing_sections" file="E:\xampp\htdocs\survey_progress_monitoring_system\tests\Feature\MdbOperatorEntryTest.php" line="161" class="Tests\Feature\MdbOperatorEntryTest" classname="Tests.Feature.MdbOperatorEntryTest" assertions="14" time="0.224449"/>
+        <testcase name="test_explicit_branch_pairs_flow_through_the_existing_writer_and_reopen_as_a_genuine_mdb" file="E:\xampp\htdocs\survey_progress_monitoring_system\tests\Feature\MdbOperatorEntryTest.php" line="176" class="Tests\Feature\MdbOperatorEntryTest" classname="Tests.Feature.MdbOperatorEntryTest" assertions="9" time="2.109615">
+          <error type="RuntimeException">Tests\Feature\MdbOperatorEntryTest::test_explicit_branch_pairs_flow_through_the_existing_writer_and_reopen_as_a_genuine_mdb&#13;
+RuntimeException: MDB worker failed: Explicit required value missing: InstPrimaryTransformers.ConnectedPhases
+&#13;
+E:\xampp\htdocs\survey_progress_monitoring_system\app\Services\Mdb\WindowsExporter.php:36
+E:\xampp\htdocs\survey_progress_monitoring_system\app\Services\Mdb\ExportService.php:126
+E:\xampp\htdocs\survey_progress_monitoring_system\tests\Feature\MdbOperatorEntryTest.php:209</error>
+        </testcase>
+      </testsuite>
+    </testsuite>
+  </testsuite>
+</testsuites>

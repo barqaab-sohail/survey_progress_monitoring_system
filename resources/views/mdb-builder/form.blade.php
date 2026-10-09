@@ -36,7 +36,7 @@
 </div></section>
 <section class="card"><div class="section-title"><h2>3. Paper survey rows</h2><button class="btn btn-light" type="button" id="add-pair">Add S/E pair</button></div>
 <p>Each S/E pair becomes a section. Enter phase and conductors on S, consumers on E. Repeat waypoint identifiers to form branches. Enter ditto marks as their actual values. Coordinates may stay blank when a GPX waypoint matches.</p>
-<div style="overflow-x:auto"><table class="table mdb-paper-table"><thead><tr><th>Row</th><th>S/E</th><th>Group</th><th>Date</th><th>GPS WP</th><th>Phase</th><th>R</th><th>Y</th><th>B</th><th>Neutral</th><th>Type</th><th>Pole class</th><th>Height (ft)</th>@foreach(['RS','RL','SC','LC','SI','LI','PB','AG','ST'] as $key)<th>{{ $key }}</th>@endforeach<th>Int</th><th>Latitude</th><th>Longitude</th><th>GPX link</th><th>Remarks</th><th></th></tr></thead><tbody id="mdb-rows"></tbody></table></div>
+<div style="overflow-x:auto"><table class="table mdb-paper-table"><thead><tr><th>Row</th><th>S/E</th><th>Group</th><th>Date</th><th>GPS WP</th><th>Phase</th><th>R</th><th>Y</th><th>B</th><th>Neutral</th><th>Type</th><th>Pole class</th><th>Height (ft)</th>@foreach(['RS','RL','SC','LC','SI','LI','PB','AG','ST'] as $key)<th>{{ $key }}</th>@endforeach<th>Intersection</th><th>Latitude</th><th>Longitude</th><th>GPX link</th><th>Remarks</th><th></th></tr></thead><tbody id="mdb-rows"></tbody></table></div>
 <small>A = ANT, W = WASP, GN = GNAT. Other conductor IDs remain as entered. A blank consumer cell stays unrecorded until you explicitly choose the zero-count convention below.</small>
 </section>
 <section class="card"><div class="section-title"><h2>4. Solar / net metering</h2><button class="btn btn-light" type="button" id="add-solar">Add solar entry</button></div><p>These entries are preserved in the MDB survey tables. Assign generator locations and electrical models in SynerGEE.</p><div id="mdb-solar"></div></section>
@@ -70,7 +70,7 @@
 @foreach(['r','y','b','neutral'] as $phase)<td><input data-row="conductor_{{ $phase }}" maxlength="100" aria-label="Conductor {{ $phase }}"></td>@endforeach
 <td><input data-row="equipment_type" maxlength="50" aria-label="Equipment type"></td><td><input data-row="pole_class" maxlength="50" aria-label="Pole class"></td><td><input data-row="pole_height_ft" type="number" min="0" step="any" aria-label="Pole height"></td>
 @foreach(['rs','rl','sc','lc','si','li','pb','ag','st'] as $category)<td><input data-consumer="{{ $category }}" type="number" min="0" max="1000000" step="1" aria-label="Consumers {{ strtoupper($category) }}"></td>@endforeach
-<td><input data-row="intersection" maxlength="100" aria-label="Int"></td><td><input data-row="latitude" type="number" min="-90" max="90" step="any" aria-label="Latitude"></td><td><input data-row="longitude" type="number" min="-180" max="180" step="any" aria-label="Longitude"></td><td data-gpx-link></td><td><input data-row="remarks" maxlength="1000" aria-label="Row remarks"></td><td><button type="button" class="btn btn-sm btn-light" data-delete-pair>Remove pair</button></td>
+<td><input data-row="intersection" type="checkbox" aria-label="Intersection"></td><td><input data-row="latitude" type="number" min="-90" max="90" step="any" aria-label="Latitude"></td><td><input data-row="longitude" type="number" min="-180" max="180" step="any" aria-label="Longitude"></td><td data-gpx-link></td><td><input data-row="remarks" maxlength="1000" aria-label="Row remarks"></td><td><button type="button" class="btn btn-sm btn-light" data-delete-pair>Remove pair</button></td>
 </tr></template>
 <template id="mdb-solar-template"><div class="grid mdb-solar-entry" style="grid-template-columns:2fr 1fr 2fr auto;align-items:end;margin-bottom:12px"><label>Consumer reference<input data-solar="consumer_reference" maxlength="100"></label><label>PV capacity (kW)<input data-solar="installed_pv_kw" type="number" min="0" step="any"></label><label>Remarks<input data-solar="remarks" maxlength="1000"></label><button type="button" class="btn btn-light" data-delete-solar>Remove</button></div></template>
 <datalist id="gpx-names"></datalist>
@@ -78,5 +78,5 @@
 @push('styles')<link rel="stylesheet" href="{{ asset('css/mdb-builder.css') }}">@endpush
 @push('scripts')
 <script>window.mdbEditorData = {{ \Illuminate\Support\Js::from(['initial'=>$initial,'references'=>$references,'waypoints'=>$project->gpx_waypoints ?? []]) }};</script>
-<script src="{{ asset('js/mdb-builder.js') }}"></script>
+<script src="{{ asset('js/mdb-builder.js') }}?v=intersection"></script>
 @endpush

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Users\Schemas;
 
 use App\Enums\UserRole;
+use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 
@@ -12,6 +13,7 @@ class UserInfolist
     {
         return $schema
             ->components([
+                ImageEntry::make('profile_photo_url')->label('Profile picture')->circular()->placeholder('No picture uploaded'),
                 TextEntry::make('organization.name')
                     ->label('Organization')
                     ->placeholder('-'),

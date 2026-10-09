@@ -1,0 +1,34 @@
+# Simple MDB survey entry
+
+Open **MDB Creation & Verification**, create a batch and select its project, feeder, survey team and date. Upload PDF and GPX together, or add them under **Upload PDF + GPX** later. Existing source processing, permissions and private downloads remain in use.
+
+The PDF stays above the form. Use previous/next, page number, zoom, rotation and the viewing-height slider. Zoomed pages scroll inside the viewer. Changing pages keeps the selected transformer and entered fields. A new row records the currently displayed PDF page automatically. Editing an already saved row preserves its recorded page unless **Use displayed PDF page** is chosen.
+
+Before entry, an administrator should configure the verified pole-height unit and two-digit-year window once in **Project entry settings**. For example, a window starting at 2000 interprets YY 00–99 as 2000–2099. No unit or century rule is assumed when unconfigured. Existing saved row units remain intact.
+
+1. **Add Transformer**, enter its header once and select its surveyed GPS waypoint. Feeder, substation, division and subdivision values come from existing reference records; correct them against the PDF. Saving a header confirms the displayed page as its header page after source processing finishes.
+2. On continuation pages, choose **Continue Current Transformer**. Choose **Add New Transformer** only when the form changes transformer. Headers, rows and copying scope remain separate.
+3. Enter an **S — Start** row, then **Save & Add Next** to enter its **E — End** row. The pair number keeps endpoints together. Drafts may contain incomplete pairs; deleting one endpoint does not re-pair later rows. Enter group (two digits), date (**DD/MM/YYYY**) and GPS number (three digits). The read-only complete waypoint uses **GGDDMMYYWWW**: `11`, `13/12/2022`, `104` gives `11131222104`; `01`, `08/10/2026`, `001` gives `01081026001`. **Paste Complete Waypoint** fills these components using the configured year window.
+4. Select each R/Y/B/neutral conductor. **Not Entered** means unknown; **None / Not Present** means explicitly absent. Phase derives from R/Y/B only. Neutral stays separate and the exporter preserves its neutral notation.
+5. Copy conductors/equipment only after checking PDF ditto marks. For an E row, copying uses its saved S row when available. Copy markers identify the source; editing a copied field clears its marker. Counts, PV and intersection are never copied. Using the previous E waypoint for a new S is optional; change it for a branch.
+6. Enter equipment type, pole class and height for each individual S/E pole. Conductors, type and pole class have one searchable dropdown each: closed controls show short codes, and their popup shows full descriptions. Height uses the project unit shown beside the narrow input. The reference PDF does not print a unit, so no unit is assumed. If the project unit changes while a new draft is open, refresh and use the conditional **Convert draft** action to convert its confirmed old unit explicitly. Unknown units are never converted.
+7. Enter counts in form order: RS, RL, SC, LC, SI, LI, PB, AG, ST, PV. Blank and explicit zero remain distinct. **Intersection (Int)** is a checkbox excluded from totals. Existing nine-category load mapping sums entered S/E counts once; PV counts/details remain separate, without inventing a load or generator.
+8. Add optional PV records with a text reference, decimal service load/capacity in kW and remarks. Leading zeros remain intact in waypoint and consumer references.
+9. **Save Draft** stores the row in the application. **Save & Add Next** clears conductors, equipment, counts, PV and intersection while retaining group/date. Inheritance is shown and can be corrected immediately; changing a row date does not change the transformer header or another row. Saved rows can be edited or deleted with confirmation. Ctrl+Enter saves and advances; Ctrl+S saves the row draft, or the header when it has unsaved edits.
+10. **Review & save**, resolve entry issues and confirm the header/rows against the PDF. Send the batch for verification. Once the current revision is approved, **Generate MDB** uses the existing queued exporter and readback checks.
+
+Unsaved fields are retained in this browser for accidental reload recovery, with a clear save-status message. This does not replace Save Draft: browser recovery stays on the same browser/account and can be cleared by browser settings. Navigation warns about unsaved fields. If another operator or source job changes the batch, stale saves are refused; **Refresh saved records** retains entered fields for review before saving again.
+
+The complete waypoint is the survey/node identity; the GPS-number component matches the GPX name. Repeated GPS numbers from different survey dates remain different nodes. Source-file and recording-date evidence help resolve matches without rewriting the PDF date. Missing or ambiguous evidence stays flagged; no nearest coordinate is substituted. A source selector appears only when resolving conflicting matches. Review shows the retained source.
+
+PDF page and GPX association are recorded automatically. Each new saved row receives an **application entry sequence** such as `Entry 1`, not a verified physical row number on the PDF. Legacy PDF row references remain labelled separately.
+
+Existing section-only records were not rewritten or guessed into S/E rows. They remain an existing saved network with a link to the original editor. Engineering settings, templates, demand approval, source corrections, verification and SynerGEE acceptance are on separate review/advanced pages.
+
+## Form lookup limits
+
+`A081026.pdf` has fourteen pages. Its visible legend provides A/Ant, W/Wasp, GN/Gnat, AWG/PVC/ABC codes and pole-class codes. Existing A→ANT, W→WASP and GN→GNAT aliases are retained. Other values must match reviewed library references. Approved template conductor IDs join the searchable lists. Administrators may provide reviewed code-to-description objects in template metadata `entry_lookups.equipment_types` and `entry_lookups.pole_classes`.
+
+TR and SP are offered exactly as written, with descriptions marked unconfirmed. Their equipment mapping still needs review. LC's precise commercial classification remains unconfirmed because it is not expanded in the visible legend. No unreadable electrical values, equipment parameters, load assumptions or pole-height units were guessed.
+
+Browser visual QA and SynerGEE acceptance remain pending. Server rendering, DOM interactions, MySQL changes with rollback and a genuine synthetic branch MDB round-trip were checked; these do not establish full transcription or engineering approval of the handwritten PDF. See [compact-entry verification](COMPACT_ENTRY_VERIFICATION.md) for the latest checks.

@@ -1,6 +1,6 @@
 # HAZECO Field Survey for Android
 
-An Android first release connected to the existing Laravel survey monitoring system. It digitizes the blank LT survey layout from B2308.pdf: transformer and administrative details, repeated S/E observations, all nine consumer codes, a separate Int field, solar installations, and photo/sketch images. The sample PDF and its handwritten entries are not bundled with the app.
+An Android first release connected to the existing Laravel survey monitoring system. It digitizes the blank LT survey layout from B2308.pdf: transformer and administrative details, repeated S/E observations, all nine consumer codes, a separate Intersection checkbox, solar installations, and photo/sketch images. The sample PDF and its handwritten entries are not bundled with the app.
 
 ## Install and connect
 
@@ -33,9 +33,9 @@ The Laravel endpoints and migration setup are documented in [the delivery guide]
 
 Codes, group identifiers, waypoints, transformer codes, and consumer references remain text to preserve leading zeros. Blank consumer counts mean **not recorded**, while `0` is a recorded zero. Both S and E observations remain separate; they do not automatically change the monitoring system's progress totals or approvals. Existing GIS reference data is used for selection and never rewritten by mobile collection.
 
-The printed form omits several definitions. S/E codes are displayed without inventing expanded meanings; LC stays labelled Commercial (LC). Int is preserved separately rather than counted as consumers. Capacity in kVA and pole height in feet are application conventions because the scanned form does not state these units; confirm units with the survey lead. Other conductor text remains editable. [Form mapping](../../docs/mobile/FORM_MAPPING.md) records the remaining interpretation assumptions.
+The printed form omits several definitions. S/E codes are displayed without inventing expanded meanings; LC stays labelled Commercial (LC). Int is an Intersection checkbox and is never counted as a consumer. Capacity in kVA and pole height in feet are application conventions because the scanned form does not state these units; confirm units with the survey lead. Other conductor text remains editable. [Form mapping](../../docs/mobile/FORM_MAPPING.md) records the remaining interpretation assumptions.
 
-GPS capture is optional and requests foreground location permission only. Its displayed accuracy describes the phone fix, and the paper waypoint identifier must still be entered. Editing coordinates clears the captured accuracy. Camera/gallery uses Android's picker; no broad media-storage permission is requested.
+Phone GPS capture and manual latitude/longitude entry have been removed. The app does not request location permission. Enter the GPS waypoint identifier to link coordinates from a separately uploaded GPX file in the web MDB workflow. Existing saved coordinate values are retained for compatibility. Camera/gallery uses Android's picker; no broad media-storage permission is requested.
 
 ## Build and verify
 
@@ -53,4 +53,4 @@ flutter build apk --debug
 
 The APK is written to `build/app/outputs/flutter-apk/app-debug.apk`. Connect a test phone or start an emulator, then use `flutter run` for interactive testing.
 
-Automated tests cover local SQLite restart persistence, immutable retries, revision/conflict handling, account/server isolation, attachment upload/deletion races, validation, HTTP payloads, printed consumer fields, leading zeros, and editable GPS focus. Test real camera/gallery, GPS accuracy, denied permissions, low storage, poor networks, and force-stop/reopen on the survey team's phones before general rollout. A debug APK is a testable first release; it is not a Play Store publication.
+Automated tests cover local SQLite restart persistence, immutable retries, revision/conflict handling, account/server isolation, attachment upload/deletion races, validation, HTTP payloads, printed consumer fields, leading zeros, waypoint input focus, and absence of phone GPS controls. Test real camera/gallery, denied camera permissions, low storage, poor networks, and force-stop/reopen on the survey team's phones before general rollout. A debug APK is a testable first release; it is not a Play Store publication.

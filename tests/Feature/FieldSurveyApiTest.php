@@ -78,7 +78,7 @@ class FieldSurveyApiTest extends TestCase
             'transformer_id' => null, 'transformer_code' => 'B2308',
             'survey_date' => today()->toDateString(), 'status' => $status,
             'header' => ['substation' => 'Substation', 'capacity_kva' => 50, 'inspectors' => 'Field inspector', 'location' => 'Street 1', 'mounting' => 'D.Pole', 'duty' => 'General Duty'],
-            'rows' => [['se' => 'S', 'group' => '01', 'date' => today()->toDateString(), 'gps_waypoint' => '0008', 'phase' => '3', 'conductor_r' => 'A', 'pole_class' => 'PCO', 'pole_height_ft' => 36, 'consumers' => ['rs' => 5, 'lc' => 1], 'intersection' => 'Int']],
+            'rows' => [['se' => 'S', 'group' => '01', 'date' => today()->toDateString(), 'gps_waypoint' => '0008', 'phase' => '3', 'conductor_r' => 'A', 'pole_class' => 'PCO', 'pole_height_ft' => 36, 'consumers' => ['rs' => 5, 'lc' => 1], 'intersection' => true]],
             'solar' => [['consumer_reference' => '0000123', 'installed_pv_kw' => 5.5, 'remarks' => 'Rooftop']], 'remarks' => 'Field visit',
         ];
     }
@@ -94,6 +94,21 @@ class FieldSurveyApiTest extends TestCase
         $this->withHeader('Authorization', 'Bearer '.$plain)->postJson('/api/v1/field/logout')->assertNoContent();
         $this->getJson('/api/v1/field/bootstrap')->assertUnauthorized();
         $this->withHeader('Authorization', 'Bearer '.$this->token)->getJson('/api/v1/field/bootstrap')->assertOk();
+    }
+
+    public function test_tracking_device_activity_preserves_the_thirty_day_expiry(): void
+    {
+        $login = $this->postJson('/api/v1/field/login', ['email' => $this->leader->email, 'password' => 'password', 'device_name' => 'Expiry test phone'])->assertOk();
+        $token = MobileDeviceToken::where('token_hash', hash('sha256', $login->json('token')))->firstOrFail();
+        $expiry = $token->expires_at->toDateTimeString();
+        $this->withHeader('Authorization', 'Bearer '.$login->json('token'))->getJson('/api/v1/field/bootstrap')->assertOk();
+        $this->assertSame($expiry, $token->fresh()->expires_at->toDateTimeString());
+        $this->assertNotNull($token->fresh()->last_used_at);
+        $this->travel(6)->minutes();
+        $this->getJson('/api/v1/field/bootstrap')->assertOk();
+        $this->postJson('/api/v1/field/surveys/sync', $this->payload())->assertCreated();
+        $this->assertSame($expiry, $token->fresh()->expires_at->toDateTimeString());
+        $this->assertTrue($token->fresh()->expires_at->isFuture());
     }
 
     public function test_login_is_limited_by_email_and_ip_and_rejects_other_roles(): void
@@ -139,7 +154,7 @@ class FieldSurveyApiTest extends TestCase
         $survey = FieldSurvey::firstOrFail();
         $this->assertSame('0008', $survey->rows[0]['gps_waypoint']);
         $this->assertSame('01', $survey->rows[0]['group']);
-        $this->assertSame('Int', $survey->rows[0]['intersection']);
+        $this->assertTrue($survey->rows[0]['intersection']);
         $this->assertSame('0000123', $survey->solar[0]['consumer_reference']);
         $this->assertSame($data['header'], $survey->header);
         $this->assertSame(0, SurveyDailyEntry::count());
@@ -281,7 +296,7 @@ class FieldSurveyApiTest extends TestCase
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
         $viewer = User::factory()->create(['role' => UserRole::ManagementViewer]);
         $this->actingAs($viewer)->get('/field-surveys')->assertOk()->assertSee('B2308')->assertSee('Mobile Field Surveys');
-        $this->get('/field-surveys/'.$data['client_uuid'])->assertOk()->assertSee('0008')->assertSee('0000123')->assertSee('Int (paper field)');
+        $this->get('/field-surveys/'.$data['client_uuid'])->assertOk()->assertSee('0008')->assertSee('0000123')->assertSee('Intersection');
         $other = User::factory()->create(['role' => UserRole::SurveyTeamLeader]);
         $this->actingAs($other)->get('/field-surveys/'.$data['client_uuid'])->assertNotFound();
         $this->actingAs($this->leader)->get('/field-surveys/'.$data['client_uuid'])->assertOk();

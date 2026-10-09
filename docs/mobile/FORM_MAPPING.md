@@ -19,15 +19,15 @@ Reference: `B2308.pdf`, 27 scanned sheets titled **Data Input Form for LT Survey
 | Group | `rows[].group` | Text identifier, preserving leading zeros |
 | Date: d d m m y y | `rows[].date` | Full calendar date, separate from header survey date |
 | GPS WP | `rows[].gps_waypoint` | Waypoint identifier as text; preserve leading zeros |
-| Phase | `rows[].phase` | Editable text |
+| Phase | `rows[].phase` | Automatically combines populated R, Y and B conductor columns in R/Y/B order; Neutral is excluded |
 | Conductor: R, Y, B, Neutral | `rows[].conductor_r`, `conductor_y`, `conductor_b`, `conductor_neutral` | Separate editable codes or conductor descriptions |
 | Equipment Type: Type, Pole Class, Pole Height | `rows[].equipment_type`, `pole_class`, `pole_height_ft` | Type text; pole class code; numeric height |
 | Consumer Type: RS, RL, SC, LC, SI, LI, PB, AG, ST | `rows[].consumers` | Optional separate counts for each printed code |
-| Int | `rows[].intersection` | Separate text field; interpretation remains uncertain, see below |
+| Int | `rows[].intersection` | Intersection checkbox (true/false), separate from consumer counts |
 | PV Solar/Net-Metering Data: Consumer Reference No. | `solar[].consumer_reference` | Text identifier, preserving leading zeros |
 | Installed PV Capacity (kW); Remarks | `solar[].installed_pv_kw`, `solar[].remarks` | Numeric kW; text remarks |
 
-Phone GPS latitude, longitude, accuracy, row remarks, overall remarks, and photo/sketch attachments are digital additions. They are not separate printed columns. A GPS fix does not replace the paper's waypoint identifier. The paper has a solar/net-metering section but does not separately identify a meter status or export-meter number.
+Latitude, longitude and accuracy remain optional API fields for legacy compatibility and web testing, but Android phone GPS capture and coordinate entry have been removed. Row remarks, overall remarks, and photo/sketch attachments are digital additions. They are not separate printed columns. A GPS fix does not replace the paper's waypoint identifier. The paper has a solar/net-metering section but does not separately identify a meter status or export-meter number.
 
 ## Printed legends
 
@@ -41,7 +41,7 @@ Phone GPS latitude, longitude, accuracy, row remarks, overall remarks, and photo
 1. **S/E:** Start/End is a possible reading, but the scanned sheet does not provide an explicit expansion. The app displays and stores S/E exactly, permitting repeated waypoints and incomplete pairs.
 2. **Group:** the purpose and assignment rules are not defined in the printed legend. Do not infer it from waypoint, team, feeder, or row number.
 3. **Equipment Type:** the printed row heading is simply Type; its allowed values are not defined. Keep free text independently from mounting and pole class.
-4. **Int:** the table places it after ST under Consumer Type, whereas the conductor legend expands Int as Intersection. Preserve it as its own text field. Its final field meaning should be confirmed by the survey lead; do not include it in consumer totals.
+4. **Int:** confirmed by the project owner as Intersection. Use a separate checkbox, checked when the observation is at an intersection. Never include it in consumer totals.
 5. **Units:** the paper does not state units beside T/F Capacity or Pole Height. The API assumes capacity in kVA and height in feet. Its USAID options use mm2 as a conventional conductor-area interpretation of the printed `50mm`/`95mm`. These are application conventions, not explicitly printed facts.
 6. **Identifiers and dates:** the form's boxed digits are formatting/examples, not fixed group, waypoint, or year values. Use the entered full year, not the sample year.
 7. **Repeated S/E rows:** each row is a separate observation. Do not sum both ends into feeder progress or deduplicate a waypoint automatically. Detailed survey collection remains separate from the existing monitoring progress approvals.
@@ -50,7 +50,7 @@ Phone GPS latitude, longitude, accuracy, row remarks, overall remarks, and photo
 
 1. Download assigned team, feeder, and transformer references while online.
 2. Select team and feeder; select or enter transformer code. Check the prefilled division and substation details, then enter date, inspector names, capacity, make, mounting, duty, and location.
-3. Add one row at a time: S/E, group, row date, waypoint, optional phone GPS, phase, four conductor fields, equipment details, consumer counts, and Int. Carry-forward values must remain editable; do not store handwritten ditto marks as copied values.
+3. Add one row at a time: S/E, group, row date, waypoint, automatic phase, four conductor fields, equipment details, consumer counts, and Int. Carry-forward values must remain editable; do not store handwritten ditto marks as copied values.
 4. Add solar consumer references, installed PV capacities, and remarks where available. Attach photographs/sketches if useful.
 5. Save locally as a draft at any stage. Queue a complete form for syncing, and retain it until the server acknowledges the revision and each attachment.
 
@@ -66,3 +66,7 @@ These rules belong to the implementation and API contract; they are not requirem
 - On a failed sync retain the local form; on a revision conflict require review rather than replacing another saved revision silently.
 
 See [API_CONTRACT.md](API_CONTRACT.md) for endpoint limits, revision handling, assignment access, and offline storage behavior.
+
+## Automatic phase
+
+Phase is derived from the R, Y and B conductor columns in that order: R + Y gives `RY`, and R + Y + B gives `RYB`. Neutral does not affect Phase. Empty/whitespace values and absence marks (`+`, `-`, en/em dash, `x`, `?`) do not indicate a populated phase conductor. The field is read-only in the web test and Android editors. The shared sync request recalculates Phase before validation/storage; historical records are not rewritten until resubmitted.

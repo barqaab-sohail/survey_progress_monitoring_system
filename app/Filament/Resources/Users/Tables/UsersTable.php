@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Users\Tables;
 use App\Enums\UserRole;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -15,6 +16,7 @@ class UsersTable
     {
         return $table
             ->columns([
+                ImageColumn::make('profile_photo_url')->label('Picture')->circular(),
                 TextColumn::make('organization.name')
                     ->searchable(),
                 TextColumn::make('name')

@@ -17,11 +17,11 @@ Root: `client_uuid` UUID, `base_revision` integer (0 for new), `survey_team_id` 
 
 Header keys (strings <=200 except location <=500): `substation`, `division`, `sub_division`, `sub_division_code`, `transformer_make`, `inspectors`, `location`; `capacity_kva` nullable number >0; `mounting` empty/S.Pole/D.Pole/Pad; `duty` empty/General Duty/Dedicated.
 
-Rows model each printed S/E row, not an invented whole transformer total. Keys: `se` S/E, `group` string<=20, `date` YYYY-MM-DD, `gps_waypoint` string<=50, `latitude` nullable -90..90, `longitude` nullable -180..180, `gps_accuracy_m` nullable number>=0, `phase` string<=30; `conductor_r`,`conductor_y`,`conductor_b`,`conductor_neutral` strings<=100 (offer A,W,GN,2/0 AWG,PVC 7/0.052,PVC 19/0.052,PVC 19/0.083,USAID 50mm2,USAID 95mm2,Ang,Int,Other); `equipment_type` string<=50, `pole_class` string<=50 (S,PCO,PCS,RS,TS,WB), `pole_height_ft` nullable number>=0; `consumers` object with optional nonnegative integer keys `rs`,`rl`,`sc`,`lc`,`si`,`li`,`pb`,`ag`,`st`; `intersection` optional string<=100 (paper Int column preserved independently); `remarks` optional string<=1000.
+Rows model each printed S/E row, not an invented whole transformer total. Keys: `se` S/E, `group` string<=20, `date` YYYY-MM-DD, `gps_waypoint` string<=50, `latitude` nullable -90..90, `longitude` nullable -180..180, `gps_accuracy_m` nullable number>=0, `phase` string<=30; `conductor_r`,`conductor_y`,`conductor_b`,`conductor_neutral` strings<=100 (offer A,W,GN,2/0 AWG,PVC 7/0.052,PVC 19/0.052,PVC 19/0.083,USAID 50mm2,USAID 95mm2,Ang,Int,Other); `equipment_type` string<=50, `pole_class` string<=50 (S,PCO,PCS,RS,TS,WB), `pole_height_ft` nullable number>=0; `consumers` object with optional nonnegative integer keys `rs`,`rl`,`sc`,`lc`,`si`,`li`,`pb`,`ag`,`st`; `intersection` optional boolean (Intersection checkbox, separate from consumers); `remarks` optional string<=1000.
 
 Solar keys: `consumer_reference` string<=100, `installed_pv_kw` nullable number>=0, `remarks` string<=1000.
 
-Submitted records require transformer_code, capacity_kva, inspectors, at least 1 row with gps_waypoint; all submitted rows need se/date/gps_waypoint. Drafts may leave paper fields blank but team/feeder/date required. Do not invent requirements for solar/photos/GPS fix; capture GPS optional, show accuracy. Submitted remains editable via revision sync until a future detailed review module exists. Do not write progress transaction tables or alter existing imported GIS records. Always preserve snapshot header values even if reference import changes.
+Submitted records require transformer_code, capacity_kva, inspectors, at least 1 row with gps_waypoint; all submitted rows need se/date/gps_waypoint. Drafts may leave paper fields blank but team/feeder/date required. Do not invent requirements for solar/photos/GPS fix; Android retains waypoint identifiers but no longer captures phone coordinates or requests location permission. Submitted remains editable via revision sync until a future detailed review module exists. Do not write progress transaction tables or alter existing imported GIS records. Always preserve snapshot header values even if reference import changes.
 
 ## Phone state
 
@@ -31,3 +31,7 @@ Persist SQLite records on each save (and debounce autosave); status draft/queued
 ## Additional validation limits
 
 Survey and row dates cannot be in the future. Upper numeric limits: capacity/installed solar 10,000,000; GPS accuracy 100,000,000; pole height and each consumer count 1,000,000. These are application bounds, not rules extracted from the paper. JSON survey request limit is 2 MB. For attachments, configure PHP upload_max_filesize to at least 10M and post_max_size to at least 12M; the API still limits each file to 10 MB.
+
+## Automatic phase
+
+Phase is derived from the R, Y and B conductor columns in that order: R + Y gives `RY`, and R + Y + B gives `RYB`. Neutral does not affect Phase. Empty/whitespace values and absence marks (`+`, `-`, en/em dash, `x`, `?`) do not indicate a populated phase conductor. The field is read-only in the web test and Android editors. The shared sync request recalculates Phase before validation/storage; historical records are not rewritten until resubmitted.

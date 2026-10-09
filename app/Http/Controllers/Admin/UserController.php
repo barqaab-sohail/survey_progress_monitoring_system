@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Organization;
 use App\Models\User;
 use App\Services\AuditService;
+use App\Services\UserPhotoService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -24,23 +25,25 @@ class UserController extends Controller
         return view('admin.users.index', ['users' => $users, 'organizations' => Organization::where('status', 'active')->orderBy('name')->get(), 'roles' => UserRole::cases()]);
     }
 
-    public function store(Request $request, AuditService $audit): RedirectResponse
+    public function store(Request $request, AuditService $audit, UserPhotoService $photos): RedirectResponse
     {
         $data = $request->validate(['organization_id' => $this->organizationRules($request), 'name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email', 'unique:users,email'], 'phone' => ['nullable', 'string', 'max:30'], 'role' => ['required', Rule::enum(UserRole::class)], 'password' => ['required', 'string', 'min:10', 'confirmed']]);
-        $user = User::create($data + ['status' => 'active']);
+        $request->validate(UserPhotoService::rules());
+        $user = User::create($data + ['status' => 'active'] + $photos->attributes($request));
         $audit->record($request->user(), 'user.created', $user, new: collect($user->toArray())->except('password')->all());
 
         return back()->with('success', 'User account created.');
     }
 
-    public function update(Request $request, User $user, AuditService $audit): RedirectResponse
+    public function update(Request $request, User $user, AuditService $audit, UserPhotoService $photos): RedirectResponse
     {
         $data = $request->validate(['organization_id' => $this->organizationRules($request), 'name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email', Rule::unique('users')->ignore($user)], 'phone' => ['nullable', 'string', 'max:30'], 'role' => ['required', Rule::enum(UserRole::class)], 'status' => ['required', 'in:active,inactive'], 'password' => ['nullable', 'string', 'min:10', 'confirmed']]);
         if (blank($data['password'] ?? null)) {
             unset($data['password']);
         }
+        $request->validate(UserPhotoService::rules());
         $old = collect($user->toArray())->except('password')->all();
-        $user->update($data);
+        $user->update($data + $photos->attributes($request));
         $audit->record($request->user(), 'user.updated', $user, $old, collect($user->fresh()->toArray())->except('password')->all());
 
         return back()->with('success', 'User account updated.');

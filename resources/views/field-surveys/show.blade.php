@@ -12,9 +12,10 @@
 <section class="card"><h2>Survey rows ({{ count($survey->rows) }})</h2>
 @forelse($survey->rows as $row)
 <article style="border-top:1px solid var(--line);padding:16px 0"><h3 style="margin-top:0">Row {{ $loop->iteration }} &middot; {{ $row['se'] ?? '-' }} @if(!empty($row['group'])) &middot; Group {{ $row['group'] }} @endif</h3><dl class="detail-list">
-    @foreach(['date'=>'Date','gps_waypoint'=>'GPS waypoint','phase'=>'Phase','conductor_r'=>'Conductor R','conductor_y'=>'Conductor Y','conductor_b'=>'Conductor B','conductor_neutral'=>'Conductor neutral','equipment_type'=>'Equipment type','pole_class'=>'Pole class','pole_height_ft'=>'Pole height (ft)','intersection'=>'Int (paper field)','remarks'=>'Remarks'] as $key=>$label)
+    @foreach(['date'=>'Date','gps_waypoint'=>'GPS waypoint','phase'=>'Phase','conductor_r'=>'Conductor R','conductor_y'=>'Conductor Y','conductor_b'=>'Conductor B','conductor_neutral'=>'Conductor neutral','equipment_type'=>'Equipment type','pole_class'=>'Pole class','pole_height_ft'=>'Pole height (ft)','remarks'=>'Remarks'] as $key=>$label)
     <div><dt>{{ $label }}</dt><dd>{{ $row[$key] ?? '-' }}</dd></div>
     @endforeach
+    <div><dt>Intersection</dt><dd>{{ in_array(\App\Support\IntersectionFlag::normalize($row['intersection'] ?? false), [true, 1], true) ? 'Yes' : 'No' }}</dd></div>
     <div><dt>GPS coordinates</dt><dd>@if(isset($row['latitude'],$row['longitude'])){{ $row['latitude'] }}, {{ $row['longitude'] }}@else Not captured @endif</dd></div><div><dt>GPS accuracy (m)</dt><dd>{{ $row['gps_accuracy_m'] ?? 'Not captured' }}</dd></div>
     <div style="grid-column:1/-1"><dt>Consumers (paper categories)</dt><dd>@foreach(['rs','rl','sc','lc','si','li','pb','ag','st'] as $category)<span style="display:inline-block;margin:4px 18px 4px 0">{{ strtoupper($category) }}: {{ $row['consumers'][$category] ?? '-' }}</span>@endforeach</dd></div>
 </dl></article>
