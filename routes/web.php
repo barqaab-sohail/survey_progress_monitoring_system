@@ -77,7 +77,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/{transformer}', [TransformerController::class, 'show'])->name('show');
     });
 
-    Route::middleware('role:survey_team_leader,super_admin')->prefix('survey')->name('survey.')->group(function () {
+    Route::middleware(['role:survey_team_leader,super_admin', \App\Http\Middleware\AutomaticSurveyProgressReadOnly::class])->prefix('survey')->name('survey.')->group(function () {
         Route::get('/', [SurveyEntryController::class, 'index'])->name('index');
         Route::get('/create', [SurveyEntryController::class, 'create'])->name('create');
         Route::post('/', [SurveyEntryController::class, 'store'])->name('store');
@@ -85,6 +85,20 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::put('/entries/{entry}', [SurveyEntryController::class, 'updateEntry'])->name('update');
         Route::get('/returned', [SurveyEntryController::class, 'returned'])->name('returned');
         Route::put('/items/{item}/resubmit', [SurveyEntryController::class, 'update'])->name('resubmit');
+    });
+
+    Route::middleware('role:survey_team_leader,super_admin,project_manager,management_viewer')->prefix('survey-progress')->name('survey-progress.')->controller(\App\Http\Controllers\AutomaticSurveyProgressController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::middleware('role:super_admin')->group(function () {
+            Route::post('/sync', 'sync')->middleware('throttle:5,1')->name('sync');
+            Route::post('/feeders/{feeder}/length', 'calculate')->middleware('throttle:10,1')->name('length');
+            Route::put('/feeders/{feeder}/mapping', 'mapping')->name('mapping');
+            Route::get('/feeders/{feeder}/transcriptions', 'transcriptions')->name('transcriptions');
+            Route::post('/feeders/{feeder}/transcriptions', 'saveTranscription')->name('transcriptions.store');
+            Route::get('/feeders/{feeder}/sources/{source}', 'source')->name('source');
+            Route::post('/drive/connect', 'connect')->name('drive.connect');
+            Route::get('/drive/callback', 'callback')->name('drive.callback');
+        });
     });
 
     Route::middleware('role:mdb_team_user,super_admin')->prefix('verification')->name('verification.')->group(function () {

@@ -16,7 +16,7 @@ class SurveyBatch extends Model
 
     protected function casts(): array
     {
-        return ['survey_date' => 'date', 'revision' => 'integer'];
+        return ['survey_date' => 'date', 'revision' => 'integer', 'staged_workflow' => 'boolean', 'entry_actor_ids' => 'array', 'entry_completed_at' => 'datetime', 'survey_verified_at' => 'datetime'];
     }
 
     public function project()
@@ -37,6 +37,16 @@ class SurveyBatch extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function entryOperator()
+    {
+        return $this->belongsTo(User::class, 'entry_operator_id');
+    }
+
+    public function surveyVerifier()
+    {
+        return $this->belongsTo(User::class, 'survey_verifier_id');
     }
 
     public function sources()

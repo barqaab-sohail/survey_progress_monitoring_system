@@ -41,11 +41,12 @@
                 <a class="nav-link {{ request()->routeIs('mdb-workflow.*') ? 'active' : '' }}" href="{{ route('mdb-workflow.index') }}">MDB Creation &amp; Verification</a>
             @endcan
             @if(auth()->user()->hasAnyRole(['survey_team_leader','super_admin','project_manager','management_viewer']))
+                <a class="nav-link {{ request()->routeIs('survey-progress.*') ? 'active' : '' }}" href="{{ route('survey-progress.index') }}">Automatic Survey Progress</a>
                 <a class="nav-link {{ request()->routeIs('field-surveys.*') ? 'active' : '' }}" href="{{ route('field-surveys.index') }}">Mobile Field Surveys</a>
             @endif
             @if(auth()->user()->hasAnyRole(['survey_team_leader','super_admin']))
                 <div class="nav-label">Survey</div>
-                <a class="nav-link {{ request()->routeIs('survey.create') ? 'active' : '' }}" href="{{ route('survey.create') }}">Add Daily Survey</a>
+                @unless(config('survey_progress.automatic'))<a class="nav-link {{ request()->routeIs('survey.create') ? 'active' : '' }}" href="{{ route('survey.create') }}">Add Daily Survey</a>@endunless
                 <a class="nav-link {{ request()->routeIs('survey.index') ? 'active' : '' }}" href="{{ route('survey.index') }}">My Survey Entries</a>
                 <a class="nav-link {{ request()->routeIs('survey.returned') ? 'active' : '' }}" href="{{ route('survey.returned') }}">Returned Entries</a>
             @endif

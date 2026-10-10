@@ -9,9 +9,9 @@
             <label>Feeder<select name="feeder_id" required data-mdb-project-dependent><option value="">Choose feeder</option>@foreach($feeders as $feeder)<option value="{{ $feeder->id }}" data-project-id="{{ $feeder->project_id }}" @selected((string) old('feeder_id') === (string) $feeder->id)>{{ $feeder->feeder_code }} | {{ $feeder->feeder_name }}</option>@endforeach</select></label>
             <label>Survey team<select name="survey_team_id" required data-mdb-project-dependent><option value="">Choose survey team</option>@foreach($teams as $team)<option value="{{ $team->id }}" data-project-id="{{ $team->project_id }}" @selected((string) old('survey_team_id') === (string) $team->id)>{{ $team->code }} | {{ $team->name }}</option>@endforeach</select></label>
             <label>Survey date<input type="date" name="survey_date" value="{{ old('survey_date', now('Asia/Karachi')->toDateString()) }}" required></label>
-            <label class="mdb-span-all">Original PDF and GPX files (optional)<input name="files[]" type="file" multiple accept=".pdf,.gpx,application/pdf,application/gpx+xml"><small>You can add files and preserve new versions after creating the batch.</small></label>
+            <label>Survey PDF<input name="survey_pdf" type="file" accept=".pdf" required></label><label>GPS GPX<input name="gps_gpx" type="file" accept=".gpx" required></label>
         </div>
-        <p class="muted">Choose PDF and GPX files now, or add them later. Originals are kept privately while processing runs in the background.</p>
+        <p class="muted">Both files must finish processing before entry starts. Originals are kept privately while processing runs in the background.</p>
         <button class="btn btn-primary">Create batch &amp; start entry</button>
     </form>
 </div>

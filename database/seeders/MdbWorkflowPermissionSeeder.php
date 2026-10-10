@@ -17,13 +17,16 @@ class MdbWorkflowPermissionSeeder extends Seeder
             Permission::findOrCreate('MdbWorkflow:'.ucfirst($ability), 'web');
         }
         $grants = [
+            'survey_data_entry_operator' => ['view', 'upload', 'edit'],
+            'survey_data_verifier' => ['view', 'surveyVerify'],
+            'mdb_generator' => ['view', 'process', 'verify', 'export', 'generate'],
             'super_admin' => WorkflowAccess::ABILITIES,
             'project_manager' => ['view'],
             'survey_team_leader' => ['view', 'upload'],
             'mdb_team_user' => ['view', 'edit', 'export'],
             'mdb_processing_user' => ['view', 'verify'],
             'mdb_creation_team' => ['view', 'edit', 'export'],
-            'mdb_verifier' => ['view', 'verify'],
+            'mdb_verifier' => ['view', 'verify', 'analyze', 'export'],
             'analysis_team' => ['view', 'analyze', 'export'],
         ];
         foreach ($grants as $role => $abilities) {

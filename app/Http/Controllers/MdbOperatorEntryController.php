@@ -122,6 +122,8 @@ class MdbOperatorEntryController extends Controller
             if (! $row && $existing) {
                 throw ValidationException::withMessages(['client_uuid' => 'This row already exists. Reload it before making changes.']);
             }
+            $this->access->authorize($request->user(), $locked, 'edit');
+            $this->access->recordEntry($locked, $request->user());
             $this->assertRevision($locked, (int) $validated['revision']);
             if ($row && ($row->pair_number !== (int) $data['pair_number'] || $row->designation !== $data['designation'] || $row->client_uuid !== $validated['client_uuid'])) {
                 throw ValidationException::withMessages(['designation' => 'Keep the saved pair and S/E designation. Delete and add a corrected row to move it.']);
@@ -169,6 +171,8 @@ class MdbOperatorEntryController extends Controller
         $request->validate(['revision' => 'required|integer', 'confirmed' => 'accepted']);
         DB::transaction(function () use ($request, $batch, $transformer, $row) {
             $locked = SurveyBatch::lockForUpdate()->findOrFail($batch->id);
+            $this->access->authorize($request->user(), $locked, 'edit');
+            $this->access->recordEntry($locked, $request->user());
             $this->assertRevision($locked, (int) $request->input('revision'));
             $old = $this->snapshots->snapshot($locked);
             $this->snapshots->invalidate($locked);
@@ -191,7 +195,10 @@ class MdbOperatorEntryController extends Controller
             'header.survey_date' => 'nullable|date_format:Y-m-d', 'header.mounting' => ['nullable', Rule::in(array_filter(['Single Pole', 'Double Pole', 'Pad', $transformer?->header['mounting'] ?? null]))],
             'header.service_category' => 'nullable|in:General Duty,Dedicated', 'header.source_survey_identifier' => 'nullable|string|regex:/^\d{11}$/D', 'source_pdf_id' => 'nullable|integer', 'source_page' => 'nullable|integer|min:1']);
         $fields = ['substation_name', 'substation_identifier', 'feeder_identifier', 'feeder_name', 'division', 'subdivision', 'subdivision_code',
-            'make', 'inspector', 'location', 'survey_date', 'mounting', 'service_category', 'team_group', 'source_survey_identifier'];
+            'make', 'inspector', 'location', 'survey_date', 'mounting', 'service_category', 'team_group', 'source_survey_identifier', 'client_transformer_information'];
+        if ($batch->staged_workflow && (! $batch->transformers()->exists() || $transformer?->id === $batch->transformers()->min('id'))) {
+            $request->validate(['header.client_transformer_information' => 'required|string|max:500']);
+        }
         foreach ($fields as $field) {
             $request->validate(['header.'.$field => 'nullable|string|max:500']);
         }
@@ -207,6 +214,8 @@ class MdbOperatorEntryController extends Controller
         $record = null;
         DB::transaction(function () use ($request, $batch, $transformer, $data, $fields, $page, &$record) {
             $locked = SurveyBatch::lockForUpdate()->findOrFail($batch->id);
+            $this->access->authorize($request->user(), $locked, 'edit');
+            $this->access->recordEntry($locked, $request->user());
             $this->assertRevision($locked, (int) $data['revision']);
             $old = $this->snapshots->snapshot($locked);
             $this->snapshots->invalidate($locked);
@@ -231,6 +240,8 @@ class MdbOperatorEntryController extends Controller
         $transformer = $batch->transformers()->findOrFail($data['transformer_id']);
         DB::transaction(function () use ($request, $batch, $data, $transformer) {
             $locked = SurveyBatch::lockForUpdate()->findOrFail($batch->id);
+            $this->access->authorize($request->user(), $locked, 'edit');
+            $this->access->recordEntry($locked, $request->user());
             $this->assertRevision($locked, (int) $data['revision']);
             $issues = collect($this->entries->issues($locked))->where('transformer_id', $transformer->id);
             if ($issues->isNotEmpty()) {

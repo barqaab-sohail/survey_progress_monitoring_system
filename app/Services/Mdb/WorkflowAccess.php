@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class WorkflowAccess
 {
-    public const ABILITIES = ['view', 'upload', 'edit', 'verify', 'configure', 'analyze', 'export'];
+    public const ABILITIES = ['view', 'upload', 'edit', 'verify', 'configure', 'analyze', 'export', 'surveyVerify', 'process', 'generate'];
 
     public function allows(User $user, string $ability): bool
     {
@@ -32,6 +32,35 @@ class WorkflowAccess
 
     public function authorize(User $user, SurveyBatch $batch, string $ability = 'view'): void
     {
+        if ($batch->staged_workflow) {
+            if (in_array($ability, ['edit', 'upload'], true)) {
+                abort_unless(in_array($batch->survey_status, ['entry', 'returned'], true), 403, 'Survey entry is locked.');
+                if ($ability === 'edit') {
+                    $this->assertSourcesReady($batch);
+                }
+            }
+            if ($ability === 'surveyVerify') {
+                abort_if(in_array($user->id, $batch->entry_actor_ids ?? [], true), 403, 'Entry contributors cannot verify their survey.');
+            }
+            if (in_array($ability, ['process', 'verify', 'export', 'generate'], true)) {
+                abort_unless($batch->survey_status === 'approved', 403, 'Survey approval is required before network processing.');
+            }
+        }
         abort_unless($this->allows($user, $ability) && $this->visible($user)->whereKey($batch->id)->exists(), 403);
+    }
+
+    public function assertSourcesReady(SurveyBatch $batch): void
+    {
+        foreach (['pdf', 'gpx'] as $kind) {
+            abort_unless($batch->sources()->where('kind', $kind)->where('status', 'ready')->exists(), 422, 'Both PDF and GPX must finish processing before entry.');
+        }
+        abort_if($batch->sources()->where('status', '!=', 'ready')->exists(), 422, 'Source processing is incomplete.');
+    }
+
+    public function recordEntry(SurveyBatch $batch, User $actor): void
+    {
+        if ($batch->staged_workflow) {
+            $batch->update(['entry_actor_ids' => array_values(array_unique([...($batch->entry_actor_ids ?? []), $actor->id])), 'entry_operator_id' => $actor->id]);
+        }
     }
 }

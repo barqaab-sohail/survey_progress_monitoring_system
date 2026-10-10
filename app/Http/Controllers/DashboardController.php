@@ -26,6 +26,9 @@ class DashboardController extends Controller
         }
 
         if ($request->user()->hasRole(UserRole::SurveyTeamLeader->value)) {
+            if (config('survey_progress.automatic')) {
+                return app(AutomaticSurveyProgressController::class)->index($request);
+            }
             $teamIds = $request->user()->surveyTeams()->pluck('survey_teams.id');
             $feederIds = FeederAssignment::whereIn('survey_team_id', $teamIds)
                 ->where('status', 'active')

@@ -66,6 +66,56 @@ class MdbWorkflowTest extends TestCase
         return '<g:gpx xmlns:g="http://www.topografix.com/GPX/1/1" version="1.1"><g:wpt lat="30.464656" lon="71.917033"><g:name>0001</g:name><g:ele>123.4</g:ele><g:time>2025-08-23T08:15:32Z</g:time><g:desc>Transformer</g:desc></g:wpt><g:wpt lat="30.464641" lon="71.917066"><g:name>SSS</g:name></g:wpt></g:gpx>';
     }
 
+    public function test_staged_survey_contributors_cannot_verify_even_as_admin(): void
+    {
+        $this->batch->update(['revision' => 1, 'staged_workflow' => true, 'survey_status' => 'awaiting_verification', 'entry_actor_ids' => [$this->admin->id]]);
+        $this->post(route('mdb-workflow.survey.decision', $this->batch), ['revision' => $this->batch->revision, 'action' => 'approve'])->assertForbidden();
+        $this->assertSame('awaiting_verification', $this->batch->fresh()->survey_status);
+    }
+
+    public function test_new_survey_requires_separate_pdf_and_gpx_uploads(): void
+    {
+        $this->post(route('mdb-workflow.store'), [
+            'project_id' => $this->batch->project_id, 'feeder_id' => $this->batch->feeder_id,
+            'survey_team_id' => $this->team->id, 'survey_date' => '2026-10-10',
+        ])->assertSessionHasErrors(['survey_pdf', 'gps_gpx']);
+    }
+
+    public function test_new_roles_keep_survey_verification_and_generation_separate(): void
+    {
+        $verifier = \Spatie\Permission\Models\Role::findByName('survey_data_verifier');
+        $generator = \Spatie\Permission\Models\Role::findByName('mdb_generator');
+        $mdbVerifier = \Spatie\Permission\Models\Role::findByName('mdb_verifier');
+        $this->assertTrue($verifier->hasPermissionTo('MdbWorkflow:SurveyVerify'));
+        $this->assertFalse($verifier->hasPermissionTo('MdbWorkflow:Edit'));
+        $this->assertTrue($generator->hasPermissionTo('MdbWorkflow:Generate'));
+        $this->assertFalse($mdbVerifier->hasPermissionTo('MdbWorkflow:Generate'));
+        $this->assertTrue($mdbVerifier->hasPermissionTo('MdbWorkflow:Analyze'));
+    }
+
+    public function test_staged_survey_blocks_processing_until_approved(): void
+    {
+        $this->batch->update(['revision' => 1, 'staged_workflow' => true]);
+        $this->post(route('mdb-workflow.exports.store', $this->batch), ['revision' => $this->batch->revision, 'code' => 'BLOCKED'])->assertForbidden();
+        $this->assertSame(0, $this->batch->transformers()->count());
+    }
+
+    public function test_staged_approved_survey_is_locked_against_operator_edits(): void
+    {
+        $this->batch->update(['revision' => 1, 'staged_workflow' => true, 'survey_status' => 'approved']);
+        $this->post(route('mdb-workflow.entry.headers.store', $this->batch), ['revision' => $this->batch->revision, 'code' => 'BLOCKED', 'header' => []])->assertForbidden();
+    }
+
+    public function test_staged_return_requires_remarks_and_preserves_audit(): void
+    {
+        $this->batch->update(['revision' => 1, 'staged_workflow' => true, 'survey_status' => 'awaiting_verification']);
+        $url = route('mdb-workflow.survey.decision', $this->batch);
+        $this->post($url, ['revision' => $this->batch->revision, 'action' => 'return'])->assertSessionHasErrors('remarks');
+        $this->post($url, ['revision' => $this->batch->revision, 'action' => 'return', 'remarks' => 'Correct waypoint references'])->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame('returned', $this->batch->fresh()->survey_status);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'mdb.survey_return']);
+    }
+
     private function source(): SourceFile
     {
         $this->post(route('mdb-workflow.sources.store', $this->batch), ['revision' => $this->batch->fresh()->revision,

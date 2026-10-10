@@ -29,6 +29,9 @@ class ExportService
 
     public function request(SurveyBatch $batch, User $actor, ?int $transformerId = null): ExportJob
     {
+        if ($batch->staged_workflow) {
+            $this->access->authorize($actor, $batch, 'generate');
+        }
         $this->access->authorize($actor, $batch, 'export');
 
         return DB::transaction(function () use ($batch, $actor, $transformerId) {
@@ -64,6 +67,9 @@ class ExportService
 
     public function retry(ExportJob $export, User $actor): ExportJob
     {
+        if ($export->batch->staged_workflow) {
+            $this->access->authorize($actor, $export->batch, 'generate');
+        }
         $this->access->authorize($actor, $export->batch, 'export');
 
         return DB::transaction(function () use ($export, $actor) {

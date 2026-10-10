@@ -21,6 +21,7 @@ class SurveyProgressService
 
     public function create(User $actor, SurveyTeam $team, array $data): SurveyDailyEntry
     {
+        abort_if(config('survey_progress.automatic') && $team->project?->code === config('survey_progress.project_code'), 409, 'Manual HAZECO progress entry is replaced by Google Drive synchronization.');
         Gate::forUser($actor)->authorize('create', SurveyDailyEntry::class);
 
         return DB::transaction(function () use ($actor, $team, $data) {
@@ -69,6 +70,7 @@ class SurveyProgressService
 
     public function update(User $actor, SurveyDailyEntry $entry, array $data): void
     {
+        abort_if(config('survey_progress.automatic') && $entry->team->project?->code === config('survey_progress.project_code'), 409, 'Manual HAZECO progress entry is replaced by Google Drive synchronization.');
         DB::transaction(function () use ($actor, $entry, $data) {
             $entry = SurveyDailyEntry::query()->lockForUpdate()->findOrFail($entry->id);
             $feederIds = $entry->items()->pluck('feeder_id');
@@ -144,6 +146,7 @@ class SurveyProgressService
 
     public function resubmit(User $actor, SurveyDailyEntryItem $item, array $data): void
     {
+        abort_if(config('survey_progress.automatic') && $item->feeder->project?->code === config('survey_progress.project_code'), 409, 'Manual HAZECO progress entry is replaced by Google Drive synchronization.');
         Gate::forUser($actor)->authorize('update', $item);
 
         DB::transaction(function () use ($actor, $item, $data) {

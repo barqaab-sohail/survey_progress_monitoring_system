@@ -17,6 +17,7 @@ Route::middleware(['auth', 'active'])->prefix('mdb-workflow')->name('mdb-workflo
     Route::get('/{batch}', 'show')->name('show');
     Route::get('/{batch}/advanced', 'advanced')->name('advanced');
     Route::get('/{batch}/review', 'review')->name('review');
+    Route::post('/{batch}/survey-decision', 'surveyDecision')->name('survey.decision');
     Route::get('/{batch}/entry-data', [MdbOperatorEntryController::class, 'data'])->name('entry.data');
     Route::post('/{batch}/entry-review', [MdbOperatorEntryController::class, 'confirmReview'])->name('entry.review');
     Route::post('/{batch}/entry-headers', [MdbOperatorEntryController::class, 'header'])->name('entry.headers.store');

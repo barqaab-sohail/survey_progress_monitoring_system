@@ -21,7 +21,7 @@
 <article class="card"><h2>{{ $feeder->feeder_code }} &middot; {{ $feeder->feeder_name }}</h2>
 <p>{{ $stage === 'baseline' ? 'Transformer baseline needs verification' : 'Remaining quantity: '.number_format($stage === 'survey' ? $feeder->survey_pending : $feeder->mdb_creation_backlog) }}</p>
 @if($stage === 'baseline' && auth()->user()->hasRole('super_admin'))<a class="btn btn-primary" href="{{ route('admin.master.edit', $feeder) }}">Update baseline</a>@endif
-@if($stage === 'survey' && auth()->user()->hasAnyRole(['super_admin','survey_team_leader']))<a class="btn btn-primary" href="{{ route('survey.create') }}">Add daily survey</a>@endif
+@if($stage === 'survey' && !config('survey_progress.automatic') && auth()->user()->hasAnyRole(['super_admin','survey_team_leader']))<a class="btn btn-primary" href="{{ route('survey.create') }}">Add daily survey</a>@endif
 @if($stage === 'mdb_creation' && auth()->user()->hasAnyRole(['super_admin','mdb_team_user']))<a class="btn btn-primary" href="{{ route('mdb.create') }}">Add daily MDB</a>@endif
 </article>
 @empty<div class="card empty">No work matches this queue.</div>@endforelse

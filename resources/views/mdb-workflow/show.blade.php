@@ -26,6 +26,7 @@
                 @foreach(['division'=>'Division','subdivision'=>'Subdivision','subdivision_code'=>'Subdivision code'] as $key=>$label)<label>{{ $label }}<input name="header[{{ $key }}]" maxlength="500"></label>@endforeach
                 <label>Transformer capacity (kVA)<input name="capacity_kva" type="number" min="0.001" max="1000000" step="any"></label>
                 @foreach(['make'=>'Transformer make','inspector'=>'Inspector','location'=>'Location'] as $key=>$label)<label>{{ $label }}<input name="header[{{ $key }}]" maxlength="500"></label>@endforeach
+                @if($batch->staged_workflow)<label>Client-provided transformer information (required for the first transformer)<input name="header[client_transformer_information]" maxlength="500"></label>@endif
                 <label>Survey date<input name="header[survey_date]" type="date"></label>
                 <label>Mounting arrangement<select name="header[mounting]"><option value="">Not entered</option><option>Single Pole</option><option>Double Pole</option><option>Pad</option></select></label>
                 <label>Service category<select name="header[service_category]"><option value="">Not entered</option><option>General Duty</option><option>Dedicated</option></select></label>

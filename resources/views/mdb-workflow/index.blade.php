@@ -2,6 +2,11 @@
 @section('title', 'MDB creation and verification')
 @section('content')
 <div class="mdb-workflow">
+    <nav class="mdb-tabs">
+        @foreach(['entry'=>['edit','Data entry'], 'survey_verification'=>['surveyVerify','Survey verification'], 'processing'=>['process','Network processing'], 'mdb_verification'=>['analyze','Final MDB verification']] as $queue=>$details)
+        @can('mdb-workflow.'.$details[0])<a href="{{ route('mdb-workflow.index', ['queue'=>$queue]) }}">{{ $details[1] }}</a>@endcan
+        @endforeach
+    </nav>
     <div class="page-head"><div><span class="eyebrow">Survey to engineering model</span><h1>MDB creation and verification</h1><p>Track source surveys, verified transformer networks, MDB outputs and SynerGEE acceptance.</p></div>
         @can('mdb-workflow.upload')<a class="btn btn-primary" href="{{ route('mdb-workflow.create') }}">Create survey batch</a>@endcan
     </div>
