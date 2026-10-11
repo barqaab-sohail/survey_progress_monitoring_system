@@ -40,6 +40,10 @@ class SnapshotService
         DB::transaction(function () use ($batch): void {
             $locked = SurveyBatch::whereKey($batch->id)->lockForUpdate()->firstOrFail();
             $locked->forceFill(['approved_revision_id' => null, 'status' => 'draft'])->save();
+            if ($locked->staged_workflow && $locked->survey_status === 'approved') {
+                $locked->update(['survey_status' => 'returned',
+                    'survey_remarks' => 'Approval was invalidated because survey data or engineering settings changed. Submit the updated survey for verification.']);
+            }
             $locked->exports()->whereNull('superseded_at')->update(['superseded_at' => now('UTC'), 'updated_at' => now('UTC')]);
             $batch->setRawAttributes($locked->getAttributes(), true);
         });

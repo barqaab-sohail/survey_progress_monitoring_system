@@ -3,7 +3,7 @@
 @section('content')
 <div class="mdb-workflow">
     <nav class="mdb-tabs">
-        @foreach(['entry'=>['edit','Data entry'], 'survey_verification'=>['surveyVerify','Survey verification'], 'processing'=>['process','Network processing'], 'mdb_verification'=>['analyze','Final MDB verification']] as $queue=>$details)
+        @foreach(['entry'=>['edit','Data entry'], 'survey_verification'=>['surveyVerify','Survey verification'], 'mdb_creation'=>['generate','MDB creation'], 'processing'=>['process','Network processing'], 'mdb_verification'=>['analyze','Final MDB verification']] as $queue=>$details)
         @can('mdb-workflow.'.$details[0])<a href="{{ route('mdb-workflow.index', ['queue'=>$queue]) }}">{{ $details[1] }}</a>@endcan
         @endforeach
     </nav>
@@ -28,7 +28,7 @@
     </form></section>
     <section class="card table-wrap"><table class="table mdb-batch-table"><thead><tr><th>Survey batch</th><th>Project / feeder</th><th>Team / date</th><th>Transformer records</th><th>Source files</th><th>Workflow</th><th></th></tr></thead><tbody>
         @forelse($batches as $batch)
-        <tr><td><strong>Batch #{{ $batch->id }}</strong><small>Revision {{ $batch->revision }}</small></td><td>{{ $batch->project?->name }}<small>{{ $batch->feeder?->feeder_code }} | {{ $batch->feeder?->feeder_name }}</small></td><td>{{ $batch->surveyTeam?->name ?? 'Unassigned' }}<small>{{ $batch->survey_date?->format('d M Y') }}</small></td><td>{{ $batch->transformers_count ?? $batch->transformers->count() }}</td><td>{{ $batch->sources_count ?? $batch->sources->count() }}</td><td><span class="status mdb-status-{{ $batch->status }}">{{ str($batch->status)->replace('_', ' ')->title() }}</span></td><td><a class="btn btn-sm btn-light" href="{{ route('mdb-workflow.show', $batch) }}">Open batch</a></td></tr>
+        <tr><td><strong>Batch #{{ $batch->id }}</strong><small>Revision {{ $batch->revision }}</small></td><td>{{ $batch->project?->name }}<small>{{ $batch->feeder?->feeder_code }} | {{ $batch->feeder?->feeder_name }}</small></td><td>{{ $batch->surveyTeam?->name ?? 'Unassigned' }}<small>{{ $batch->survey_date?->format('d M Y') }}</small></td><td>{{ $batch->transformers_count ?? $batch->transformers->count() }}</td><td>{{ $batch->sources_count ?? $batch->sources->count() }}</td><td><span class="status mdb-status-{{ $batch->status }}">{{ str($batch->staged_workflow ? $batch->survey_status : $batch->status)->replace('_', ' ')->title() }}</span></td><td><a class="btn btn-sm btn-light" href="{{ route(auth()->user()->can('mdb-workflow.edit') ? 'mdb-workflow.show' : 'mdb-workflow.review', $batch) }}">Open batch</a></td></tr>
         @empty<tr><td colspan="7" class="empty">No survey batches match these filters.</td></tr>@endforelse
     </tbody></table></section>
     {{ $batches->withQueryString()->links() }}

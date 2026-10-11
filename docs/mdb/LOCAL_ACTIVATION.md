@@ -76,3 +76,29 @@ A second MySQL transaction checked the two example identifiers, different S/E da
 The updated queue worker was restarted gracefully after the identity/export changes. Its verification-time process ID is **7952**, using the same queues and log paths above. It was running without startup errors. The new integrated-select JavaScript asset returned HTTP 200.
 
 Verified units and the two-digit-year window still need to be selected in each project's entry settings; no source unit or century was guessed. See [COMPACT_ENTRY_VERIFICATION.md](COMPACT_ENTRY_VERIFICATION.md).
+
+## Source processing and PDF refresh repair — 11 October 2026
+
+No source queue worker was running when the header-save readiness error was investigated. Eight source jobs were waiting. PDF inspection also emitted a `fitz` deprecation warning to standard output, breaking Laravel's JSON parsing. The inspector now imports `pymupdf` directly and emits only the JSON metadata. All eight waiting sources for batches 13–16 completed; both files for each batch are ready and match their original SHA-256 hashes. Operator edit authorization was checked without changing headers or rows. Historical failed jobs for other batches were left for separate review.
+
+A hidden worker now handles `mdb-sources` (verification-time PID 17592), with logs in `storage/logs/mdb-sources-queue.out.log` and `storage/logs/mdb-sources-queue.err.log`. This is a local process and must be restarted after stopping it or restarting Windows:
+
+```powershell
+php artisan queue:work database --queue=mdb-sources --tries=3 --timeout=180 --sleep=3
+```
+
+PDF refresh now destroys the loading task once instead of calling an unavailable document-proxy `destroy` method. Save failures use a single banner with the refresh control; fields and inline validation remain available. Changed entry assets include version query strings to refresh cached browser copies. Verification passed 29 operator-entry PHP tests (301 assertions), 10 JavaScript tests using document proxies without a destroy method, and three PDF inspection tests covering JSON output, encrypted/invalid input, and unchanged source bytes.
+
+## Separate survey roles — 11 October 2026
+
+The three dedicated roles now display as Data Entry Operator, Data Verifier and MDB Creator. Their grants were synchronized locally, with backend role boundaries and submitted/approved entry locks. MDB User retains the operator role. Following the corrected instruction, Third-Party Processor's verifier role and verification-only Project 1 team membership were removed in an audited account correction. Data Verifier and MDB Creator currently have no assigned accounts. Project Manager was not assigned MDB Creator.
+
+Both 11 October additive migrations are applied: PDF row progress and private generation inputs. The creator's generation package requires an approved immutable survey revision, original ready PDF/GPX, a valid KMZ, the approved MDB template, and any additional base filenames required by the template. Source files are preserved; file hashes are checked throughout generation and download. See [ROLE_WORKFLOW.md](ROLE_WORKFLOW.md) for the input and engineering mapping details.
+
+A separate hidden worker handles `mdb`, logging to `storage/logs/mdb-generation-queue.out.log` and `storage/logs/mdb-generation-queue.err.log`. The source worker remains on `mdb-sources`. Neither is a Windows service. Restart the generation worker after stopping it or restarting Windows:
+
+```powershell
+php artisan queue:work database --queue=mdb --tries=3 --timeout=300 --sleep=3
+```
+
+Final verification passed 78 PHP feature tests (801 assertions), 12 JavaScript tests and scoped PHP formatting checks. PHP checks include rendered role-specific pages and forbidden HTTP actions; JavaScript checks use the rendered pages in jsdom. Live browser visual verification and generation of a production engineering model were not performed. No creator/verifier account was guessed or assigned, and no MDB generation request was made during this role activation.

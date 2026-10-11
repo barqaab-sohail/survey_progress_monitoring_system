@@ -17,9 +17,7 @@ class MdbWorkflowPermissionSeeder extends Seeder
             Permission::findOrCreate('MdbWorkflow:'.ucfirst($ability), 'web');
         }
         $grants = [
-            'survey_data_entry_operator' => ['view', 'upload', 'edit'],
-            'survey_data_verifier' => ['view', 'surveyVerify'],
-            'mdb_generator' => ['view', 'process', 'verify', 'export', 'generate'],
+            ...WorkflowAccess::SURVEY_ROLE_ABILITIES,
             'super_admin' => WorkflowAccess::ABILITIES,
             'project_manager' => ['view'],
             'survey_team_leader' => ['view', 'upload'],
@@ -30,7 +28,14 @@ class MdbWorkflowPermissionSeeder extends Seeder
             'analysis_team' => ['view', 'analyze', 'export'],
         ];
         foreach ($grants as $role => $abilities) {
-            Role::findOrCreate($role, 'web')->givePermissionTo(array_map(fn ($ability) => 'MdbWorkflow:'.ucfirst($ability), $abilities));
+            $record = Role::findOrCreate($role, 'web');
+            $permissions = array_map(fn ($ability) => 'MdbWorkflow:'.ucfirst($ability), $abilities);
+            if (isset(WorkflowAccess::SURVEY_ROLE_ABILITIES[$role])) {
+                $record->syncPermissions($permissions);
+            } else {
+                $record->givePermissionTo($permissions);
+            }
         }
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

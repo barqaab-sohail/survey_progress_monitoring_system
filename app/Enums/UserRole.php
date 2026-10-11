@@ -24,9 +24,9 @@ enum UserRole: string
             self::MdbTeamUser => 'MDB User',
             self::MdbProcessingUser => 'Third-Party Processor',
             self::ManagementViewer => 'Management / Viewer',
-            self::SurveyDataEntryOperator => 'Survey Data Entry Operator',
-            self::SurveyDataVerifier => 'Survey Data Verifier',
-            self::MdbGenerator => 'MDB Generator',
+            self::SurveyDataEntryOperator => 'Data Entry Operator',
+            self::SurveyDataVerifier => 'Data Verifier',
+            self::MdbGenerator => 'MDB Creator',
             self::MdbVerifier => 'MDB Verifier',
         };
     }

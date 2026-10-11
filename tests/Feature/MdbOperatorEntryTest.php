@@ -11,6 +11,7 @@ use App\Models\GridStation;
 use App\Models\Mdb\Configuration;
 use App\Models\Mdb\EntryRow;
 use App\Models\Mdb\NetworkTransformer;
+use App\Models\Mdb\PdfRow;
 use App\Models\Mdb\SourceFile;
 use App\Models\Mdb\SurveyBatch;
 use App\Models\Mdb\Template;
@@ -30,9 +31,12 @@ use App\Services\Mdb\SurveyWaypoint;
 use App\Services\Mdb\WindowsExporter;
 use Database\Seeders\MdbWorkflowPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class MdbOperatorEntryTest extends TestCase
@@ -103,6 +107,394 @@ class MdbOperatorEntryTest extends TestCase
     private function entrySettings(): void
     {
         Configuration::create(['project_id' => $this->batch->project_id, 'settings' => ['entry' => ['two_digit_year_start' => 2000, 'pole_height_unit' => 'ft']]]);
+    }
+
+    private function headerPayload(array $changes = []): array
+    {
+        return array_replace(['revision' => $this->batch->fresh()->revision, 'code' => 'T-new-header', 'capacity_kva' => 100,
+            'source_waypoint_id' => null, 'source_pdf_id' => $this->pdf->id, 'source_page' => 1,
+            'header' => ['substation_name' => 'Keep this substation', 'location' => 'Keep this location', 'survey_date' => '2026-10-08',
+                'client_transformer_information' => 'Client transformer information']], $changes);
+    }
+
+    public function test_header_returns_all_specific_validation_errors_and_logs_reference_without_saving(): void
+    {
+        Log::spy();
+        $this->batch->update(['staged_workflow' => true]);
+        $revision = $this->batch->fresh()->revision;
+        $response = $this->postJson(route('mdb-workflow.entry.headers.store', $this->batch), $this->headerPayload([
+            'code' => $this->transformer->code, 'capacity_kva' => -100,
+            'header' => ['survey_date' => 'not a date', 'source_survey_identifier' => '123'],
+        ]))->assertUnprocessable()->assertJsonValidationErrors(['code', 'capacity_kva', 'header.survey_date', 'header.source_survey_identifier']);
+        $this->assertStringContainsString('already exists', $response->json('errors.code.0'));
+        $this->assertStringContainsString('11-digit', $response->json('errors')['header.source_survey_identifier'][0]);
+        $this->assertTrue(Str::isUuid($response->json('reference')));
+        $this->assertSame($revision, $this->batch->fresh()->revision);
+        $this->assertSame(1, $this->batch->transformers()->count());
+        Log::shouldHaveReceived('warning')->once()->with('Survey header save rejected', \Mockery::on(fn ($context) => $context['reference'] === $response->json('reference') && $context['http_status'] === 422 && isset($context['exception'])));
+    }
+
+    public function test_first_staged_header_has_a_specific_required_client_information_error(): void
+    {
+        $batch = $this->batch->replicate();
+        $batch->staged_workflow = true;
+        $batch->save();
+        foreach ([$this->pdf, $this->gpx] as $source) {
+            $copy = $source->replicate();
+            $copy->batch_id = $batch->id;
+            $copy->save();
+        }
+        $this->postJson(route('mdb-workflow.entry.headers.store', $batch), $this->headerPayload([
+            'source_pdf_id' => null, 'header' => ['client_transformer_information' => '', 'location' => 'Retain this location'],
+        ]))->assertUnprocessable()->assertJsonValidationErrors('header.client_transformer_information')
+            ->assertJsonFragment(['header.client_transformer_information' => ['Enter the client-provided transformer information for the first transformer.']]);
+        $this->assertSame(0, $batch->transformers()->count());
+    }
+
+    public function test_header_source_readiness_failure_explains_why_it_was_rejected(): void
+    {
+        $this->batch->update(['staged_workflow' => true]);
+        $this->pdf->update(['status' => 'queued']);
+        $this->postJson(route('mdb-workflow.entry.headers.store', $this->batch), $this->headerPayload())
+            ->assertUnprocessable()->assertJsonPath('message', 'Both PDF and GPX must finish processing before entry.');
+        $this->assertSame(1, $this->batch->transformers()->count());
+    }
+
+    public function test_header_technical_failure_is_logged_safely_and_transaction_rolls_back(): void
+    {
+        Log::spy();
+        $this->partialMock(SnapshotService::class, function ($mock) {
+            $mock->shouldReceive('invalidate')->once()->andThrow(new \RuntimeException('Private database connection detail'));
+        });
+        $revision = $this->batch->fresh()->revision;
+        $response = $this->postJson(route('mdb-workflow.entry.headers.store', $this->batch), $this->headerPayload())->assertStatus(500);
+        $this->assertTrue(Str::isUuid($response->json('reference')));
+        $this->assertStringNotContainsString('Private database connection detail', $response->getContent());
+        $this->assertSame($revision, $this->batch->fresh()->revision);
+        $this->assertSame(1, $this->batch->transformers()->count());
+        Log::shouldHaveReceived('error')->once()->with('Survey header save failed', \Mockery::on(fn ($context) => $context['reference'] === $response->json('reference') && $context['exception']->getMessage() === 'Private database connection detail'));
+    }
+
+    public function test_header_valid_retry_succeeds_and_invalid_source_fields_are_identified(): void
+    {
+        $url = route('mdb-workflow.entry.headers.store', $this->batch);
+        $this->postJson($url, $this->headerPayload(['source_page' => 100]))->assertUnprocessable()->assertJsonValidationErrors('source_page');
+        $this->postJson($url, $this->headerPayload(['source_waypoint_id' => 999999]))->assertUnprocessable()->assertJsonValidationErrors('source_waypoint_id');
+        $this->postJson($url, $this->headerPayload(['revision' => -1]))->assertUnprocessable()->assertJsonValidationErrors('revision');
+        $response = $this->postJson($url, $this->headerPayload())->assertOk();
+        $this->assertNotNull($response->json('active_transformer_id'));
+        $saved = $this->batch->transformers()->findOrFail($response->json('active_transformer_id'));
+        $this->assertSame('Keep this substation', $saved->header['substation_name']);
+        $this->assertSame('Keep this location', $saved->header['location']);
+    }
+
+    public function test_dedicated_survey_roles_have_separate_server_enforced_rights_with_team_scope(): void
+    {
+        $this->batch->update(['staged_workflow' => true]);
+        $operator = User::factory()->create(['role' => UserRole::SurveyDataEntryOperator]);
+        $verifier = User::factory()->create(['role' => UserRole::SurveyDataVerifier]);
+        $this->batch->surveyTeam->members()->attach([$operator->id, $verifier->id]);
+        $url = route('mdb-workflow.entry.headers.store', $this->batch);
+        $this->actingAs($operator)->postJson($url, $this->headerPayload())->assertOk();
+        $this->actingAs($verifier)->postJson($url, $this->headerPayload(['code' => 'Verifier cannot enter']))->assertForbidden();
+        $this->batch->update(['survey_status' => 'awaiting_verification']);
+        $decision = route('mdb-workflow.survey.decision', $this->batch);
+        $this->actingAs($operator)->postJson($decision, ['revision' => $this->batch->fresh()->revision, 'action' => 'approve'])->assertForbidden();
+        $this->actingAs($verifier)->post($decision, ['revision' => $this->batch->fresh()->revision, 'action' => 'return', 'remarks' => 'Correct the PDF date'])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('returned', $this->batch->fresh()->survey_status);
+        $this->assertSame($verifier->id, $this->batch->fresh()->survey_verifier_id);
+        $outsider = User::factory()->create(['role' => UserRole::SurveyDataEntryOperator]);
+        $this->actingAs($outsider)->getJson(route('mdb-workflow.entry.data', $this->batch))->assertForbidden();
+    }
+
+    private function workflowActors(): array
+    {
+        $actors = [User::factory()->create(['role' => UserRole::SurveyDataEntryOperator]),
+            User::factory()->create(['role' => UserRole::SurveyDataVerifier]),
+            User::factory()->create(['role' => UserRole::MdbGenerator])];
+        $this->batch->surveyTeam->members()->attach(array_map(fn ($user) => $user->id, $actors));
+        $this->batch->update(['staged_workflow' => true]);
+
+        return $actors;
+    }
+
+    private function completeSurvey(User $operator): void
+    {
+        $this->actingAs($operator);
+        $this->save();
+        $this->save(['designation' => 'E', 'waypoint_reference' => '010']);
+        $this->post(route('mdb-workflow.entry.review', $this->batch), ['revision' => $this->batch->fresh()->revision,
+            'transformer_id' => $this->transformer->id, 'confirmed' => 1])->assertRedirect()->assertSessionHasNoErrors();
+    }
+
+    private function kmzUpload(string $content = '<Document/>'): UploadedFile
+    {
+        $path = tempnam(sys_get_temp_dir(), 'survey-kmz-');
+        $archive = new \ZipArchive;
+        $archive->open($path, \ZipArchive::OVERWRITE);
+        $archive->addFromString('doc.kml', '<kml xmlns="http://www.opengis.net/kml/2.2">'.$content.'</kml>');
+        $archive->close();
+        try {
+            return UploadedFile::fake()->createWithContent('survey.kmz', file_get_contents($path));
+        } finally {
+            unlink($path);
+        }
+    }
+
+    public function test_three_role_submission_return_and_approval_freeze_data_and_audit_every_actor(): void
+    {
+        [$operator, $verifier, $creator] = $this->workflowActors();
+        $this->completeSurvey($operator);
+        $decision = route('mdb-workflow.survey.decision', $this->batch);
+        $this->post($decision, ['revision' => $this->batch->fresh()->revision, 'action' => 'submit'])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('awaiting_verification', $this->batch->fresh()->status);
+        $this->assertSame($operator->id, $this->batch->fresh()->entry_operator_id);
+        $this->assertNotNull($this->batch->fresh()->entry_completed_at);
+        $row = $this->transformer->entryRows()->first();
+        $this->postJson(route('mdb-workflow.entry.headers.store', $this->batch), $this->headerPayload())->assertForbidden();
+        $this->putJson(route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $row]), $this->payload())->assertForbidden();
+        $this->deleteJson(route('mdb-workflow.entry.rows.destroy', [$this->batch, $this->transformer, $row]), ['revision' => $this->batch->fresh()->revision])->assertForbidden();
+        $this->postJson(route('mdb-workflow.transition', $this->batch), ['revision' => $this->batch->fresh()->revision, 'action' => 'approve'])->assertForbidden();
+        $this->get(route('mdb-workflow.show', $this->batch))->assertOk()->assertDontSee('id="entry-header-form"', false)
+            ->assertDontSee('id="entry-row-form"', false)->assertDontSee('id="entry-pdf-mark"', false);
+        $this->actingAs($creator)->postJson($decision, ['revision' => $this->batch->fresh()->revision, 'action' => 'approve'])->assertForbidden();
+        $this->actingAs($verifier)->postJson($decision, ['revision' => $this->batch->fresh()->revision, 'action' => 'return'])->assertUnprocessable()->assertJsonValidationErrors('remarks');
+        $this->post($decision, ['revision' => $this->batch->fresh()->revision, 'action' => 'return', 'remarks' => 'Check the page and GPS reference'])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('returned', $this->batch->fresh()->survey_status);
+        $this->assertSame(2, $this->transformer->entryRows()->count());
+        $this->actingAs($operator)->post(route('mdb-workflow.entry.review', $this->batch), ['revision' => $this->batch->fresh()->revision,
+            'transformer_id' => $this->transformer->id, 'confirmed' => 1])->assertRedirect()->assertSessionHasNoErrors();
+        $this->post($decision, ['revision' => $this->batch->fresh()->revision, 'action' => 'submit'])->assertRedirect()->assertSessionHasNoErrors();
+        $this->actingAs($verifier)->post($decision, ['revision' => $this->batch->fresh()->revision, 'action' => 'approve'])->assertRedirect()->assertSessionHasNoErrors();
+        $batch = $this->batch->fresh();
+        $this->assertSame('approved', $batch->status);
+        $this->assertSame('approved', $batch->survey_status);
+        $this->assertSame($verifier->id, $batch->survey_verifier_id);
+        $this->assertNotNull($batch->survey_verified_at);
+        $this->assertSame($batch->revision, $batch->approvedRevision->number);
+        $this->assertSame($verifier->id, $batch->approvedRevision->created_by);
+        $this->assertSame($batch->approvedRevision->sha256, app(SnapshotService::class)->hash(app(SnapshotService::class)->snapshot($batch)));
+        $this->actingAs($operator)->postJson(route('mdb-workflow.entry.headers.store', $batch), $this->headerPayload())->assertForbidden();
+        $this->actingAs($creator)->postJson(route('mdb-workflow.entry.headers.store', $batch), $this->headerPayload())->assertForbidden();
+        foreach (['submit' => $operator, 'return' => $verifier, 'approve' => $verifier] as $action => $actor) {
+            $event = AuditLog::where('action', 'mdb.survey_'.$action)->where('auditable_id', $batch->id)->latest('id')->firstOrFail();
+            $this->assertSame($actor->id, $event->user_id);
+            $this->assertNotNull($event->created_at);
+        }
+    }
+
+    public function test_role_specific_pages_hide_other_actions_and_readonly_pdf_viewer_keeps_navigation(): void
+    {
+        [$operator, $verifier, $creator] = $this->workflowActors();
+        $operatorPage = $this->actingAs($operator)->get(route('mdb-workflow.show', $this->batch))->assertOk()->assertSee('Submit for Verification')
+            ->assertDontSee('Review all rows &amp; generate MDB', false)->assertDontSee('Review &amp; generate MDB', false)->getContent();
+        if (getenv('MDB_ENTRY_QA_ARTIFACTS')) {
+            file_put_contents(base_path('tmp/mdb-entry-qa/operator-workflow.html'), $operatorPage);
+        }
+        $this->get(route('mdb-workflow.review', $this->batch))->assertOk()->assertDontSee('Generate MDB')->assertDontSee('value="approve"', false);
+        $this->batch->update(['survey_status' => 'awaiting_verification']);
+        $this->actingAs($verifier)->get(route('mdb-workflow.review', $this->batch))->assertOk()->assertSee('Return for Correction')
+            ->assertSee('value="approve"', false)->assertDontSee('Generate MDB')->assertDontSee('entry.review', false);
+        $readonly = $this->get(route('mdb-workflow.show', $this->batch))->assertOk()->assertDontSee('id="entry-header-form"', false)
+            ->assertDontSee('id="entry-row-form"', false)->assertDontSee('id="entry-pdf-mark"', false)->getContent();
+        if (getenv('MDB_ENTRY_QA_ARTIFACTS')) {
+            file_put_contents(base_path('tmp/mdb-entry-qa/readonly.html'), $readonly);
+        }
+        $this->actingAs($creator)->get(route('mdb-workflow.review', $this->batch))->assertOk()->assertSee('Generate MDB')
+            ->assertDontSee('value="approve"', false)->assertDontSee('id="entry-header-form"', false);
+        $this->get(route('mdb-workflow.advanced', $this->batch))->assertOk()->assertDontSee('name="action" value="review"', false)
+            ->assertDontSee('name="action" value="approve"', false)->assertDontSee('Add transformer network');
+    }
+
+    public function test_supplemental_permissions_cannot_expand_creator_rights_and_designations_do_not_assign_roles(): void
+    {
+        [$operator, $verifier, $creator] = $this->workflowActors();
+        $creator->givePermissionTo(['MdbWorkflow:Edit', 'MdbWorkflow:SurveyVerify', 'MdbWorkflow:Verify', 'MdbWorkflow:Process']);
+        $this->actingAs($creator)->postJson(route('mdb-workflow.entry.headers.store', $this->batch), $this->headerPayload())->assertForbidden();
+        $this->batch->update(['survey_status' => 'awaiting_verification']);
+        $this->postJson(route('mdb-workflow.survey.decision', $this->batch), ['revision' => $this->batch->revision, 'action' => 'approve'])->assertForbidden();
+        $external = User::factory()->create(['role' => UserRole::MdbProcessingUser]);
+        $manager = User::factory()->create(['role' => UserRole::ProjectManager]);
+        $this->batch->surveyTeam->members()->attach($external->id);
+        $this->assertFalse($external->hasRole('survey_data_verifier'));
+        $this->assertFalse($manager->hasRole('mdb_generator'));
+        $this->actingAs($external)->postJson(route('mdb-workflow.survey.decision', $this->batch), ['revision' => $this->batch->revision, 'action' => 'approve'])->assertForbidden();
+        $this->postJson(route('mdb-workflow.exports.store', $this->batch), ['revision' => $this->batch->revision])->assertForbidden();
+        $generatorRole = Role::findByName('mdb_generator');
+        $generatorRole->givePermissionTo('MdbWorkflow:Verify');
+        $this->seed(MdbWorkflowPermissionSeeder::class);
+        $this->assertFalse($generatorRole->fresh()->hasPermissionTo('MdbWorkflow:Verify'));
+    }
+
+    public function test_creator_freezes_pdf_gpx_kmz_and_required_base_files_without_editing_approved_survey(): void
+    {
+        [$operator, $verifier, $creator] = $this->workflowActors();
+        Storage::disk('local')->put('base.mdb', file_get_contents(resource_path('mdb/synergee-empty.mdb')));
+        Template::create(['code' => 'BASE', 'version' => '1', 'disk' => 'local', 'path' => 'base.mdb',
+            'sha256' => hash_file('sha256', resource_path('mdb/synergee-empty.mdb')), 'synergee_version' => 'Fixture',
+            'metadata' => ['required_base_files' => ['reviewed.csv']], 'approved_by' => $this->admin->id, 'approved_at' => now('UTC'), 'active' => true]);
+        $this->completeSurvey($operator);
+        $decision = route('mdb-workflow.survey.decision', $this->batch);
+        $this->post($decision, ['revision' => $this->batch->fresh()->revision, 'action' => 'submit'])->assertRedirect()->assertSessionHasNoErrors();
+        $inputs = route('mdb-workflow.generation.inputs.store', $this->batch);
+        $this->actingAs($creator)->post($inputs, ['kind' => 'kmz', 'file' => $this->kmzUpload()])->assertForbidden();
+        $this->actingAs($verifier)->post($decision, ['revision' => $this->batch->fresh()->revision, 'action' => 'approve'])->assertRedirect()->assertSessionHasNoErrors();
+        $this->post($inputs, ['kind' => 'kmz', 'file' => $this->kmzUpload()])->assertForbidden();
+        $this->postJson(route('mdb-workflow.exports.store', $this->batch), ['revision' => $this->batch->fresh()->revision])->assertForbidden();
+        $this->actingAs($creator);
+        $exports = route('mdb-workflow.exports.store', $this->batch);
+        $this->postJson($exports, ['revision' => $this->batch->fresh()->revision])->assertUnprocessable()->assertJsonValidationErrors('generation_inputs');
+        $this->post($inputs, ['kind' => 'kmz', 'file' => UploadedFile::fake()->createWithContent('bad.kmz', 'not a map')])->assertSessionHasErrors('file');
+        $this->post($inputs, ['kind' => 'kmz', 'file' => $this->kmzUpload()])->assertRedirect()->assertSessionHasNoErrors();
+        $approved = $this->batch->fresh()->approved_revision_id;
+        $approvedHash = $this->batch->fresh()->approvedRevision->sha256;
+        $this->postJson($exports, ['revision' => $this->batch->fresh()->revision])->assertUnprocessable()->assertJsonValidationErrors('generation_inputs');
+        $this->post($inputs, ['kind' => 'base', 'file' => UploadedFile::fake()->createWithContent('reviewed.csv', 'id,value')])->assertRedirect()->assertSessionHasNoErrors();
+        $this->mock(ExportPayloadBuilder::class)->shouldReceive('build')->andReturn(['settings' => [], 'tables' => []]);
+        $this->post($exports, ['revision' => $this->batch->fresh()->revision])->assertRedirect()->assertSessionHasNoErrors();
+        $this->post($exports, ['revision' => $this->batch->fresh()->revision])->assertRedirect()->assertSessionHasNoErrors();
+        $job = $this->batch->exports()->sole();
+        $this->assertSame($creator->id, $job->requested_by);
+        $manifest = $job->settings['generation_inputs'];
+        $this->assertSame($approved, $manifest['approved_revision_id']);
+        $this->assertCount(2, $manifest['survey_sources']);
+        $this->assertCount(2, $manifest['supporting_files']);
+        $payload = json_decode(Storage::disk('local')->get($job->payload_path), true);
+        $this->assertSame($manifest, $payload['generation_inputs']);
+        $this->assertSame($approved, $this->batch->fresh()->approved_revision_id);
+        $this->assertSame($approvedHash, app(SnapshotService::class)->hash(app(SnapshotService::class)->snapshot($this->batch->fresh())));
+        $event = AuditLog::where('action', 'mdb_workflow.export_requested')->where('auditable_id', $job->id)->sole();
+        $this->assertSame($creator->id, $event->user_id);
+        $this->assertNotNull($event->created_at);
+        Storage::disk('local')->put('generated.mdb', Storage::disk('local')->get('base.mdb'));
+        $job->update(['status' => 'generated', 'output_path' => 'generated.mdb', 'output_sha256' => hash('sha256', Storage::disk('local')->get('generated.mdb'))]);
+        $download = route('mdb-workflow.exports.download', $job);
+        $this->actingAs($operator)->get($download)->assertForbidden();
+        $this->actingAs($verifier)->get($download)->assertForbidden();
+        $this->actingAs($creator)->get($download)->assertOk();
+        $this->assertDatabaseHas('audit_logs', ['action' => 'mdb.output_downloaded', 'user_id' => $creator->id]);
+        Storage::disk('local')->put($manifest['supporting_files'][0]['path'], 'changed bytes');
+        $this->getJson($download)->assertUnprocessable()->assertJsonValidationErrors('generation_inputs');
+    }
+
+    private function pdfLayout(int $page = 1, ?SourceFile $source = null): array
+    {
+        $source ??= $this->pdf;
+
+        return $this->putJson(route('mdb-workflow.entry.pdf.layout', [$this->batch, $source]), [
+            'revision' => $this->batch->fresh()->revision, 'page' => $page, 'row_count' => 4,
+            'bounds' => ['x' => .05, 'y' => .2, 'width' => .9, 'height' => .6],
+        ])->assertOk()->json('pdf_rows');
+    }
+
+    public function test_pdf_progress_is_saved_with_record_and_undo_retains_link_and_original_pdf(): void
+    {
+        $bytes = Storage::disk('local')->get($this->pdf->path);
+        $marker = $this->pdfLayout()[0];
+        $row = $this->save(['pdf_progress_row_id' => $marker['id']]);
+        $this->assertSame('PDF row 1', $row->source_row);
+        $this->assertTrue(PdfRow::find($marker['id'])->entered);
+        $this->getJson(route('mdb-workflow.entry.data', $this->batch))->assertOk()
+            ->assertJsonPath('pdf_rows.0.entry_row_id', $row->id)->assertJsonPath('pdf_rows.0.entered', true);
+        $this->putJson(route('mdb-workflow.entry.pdf.mark', [$this->batch, $marker['id']]), [
+            'revision' => $this->batch->fresh()->revision, 'entered' => false,
+        ])->assertOk()->assertJsonPath('pdf_rows.0.entered', false)->assertJsonPath('pdf_rows.0.entry_row_id', $row->id);
+        $this->assertNotNull($row->fresh());
+        $this->postJson(route('mdb-workflow.entry.rows.store', [$this->batch, $this->transformer]),
+            $this->payload(['pair_number' => 2, 'pdf_progress_row_id' => $marker['id']]))->assertUnprocessable();
+        $this->putJson(route('mdb-workflow.entry.pdf.mark', [$this->batch, $marker['id']]), [
+            'revision' => $this->batch->fresh()->revision, 'entered' => true,
+        ])->assertOk()->assertJsonPath('pdf_rows.0.entered', true);
+        $this->assertSame($bytes, Storage::disk('local')->get($this->pdf->path));
+        $this->assertSame($this->pdf->sha256, hash('sha256', $bytes));
+    }
+
+    public function test_pdf_row_marking_requires_a_saved_record_and_failed_saves_leave_it_pending(): void
+    {
+        $marker = $this->pdfLayout()[0];
+        $this->putJson(route('mdb-workflow.entry.pdf.mark', [$this->batch, $marker['id']]), [
+            'revision' => $this->batch->fresh()->revision, 'entered' => true,
+        ])->assertUnprocessable();
+        $this->postJson(route('mdb-workflow.entry.rows.store', [$this->batch, $this->transformer]),
+            $this->payload(['revision' => -1, 'pdf_progress_row_id' => $marker['id']]))->assertUnprocessable();
+        $this->postJson(route('mdb-workflow.entry.rows.store', [$this->batch, $this->transformer]), $this->payload())->assertUnprocessable();
+        $this->assertFalse(PdfRow::find($marker['id'])->entered);
+        $this->assertNull(PdfRow::find($marker['id'])->entry_row_id);
+        $this->assertSame(0, $this->transformer->entryRows()->count());
+    }
+
+    public function test_pdf_rows_are_scoped_by_pdf_page_and_row_and_cannot_be_relocated_after_linking(): void
+    {
+        $this->pdfLayout();
+        $this->pdfLayout(2);
+        $other = $this->pdf->replicate();
+        $other->original_name = 'other.pdf';
+        $other->path = 'other.pdf';
+        $other->save();
+        $markers = $this->pdfLayout(1, $other);
+        $marker = collect($markers)->first(fn ($row) => $row['source_file_id'] === $this->pdf->id && $row['page'] === 1);
+        $this->assertCount(12, $markers);
+        $this->postJson(route('mdb-workflow.entry.rows.store', [$this->batch, $this->transformer]),
+            $this->payload(['source_page' => 2, 'pdf_progress_row_id' => $marker['id']]))->assertUnprocessable();
+        $row = $this->save(['pdf_progress_row_id' => $marker['id']]);
+        $this->putJson(route('mdb-workflow.entry.pdf.layout', [$this->batch, $this->pdf]), [
+            'revision' => $this->batch->fresh()->revision, 'page' => 1, 'row_count' => 3,
+            'bounds' => ['x' => 0, 'y' => 0, 'width' => 1, 'height' => 1],
+        ])->assertUnprocessable();
+        $this->pdfLayout(); // Adjusting bounds with the same count preserves IDs and saved links.
+        $this->assertSame($row->id, PdfRow::find($marker['id'])->entry_row_id);
+        $this->assertTrue(PdfRow::find($marker['id'])->entered);
+        $this->deleteJson(route('mdb-workflow.entry.rows.destroy', [$this->batch, $this->transformer, $row]), [
+            'revision' => $this->batch->fresh()->revision, 'confirmed' => true,
+        ])->assertOk();
+        $this->assertFalse(PdfRow::find($marker['id'])->entered);
+        $this->assertNull(PdfRow::find($marker['id'])->entry_row_id);
+    }
+
+    public function test_pdf_layout_and_markers_reject_foreign_batches_invalid_bounds_and_stale_changes(): void
+    {
+        $marker = $this->pdfLayout()[0];
+        $foreign = SurveyBatch::create(['project_id' => $this->batch->project_id, 'feeder_id' => $this->batch->feeder_id, 'survey_team_id' => $this->batch->survey_team_id,
+            'survey_date' => '2026-10-08', 'created_by' => $this->admin->id]);
+        $this->putJson(route('mdb-workflow.entry.pdf.mark', [$foreign, $marker['id']]), ['revision' => 0, 'entered' => false])->assertNotFound();
+        $this->putJson(route('mdb-workflow.entry.pdf.layout', [$foreign, $this->pdf]), [])->assertNotFound();
+        $this->putJson(route('mdb-workflow.entry.pdf.layout', [$this->batch, $this->pdf]), [
+            'revision' => $this->batch->fresh()->revision, 'page' => 15, 'row_count' => 3,
+            'bounds' => ['x' => .9, 'y' => 0, 'width' => 1, 'height' => 1],
+        ])->assertUnprocessable();
+        $this->putJson(route('mdb-workflow.entry.pdf.mark', [$this->batch, $marker['id']]), ['revision' => -1, 'entered' => false])->assertConflict();
+        $this->actingAs(User::factory()->create(['role' => UserRole::ManagementViewer]));
+        $this->putJson(route('mdb-workflow.entry.pdf.mark', [$this->batch, $marker['id']]), ['revision' => 1, 'entered' => false])->assertForbidden();
+    }
+
+    public function test_pdf_row_save_retries_are_idempotent_and_do_not_mark_a_different_row(): void
+    {
+        $markers = $this->pdfLayout();
+        $payload = $this->payload(['pdf_progress_row_id' => $markers[0]['id']]);
+        $url = route('mdb-workflow.entry.rows.store', [$this->batch, $this->transformer]);
+        $this->postJson($url, $payload)->assertOk();
+        $this->postJson($url, $payload)->assertOk();
+        $payload['pdf_progress_row_id'] = $markers[1]['id'];
+        $this->postJson($url, $payload)->assertUnprocessable();
+        $this->assertSame(1, $this->transformer->entryRows()->count());
+        $this->assertFalse(PdfRow::find($markers[1]['id'])->entered);
+    }
+
+    public function test_existing_records_can_be_linked_to_physical_rows_without_duplication(): void
+    {
+        $this->entrySettings();
+        $row = $this->save(['identity_version' => 2]);
+        $markers = $this->pdfLayout();
+        $url = route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $row]);
+        $this->putJson($url, $this->payload(['identity_version' => 2, 'client_uuid' => $row->client_uuid,
+            'pdf_progress_row_id' => $markers[0]['id']]))->assertOk();
+        $this->assertSame(1, $this->transformer->entryRows()->count());
+        $this->assertSame('PDF row 1', $row->fresh()->source_row);
+        $this->assertSame(1, $row->fresh()->entry_sequence);
+        $this->putJson($url, $this->payload(['identity_version' => 2, 'client_uuid' => $row->client_uuid,
+            'pdf_progress_row_id' => $markers[1]['id']]))->assertUnprocessable();
+        $this->assertSame($row->id, PdfRow::find($markers[0]['id'])->entry_row_id);
+        $this->assertNull(PdfRow::find($markers[1]['id'])->entry_row_id);
     }
 
     public function test_complete_identity_and_automatic_metadata_are_saved_once_with_project_unit(): void
@@ -236,11 +628,35 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertStringContainsString('id="sidebar-collapse-toggle"', $html);
         $this->assertStringContainsString('Hide menu', $html);
         $this->assertStringContainsString('entry-electrical-equipment-fields', $html);
-        $this->assertStringContainsString('Conductors, automatic phase and equipment at this S/E row', $html);
+        $this->assertStringContainsString('Phase / conductors / equipment', $html);
         $this->assertStringContainsString('name="pole_height" type="number"', $html);
         $this->assertSame(1, substr_count($html, 'class="entry-compact-fieldset entry-electrical-equipment"'));
         $this->assertSame(6, substr_count($html, 'data-compact-select'));
+        $this->assertStringNotContainsString('entry-copy-endpoint', $html);
+        $columns = ['name="designation"', 'name="group_number"', 'name="row_date"', 'name="waypoint_reference"', 'id="entry-phase"',
+            'name="conductors[R]"', 'name="conductors[Y]"', 'name="conductors[B]"', 'name="conductors[N]"', 'name="equipment_type"', 'name="pole_class"', 'name="pole_height"',
+            ...array_map(fn ($key) => 'name="consumers['.$key.']"', array_keys(EntryLookups::CONSUMERS)), 'name="intersection"', 'id="entry-pv-records"'];
+        $positions = array_map(fn ($column) => strpos($html, $column), $columns);
+        $ordered = $positions;
+        sort($ordered);
+        $this->assertSame($ordered, $positions);
         $this->get(route('mdb-workflow.config', $this->batch->project_id))->assertOk()->assertSee('Survey two-digit-year window starts at')->assertSee('Verified survey pole-height unit');
+    }
+
+    public function test_row_validation_returns_specific_field_messages_without_saving_or_marking_progress(): void
+    {
+        $marker = $this->pdfLayout()[0];
+        $response = $this->postJson(route('mdb-workflow.entry.rows.store', [$this->batch, $this->transformer]), $this->payload([
+            'pdf_progress_row_id' => $marker['id'], 'row_date' => '2026-02-31', 'pole_height' => -1,
+            'consumers' => ['rs' => 1.5, 'rl' => -1], 'conductors' => ['R' => 'invalid', 'Y' => '__none__', 'B' => '__none__', 'N' => '__none__'],
+        ]));
+        $response->assertUnprocessable()->assertJsonValidationErrors(['row_date', 'pole_height', 'consumers.rs', 'consumers.rl', 'conductors.R']);
+        $this->assertStringContainsString('valid calendar date', $response->json('errors.row_date.0'));
+        $this->assertStringContainsString('RS consumer count must be a whole number', $response->json('errors')['consumers.rs'][0]);
+        $this->assertStringContainsString('RL consumer count cannot be negative', $response->json('errors')['consumers.rl'][0]);
+        $this->assertStringContainsString('listed conductor', $response->json('errors')['conductors.R'][0]);
+        $this->assertSame(0, $this->transformer->entryRows()->count());
+        $this->assertFalse(PdfRow::find($marker['id'])->entered);
     }
 
     public function test_draft_missing_waypoint_and_none_states_survive_reload_and_duplicate_clicks_are_idempotent(): void

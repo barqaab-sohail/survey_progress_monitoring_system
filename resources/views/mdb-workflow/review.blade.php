@@ -3,18 +3,8 @@
 @section('content')
 @php($active = $batch->transformers->firstWhere('id', (int) request('transformer_id')) ?? $batch->transformers->first())
 <div class="mdb-workflow mdb-entry">
-    @if($batch->staged_workflow)
-    <section class="card"><h2>Survey data verification</h2><p>Status: {{ str($batch->survey_status)->replace('_', ' ')->title() }} · Operator: {{ $batch->entryOperator?->name ?? 'Pending' }} · Verifier: {{ $batch->surveyVerifier?->name ?? 'Pending' }} · Entry completed: {{ $batch->entry_completed_at ?? 'Pending' }} · Verified: {{ $batch->survey_verified_at ?? 'Pending' }}</p><p>{{ $batch->survey_remarks }}</p>
-        @foreach($batch->sources as $source)<p><a href="{{ route('mdb-workflow.source', [$batch, $source]) }}" target="_blank">{{ strtoupper($source->kind) }}: {{ $source->original_name }}</a></p>@endforeach
-        @if(in_array($batch->survey_status, ['entry','returned'], true))
-        @can('mdb-workflow.edit')<form method="POST" action="{{ route('mdb-workflow.survey.decision', $batch) }}">@csrf<input type="hidden" name="revision" value="{{ $batch->revision }}"><input type="hidden" name="action" value="submit"><button class="btn btn-primary">Submit survey for verification</button></form>@endcan
-        @elseif($batch->survey_status === 'awaiting_verification')
-        @can('mdb-workflow.surveyVerify')<form method="POST" action="{{ route('mdb-workflow.survey.decision', $batch) }}">@csrf<input type="hidden" name="revision" value="{{ $batch->revision }}"><label>Remarks<textarea name="remarks" maxlength="10000"></textarea></label><button name="action" value="approve" class="btn btn-primary">Approve survey</button><button name="action" value="return" class="btn btn-light">Return for correction</button></form>@endcan
-        @endif
-        <details><summary>Survey approval history</summary><ul>@foreach($surveyHistory as $event)<li>{{ $event->created_at }} · {{ $event->user?->name ?? 'Deleted user' }} · {{ str($event->action)->after('mdb.survey_')->title() }} · {{ $event->reason }}</li>@endforeach</ul></details>
-    </section>
-    @endif
-    <div class="page-head"><div><h1>Review &amp; save</h1><p>{{ $batch->feeder?->feeder_name }} · Batch #{{ $batch->id }} · Revision {{ $batch->revision }}</p></div><a class="btn btn-light" href="{{ route('mdb-workflow.show', [$batch, 'transformer_id'=>$active?->id]) }}">Back to entry</a></div>
+    @include('mdb-workflow.workflow-actions')
+    <div class="page-head"><div><h1>Review survey data</h1><p>{{ $batch->feeder?->feeder_name }} · Batch #{{ $batch->id }} · Revision {{ $batch->revision }}</p></div><a class="btn btn-light" href="{{ route('mdb-workflow.show', [$batch, 'transformer_id'=>$active?->id]) }}">View survey PDF and rows</a></div>
     <nav class="mdb-tabs">@foreach($batch->transformers as $transformer)<a href="{{ route('mdb-workflow.review', [$batch, 'transformer_id'=>$transformer->id]) }}" @if($active?->id === $transformer->id) aria-current="page" @endif>{{ $transformer->code }}</a>@endforeach</nav>
     @if($active)
     <section class="card"><h2>{{ $active->code }} — transformer header</h2><dl class="entry-review-header"><div><dt>Capacity</dt><dd>{{ $active->capacity_kva ?? 'Not entered' }} kVA</dd></div>
@@ -25,12 +15,12 @@
     </tbody></table></div>
     @php($activeIssues = collect($entryIssues)->where('transformer_id', $active->id))
     @if($activeIssues->isNotEmpty())<div class="entry-error-summary entry-review-issues"><strong>Resolve these entries before final submission</strong><ul>@foreach($activeIssues as $issue)<li>Page {{ $issue['source_page'] ?? '—' }}, row {{ $issue['source_row'] ?? '—' }}: {{ $issue['message'] }}</li>@endforeach</ul></div>@endif
-    @can('mdb-workflow.edit')<form method="POST" action="{{ route('mdb-workflow.entry.review', $batch) }}">@csrf<input type="hidden" name="revision" value="{{ $batch->revision }}"><input type="hidden" name="transformer_id" value="{{ $active->id }}"><label class="mdb-check"><input name="confirmed" type="checkbox" value="1" required><span>I checked this transformer header and all its S/E rows against the PDF.</span></label><div class="mdb-form-actions"><button class="btn btn-primary" @disabled($activeIssues->isNotEmpty())>Review and save {{ $active->code }}</button><a class="btn btn-light" href="{{ route('mdb-workflow.show', [$batch, 'transformer_id'=>$active->id]) }}">Correct entries</a></div></form>@endcan
+    @if($canEdit)<form method="POST" action="{{ route('mdb-workflow.entry.review', $batch) }}">@csrf<input type="hidden" name="revision" value="{{ $batch->revision }}"><input type="hidden" name="transformer_id" value="{{ $active->id }}"><label class="mdb-check"><input name="confirmed" type="checkbox" value="1" required><span>I checked this transformer header and all its S/E rows against the PDF.</span></label><div class="mdb-form-actions"><button class="btn btn-primary" @disabled($activeIssues->isNotEmpty())>Review and save {{ $active->code }}</button><a class="btn btn-light" href="{{ route('mdb-workflow.show', [$batch, 'transformer_id'=>$active->id]) }}">Correct entries</a></div></form>@endif
     </section>@endif
-    <section class="card"><h2>Verification and MDB generation</h2><p class="mdb-note">{{ str($batch->status)->replace('_',' ')->title() }}. Saved draft rows remain available when you return to entry.</p>
-        @can($batch->staged_workflow ? 'mdb-workflow.process' : 'mdb-workflow.edit')@if(in_array($batch->status,['draft','submitted','returned'],true))<form method="POST" action="{{ route('mdb-workflow.transition', $batch) }}">@csrf<input type="hidden" name="revision" value="{{ $batch->revision }}"><input type="hidden" name="action" value="review"><button class="btn btn-light" @disabled(count($entryIssues))>Submit network for export approval</button></form>@endif@endcan
+    @if($canCreateMdb)<section class="card"><h2>MDB creation</h2><p class="mdb-note">{{ str($batch->status)->replace('_',' ')->title() }}. Saved draft rows remain available when you return to entry.</p>
         @if(!$workerConfigured)<p class="mdb-worker-note">MDB export worker not configured.</p>@endif
-        @can($batch->staged_workflow ? 'mdb-workflow.generate' : 'mdb-workflow.export')<form method="POST" action="{{ route('mdb-workflow.exports.store', $batch) }}">@csrf<input type="hidden" name="revision" value="{{ $batch->revision }}"><input type="hidden" name="transformer_id" value="{{ $active?->id }}"><div class="mdb-form-actions"><button class="btn btn-primary" @disabled(!$batch->approved_revision_id)>Generate MDB{{ $active ? ' for '.$active->code : '' }}</button>@if(!$batch->approved_revision_id)<small>Verifier approval is required.</small>@endif</div></form>@endcan
+        @include('mdb-workflow.generation-inputs')
+        @can($batch->staged_workflow ? 'mdb-workflow.generate' : 'mdb-workflow.export')<form method="POST" action="{{ route('mdb-workflow.exports.store', $batch) }}">@csrf<input type="hidden" name="revision" value="{{ $batch->revision }}"><input type="hidden" name="transformer_id" value="{{ $active?->id }}"><div class="mdb-form-actions"><button class="btn btn-primary" @disabled(!$batch->approved_revision_id)>Generate MDB</button>@if(!$batch->approved_revision_id)<small>Verifier approval is required.</small>@endif</div></form>@endcan
         @foreach($batch->exports->sortByDesc('id') as $export)
         <p>Export #{{ $export->id }} — {{ $export->transformer?->code ?? 'Feeder' }} — {{ str($export->status)->replace('_',' ') }}
             @if($export->status === 'generated' && !$export->superseded_at)
@@ -38,9 +28,10 @@
             @endif
         </p>
         @endforeach
-        <details><summary>Requirements for the MDB verifier / administrator ({{ count($validation['errors']) }})</summary><ul class="mdb-issue-list">@foreach($validation['errors'] as $issue)<li>{{ $issue['message'] }} @if(isset($issue['source_page']))<small>Page {{ $issue['source_page'] }}, row {{ $issue['source_row'] ?? '—' }}</small>@endif</li>@endforeach</ul></details>
-        <div class="mdb-form-actions"><a class="btn btn-light" href="{{ route('mdb-workflow.advanced', [$batch, 'transformer_id'=>$active?->id]) }}">Engineering, verification &amp; export details</a>@can('mdb-workflow.configure')<a class="btn btn-light" href="{{ route('mdb-workflow.config', $batch->project_id) }}">Administrator settings</a>@endcan</div>
-    </section>
+        <details><summary>MDB generation requirements ({{ count($validation['errors']) }})</summary><ul class="mdb-issue-list">@foreach($validation['errors'] as $issue)<li>{{ $issue['message'] }} @if(isset($issue['source_page']))<small>Page {{ $issue['source_page'] }}, row {{ $issue['source_row'] ?? '—' }}</small>@endif</li>@endforeach</ul></details>
+        <div class="mdb-form-actions"><a class="btn btn-light" href="{{ route('mdb-workflow.advanced', [$batch, 'transformer_id'=>$active?->id]) }}">MDB generation details</a>@can('mdb-workflow.configure')<a class="btn btn-light" href="{{ route('mdb-workflow.config', $batch->project_id) }}">Administrator settings</a>@endcan</div>
+    </section>@endif
+    <section class="card"><h2>Action history</h2><ul>@forelse($workflowHistory as $event)<li>{{ $event->created_at->timezone('Asia/Karachi')->format('d M Y H:i:s') }} PKT · {{ $event->user?->name ?? 'Deleted user' }} · {{ str($event->action)->after('mdb.')->after('mdb_workflow.')->replace('_', ' ')->title() }} @if($event->reason) · {{ $event->reason }} @endif</li>@empty<li>No workflow actions recorded.</li>@endforelse</ul></section>
 </div>
 @endsection
 @push('styles')<link rel="stylesheet" href="{{ asset('css/mdb-workflow.css') }}"><link rel="stylesheet" href="{{ asset('css/mdb-entry.css') }}">@endpush

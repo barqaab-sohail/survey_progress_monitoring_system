@@ -6,7 +6,19 @@ Open **MDB Creation & Verification** from the application navigation. The dashbo
 
 Access uses the application's existing users, roles, team membership and permissions. Administrators grant the new `MdbWorkflow:*` permissions. A permission to perform an action still requires access to the batch's project or team.
 
-Assign additional roles such as `mdb_creation_team`, `mdb_verifier` and `analysis_team` through the application's existing role management. An Analysis Team user also needs membership in an MDB or processing team for the applicable project. Existing survey, MDB creation and verification roles receive the appropriate workflow permissions through the permission seeder; an administrator can manage them using the existing permission system.
+New staged surveys use three separate roles:
+
+| Role | Actions | Restrictions |
+| --- | --- | --- |
+| Data Entry Operator | Upload survey PDF/GPX, enter/edit draft records, mark PDF progress, Submit for Verification | No approval or MDB creation/download |
+| Data Verifier | Read submitted survey data and source files, Approve, Return for Correction with comments | No survey edits or MDB creation/download |
+| MDB Creator | Prepare KMZ/base files, Generate MDB, Download MDB | Approved frozen data only; no survey editing or approval |
+
+Install grants with `php artisan db:seed --class=MdbWorkflowPermissionSeeder`, then explicitly assign the chosen role and project/team membership. Clear cached permissions with `php artisan permission:cache-reset`. **Third-Party Processor** is an external-party designation and does not imply Data Verifier rights. Project Manager does not receive MDB Creator rights automatically. MDB Creator remains unassigned until a designated account is selected. Active user and organization status are required. Existing internal role keys remain `survey_data_entry_operator`, `survey_data_verifier`, and `mdb_generator`.
+
+Save drafts, review the saved survey and use **Submit for Verification**. Submission locks survey editing. A separate verifier may approve the current revision or return it with correction comments. Return reopens entry; approval freezes a revision for MDB creation without a second creator approval step. Entry contributors cannot approve their own work. Generation requires the original ready PDF/GPX, a valid KMZ, the approved MDB base template and any filenames listed in the template metadata `required_base_files`. Each request freezes and hashes its file package; additional generation files do not change approved survey records. Required engineering settings and mappings still need administrator approval. See [ROLE_WORKFLOW.md](ROLE_WORKFLOW.md).
+
+Legacy engineering roles and the procedures below remain for historical non-staged batches and SynerGEE acceptance. They cannot expand a dedicated survey role's rights. Staged survey mutation, approval and generation endpoints require the corresponding dedicated role (or administrator access); direct HTTP requests receive the same checks as the interface.
 
 ## Survey Team: collect and submit sources
 

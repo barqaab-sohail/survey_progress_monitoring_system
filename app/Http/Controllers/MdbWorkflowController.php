@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\Mdb\ProcessSourceFile;
+use App\Models\AuditLog;
 use App\Models\Feeder;
 use App\Models\Mdb\Configuration;
 use App\Models\Mdb\Consumer;
@@ -46,15 +47,16 @@ class MdbWorkflowController extends Controller
             'survey_date' => 'nullable|date', 'date_from' => 'nullable|date', 'date_to' => 'nullable|date|after_or_equal:date_from', 'transformer' => 'nullable|string|max:255', 'status' => 'nullable|string|max:40']);
         $query = $this->access->visible($request->user());
         if ($request->filled('queue')) {
-            $queue = $request->validate(['queue' => 'required|in:entry,survey_verification,processing,mdb_verification'])['queue'];
+            $queue = $request->validate(['queue' => 'required|in:entry,survey_verification,mdb_creation,processing,mdb_verification'])['queue'];
             $ability = match ($queue) {
-                'entry' => 'edit', 'survey_verification' => 'surveyVerify', 'processing' => 'process', 'mdb_verification' => 'analyze'
+                'entry' => 'edit', 'survey_verification' => 'surveyVerify', 'mdb_creation' => 'generate', 'processing' => 'process', 'mdb_verification' => 'analyze'
             };
             abort_unless($this->access->allows($request->user(), $ability), 403);
             $query->where('staged_workflow', true);
             match ($queue) {
                 'entry' => $query->whereIn('survey_status', ['entry', 'returned']),
                 'survey_verification' => $query->where('survey_status', 'awaiting_verification'),
+                'mdb_creation' => $query->where('survey_status', 'approved')->where('status', 'approved')->whereNotNull('approved_revision_id'),
                 'processing' => $query->where('survey_status', 'approved')->whereNull('approved_revision_id'),
                 'mdb_verification' => $query->whereHas('exports', fn ($q) => $q->where('status', 'generated')->whereNull('superseded_at')),
             };
@@ -134,7 +136,8 @@ class MdbWorkflowController extends Controller
         $this->access->authorize($request->user(), $batch);
 
         return view('mdb-workflow.show', ['batch' => $batch->load(['project', 'feeder', 'surveyTeam']),
-            'editorData' => app(EntryService::class)->editorData($batch)]);
+            'editorData' => app(EntryService::class)->editorData($batch), 'canEdit' => $this->access->canEdit($request->user(), $batch),
+            'canUpload' => $this->access->canUpload($request->user(), $batch)]);
     }
 
     public function review(Request $request, SurveyBatch $batch)
@@ -143,8 +146,16 @@ class MdbWorkflowController extends Controller
         $batch->load(['project', 'feeder', 'surveyTeam', 'transformers.entryRows', 'transformers.sections.consumers', 'exports.transformer', 'exports.revision', 'approvedRevision']);
 
         return view('mdb-workflow.review', ['batch' => $batch, 'entryIssues' => app(EntryService::class)->issues($batch),
+            'canEdit' => $this->access->canEdit($request->user(), $batch),
+            'canVerify' => $this->access->allowsForBatch($request->user(), $batch, 'surveyVerify') && ! in_array($request->user()->id, $batch->entry_actor_ids ?? [], true),
+            'canCreateMdb' => $this->access->allowsForBatch($request->user(), $batch, $batch->staged_workflow ? 'generate' : 'export') && $this->access->allowsForBatch($request->user(), $batch, 'export'),
             'validation' => app(NetworkValidator::class)->validate($batch), 'workerConfigured' => ExporterFactory::make()->configured(),
-            'surveyHistory' => \App\Models\AuditLog::with('user')->where('auditable_type', $batch->getMorphClass())->where('auditable_id', $batch->id)->where('action', 'like', 'mdb.survey_%')->orderBy('id')->get()]);
+            'workflowHistory' => AuditLog::with('user')->where(function ($query) use ($batch) {
+                $query->where(fn ($scope) => $scope->where('auditable_type', $batch->getMorphClass())->where('auditable_id', $batch->id))
+                    ->orWhere(fn ($scope) => $scope->where('auditable_type', (new ExportJob)->getMorphClass())
+                        ->whereIn('auditable_id', $batch->exports()->select('id')));
+            })->whereIn('action', ['mdb.survey_submit', 'mdb.survey_approve', 'mdb.survey_return', 'mdb_workflow.export_requested',
+                'mdb_workflow.export_generated', 'mdb_workflow.export_retried', 'mdb_workflow.export_failed', 'mdb.output_downloaded'])->orderBy('id')->get()]);
     }
 
     public function advanced(Request $request, SurveyBatch $batch)
@@ -153,6 +164,10 @@ class MdbWorkflowController extends Controller
         $batch->load(['project', 'feeder', 'surveyTeam', 'approvedRevision', 'sources.waypoints', 'waypoints', 'transformers.sourceWaypoint', 'transformers.sections.consumers', 'transformers.pvRecords', 'decisions.verifier', 'decisions.revision', 'exports.validations.analyst', 'exports.revision', 'exports.template', 'exports.transformer']);
 
         return view('mdb-workflow.advanced', ['batch' => $batch, 'validation' => app(NetworkValidator::class)->validate($batch),
+            'canEdit' => ! $batch->staged_workflow && $this->access->allows($request->user(), 'edit'),
+            'canUpload' => $this->access->canUpload($request->user(), $batch), 'entryIssues' => app(EntryService::class)->issues($batch),
+            'canVerify' => $this->access->allowsForBatch($request->user(), $batch, 'surveyVerify') && ! in_array($request->user()->id, $batch->entry_actor_ids ?? [], true),
+            'canCreateMdb' => $this->access->allowsForBatch($request->user(), $batch, $batch->staged_workflow ? 'generate' : 'export'),
             'configuration' => Configuration::where('project_id', $batch->project_id)->first(), 'templates' => Template::where('active', true)->get(),
             'workerConfigured' => ExporterFactory::make()->configured()]);
     }
@@ -413,36 +428,55 @@ class MdbWorkflowController extends Controller
 
     public function surveyDecision(Request $request, SurveyBatch $batch)
     {
+        $this->access->authorize($request->user(), $batch, $request->input('action') === 'submit' ? 'submit' : 'surveyVerify');
         $data = $request->validate(['revision' => 'required|integer', 'action' => 'required|in:submit,approve,return', 'remarks' => 'required_if:action,return|nullable|string|max:10000']);
         DB::transaction(function () use ($request, $batch, $data) {
             $locked = SurveyBatch::lockForUpdate()->findOrFail($batch->id);
             abort_unless($locked->staged_workflow, 422);
-            $this->access->authorize($request->user(), $locked, $data['action'] === 'submit' ? 'edit' : 'surveyVerify');
+            $this->access->authorize($request->user(), $locked, $data['action'] === 'submit' ? 'submit' : 'surveyVerify');
             $this->assertRevision($locked, (int) $data['revision']);
             $before = $locked->toArray();
             if ($data['action'] === 'submit') {
                 abort_unless(in_array($locked->survey_status, ['entry', 'returned'], true), 422);
                 app(EntryService::class)->assertComplete($locked);
                 abort_unless($locked->transformers()->exists(), 422, 'Enter at least one transformer.');
-                $locked->update(['survey_status' => 'awaiting_verification', 'entry_completed_at' => now('UTC')]);
+                $this->snapshots->invalidate($locked);
+                $this->access->recordEntry($locked, $request->user());
+                $locked->update(['survey_status' => 'awaiting_verification', 'status' => 'awaiting_verification', 'entry_completed_at' => now('UTC')]);
             } else {
                 abort_unless($locked->survey_status === 'awaiting_verification', 422);
                 if ($data['action'] === 'approve') {
                     $this->access->assertSourcesReady($locked);
                     app(EntryService::class)->assertComplete($locked);
                 }
+                if ($data['action'] === 'return') {
+                    $this->snapshots->invalidate($locked);
+                }
                 $locked->update(['survey_status' => $data['action'] === 'approve' ? 'approved' : 'returned',
+                    'status' => $data['action'] === 'approve' ? 'approved' : 'returned',
                     'survey_verifier_id' => $request->user()->id, 'survey_verified_at' => now('UTC'), 'survey_remarks' => $data['remarks'] ?? null]);
             }
             $locked->increment('revision');
+            $revision = $this->snapshots->capture($locked, $request->user()->id);
+            VerificationDecision::create(['batch_id' => $locked->id, 'revision_id' => $revision->id,
+                'decided_by' => $request->user()->id, 'decision' => $data['action'], 'comments' => $data['remarks'] ?? null,
+                'validation' => ['entry_issues' => app(EntryService::class)->issues($locked)]]);
+            if ($data['action'] === 'approve') {
+                $locked->update(['approved_revision_id' => $revision->id]);
+            }
             $this->audit->record($request->user(), 'mdb.survey_'.$data['action'], $locked, $before, $locked->toArray(), $data['remarks'] ?? null);
         });
 
-        return back()->with('success', 'Survey decision recorded.');
+        return back()->with('success', match ($data['action']) {
+            'submit' => 'Submitted for verification. Survey data is locked until returned for correction.',
+            'approve' => 'Survey approved. The data revision is frozen for MDB creation.',
+            'return' => 'Returned for correction with comments. The operator can edit the draft again.',
+        });
     }
 
     public function transition(Request $request, SurveyBatch $batch)
     {
+        abort_if($batch->staged_workflow, 403, 'Use Submit for Verification or the Data Verifier approval and correction actions.');
         $data = $request->validate(['revision' => 'required|integer', 'action' => 'required|in:submit,review,reject,approve,comment', 'comment' => 'required_if:action,reject,comment|nullable|string|max:10000']);
         $ability = match ($data['action']) {
             'submit' => $batch->staged_workflow ? 'edit' : 'upload', 'review' => $batch->staged_workflow ? 'process' : 'edit', default => 'verify'
@@ -511,6 +545,8 @@ class MdbWorkflowController extends Controller
     {
         $this->access->authorize($request->user(), $export->batch, 'export');
         abort_unless($export->status === 'generated' && ! $export->superseded_at && $export->batch->approved_revision_id === $export->revision_id, 409, 'Only the current approved MDB can be downloaded.');
+        app(ExportService::class)->assertApproved($export->batch);
+        app(ExportService::class)->assertGenerationInputs($export, $export->batch);
         $disk = Storage::disk($export->output_disk);
         abort_unless($export->output_path && $disk->exists($export->output_path), 404);
         abort_unless(hash_equals($export->output_sha256, hash_file('sha256', $disk->path($export->output_path))), 409, 'Output hash verification failed.');

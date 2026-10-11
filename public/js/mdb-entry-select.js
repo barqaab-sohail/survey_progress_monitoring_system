@@ -47,7 +47,15 @@ export function installCompactSelects(root = document) {
             if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();position=event.key==='Home' ? 0 : event.key==='End' ? options.length-1 : Math.max(0,Math.min(options.length-1,position+(event.key==='ArrowDown'?1:-1)));highlight();}
             if(event.key==='Enter'){event.preventDefault();event.stopPropagation();choose(position);}
             if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();trigger.focus();}
-            if(event.key==='Tab')close();
+            if(event.key==='Tab'){
+                event.preventDefault();close();
+                if(event.shiftKey){trigger.focus();return;}
+                const focusable=[...root.querySelectorAll('input,select,textarea,button,a[href],summary')].filter(element=>{
+                    if(element.disabled || element.tabIndex<0 || element.type==='hidden' || element.classList.contains('entry-native-select') || element.closest('[hidden]'))return false;
+                    const closed=element.closest('details:not([open])');return !closed || element===closed.querySelector('summary');
+                });
+                const next=focusable[focusable.indexOf(trigger)+1];(next || trigger).focus();
+            }
         });
         wrapper.addEventListener('focusout',()=>queueMicrotask(()=>{if(!wrapper.contains(wrapper.ownerDocument.activeElement))close();}));
         document.addEventListener('mousedown',event=>{if(!wrapper.contains(event.target))close();});

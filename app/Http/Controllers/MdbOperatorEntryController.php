@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Mdb\EntryRow;
 use App\Models\Mdb\NetworkTransformer;
+use App\Models\Mdb\PdfRow;
 use App\Models\Mdb\SurveyBatch;
 use App\Services\AuditService;
 use App\Services\Mdb\EntryLookups;
@@ -11,10 +12,15 @@ use App\Services\Mdb\EntryService;
 use App\Services\Mdb\SnapshotService;
 use App\Services\Mdb\SurveyWaypoint;
 use App\Services\Mdb\WorkflowAccess;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Throwable;
 
 class MdbOperatorEntryController extends Controller
 {
@@ -41,7 +47,7 @@ class MdbOperatorEntryController extends Controller
             'pv_details.*.reference' => 'nullable|string|max:255', 'pv_details.*.service_load_kw' => 'nullable|numeric|min:0|max:1000000',
             'pv_details.*.installed_capacity_kw' => 'nullable|numeric|min:0|max:1000000', 'pv_details.*.remarks' => 'nullable|string|max:4000',
             'inheritance' => 'nullable|array:conductors,equipment,group_date', 'inheritance.*' => 'nullable|integer', 'manually_verified' => 'nullable|boolean',
-            'identity_version' => 'nullable|in:2', 'composite_identifier' => 'nullable|string|regex:/^\d{11}$/D'];
+            'identity_version' => 'nullable|in:2', 'composite_identifier' => 'nullable|string|regex:/^\d{11}$/D', 'pdf_progress_row_id' => 'nullable|integer'];
         foreach (['R', 'Y', 'B', 'N'] as $phase) {
             $codes = array_merge(array_keys(app(EntryLookups::class)->options()['conductors']), ['__none__'], array_values($row?->conductors ?? []));
             $rules['conductors.'.$phase] = ['present', 'nullable', 'string', 'max:255', Rule::in(array_filter($codes, fn ($value) => $value !== null && $value !== ''))];
@@ -49,7 +55,20 @@ class MdbOperatorEntryController extends Controller
         foreach (array_keys(EntryLookups::CONSUMERS) as $category) {
             $rules['consumers.'.$category] = 'nullable|integer|min:0|max:1000000';
         }
-        $validated = $request->validate($rules);
+        $validated = $request->validate($rules, [
+            'row_date.date_format' => 'Enter a valid calendar date in DD/MM/YYYY.',
+            'conductors.*.in' => 'Select a listed conductor code or None / Not Present.',
+            'consumers.*.integer' => ':attribute must be a whole number; use 0 for none or leave it blank.',
+            'consumers.*.min' => ':attribute cannot be negative; use 0 for none or leave it blank.',
+            'consumers.*.max' => ':attribute cannot exceed 1,000,000.',
+            'pole_height.numeric' => 'Pole/tower height must be a number in the displayed unit.',
+            'pole_height.min' => 'Pole/tower height cannot be negative.',
+            'pole_height.max' => 'Pole/tower height cannot exceed 200 in the displayed unit.',
+            'pv_details.*.service_load_kw.numeric' => 'PV service load must be a number in kW.',
+            'pv_details.*.installed_capacity_kw.numeric' => 'PV solar capacity must be a number in kW.',
+        ], ['row_date' => 'Row date', 'group_number' => 'Group', 'waypoint_reference' => 'GPS number',
+            'pole_height' => 'Pole/tower height', 'pair_number' => 'Section pair',
+            ...collect(EntryLookups::CONSUMERS)->mapWithKeys(fn ($description, $key) => ['consumers.'.$key => strtoupper($key).' consumer count'])->all()]);
         $identity = app(SurveyWaypoint::class);
         $settings = $identity->settings($batch->project_id);
         if (! empty($validated['inheritance']['group_date'])) {
@@ -112,7 +131,7 @@ class MdbOperatorEntryController extends Controller
         if (strlen(json_encode($data, JSON_THROW_ON_ERROR)) > 256 * 1024) {
             throw ValidationException::withMessages(['pv_details' => 'This row exceeds the 256 KB entry limit.']);
         }
-        $hash = $this->snapshots->hash($data);
+        $hash = $this->snapshots->hash($data + (! empty($validated['pdf_progress_row_id']) ? ['pdf_progress_row_id' => $validated['pdf_progress_row_id']] : []));
         DB::transaction(function () use ($request, $batch, $transformer, $row, $validated, $data, $hash) {
             $locked = SurveyBatch::lockForUpdate()->findOrFail($batch->id);
             $existing = $row ? $transformer->entryRows()->findOrFail($row->id) : $transformer->entryRows()->where('client_uuid', $validated['client_uuid'])->first();
@@ -130,6 +149,23 @@ class MdbOperatorEntryController extends Controller
             }
             if ($transformer->entryRows()->where('pair_number', $data['pair_number'])->where('designation', $data['designation'])->when($row, fn ($q) => $q->whereKeyNot($row->id))->exists()) {
                 throw ValidationException::withMessages(['designation' => 'This pair already contains that S/E row. Edit the saved row.']);
+            }
+            $progress = ! empty($validated['pdf_progress_row_id'])
+                ? PdfRow::whereIn('source_file_id', $locked->sources()->where('kind', 'pdf')->pluck('id'))->findOrFail($validated['pdf_progress_row_id'])
+                : ($existing ? PdfRow::where('entry_row_id', $existing->id)->first() : null);
+            if (! $progress && PdfRow::where('source_file_id', $data['source_pdf_id'])->where('page', $data['source_page'])->exists()) {
+                throw ValidationException::withMessages(['pdf_progress_row_id' => 'Select the corresponding PDF row before saving this record.']);
+            }
+            if ($progress) {
+                if ($progress->source_file_id !== ($data['source_pdf_id'] ?? null) || $progress->page !== ($data['source_page'] ?? null)) {
+                    throw ValidationException::withMessages(['source_page' => 'The selected PDF row must match this record\'s PDF and page.']);
+                }
+                if ($progress->entry_row_id && $progress->entry_row_id !== $existing?->id) {
+                    throw ValidationException::withMessages(['pdf_progress_row_id' => 'This PDF row already has a saved record. Select it to edit that record.']);
+                }
+                if ($existing && PdfRow::where('entry_row_id', $existing->id)->whereKeyNot($progress->id)->exists()) {
+                    throw ValidationException::withMessages(['pdf_progress_row_id' => 'This record already belongs to another PDF row.']);
+                }
             }
             foreach ($data['inheritance'] as $scope => $sourceId) {
                 if (! $sourceId) {
@@ -151,10 +187,16 @@ class MdbOperatorEntryController extends Controller
             $values = $data + ['client_uuid' => $validated['client_uuid'], 'save_uuid' => $validated['save_uuid'], 'save_hash' => $hash];
             if (($data['identity_version'] ?? null) == 2) {
                 $values['entry_sequence'] = $existing?->entry_sequence ?? ((int) $locked->transformers()->withMax('entryRows', 'entry_sequence')->get()->max('entry_rows_max_entry_sequence') + 1);
-                $values['source_row'] = 'Entry '.$values['entry_sequence'];
+                $values['source_row'] = $progress ? 'PDF row '.$progress->row_number : 'Entry '.$values['entry_sequence'];
+            }
+            if ($progress) {
+                $values['source_row'] = 'PDF row '.$progress->row_number;
             }
             $values['original_entry'] = $existing?->original_entry ?? ['first_entry' => $data];
             $record = $existing ? tap($existing)->update($values) : $transformer->entryRows()->create($values);
+            if ($progress) {
+                $progress->update(['entry_row_id' => $record->id, 'entered' => true]);
+            }
             $this->entries->synchronizePair($transformer, $record->pair_number);
             $this->entries->synchronizePv($record->fresh());
             $locked->increment('revision');
@@ -177,6 +219,7 @@ class MdbOperatorEntryController extends Controller
             $old = $this->snapshots->snapshot($locked);
             $this->snapshots->invalidate($locked);
             $row->pvRecords()->delete();
+            PdfRow::where('entry_row_id', $row->id)->update(['entry_row_id' => null, 'entered' => false]);
             $row->delete();
             $this->entries->synchronizePair($transformer, $row->pair_number);
             $locked->increment('revision');
@@ -188,27 +231,83 @@ class MdbOperatorEntryController extends Controller
 
     public function header(Request $request, SurveyBatch $batch, ?NetworkTransformer $transformer = null)
     {
+        $reference = (string) Str::uuid();
+        try {
+            return $this->persistHeader($request, $batch, $transformer);
+        } catch (Throwable $exception) {
+            $status = 500;
+            $errors = [];
+            $message = 'The server could not confirm saving the survey header. Refresh saved records to check whether it was saved before retrying. If this continues, contact the administrator with the reference below.';
+            if ($exception instanceof ValidationException) {
+                $status = 422;
+                $errors = $exception->errors();
+                $message = 'Correct the invalid or missing header fields listed below and save again.';
+            } elseif ($exception instanceof ModelNotFoundException) {
+                $status = 404;
+                $message = 'The selected transformer, PDF or GPS waypoint is no longer available in this survey. Refresh saved records and select it again.';
+            } elseif ($exception instanceof HttpExceptionInterface && $exception->getStatusCode() < 500) {
+                $status = $exception->getStatusCode();
+                $message = $exception->getMessage() ?: match ($status) {
+                    403 => 'You do not have permission to save this survey header, or survey entry is locked.',
+                    404 => 'The selected transformer or survey could not be found. Refresh saved records and try again.',
+                    default => 'The survey header could not be saved. Refresh saved records and try again.',
+                };
+            }
+            $context = ['reference' => $reference, 'batch_id' => $batch->id, 'transformer_id' => $transformer?->id,
+                'user_id' => $request->user()?->id, 'revision' => $request->input('revision'), 'http_status' => $status,
+                'validation_errors' => $errors, 'exception' => $exception];
+            if ($status >= 500) {
+                Log::error('Survey header save failed', $context);
+            } else {
+                Log::warning('Survey header save rejected', $context);
+            }
+
+            return response()->json(['message' => $message, 'errors' => $errors, 'reference' => $reference], $status);
+        }
+    }
+
+    private function persistHeader(Request $request, SurveyBatch $batch, ?NetworkTransformer $transformer)
+    {
         $this->access->authorize($request->user(), $batch, 'edit');
         abort_unless(! $transformer || $transformer->batch_id === $batch->id, 404);
-        $data = $request->validate(['revision' => 'required|integer', 'code' => ['required', 'string', 'max:255', Rule::unique('mdb_workflow_transformers', 'code')->where('batch_id', $batch->id)->ignore($transformer?->id)],
+        $rules = ['revision' => 'required|integer', 'code' => ['required', 'string', 'max:255', Rule::unique('mdb_workflow_transformers', 'code')->where('batch_id', $batch->id)->ignore($transformer?->id)],
             'capacity_kva' => 'nullable|numeric|min:0.001|max:1000000', 'source_waypoint_id' => 'nullable|integer', 'header' => 'required|array',
             'header.survey_date' => 'nullable|date_format:Y-m-d', 'header.mounting' => ['nullable', Rule::in(array_filter(['Single Pole', 'Double Pole', 'Pad', $transformer?->header['mounting'] ?? null]))],
-            'header.service_category' => 'nullable|in:General Duty,Dedicated', 'header.source_survey_identifier' => 'nullable|string|regex:/^\d{11}$/D', 'source_pdf_id' => 'nullable|integer', 'source_page' => 'nullable|integer|min:1']);
+            'header.service_category' => 'nullable|in:General Duty,Dedicated', 'header.source_survey_identifier' => 'nullable|string|regex:/^\d{11}$/D', 'source_pdf_id' => 'nullable|integer', 'source_page' => 'nullable|integer|min:1'];
         $fields = ['substation_name', 'substation_identifier', 'feeder_identifier', 'feeder_name', 'division', 'subdivision', 'subdivision_code',
             'make', 'inspector', 'location', 'survey_date', 'mounting', 'service_category', 'team_group', 'source_survey_identifier', 'client_transformer_information'];
-        if ($batch->staged_workflow && (! $batch->transformers()->exists() || $transformer?->id === $batch->transformers()->min('id'))) {
-            $request->validate(['header.client_transformer_information' => 'required|string|max:500']);
-        }
         foreach ($fields as $field) {
-            $request->validate(['header.'.$field => 'nullable|string|max:500']);
+            $rules['header.'.$field] ??= 'nullable|string|max:500';
         }
+        if ($batch->staged_workflow && (! $batch->transformers()->exists() || $transformer?->id === $batch->transformers()->min('id'))) {
+            $rules['header.client_transformer_information'] = 'required|string|max:500';
+        }
+        $attributes = ['code' => 'transformer code', 'capacity_kva' => 'transformer capacity (kVA)', 'source_waypoint_id' => 'transformer GPS waypoint',
+            'source_pdf_id' => 'source PDF', 'source_page' => 'PDF page'];
+        foreach ($fields as $field) {
+            $attributes['header.'.$field] = str_replace('_', ' ', $field);
+        }
+        $data = $request->validate($rules, [
+            'code.required' => 'Enter the transformer code shown on the survey PDF.',
+            'code.unique' => 'This transformer code already exists in this survey. Select its saved header to edit it, or enter a different code.',
+            'header.client_transformer_information.required' => 'Enter the client-provided transformer information for the first transformer.',
+            'header.source_survey_identifier.regex' => 'Enter an 11-digit complete transformer waypoint (GGDDMMYYWWW), or leave it blank.',
+            'header.survey_date.date_format' => 'Enter a valid survey date in YYYY-MM-DD format.',
+        ], $attributes);
         if (! empty($data['source_waypoint_id'])) {
-            $batch->waypoints()->findOrFail($data['source_waypoint_id']);
+            if (! $batch->waypoints()->whereKey($data['source_waypoint_id'])->exists()) {
+                throw ValidationException::withMessages(['source_waypoint_id' => 'Choose a transformer GPS waypoint from this survey\'s GPX sources.']);
+            }
         }
         $page = null;
         if (! empty($data['source_pdf_id']) && ! empty($data['source_page'])) {
-            $pdf = $batch->sources()->where('kind', 'pdf')->where('status', 'ready')->findOrFail($data['source_pdf_id']);
-            abort_unless($data['source_page'] <= ($pdf->metadata['page_count'] ?? 0), 422, 'Page is outside the PDF.');
+            $pdf = $batch->sources()->where('kind', 'pdf')->where('status', 'ready')->find($data['source_pdf_id']);
+            if (! $pdf) {
+                throw ValidationException::withMessages(['source_pdf_id' => 'Choose a PDF from this survey that has finished processing.']);
+            }
+            if ($data['source_page'] > ($pdf->metadata['page_count'] ?? 0)) {
+                throw ValidationException::withMessages(['source_page' => 'The selected page is outside this PDF. Choose a valid PDF page.']);
+            }
             $page = ['source_pdf_id' => (int) $pdf->id, 'page' => (int) $data['source_page'], 'role' => 'header', 'confirmed' => true];
         }
         $record = null;

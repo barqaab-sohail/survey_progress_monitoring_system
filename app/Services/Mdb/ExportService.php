@@ -36,21 +36,30 @@ class ExportService
 
         return DB::transaction(function () use ($batch, $actor, $transformerId) {
             $locked = SurveyBatch::whereKey($batch->id)->lockForUpdate()->firstOrFail();
+            $this->access->authorize($actor, $locked, $locked->staged_workflow ? 'generate' : 'export');
             $revision = $this->assertApproved($locked);
+            $manifest = $locked->staged_workflow ? app(GenerationInputService::class)->manifest($locked) : [];
             $template = Template::findOrFail($revision->snapshot['template']['id'] ?? null);
-            $key = hash('sha256', implode('|', [$revision->sha256, $transformerId ?? 'feeder', $template->sha256, ExportPayloadBuilder::VERSION]));
+            $identity = [$revision->sha256, $transformerId ?? 'feeder', $template->sha256, ExportPayloadBuilder::VERSION];
+            if ($manifest) {
+                $identity[] = $this->snapshots->hash($manifest);
+            }
+            $key = hash('sha256', implode('|', $identity));
             $existing = ExportJob::where('idempotency_key', $key)->first();
             if ($existing) {
                 return $existing;
             }
             $payload = $this->payloads->build($revision, $template, $transformerId, $key);
+            if ($manifest) {
+                $payload['generation_inputs'] = $manifest;
+            }
             $disk = config('mdb_workflow.disk', 'local');
             $this->assertPrivateDisk($disk);
             $job = ExportJob::create([
                 'batch_id' => $locked->id, 'revision_id' => $revision->id, 'transformer_id' => $transformerId,
                 'template_id' => $template->id, 'idempotency_key' => $key, 'status' => 'queued',
                 'mapping_version' => ExportPayloadBuilder::VERSION, 'template_version' => $template->version,
-                'settings' => $payload['settings'], 'requested_by' => $actor->id, 'output_disk' => $disk,
+                'settings' => $payload['settings'] + ($manifest ? ['generation_inputs' => $manifest] : []), 'requested_by' => $actor->id, 'output_disk' => $disk,
             ]);
             $json = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
             $path = 'mdb-workflow/exports/'.$job->id.'/approved-payload.json';
@@ -74,8 +83,10 @@ class ExportService
 
         return DB::transaction(function () use ($export, $actor) {
             $batch = SurveyBatch::whereKey($export->batch_id)->lockForUpdate()->firstOrFail();
+            $this->access->authorize($actor, $batch, $batch->staged_workflow ? 'generate' : 'export');
             $locked = ExportJob::whereKey($export->id)->lockForUpdate()->firstOrFail();
             $revision = $this->assertApproved($batch);
+            $this->assertGenerationInputs($locked, $batch);
             $this->require($revision->id === $locked->revision_id && ! $locked->superseded_at, 'Export belongs to a superseded revision. Request export of the current approval.');
             $this->require(in_array($locked->status, ['failed', 'worker_not_configured'], true), 'Only failed exports or exports waiting for a worker can be retried.');
             $old = ['status' => $locked->status];
@@ -107,6 +118,7 @@ class ExportService
                     return null;
                 }
                 $this->assertApproved($batch);
+                $this->assertGenerationInputs($job, $batch);
                 $job->update(['status' => 'running', 'started_at' => now('UTC'), 'attempts' => $job->attempts + 1]);
 
                 return $job;
@@ -140,6 +152,7 @@ class ExportService
                     return;
                 }
                 $this->assertApproved($batch);
+                $this->assertGenerationInputs($locked, $batch);
                 $path = 'mdb-workflow/exports/'.$locked->id.'/approved.mdb';
                 $stream = fopen($output, 'rb');
                 try {
@@ -170,10 +183,15 @@ class ExportService
         }
     }
 
-    private function assertApproved(SurveyBatch $batch): Revision
+    public function assertApproved(SurveyBatch $batch): Revision
     {
         $revision = $batch->approvedRevision;
         $this->require($batch->status === 'approved' && $revision !== null && $revision->batch_id === $batch->id, 'Final MDB export requires a current approved immutable revision.');
+        if ($batch->staged_workflow) {
+            $this->require($batch->survey_status === 'approved' && $batch->decisions()->where('revision_id', $revision->id)
+                ->where('decision', 'approve')->whereNotIn('decided_by', $batch->entry_actor_ids ?? [])->exists(),
+                'MDB creation requires approval of this data revision by a separate Data Verifier.');
+        }
         $this->require(hash_equals($revision->sha256, $this->snapshots->hash($revision->snapshot)), 'Approved revision SHA-256 differs from its frozen contents.');
         $this->require(hash_equals($revision->sha256, $this->snapshots->hash($this->snapshots->snapshot($batch))), 'Survey data or project settings differ from the approved revision. Reverification is required.');
         foreach ($revision->snapshot['sources'] ?? [] as $source) {
@@ -198,6 +216,16 @@ class ExportService
     {
         if (! $condition) {
             throw ValidationException::withMessages(['export' => $message]);
+        }
+    }
+
+    public function assertGenerationInputs(ExportJob $export, SurveyBatch $batch): void
+    {
+        if ($batch->staged_workflow) {
+            $manifest = $export->settings['generation_inputs'] ?? [];
+            $this->require(($manifest['approved_revision_id'] ?? null) === $export->revision_id,
+                'This MDB needs a frozen input package for its approved data revision.');
+            app(GenerationInputService::class)->assertUnchanged($manifest);
         }
     }
 

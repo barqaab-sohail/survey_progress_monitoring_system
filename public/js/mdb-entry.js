@@ -51,14 +51,72 @@ export function consumerTotal(consumers) {
     return ['rs', 'rl', 'sc', 'lc', 'si', 'li', 'pb', 'ag', 'st', 'pv'].reduce((sum, key) => sum + (Number(consumers[key]) || 0), 0);
 }
 
+// Blank fields remain valid for drafts; entered values must have a valid shape/range.
+export function rowValidationErrors(payload, yearStart = null) {
+    const errors = {}, add = (key, message) => { errors[key] = [message]; };
+    if(payload.identity_version === 2) {
+        if(payload.group_number && !/^\d{2}$/.test(payload.group_number))add('group_number','Enter exactly two group digits, for example 01.');
+        if(payload.waypoint_reference && !/^\d{3}$/.test(payload.waypoint_reference))add('waypoint_reference','Enter exactly three GPS digits, retaining zeros, for example 001.');
+    }
+    if(payload.row_date) {
+        try { completeWaypoint('01',payload.row_date,'001',yearStart); }
+        catch(e) { add('row_date',e.message); }
+    }
+    if(payload.pole_height !== null && (!Number.isFinite(payload.pole_height) || payload.pole_height < 0 || payload.pole_height > 200))add('pole_height','Enter pole/tower height from 0 to 200 in the displayed unit, or leave it blank.');
+    for(const [key, value] of Object.entries(payload.consumers || {})) {
+        if(value !== null && (!Number.isInteger(value) || value < 0 || value > 1000000))add('consumers.'+key,`${key.toUpperCase()}: enter a whole number from 0 to 1,000,000, or leave it blank.`);
+    }
+    for(const [index, pv] of (payload.pv_details || []).entries()) {
+        for(const key of ['service_load_kw','installed_capacity_kw']) {
+            if(pv[key] !== null && (!Number.isFinite(pv[key]) || pv[key] < 0 || pv[key] > 1000000))add(`pv_details.${index}.${key}`,`${key === 'service_load_kw' ? 'PV service load' : 'PV solar capacity'}: enter 0 to 1,000,000 kW, or leave it blank.`);
+        }
+    }
+    return errors;
+}
+
 export function nextDraft(previous = {}, defaults = {}) {
-    return {pair_number: previous.designation === 'S' ? Number(previous.pair_number) : Number(defaults.next_pair || 1),
-        designation: previous.designation === 'S' ? 'E' : 'S', group_number: previous.group_number ?? defaults.group_number ?? '',
+    let pair=previous.designation === 'S' ? Number(previous.pair_number) : Number(defaults.next_pair || 1), designation=previous.designation === 'S' ? 'E' : 'S';
+    const rows=defaults.rows || [];
+    if(rows.some(row=>row.pair_number===pair && row.designation===designation)) {
+        const open=rows.find(row=>row.designation==='S' && !rows.some(end=>end.pair_number===row.pair_number && end.designation==='E'));
+        pair=open ? Number(open.pair_number) : Number(defaults.next_pair || 1);designation=open ? 'E' : 'S';
+    }
+    return {pair_number: pair, designation, group_number: previous.group_number ?? defaults.group_number ?? '',
         row_date: previous.row_date ?? defaults.row_date ?? '', waypoint_reference: '', gpx_source_id: defaults.gpx_source_id ?? null,
         source_pdf_id: defaults.source_pdf_id ?? null, source_page: defaults.source_page ?? null, source_row: '',
         conductors: {R: null, Y: null, B: null, N: null}, equipment_type: '', pole_class: '', pole_height: null,
         pole_height_unit: defaults.pole_height_unit ?? '', consumers: Object.fromEntries(['rs','rl','sc','lc','si','li','pb','ag','st','pv'].map(key => [key,null])),
         intersection: false, pv_details: [], inheritance: previous.id ? {group_date:previous.id} : {}, manually_verified: false};
+}
+
+// Bounds use fractions of the page at its original rotation, independent of zoom.
+export function rotatedRowBounds(bounds, rotation) {
+    const {x,y,width,height}=bounds;
+    switch (((rotation % 360)+360)%360) {
+        case 90: return {x:1-y-height,y:x,width:height,height:width};
+        case 180: return {x:1-x-width,y:1-y-height,width,height};
+        case 270: return {x:y,y:1-x-width,width:height,height:width};
+        default: return bounds;
+    }
+}
+
+export function nextPendingPdfRow(rows, sourceId) {
+    return rows.filter(row=>row.source_file_id===Number(sourceId) && !row.entered)
+        .sort((a,b)=>a.page-b.page || a.row_number-b.row_number)[0] || null;
+}
+
+export function pdfPageProgress(rows) {
+    const ordered=[...rows].sort((a,b)=>a.row_number-b.row_number);
+    const firstPending=ordered.findIndex(row=>!row.entered);
+    const completed=ordered.slice(0,firstPending===-1 ? ordered.length : firstPending);
+    const areaFor = entries => {
+        if(!entries.length)return null;
+        const x=Math.min(...entries.map(row=>row.bounds.x)),y=Math.min(...entries.map(row=>row.bounds.y));
+        return {x,y,width:Math.max(...entries.map(row=>row.bounds.x+row.bounds.width))-x,
+            height:Math.max(...entries.map(row=>row.bounds.y+row.bounds.height))-y};
+    };
+    return {area:areaFor(ordered),enteredArea:areaFor(completed),enteredThrough:completed.at(-1)?.row_number || 0,
+        remaining:ordered.filter(row=>!row.entered).length};
 }
 
 if (typeof window !== 'undefined' && window.mdbEntryBoot) initialize(window.mdbEntryBoot);
@@ -72,7 +130,12 @@ function initialize(boot) {
     let data = boot, activeId = boot.active_transformer_id || boot.transformers[0]?.id || null;
     let rowId = null, clientUuid = uuid(), saveUuid = null, inheritance = {}, headerDirty = false, rowDirty = false, busy = false;
     let pageNumber = 1, rotation = 0, zoom = 1, pdf = null, pdfLoading = null, pdfLib = null, pdfGeneration = 0, renderTask = null, renderChain = Promise.resolve();
+    let selectedPdfRowId = null, drawingRows = false, rowArea = null, dragStart = null;
+    let renderedPdfLocation = null, setupPdfLocation = null;
+    const pdfRows = () => data.pdf_rows || [];
+    const selectedPdfRow = () => pdfRows().find(row=>row.id===selectedPdfRowId);
     const active = () => data.transformers.find(t => t.id === Number(activeId));
+    const editable = () => boot.can_edit && (!data.staged_workflow || ['entry','returned'].includes(data.survey_status));
     const field = (form, name) => form?.elements.namedItem(name);
     const set = (form, name, value) => {
         const element = field(form, name);
@@ -88,43 +151,90 @@ function initialize(boot) {
     const sourceUrl = id => `${boot.base_url}/sources/${encodeURIComponent(id)}`;
     function status(message, state = 'saved') {
         $('entry-save-status').textContent = message;
-        $('entry-save-status').parentElement.dataset.state = state;
+        $('entry-save-status').hidden = !$('entry-errors').hidden;
+        $('entry-save-status').parentElement.dataset.state = $('entry-errors').hidden ? state : 'error';
     }
-    function error(message, errors = {}) {
+    function clearFieldErrors() {
+        document.querySelectorAll('.entry-field-error').forEach(note=>{
+            document.querySelectorAll('[aria-describedby]').forEach(element=>{
+                const descriptions=element.getAttribute('aria-describedby').split(/\s+/).filter(id=>id!==note.id);
+                descriptions.length ? element.setAttribute('aria-describedby',descriptions.join(' ')) : element.removeAttribute('aria-describedby');
+            });
+            note.remove();
+        });
+        document.querySelectorAll('[aria-invalid]').forEach(element=>element.removeAttribute('aria-invalid'));
+    }
+    function error(message, errors = {}, preferredForm = null) {
         const box = $('entry-errors');
-        const messages = Object.values(errors).flat();
-        box.innerHTML = `<strong>${esc(message)}</strong>${messages.length ? '<ul>'+messages.map(m=>`<li>${esc(m)}</li>`).join('')+'</ul>' : ''}`;
+        const messages = Object.entries(errors).flatMap(([key,value])=>[value].flat().map(message=>({key,message})));
+        box.innerHTML = `<strong>${esc(message)}</strong>${messages.length ? '<ul>'+messages.map(item=>`<li data-validation-key="${esc(item.key)}">${esc(item.message)}</li>`).join('')+'</ul>' : ''}`;
         box.hidden = false;
-        document.querySelectorAll('.entry-field-error').forEach(e=>e.remove());
-        document.querySelectorAll('[aria-invalid]').forEach(e=>e.removeAttribute('aria-invalid'));
+        clearFieldErrors();
         for (const [key, messages] of Object.entries(errors)) {
             const parts = key.split('.'), name = parts.shift()+parts.map(p=>`[${p}]`).join('');
-            const element = field(rowForm, name) || field(headerForm, name);
+            const headerSource=preferredForm===headerForm ? ({source_pdf_id:$('entry-pdf-source'),source_page:$('entry-page')})[key] : null;
+            const pvMatch=/^pv_details\.(\d+)\.(\w+)$/.exec(key);
+            const pvField=pvMatch ? $('entry-pv-records')?.children[Number(pvMatch[1])]?.querySelector(`[data-pv-key="${pvMatch[2]}"]`) : null;
+            const rowSource=preferredForm===rowForm ? ({pdf_progress_row_id:$('entry-pdf-row'),source_pdf_id:$('entry-pdf-source'),source_page:$('entry-page'),pole_height_unit:field(rowForm,'pole_height')})[key] : null;
+            const element = pvField || rowSource || field(preferredForm,name) || headerSource || field(rowForm, name) || field(headerForm, name);
             if (element) {
                 element.setAttribute('aria-invalid', 'true');
-                const note = document.createElement('span'); note.className = 'entry-field-error'; note.textContent = messages.join(' ');
+                const note = document.createElement('span'); note.className = 'entry-field-error';note.id='entry-field-error-'+uuid(); note.dataset.validationKey=key;note.textContent = [messages].flat().join(' ');
+                element.setAttribute('aria-describedby',[element.getAttribute('aria-describedby'),note.id].filter(Boolean).join(' '));
                 element.parentElement.append(note);
+                const trigger=element.closest('.entry-combobox')?.querySelector('.entry-combobox-trigger');
+                if(trigger){trigger.setAttribute('aria-invalid','true');trigger.setAttribute('aria-describedby',note.id);}
             }
         }
-        status(message, 'error');
+        status('', 'error');
     }
     function clearErrors() {
         $('entry-errors').hidden = true;
-        document.querySelectorAll('.entry-field-error').forEach(e=>e.remove());
-        document.querySelectorAll('[aria-invalid]').forEach(e=>e.removeAttribute('aria-invalid'));
+        $('entry-save-status').hidden = false;
+        clearFieldErrors();
+    }
+    function clearCorrectedField(element, scope) {
+        const pvKey=element.dataset.pvKey, index=pvKey ? Array.from($('entry-pv-records').children).indexOf(element.closest('.entry-pv-row')) : null;
+        const key=pvKey ? `pv_details.${index}.${pvKey}` : (element.name || '').replace(/\[([^\]]+)\]/g,'.$1');
+        if(!key || !element.validity?.valid || (scope==='row' && rowValidationErrors(rowPayload(),data.entry_settings?.two_digit_year_start ?? null)[key]))return;
+        const notes=[...document.querySelectorAll('.entry-field-error')].filter(note=>note.dataset.validationKey===key);
+        for(const note of notes){
+            for(const control of document.querySelectorAll('[aria-describedby]')){
+                const ids=control.getAttribute('aria-describedby').split(/\s+/);
+                if(!ids.includes(note.id))continue;
+                const kept=ids.filter(id=>id!==note.id);kept.length ? control.setAttribute('aria-describedby',kept.join(' ')) : control.removeAttribute('aria-describedby');control.removeAttribute('aria-invalid');
+            }
+            note.remove();
+        }
+        if(notes.length){
+            $('entry-errors').querySelectorAll('li[data-validation-key]').forEach(item=>{if(item.dataset.validationKey===key)item.remove();});
+            if(!$('entry-errors').querySelector('li'))clearErrors();
+        }
     }
     function setBusy(value) {
         busy = value;
-        [rowForm, headerForm].filter(Boolean).forEach(form => Array.from(form.elements).forEach(el => el.disabled = value));
+        [rowForm, headerForm].filter(Boolean).forEach(form => Array.from(form.elements).forEach(el => el.disabled = value || !editable()));
+        document.querySelectorAll('.entry-source-files form input,.entry-source-files form button').forEach(el=>el.disabled=value || !editable());
         $('entry-transformer').disabled = value;
-        document.querySelectorAll('[data-entry-add-transformer],#entry-continue,#entry-refresh').forEach(el=>el.disabled=value);
+        document.querySelectorAll('[data-entry-add-transformer],#entry-continue,#entry-submit-form button').forEach(el=>el.disabled=value || !editable());
+        document.querySelectorAll('.entry-copy-bar button').forEach(el=>el.disabled=value || !editable());
+        $('entry-refresh').disabled=value;
         if (!value) { updateAssociation(); if(rowId && rowForm){field(rowForm,'pair_number').disabled=true;field(rowForm,'designation').disabled=true;} }
         syncSelects();
+        renderPdfRows();
     }
     async function api(path, method = 'GET', body) {
-        const response = await fetch(`${boot.base_url}${path}`, {method, credentials:'same-origin', headers:{Accept:'application/json','Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, ...(body ? {body:JSON.stringify(body)} : {})});
-        const result = await response.json().catch(()=>({message:'The server returned an unexpected response. Your fields are retained.'}));
-        if (!response.ok) { const failure = new Error(result.message || 'Save failed. Your fields are retained.'); failure.errors = result.errors || {}; throw failure; }
+        let response;
+        try{response = await fetch(`${boot.base_url}${path}`, {method, credentials:'same-origin', headers:{Accept:'application/json','Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, ...(body ? {body:JSON.stringify(body)} : {})});}
+        catch{throw new Error('Could not reach the server. Check your connection and retry. Your entered fields are retained.');}
+        const reasons={401:'Your sign-in session has ended. Sign in again, then retry with the retained fields.',403:'You do not have permission for this action, or survey entry is locked.',404:'The selected survey or record could not be found. Refresh saved records before retrying.',
+            419:'Your session has expired. Reload this page and sign in again if needed. Your entered fields are kept in this browser.',429:'Too many requests were sent. Wait a moment and retry.',500:'The server could not confirm saving. Refresh saved records before retrying to check whether the record was saved.'};
+        if(response.redirected && new URL(response.url,location.href).pathname.endsWith('/login'))throw new Error(reasons[401]);
+        let result;
+        try{result=await response.json();}
+        catch{throw new Error(reasons[response.status] || 'The server returned an unreadable response and saving could not be confirmed. Your fields are retained. Refresh saved records before retrying.');}
+        if (!response.ok) { const failure = new Error(([401,419,429].includes(response.status) ? reasons[response.status] : result?.message) || reasons[response.status] || 'Saving failed. Your fields are retained.'); failure.errors = result?.errors || {};failure.reference=result?.reference; throw failure; }
+        if(!result || typeof result!=='object')throw new Error('The server returned an unexpected response and saving could not be confirmed. Your fields are retained.');
         return result;
     }
     function optionList(select, entries, empty = 'Not entered', selected = '') {
@@ -155,6 +265,7 @@ function initialize(boot) {
         if($('entry-project-settings')) $('entry-project-settings').innerHTML=`Height unit: <strong>${esc(settings.pole_height_unit || 'unconfirmed')}</strong> · Year window: <strong>${settings.two_digit_year_start==null ? 'unconfigured' : `${settings.two_digit_year_start}–${Number(settings.two_digit_year_start)+99}`}</strong> · <a href="${esc(boot.settings_url)}" data-entry-leave>Project entry settings</a>`;
         if($('entry-paste-rule')) $('entry-paste-rule').textContent=settings.two_digit_year_start==null ? 'Configure the project year window before pasting.' : `YY uses ${settings.two_digit_year_start}–${Number(settings.two_digit_year_start)+99}.`;
         syncSelects();
+        renderPdfRows();
     }
     function headerPayload() {
         const header = {};
@@ -176,7 +287,7 @@ function initialize(boot) {
     }
     function addPv(record = {}) {
         const element = document.createElement('div'); element.className='entry-pv-row';
-        element.innerHTML = [['reference','Consumer reference number'],['service_load_kw','PV service load (kW)'],['installed_capacity_kw','PV solar capacity (kW)'],['remarks','Remarks']].map(([key,label])=>`<label>${label}<input data-pv-key="${key}" value="${esc(record[key])}" ${key.endsWith('_kw') ? 'type="number" min="0" max="1000000" step="any"' : `maxlength="${key==='remarks' ? 4000 : 255}"`}></label>`).join('')+'<button type="button" class="btn btn-sm btn-light" data-pv-remove>Remove</button>';
+        element.innerHTML = [['reference','Consumer reference number'],['service_load_kw','PV service load (kW)'],['installed_capacity_kw','PV solar capacity (kW)'],['remarks','Remarks']].map(([key,label])=>`<label>${label}<input data-pv-key="${key}" aria-label="${label}" value="${esc(record[key])}" ${key.endsWith('_kw') ? 'type="number" min="0" max="1000000" step="any"' : `maxlength="${key==='remarks' ? 4000 : 255}"`}></label>`).join('')+'<button type="button" class="btn btn-sm btn-light" data-pv-remove>Remove</button>';
         $('entry-pv-records').append(element); $('entry-pv-count').textContent=`(${pvPayload().length})`;
     }
     function rowPayload() {
@@ -193,6 +304,8 @@ function initialize(boot) {
         const saved=active()?.rows.find(row=>row.id===rowId);
         payload.identity_version=saved && !saved.identity_version && !saved.composite_identifier ? null : 2;
         payload.composite_identifier=val(rowForm,'composite_identifier') || null;
+        const selected=selectedPdfRow();
+        payload.pdf_progress_row_id=selected && selected.source_file_id===payload.source_pdf_id && selected.page===payload.source_page ? selected.id : null;
         return payload;
     }
     function pairs(selected) {
@@ -204,6 +317,7 @@ function initialize(boot) {
     }
     function fillRow(payload, id = null, identity = null) {
         if (!rowForm) return;
+        selectedPdfRowId=pdfRows().find(row=>row.entry_row_id===id && id)?.id || payload.pdf_progress_row_id || null;
         rowId=id; clientUuid=identity || uuid(); saveUuid=null; inheritance=structuredClone(payload.inheritance || {});
         rowForm.reset(); pairs(payload.pair_number);
         const legacy=!!id && !payload.identity_version && !payload.composite_identifier;
@@ -223,7 +337,7 @@ function initialize(boot) {
     function newRow(previous = {}) {
         const rows=active()?.rows || [], context=active()?.header || data.defaults;
         if(!previous.designation && rows.length)previous=rows.at(-1);
-        const draft=nextDraft(previous,{next_pair:Math.max(0,...rows.map(r=>r.pair_number))+1,group_number:/^\d{2}$/.test(context.team_group || '') ? context.team_group : '',row_date:context.survey_date,
+        const draft=nextDraft(previous,{rows,next_pair:Math.max(0,...rows.map(r=>r.pair_number))+1,group_number:/^\d{2}$/.test(context.team_group || '') ? context.team_group : '',row_date:context.survey_date,
             source_pdf_id:number($('entry-pdf-source').value),source_page:pageNumber,gpx_source_id:null,pole_height_unit:data.entry_settings?.pole_height_unit});
         // Resume the only open pair when its S is already saved.
         if (!previous.designation) { const open=rows.find(r=>r.designation==='S' && !rows.some(e=>e.pair_number===r.pair_number && e.designation==='E')); if(open){draft.pair_number=open.pair_number;draft.designation='E';} }
@@ -251,16 +365,22 @@ function initialize(boot) {
         $('entry-unit-convert').textContent=`Project unit changed: convert draft ${payload.pole_height ?? 'height'} ${payload.pole_height_unit || ''} to ${unit || ''}`;
         $('entry-consumer-total').textContent=`Entered consumer total: ${consumerTotal(payload.consumers)}${Object.values(payload.consumers).some(v=>v===null) ? ' (blank fields retained)' : ''}`;
         $('entry-row-page').textContent=`Row source: page ${payload.source_page ?? 'not entered'}`;
-        $('entry-copy-endpoint').disabled=busy || payload.designation!=='S';
+        $('entry-pair-caption').textContent=`· Pair ${payload.pair_number || 'not selected'}`;
         for (const scope of ['conductors','equipment']) $('entry-'+(scope==='conductors' ? 'conductor' : 'equipment')+'-copy-status').textContent=inheritance[scope] ? `Explicitly copied from saved row #${inheritance[scope]} in this transformer.` : '';
         syncSelects();
+        renderPdfRows();
     }
     function renderSaved() {
         const t=active(), rows=t?.rows || [];
         $('entry-saved-count').textContent=`${rows.length} rows`;
         $('entry-row-panel')?.classList.toggle('entry-row-panel-disabled',!t);
         $('entry-review-link').href=`${boot.base_url}/review${t ? '?transformer_id='+t.id : ''}`;
-        $('entry-saved-rows').innerHTML=rows.length ? '<div class="table-wrap"><table class="table entry-saved-table"><thead><tr><th>Pair / S/E</th><th>Page / entry</th><th>Waypoint</th><th>Phase / conductors</th><th>Equipment</th><th>Entered counts</th><th>Int</th><th></th></tr></thead><tbody>'+rows.map(row=>`<tr class="${row.designation==='S' ? 'entry-pair-start' : ''}"><td>${row.pair_number} / <strong>${row.designation}</strong>${rows.filter(r=>r.pair_number===row.pair_number).length===1 ? '<small class="entry-pair-incomplete">Incomplete pair</small>' : ''}</td><td>${row.source_page ?? '—'} / ${esc(row.source_row || '—')}</td><td>${esc(row.composite_identifier || 'Legacy identity')}<small>GPS ${esc(row.waypoint_reference || 'Not entered')} ? ${esc(row.group_number)} ? ${esc(displayDate(row.row_date))} ? source #${esc(row.gpx_source_id || 'unresolved')}</small></td><td>${derivePhase(row.conductors).display || '—'}<small>${['R','Y','B','N'].map(k=>`${k}: ${esc(row.conductors[k]===null ? 'Not entered' : row.conductors[k]==='' ? 'None' : row.conductors[k])}`).join(' · ')}</small></td><td>${esc(row.equipment_type || '—')} / ${esc(row.pole_class || '—')}<small>${row.pole_height ?? '—'} ${esc(row.pole_height_unit || '(unit unconfirmed)')}</small></td><td>${Object.entries(row.consumers).filter(([,v])=>v!==null).map(([k,v])=>`${k.toUpperCase()}: ${v}`).join(' · ') || 'Blank'}<small>Total: ${consumerTotal(row.consumers)}</small></td><td>${row.intersection ? '✓' : '—'}</td><td>${boot.can_edit ? `<button type="button" class="btn btn-sm btn-light" data-entry-edit="${row.id}">Edit</button> <button type="button" class="btn btn-sm btn-light" data-entry-delete="${row.id}">Delete</button>` : ''}</td></tr>`).join('')+'</tbody></table></div>' : '<p class="entry-empty">Save the transformer header, then enter its first S row.</p>';
+        $('entry-saved-rows').innerHTML=rows.length ? '<div class="table-wrap"><table class="table entry-saved-table"><thead><tr><th>Pair / S/E</th><th>Page / entry</th><th>Waypoint</th><th>Phase / conductors</th><th>Equipment</th><th>Entered counts</th><th>Int</th><th></th></tr></thead><tbody>'+rows.map(row=>`<tr class="${row.designation==='S' ? 'entry-pair-start' : ''}"><td>${row.pair_number} / <strong>${row.designation}</strong>${rows.filter(r=>r.pair_number===row.pair_number).length===1 ? '<small class="entry-pair-incomplete">Incomplete pair</small>' : ''}</td><td>${row.source_page ?? '—'} / ${esc(row.source_row || '—')}</td><td>${esc(row.composite_identifier || 'Legacy identity')}<small>GPS ${esc(row.waypoint_reference || 'Not entered')} ? ${esc(row.group_number)} ? ${esc(displayDate(row.row_date))} ? source #${esc(row.gpx_source_id || 'unresolved')}</small></td><td>${derivePhase(row.conductors).display || '—'}<small>${['R','Y','B','N'].map(k=>`${k}: ${esc(row.conductors[k]===null ? 'Not entered' : row.conductors[k]==='' ? 'None' : row.conductors[k])}`).join(' · ')}</small></td><td>${esc(row.equipment_type || '—')} / ${esc(row.pole_class || '—')}<small>${row.pole_height ?? '—'} ${esc(row.pole_height_unit || '(unit unconfirmed)')}</small></td><td>${Object.entries(row.consumers).filter(([,v])=>v!==null).map(([k,v])=>`${k.toUpperCase()}: ${v}`).join(' · ') || 'Blank'}<small>Total: ${consumerTotal(row.consumers)}</small></td><td>${row.intersection ? '✓' : '—'}</td><td>${editable() ? `<button type="button" class="btn btn-sm btn-light" data-entry-edit="${row.id}">Edit</button> <button type="button" class="btn btn-sm btn-light" data-entry-delete="${row.id}">Delete</button>` : ''}</td></tr>`).join('')+'</tbody></table></div>' : '<p class="entry-empty">Save the transformer header, then enter its first S row.</p>';
+        $('entry-saved-rows').querySelectorAll('tbody tr').forEach((element,index)=>{
+            const marker=pdfRows().find(marker=>marker.entry_row_id===rows[index].id), entered=!marker || marker.entered;
+            const badge=document.createElement('small');badge.className=entered ? 'entry-completed' : 'entry-pair-incomplete';badge.textContent=entered ? '✓ Entered' : 'PDF marker pending';
+            element.dataset.entered=String(entered);element.firstElementChild.append(badge);
+        });
         $('entry-legacy-records').innerHTML=t?.legacy_sections?.length ? `<p>Existing saved network: ${t.legacy_sections.length} section(s). <a href="${esc(boot.base_url)}/advanced?transformer_id=${t.id}#entry">Review or correct existing sections</a></p>` : '';
     }
     function chooseTransformer(id) {
@@ -270,8 +390,9 @@ function initialize(boot) {
         const url=new URL(location.href); activeId ? url.searchParams.set('transformer_id',activeId) : url.searchParams.delete('transformer_id'); history.replaceState(null,'',url);
     }
     function persist() {
+        if(!boot.can_edit)return;
         try { localStorage.setItem(boot.storage_key,JSON.stringify({activeId,pageNumber,pdfSource:$('entry-pdf-source').value,rotation,zoom,height:$('entry-viewer-height').value,
-            headerDirty,rowDirty,header:headerPayload(),row:rowPayload(),rowId,clientUuid,saveUuid})); }
+            headerDirty,rowDirty,header:headerPayload(),row:rowPayload(),rowId,clientUuid,saveUuid,selectedPdfRowId})); }
         catch { if(headerDirty || rowDirty) status('Unsaved changes — browser recovery storage is unavailable. Save Draft to keep them.','dirty'); }
     }
     function markDirty(event, scope) {
@@ -283,46 +404,193 @@ function initialize(boot) {
             if(['group_number','row_date'].includes(event.target.name))delete inheritance.group_date;
             if(['group_number','row_date','waypoint_reference'].includes(event.target.name))set(rowForm,'gpx_source_id',null);
         }
-        updateRowHints(); status('Unsaved changes — kept in this browser. Save Draft to store them in the application.','dirty'); persist();
+        updateRowHints();clearCorrectedField(event.target,scope);status('Unsaved changes — kept in this browser. Save Draft to store them in the application.','dirty'); persist();
     }
     const allowSwitch = () => !busy && (!(headerDirty || rowDirty) || window.confirm('Some fields are unsaved. Continue and discard these fields? Use Save Draft first to retain them in the application.'));
     function updateAssociation() {
         const t=active(), source=number($('entry-pdf-source').value), ready=data.sources.find(s=>s.id===source)?.status==='ready';
         const associated=t?.header?.pages?.some(p=>p.source_pdf_id===source && p.page===pageNumber && p.confirmed);
         $('entry-page-association').textContent=t ? `${t.code} · page ${pageNumber} ${associated ? 'belongs to this transformer' : 'not yet confirmed — continue current or add new transformer'}` : 'Save a new transformer header for this PDF page.';
-        if($('entry-continue')) $('entry-continue').disabled=busy || !t || !source || !ready || associated;
+        if($('entry-continue')) $('entry-continue').disabled=busy || !editable() || !t || !source || !ready || associated;
     }
     async function saveHeader(event) {
-        event?.preventDefault(); if(busy || !headerForm.reportValidity()) return;
+        event?.preventDefault(); if(busy || !headerForm || !editable()) return;
+        clearErrors();
+        if(!headerForm.checkValidity()){
+            const errors=Object.fromEntries(Array.from(headerForm.elements).filter(element=>element.name && !element.validity.valid).map(element=>[element.name.replace(/\[([^\]]+)\]/g,'.$1'),[element.validationMessage]]));
+            headerDirty=true;error('Header not saved. Correct the highlighted fields and save again.',errors,headerForm);revealHeaderErrors();persist();return;
+        }
         const body=headerPayload(), source=data.sources.find(s=>s.id===number($('entry-pdf-source').value));
         if(source?.status==='ready') {body.source_pdf_id=source.id;body.source_page=pageNumber;}
         body.revision=data.revision; const path=active() ? `/entry-headers/${activeId}` : '/entry-headers';
-        clearErrors(); setBusy(true); status('Saving transformer header…');
-        try { data=await api(path,active() ? 'PUT' : 'POST',body); activeId=data.active_transformer_id; headerDirty=false; renderLists(); fillHeader(active()); renderSaved(); if(!rowDirty)newRow(); $('entry-header-panel').open=false; status('Transformer header saved.'); persist(); }
-        catch(e){error('Header not saved. Your fields are retained.',e.errors || {save:[e.message]});}
-        finally{setBusy(false);}
+        headerDirty=true;persist();setBusy(true); status('Saving transformer header…');
+        let failed=false;
+        try {
+            const saved=await api(path,active() ? 'PUT' : 'POST',body);
+            if(!saved.transformers?.some(transformer=>transformer.id===Number(saved.active_transformer_id)))throw new Error('The server response did not confirm the saved header. Refresh saved records before retrying. Your fields are retained.');
+            data=saved;activeId=data.active_transformer_id;headerDirty=false;renderLists();fillHeader(active());renderSaved();if(!rowDirty)newRow();$('entry-header-panel').open=false;status('Transformer header saved.');persist();
+        }
+        catch(e){failed=true;headerDirty=true;error(`Header not saved. ${e.message} Your entered fields are retained.${e.reference ? ' Reference: '+e.reference : ''}`,e.errors || {},headerForm);persist();}
+        finally{setBusy(false);if(failed)revealHeaderErrors();}
+    }
+    function revealHeaderErrors() {
+        $('entry-header-panel').open=true;
+        $('entry-errors').scrollIntoView({block:'nearest',behavior:'smooth'});
+        const invalid=Array.from(headerForm.elements).find(element=>element.getAttribute('aria-invalid')==='true' && element.type!=='hidden');
+        (invalid || $('entry-errors')).focus({preventScroll:true});
     }
     async function saveRow(advance) {
-        if(busy || !active() || !rowForm.reportValidity()) return;
-        const body=rowPayload(); saveUuid ||= uuid(); Object.assign(body,{client_uuid:clientUuid,save_uuid:saveUuid,revision:data.revision});
+        if(busy || !editable() || !rowForm || !active()) return;
+        clearErrors();
+        const body=rowPayload(), validation=rowValidationErrors(body,data.entry_settings?.two_digit_year_start ?? null);
+        for(const element of Array.from(rowForm.elements).filter(el=>el.willValidate && !el.validity.valid)) {
+            const pvKey=element.dataset.pvKey, index=pvKey ? Array.from($('entry-pv-records').children).indexOf(element.closest('.entry-pv-row')) : null;
+            const key=pvKey ? `pv_details.${index}.${pvKey}` : element.name.replace(/\[([^\]]+)\]/g,'.$1');
+            if(key && !validation[key])validation[key]=[element.validationMessage];
+        }
+        if(Object.keys(validation).length){rowDirty=true;error('Row not saved. Correct the highlighted fields and retry.',validation,rowForm);revealRowErrors();persist();return;}
+        const marker=selectedPdfRow(), markedSelection=!!marker;
+        if(pdfRows().some(row=>row.source_file_id===number(val(rowForm,'source_pdf_id')) && row.page===number(val(rowForm,'source_page'))) && !marker){error('Row not saved. Select the corresponding PDF row.',{pdf_progress_row_id:['Choose the PDF row for this record before saving.']},rowForm);revealRowErrors();return;}
+        saveUuid ||= uuid(); Object.assign(body,{client_uuid:clientUuid,save_uuid:saveUuid,revision:data.revision});
         const path=`/transformers/${activeId}/rows${rowId ? '/'+rowId : ''}`;
-        clearErrors(); setBusy(true); status('Saving row…');
-        try {data=await api(path,rowId ? 'PUT' : 'POST',body); const saved=active().rows.find(r=>r.client_uuid===clientUuid); rowDirty=false;
+        setBusy(true); status('Saving row…');
+        let succeeded=false;
+        try {const response=await api(path,rowId ? 'PUT' : 'POST',body), saved=response.transformers?.find(t=>t.id===activeId)?.rows?.find(r=>r.client_uuid===clientUuid);
+            if(!saved)throw new Error('The server did not confirm the saved row. Refresh saved records before retrying.');
+            data=response;rowDirty=false;
             renderLists();renderSaved(); if(advance)newRow(saved); else fillRow(saved,saved.id,saved.client_uuid);
-            status(advance ? 'Row saved. Enter the next S/E row.' : 'Draft saved in the application. You can resume later.');persist();
-            if(advance)field(rowForm,'waypoint_reference').focus();
-        }catch(e){error('Row not saved. Your fields are retained.',e.errors || {save:[e.message]});}
-        finally{setBusy(false);if(rowId){field(rowForm,'pair_number').disabled=true;field(rowForm,'designation').disabled=true;}}
+            if(advance && markedSelection){const pending=nextPendingPdfRow(pdfRows(),body.source_pdf_id);if(pending)selectPdfRow(pending.id,false);}
+            status(advance ? 'Row completed and saved. Enter the next S/E row.' : 'Draft saved in the application. You can resume later.');persist();succeeded=true;
+        }catch(e){rowDirty=true;error(`Row not saved. ${e.message} Your fields are retained.`,e.errors || {},rowForm);persist();}
+        finally{setBusy(false);if(rowId){field(rowForm,'pair_number').disabled=true;field(rowForm,'designation').disabled=true;}
+            if(succeeded && advance){const nextField=['group_number','row_date','waypoint_reference'].find(key=>!val(rowForm,key)) || 'waypoint_reference';field(rowForm,nextField).focus({preventScroll:true});$('entry-row-panel').scrollIntoView({block:'nearest'});}
+            else if(!succeeded)revealRowErrors();
+        }
+    }
+    function revealRowErrors() {
+        const invalid=rowForm.querySelector('[aria-invalid=true]:not([type=hidden])') || document.querySelector('[aria-invalid=true]:not([type=hidden])');
+        const target=invalid?.closest('.entry-combobox')?.querySelector('.entry-combobox-trigger') || invalid || $('entry-errors');
+        for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;
+        target.focus({preventScroll:true});target.scrollIntoView({block:'nearest'});
     }
     function copyValues(scope) {
-        if(busy || !active()) return;
-        const current=rowPayload(), candidates=active().rows.filter(r=>r.id!==rowId);
+        if(busy || !editable() || !active()) return;
+        const current=rowPayload(), rows=active().rows, marker=selectedPdfRow();
+        const candidates=rows.filter((r,index)=>{
+            if(r.id===rowId || (rowId && index>=rows.findIndex(saved=>saved.id===rowId)))return false;
+            const physical=pdfRows().find(progress=>progress.entry_row_id===r.id);
+            return !marker || !physical || physical.source_file_id!==marker.source_file_id || physical.page<marker.page || (physical.page===marker.page && physical.row_number<marker.row_number);
+        });
         const previous=current.designation==='E' ? candidates.find(r=>r.pair_number===current.pair_number && r.designation==='S') || candidates.at(-1) : candidates.at(-1);
         if(!previous){error('No previous saved row in this transformer.');return;}
-        if(!window.confirm(`Copy ${scope==='both' ? 'conductors and equipment' : scope} from pair ${previous.pair_number} ${previous.designation}? Check the PDF ditto/continuation marks first.`)) return;
-        if(scope==='conductors' || scope==='both'){for(const key of ['R','Y','B','N'])set(rowForm,`conductors[${key}]`,previous.conductors[key]==='' ? '__none__' : previous.conductors[key]);inheritance.conductors=previous.id;}
-        if(scope==='equipment' || scope==='both'){for(const key of ['equipment_type','pole_class','pole_height','pole_height_unit'])set(rowForm,key,previous[key]);inheritance.equipment=previous.id;}
-        rowDirty=true;saveUuid=null;updateRowHints();status('Copied values are shown below. Check and save this row.','dirty');persist();
+        // Explicit allowlist: no identity, coordinates, source, pairing, counts or PV fields.
+        const patch=[];
+        if(scope==='conductors' || scope==='both')for(const key of ['R','Y','B','N']){const value=previous.conductors[key];if(value!==null && value!==undefined)patch.push([`conductors[${key}]`,value==='' ? '__none__' : value,`${key==='N' ? 'Neutral' : key} conductor`]);}
+        if(scope==='equipment' || scope==='both'){
+            for(const [key,label] of [['equipment_type','Equipment type'],['pole_class','Pole class']])if(previous[key])patch.push([key,previous[key],label]);
+            if(previous.pole_height!==null && previous.pole_height!==undefined && ['ft','m'].includes(previous.pole_height_unit))patch.push(['pole_height',previous.pole_height,'Pole/tower height'],['pole_height_unit',previous.pole_height_unit,'Height unit']);
+        }
+        const changed=patch.filter(([key,value])=>val(rowForm,key)!==String(value));
+        if(!changed.length){status('No additional reusable values to copy. Your fields are unchanged.',rowDirty ? 'dirty' : 'saved');return;}
+        const overwritten=changed.filter(([key])=>val(rowForm,key)!=='' && (key!=='pole_height_unit' || val(rowForm,'pole_height')!=='')).map(([, ,label])=>label);
+        if(overwritten.length && !window.confirm(`Replace your entered values for ${overwritten.join(', ')} with values from pair ${previous.pair_number} ${previous.designation}? All other fields will be kept.`))return;
+        for(const [key,value] of patch)set(rowForm,key,value);
+        const copied=rowPayload();
+        if(scope==='conductors' || scope==='both'){if(['R','Y','B','N'].every(key=>(copied.conductors[key]==='__none__' ? '' : copied.conductors[key])===(previous.conductors[key] ?? null)))inheritance.conductors=previous.id;else delete inheritance.conductors;}
+        if(scope==='equipment' || scope==='both'){if(['equipment_type','pole_class','pole_height','pole_height_unit'].every(key=>(copied[key] ?? null)===(previous[key] ?? null)))inheritance.equipment=previous.id;else delete inheritance.equipment;}
+        rowDirty=true;saveUuid=null;clearErrors();updateRowHints();status(`Reusable values copied from pair ${previous.pair_number} ${previous.designation}, including height when its unit is known. Check the PDF and edit any field before saving.`,'dirty');persist();
+    }
+    function renderPdfRows() {
+        const source=number($('entry-pdf-source').value), rows=pdfRows().filter(row=>row.source_file_id===source && row.page===pageNumber);
+        const pending=nextPendingPdfRow(pdfRows(),source), selected=selectedPdfRow();
+        const overlay=$('entry-pdf-rows');
+        const pageRendered=!$('entry-pdf-canvas').hidden && renderedPdfLocation===`${source}:${pageNumber}:${rotation}:${zoom}`;
+        overlay.hidden=!pageRendered;
+        const progress=pdfPageProgress(rows);
+        for(const [id,area] of [['entry-pdf-table-area',progress.area],['entry-pdf-entered-area',progress.enteredArea]]){
+            const element=$(id);element.hidden=!pageRendered || !area || drawingRows || !!rowArea;
+            if(area){
+                const bounds=rotatedRowBounds(area,rotation);
+                Object.assign(element.style,{left:bounds.x*100+'%',top:bounds.y*100+'%',width:bounds.width*100+'%',height:bounds.height*100+'%'});
+            }
+        }
+        $('entry-pdf-entered-area').querySelector('span').textContent=`Entered through row ${progress.enteredThrough}`;
+        const focusedRow=document.activeElement?.dataset.pdfRow;
+        overlay.innerHTML=rows.map(row=>{
+            const bounds=rotatedRowBounds(row.bounds,rotation), next=pending?.id===row.id;
+            return `<button type="button" class="entry-pdf-row" data-pdf-row="${row.id}" data-entered="${row.entered}" data-pending="${next}" aria-pressed="${selected?.id===row.id}" aria-label="PDF page ${row.page}, row ${row.row_number}: ${row.entered ? 'Entered' : next ? 'Next pending' : 'Pending'}" ${busy ? 'disabled' : ''} style="left:${bounds.x*100}%;top:${bounds.y*100}%;width:${bounds.width*100}%;height:${bounds.height*100}%"><span>${row.entered ? '&#10003; ' : next ? 'Next: ' : ''}${row.row_number}</span></button>`;
+        }).join('');
+        if(focusedRow)overlay.querySelector(`[data-pdf-row="${focusedRow}"]`)?.focus({preventScroll:true});
+        optionList($('entry-pdf-row'),rows.map(row=>[row.id,`${row.row_number} — ${row.entered ? '✓ Entered' : pending?.id===row.id ? 'Next pending' : 'Pending'}${row.entry_row_id && !row.entered ? ' (record saved)' : ''}`]),'Select row',String(rows.some(row=>row.id===selected?.id) ? selected.id : ''));
+        $('entry-pdf-row').disabled=busy || !rows.length;
+        $('entry-pdf-pending').disabled=busy || !pending;
+        const configuredPages=new Set(pdfRows().filter(row=>row.source_file_id===source).map(row=>row.page)).size;
+        $('entry-pdf-progress').textContent=rows.length ? `${rows.length-progress.remaining}/${rows.length} entered on this page; ${progress.remaining} remaining. ${progress.enteredThrough ? `Entered area reaches row ${progress.enteredThrough}. ` : ''}${pending ? `Next pending: page ${pending.page}, row ${pending.row_number}.` : 'All configured rows entered.'} ${configuredPages}/${pdf?.numPages || data.sources.find(s=>s.id===source)?.metadata?.page_count || '?'} pages set up.` : 'Rows are not set up for this page. Set up its S/E table first.';
+        if($('entry-pdf-mark'))$('entry-pdf-mark').disabled=busy || !editable() || !selected?.entry_row_id || selected.entered || rowDirty;
+        if($('entry-pdf-undo'))$('entry-pdf-undo').disabled=busy || !editable() || !selected?.entered;
+        if($('entry-pdf-draw'))$('entry-pdf-draw').disabled=busy || !pdf || !pageRendered;
+        if($('entry-pdf-row-count')){
+            const setupLocation=`${source}:${pageNumber}`;
+            if(rows.length && (setupPdfLocation!==setupLocation || rows.some(row=>row.entry_row_id)))$('entry-pdf-row-count').value=rows.length;
+            setupPdfLocation=setupLocation;
+            $('entry-pdf-row-count').disabled=busy || rows.some(row=>row.entry_row_id);
+        }
+        if($('entry-pdf-layout-save'))$('entry-pdf-layout-save').disabled=busy || !editable() || !rowArea;
+    }
+    function selectPdfRow(id, checkDraft = true) {
+        const marker=pdfRows().find(row=>row.id===Number(id));
+        if(!marker || (busy && checkDraft) || (checkDraft && !allowSwitch())){renderPdfRows();return;}
+        if(rowForm){
+            const owner=data.transformers.find(t=>t.rows.some(row=>row.id===marker.entry_row_id));
+            if(owner){
+                if(activeId!==owner.id)chooseTransformer(owner.id);
+                const saved=owner.rows.find(row=>row.id===marker.entry_row_id);fillRow(saved,saved.id,saved.client_uuid);
+                status(marker.entered ? 'Entered row selected. Editing its saved record.' : 'Pending marker selected. Its saved record is loaded; save or mark Entered.');
+            }else{
+                if((rowId && pdfRows().some(row=>row.entry_row_id===rowId)) || (checkDraft && rowDirty))newRow();
+                set(rowForm,'source_pdf_id',marker.source_file_id);set(rowForm,'source_page',marker.page);set(rowForm,'source_row',`PDF row ${marker.row_number}`);
+                if(rowId)rowDirty=true;
+                saveUuid=null;
+            }
+        }
+        const sourceChanged=number($('entry-pdf-source').value)!==marker.source_file_id;
+        selectedPdfRowId=marker.id;$('entry-pdf-source').value=String(marker.source_file_id);
+        if(pageNumber!==marker.page)setPage(marker.page);
+        if(sourceChanged)loadPdf();
+        updateRowHints();renderPdfRows();persist();
+        window.requestAnimationFrame?.(()=>$('entry-pdf-rows').querySelector(`[data-pdf-row="${marker.id}"]`)?.scrollIntoView({block:'nearest',inline:'nearest'}));
+    }
+    async function markPdfRow(entered) {
+        const marker=selectedPdfRow();if(busy || !marker || (entered && rowDirty))return;
+        setBusy(true);clearErrors();
+        try{data=await api(`/pdf-rows/${marker.id}`,'PUT',{revision:data.revision,entered});renderPdfRows();persist();status(entered ? 'PDF row marked Entered.' : 'Entered marker undone. The saved record is retained.');}
+        catch(e){error('PDF row marker was not changed.',e.errors || {save:[e.message]});}
+        finally{setBusy(false);}
+    }
+    function cancelRowDrawing() {
+        drawingRows=false;dragStart=null;rowArea=null;
+        $('entry-pdf-stage').dataset.drawing='false';$('entry-pdf-area').hidden=true;
+        renderPdfRows();
+        if($('entry-pdf-layout-save'))$('entry-pdf-layout-save').disabled=true;
+    }
+    function drawPoint(event) {
+        const rect=$('entry-pdf-canvas').getBoundingClientRect();
+        return {x:Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width)),y:Math.max(0,Math.min(1,(event.clientY-rect.top)/rect.height))};
+    }
+    function previewRowArea() {
+        const area=$('entry-pdf-area');area.hidden=!rowArea;if(!rowArea)return;
+        Object.assign(area.style,{left:rowArea.x*100+'%',top:rowArea.y*100+'%',width:rowArea.width*100+'%',height:rowArea.height*100+'%',backgroundImage:'linear-gradient(to bottom, #1768b3 1px, transparent 1px)',backgroundSize:`100% ${100/Number($('entry-pdf-row-count').value || 1)}%`});
+        $('entry-pdf-layout-save').disabled=busy;
+    }
+    async function savePdfLayout() {
+        if(busy || !rowArea || !$('entry-pdf-row-count').reportValidity())return;
+        const source=number($('entry-pdf-source').value);
+        setBusy(true);clearErrors();
+        try{
+            data=await api(`/sources/${source}/row-layout`,'PUT',{revision:data.revision,page:pageNumber,row_count:Number($('entry-pdf-row-count').value),bounds:rowArea});
+            if(!selectedPdfRow())selectedPdfRowId=null;cancelRowDrawing();$('entry-pdf-setup').open=false;renderPdfRows();status('Page rows saved. Select the first pending row to begin.');persist();
+        }catch(e){error('Page rows were not saved.',e.errors || {save:[e.message]});}
+        finally{setBusy(false);}
     }
     function renderPdf() {
         const token=pdfGeneration, document=pdf, selectedPage=pageNumber, selectedRotation=rotation, selectedZoom=zoom;
@@ -338,27 +606,38 @@ function initialize(boot) {
                 const pixel=Math.min(window.devicePixelRatio || 1,2,Math.sqrt(16000000/(cssViewport.width*cssViewport.height))), viewport=page.getViewport({scale:scale*pixel,rotation:selectedRotation});
                 const canvas=$('entry-pdf-canvas');canvas.width=Math.floor(viewport.width);canvas.height=Math.floor(viewport.height);canvas.style.width=`${viewport.width/pixel}px`;canvas.style.height=`${viewport.height/pixel}px`;canvas.hidden=false;$('entry-pdf-message').hidden=true;
                 renderTask=page.render({canvasContext:canvas.getContext('2d'),viewport});await renderTask.promise;renderTask=null;
+                if(token!==pdfGeneration)return;
+                renderedPdfLocation=`${number($('entry-pdf-source').value)}:${selectedPage}:${selectedRotation}:${selectedZoom}`;
+                renderPdfRows();
             }catch(e){if(e.name!=='RenderingCancelledException'){$('entry-pdf-message').textContent='PDF rendering failed. Use Open PDF; entered fields are retained.';$('entry-pdf-message').hidden=false;}}
         });
         return renderChain;
     }
     async function loadPdf() {
         const source=number($('entry-pdf-source').value), token=++pdfGeneration;
-        renderTask?.cancel();pdfLoading?.destroy();if(pdf)await pdf.destroy();pdf=null;
+        const previousLoading=pdfLoading;
+        renderTask?.cancel();pdfLoading=null;pdf=null;
         $('entry-pdf-canvas').hidden=true;$('entry-pdf-message').hidden=false;$('entry-pdf-message').textContent=source ? 'Loading PDF…' : 'Upload a PDF and GPX to begin.';
-        if(!source){$('entry-page-total').textContent='of 0';updateAssociation();return;}
-        $('entry-pdf-open').href=sourceUrl(source);
+        cancelRowDrawing();renderPdfRows();
         try {
+            // The loading task owns the worker and document resources. Destroy it
+            // once; document proxies in the bundled PDF.js have no destroy method.
+            await previousLoading?.destroy();
+            if(token!==pdfGeneration)return;
+            if(!source){$('entry-page-total').textContent='of 0';updateAssociation();return;}
+            $('entry-pdf-open').href=sourceUrl(source);
             pdfLib ||= await import(boot.pdfjs_url);pdfLib.GlobalWorkerOptions.workerSrc=boot.pdfjs_worker;
             if(token!==pdfGeneration)return;
             pdfLoading=pdfLib.getDocument({url:sourceUrl(source),withCredentials:true,disableRange:true,disableStream:true,isEvalSupported:false,cMapUrl:boot.pdfjs_assets+'cmaps/',cMapPacked:true,standardFontDataUrl:boot.pdfjs_assets+'standard_fonts/',wasmUrl:boot.pdfjs_assets+'wasm/'});
-            const loaded=await pdfLoading.promise;if(token!==pdfGeneration){await loaded.destroy();return;}pdf=loaded;pageNumber=Math.max(1,Math.min(pdf.numPages,pageNumber));setPage(pageNumber);await renderPdf();
+            const loaded=await pdfLoading.promise;if(token!==pdfGeneration)return;pdf=loaded;pageNumber=Math.max(1,Math.min(pdf.numPages,pageNumber));setPage(pageNumber);await renderPdf();
         }catch(e){if(token===pdfGeneration){$('entry-pdf-message').textContent='Could not open PDF. Use Open PDF or check your sign-in. Your entry is retained.';}}
     }
     function setPage(numberValue) {
         pageNumber=Math.max(1,Math.min(pdf?.numPages || data.sources.find(s=>s.id===number($('entry-pdf-source').value))?.metadata?.page_count || 1,numberValue));
         $('entry-page').value=pageNumber;$('entry-page-total').textContent=`of ${pdf?.numPages || 0}`;$('entry-page-previous').disabled=pageNumber<=1;$('entry-page-next').disabled=!pdf || pageNumber>=pdf.numPages;
-        if(rowForm && !rowId && !busy){set(rowForm,'source_pdf_id',number($('entry-pdf-source').value));set(rowForm,'source_page',pageNumber);updateRowHints();}
+        cancelRowDrawing();
+        if(rowForm && !rowId && !busy && !selectedPdfRowId){set(rowForm,'source_pdf_id',number($('entry-pdf-source').value));set(rowForm,'source_page',pageNumber);updateRowHints();}
+        renderPdfRows();
         updateAssociation();persist();renderPdf();
     }
     function filterSelect(select, query) {
@@ -370,27 +649,60 @@ function initialize(boot) {
     if(recovery && (!boot.active_transformer_id || Number(recovery.activeId)===boot.active_transformer_id))activeId=recovery.activeId;
     if(activeId && !active())activeId=data.transformers[0]?.id || null;
     chooseTransformer(activeId);
-    if(recovery && Number(recovery.activeId || 0)===Number(activeId || 0)){
+    if(recovery && boot.can_edit && Number(recovery.activeId || 0)===Number(activeId || 0)){
         pageNumber=recovery.pageNumber || 1;rotation=recovery.rotation || 0;zoom=recovery.zoom || 1;$('entry-pdf-source').value=recovery.pdfSource || $('entry-pdf-source').value;
-        $('entry-viewer-height').value=recovery.height || 300;
+        $('entry-viewer-height').value=recovery.height || 240;
         if(recovery.headerDirty && recovery.header){fillHeader(recovery.header);headerDirty=true;$('entry-header-panel').open=true;}
         if(recovery.rowDirty && recovery.row){fillRow(recovery.row,recovery.rowId,recovery.clientUuid);rowDirty=true;saveUuid=recovery.saveUuid;}
+        else if(recovery.selectedPdfRowId)selectPdfRow(recovery.selectedPdfRowId,false);
         if(headerDirty || rowDirty)status('Unsaved fields restored from this browser. Check current saved records before saving.','dirty');
     }
     if(!recovery && window.innerWidth<650)$('entry-viewer-height').value='180';
     $('entry-pdf-scroll').style.height=$('entry-viewer-height').value+'px';$('entry-height-value').textContent=$('entry-viewer-height').value+' px';
+    $('entry-pdf-rows').addEventListener('click',event=>{const button=event.target.closest('[data-pdf-row]');if(button)selectPdfRow(button.dataset.pdfRow);});
+    $('entry-pdf-row').addEventListener('change',()=>selectPdfRow($('entry-pdf-row').value));
+    $('entry-pdf-pending').addEventListener('click',()=>{const pending=nextPendingPdfRow(pdfRows(),$('entry-pdf-source').value);if(pending)selectPdfRow(pending.id);});
+    $('entry-pdf-mark')?.addEventListener('click',()=>markPdfRow(true));$('entry-pdf-undo')?.addEventListener('click',()=>markPdfRow(false));
+    $('entry-pdf-draw')?.addEventListener('click',()=>{
+        if(busy || !pdf)return;
+        cancelRowDrawing();drawingRows=true;$('entry-pdf-stage').dataset.drawing='true';
+        renderPdfRows();
+        if(rotation!==0){rotation=0;renderPdf();}
+        $('entry-pdf-setup-help').textContent='Drag around the S/E table body, excluding headings and blank rows. Check the preview lines, then save page rows.';
+    });
+    $('entry-pdf-stage').addEventListener('pointerdown',event=>{
+        if(!drawingRows || busy || event.button!==0)return;
+        event.preventDefault();dragStart=drawPoint(event);$('entry-pdf-stage').setPointerCapture?.(event.pointerId);
+    });
+    $('entry-pdf-stage').addEventListener('pointermove',event=>{
+        if(!drawingRows || !dragStart)return;
+        const point=drawPoint(event);rowArea={x:Math.min(point.x,dragStart.x),y:Math.min(point.y,dragStart.y),width:Math.abs(point.x-dragStart.x),height:Math.abs(point.y-dragStart.y)};
+        previewRowArea();
+    });
+    $('entry-pdf-stage').addEventListener('pointerup',()=>{
+        if(!drawingRows)return;
+        drawingRows=false;dragStart=null;$('entry-pdf-stage').dataset.drawing='false';
+        if(!rowArea || rowArea.width<.02 || rowArea.height<.02)cancelRowDrawing();
+        renderPdfRows();
+    });
+    $('entry-pdf-stage').addEventListener('pointercancel',cancelRowDrawing);
+    $('entry-pdf-row-count')?.addEventListener('input',previewRowArea);
+    $('entry-pdf-layout-save')?.addEventListener('click',savePdfLayout);
     if(!data.sources.some(s=>s.kind==='pdf'))document.querySelector('.entry-source-files').open=true;
     headerForm?.addEventListener('submit',saveHeader);headerForm?.addEventListener('input',event=>markDirty(event,'header'));headerForm?.addEventListener('change',event=>markDirty(event,'header'));
+    $('entry-submit-form')?.addEventListener('submit',event=>{
+        if(busy || !editable() || headerDirty || rowDirty){event.preventDefault();error('Save the header and all row changes before submitting for verification. Your entered fields are retained.');}
+    });
     rowForm?.addEventListener('submit',event=>{event.preventDefault();saveRow(true);});rowForm?.addEventListener('input',event=>markDirty(event,'row'));rowForm?.addEventListener('change',event=>markDirty(event,'row'));
     $('entry-save-draft')?.addEventListener('click',()=>saveRow(false));$('entry-row-new')?.addEventListener('click',()=>{if(allowSwitch()){newRow();status('New draft row.');}});
     $('entry-transformer').addEventListener('change',()=>{if(allowSwitch())chooseTransformer($('entry-transformer').value);else $('entry-transformer').value=String(activeId || '');});
     document.querySelectorAll('[data-entry-add-transformer]').forEach(button=>button.addEventListener('click',()=>{if(!allowSwitch())return;chooseTransformer(null);$('entry-header-panel').open=true;field(headerForm,'code')?.focus();}));
     $('entry-transformer-search').addEventListener('input',e=>filterSelect($('entry-transformer'),e.target.value));document.querySelectorAll('[data-entry-filter]').forEach(input=>input.addEventListener('input',()=>filterSelect($(input.dataset.entryFilter),input.value)));
     $('entry-copy-conductors')?.addEventListener('click',()=>copyValues('conductors'));$('entry-copy-equipment')?.addEventListener('click',()=>copyValues('equipment'));$('entry-copy-both')?.addEventListener('click',()=>copyValues('both'));
-    $('entry-copy-endpoint')?.addEventListener('click',()=>{const previous=active()?.rows.filter(r=>r.designation==='E').at(-1);if(previous){for(const key of ['group_number','row_date','waypoint_reference','gpx_source_id'])set(rowForm,key,previous[key]);inheritance.group_date=previous.id;rowDirty=true;saveUuid=null;updateRowHints();status('Previous E complete waypoint copied. Change it here for a branch.','dirty');persist();}});
     $('entry-paste-apply')?.addEventListener('click',()=>{
         try{
             const parsed=parseWaypoint($('entry-paste-waypoint').value.trim(),data.entry_settings?.two_digit_year_start);
+            if(Object.entries(parsed).some(([key,value])=>val(rowForm,key) && isoDate(val(rowForm,key))!==value) && !window.confirm('Replace the entered group, date or GPS number with this pasted waypoint?'))return;
             for(const [key,value] of Object.entries(parsed))set(rowForm,key,value);
             set(rowForm,'gpx_source_id',null);delete inheritance.group_date;rowDirty=true;saveUuid=null;clearErrors();updateRowHints();persist();status('Complete waypoint applied. Check the PDF date and GPS match.','dirty');
         }catch(e){error(e.message);}
@@ -400,7 +712,7 @@ function initialize(boot) {
         const current=rowPayload(),unit=data.entry_settings?.pole_height_unit;
         try{const height=convertPoleHeight(current.pole_height,current.pole_height_unit,unit);set(rowForm,'pole_height',height);set(rowForm,'pole_height_unit',unit);rowDirty=true;saveUuid=null;updateRowHints();persist();status(`Draft height converted from ${current.pole_height ?? 'blank'} ${current.pole_height_unit} to ${height ?? 'blank'} ${unit}. Check against the source before saving.`,'dirty');}catch(e){error(e.message);}
     });
-    $('entry-use-page')?.addEventListener('click',()=>{set(rowForm,'source_pdf_id',number($('entry-pdf-source').value));set(rowForm,'source_page',pageNumber);rowDirty=true;saveUuid=null;updateRowHints();status('Displayed page selected for this row. Save to confirm.','dirty');persist();});
+    $('entry-use-page')?.addEventListener('click',()=>{if(busy)return;if(selectedPdfRowId){error('This record is linked to a selected PDF row. Select the correct PDF row to change its source.');return;}set(rowForm,'source_pdf_id',number($('entry-pdf-source').value));set(rowForm,'source_page',pageNumber);rowDirty=true;saveUuid=null;updateRowHints();status('Displayed page selected for this row. Save to confirm.','dirty');persist();});
     $('entry-pv-add')?.addEventListener('click',()=>{addPv();rowDirty=true;saveUuid=null;persist();});$('entry-pv-records')?.addEventListener('click',event=>{if(event.target.closest('[data-pv-remove]')){event.target.closest('.entry-pv-row').remove();rowDirty=true;saveUuid=null;$('entry-pv-count').textContent=`(${pvPayload().length})`;persist();}});
     $('entry-saved-rows').addEventListener('click',async event=>{
         const edit=event.target.closest('[data-entry-edit]'),remove=event.target.closest('[data-entry-delete]');if(busy)return;
@@ -408,11 +720,12 @@ function initialize(boot) {
         if(remove){if(headerDirty || rowDirty){error('Save or cancel your current draft before deleting a saved row.');return;}if(!window.confirm('Delete this saved S/E row? Its paired row will remain as an incomplete draft.'))return;setBusy(true);try{data=await api(`/transformers/${activeId}/rows/${remove.dataset.entryDelete}`,'DELETE',{revision:data.revision,confirmed:true});renderLists();renderSaved();newRow();status('Row deleted. Check the remaining pair in review.');}catch(e){error('Row could not be deleted.',e.errors || {delete:[e.message]});}finally{setBusy(false);}}
     });
     $('entry-continue')?.addEventListener('click',async()=>{if(busy || !active())return;setBusy(true);try{data=await api(`/transformers/${activeId}/pages`,'POST',{revision:data.revision,source_pdf_id:number($('entry-pdf-source').value),page:pageNumber,role:'continuation',confirmed:true});renderLists();updateAssociation();status('Current transformer retained; continuation page confirmed.');persist();}catch(e){error('Continuation page could not be confirmed.',e.errors || {page:[e.message]});}finally{setBusy(false);}});
-    $('entry-refresh').addEventListener('click',async()=>{if(busy)return;const h=headerPayload(),r=rowPayload(),id=rowId,identity=clientUuid;setBusy(true);try{data=await api('/entry-data');renderLists();renderSaved();if(headerDirty)fillHeader(h);else fillHeader(active() || {header:data.defaults});if(rowDirty){fillRow(r,id,identity);rowDirty=true;}else newRow();status('Saved records refreshed. Review retained fields before saving.',headerDirty || rowDirty ? 'dirty' : 'saved');persist();await loadPdf();}catch(e){error(e.message);}finally{setBusy(false);}});
+    $('entry-refresh').addEventListener('click',async()=>{if(busy)return;const h=headerPayload(),r=rowPayload(),id=rowId,identity=clientUuid;setBusy(true);try{data=await api('/entry-data');clearErrors();renderLists();renderSaved();if(headerDirty)fillHeader(h);else fillHeader(active() || {header:data.defaults});if(rowDirty){fillRow(r,id,identity);rowDirty=true;}else newRow();status('Saved records refreshed. Review retained fields before saving.',headerDirty || rowDirty ? 'dirty' : 'saved');persist();await loadPdf();}catch(e){error(e.message);}finally{setBusy(false);}});
     $('entry-pdf-source').addEventListener('change',()=>{pageNumber=1;loadPdf();persist();});$('entry-page').addEventListener('change',()=>setPage(Number($('entry-page').value)||1));$('entry-page-previous').addEventListener('click',()=>setPage(pageNumber-1));$('entry-page-next').addEventListener('click',()=>setPage(pageNumber+1));
-    $('entry-zoom-out').addEventListener('click',()=>{zoom=Math.max(.25,zoom/1.25);renderPdf();persist();});$('entry-zoom-in').addEventListener('click',()=>{zoom=Math.min(3,zoom*1.25);renderPdf();persist();});$('entry-zoom-fit').addEventListener('click',()=>{zoom=1;renderPdf();persist();});$('entry-rotate').addEventListener('click',()=>{rotation=(rotation+90)%360;renderPdf();persist();});
+    $('entry-zoom-out').addEventListener('click',()=>{zoom=Math.max(.25,zoom/1.25);renderPdf();persist();});$('entry-zoom-in').addEventListener('click',()=>{zoom=Math.min(3,zoom*1.25);renderPdf();persist();});$('entry-zoom-fit').addEventListener('click',()=>{zoom=1;renderPdf();persist();});$('entry-rotate').addEventListener('click',()=>{cancelRowDrawing();rotation=(rotation+90)%360;renderPdf();persist();});
     $('entry-viewer-height').addEventListener('input',()=>{$('entry-pdf-scroll').style.height=$('entry-viewer-height').value+'px';$('entry-height-value').textContent=$('entry-viewer-height').value+' px';persist();});
     let resizeTimer;new ResizeObserver(()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(renderPdf,150);}).observe($('entry-pdf-scroll'));
+    new ResizeObserver(()=>{$('mdb-entry-workspace').style.setProperty('--entry-document-height',Math.ceil(document.querySelector('.entry-document').getBoundingClientRect().height)+'px');}).observe(document.querySelector('.entry-document'));
     // Source jobs advance the batch revision. Refresh their results without replacing
     // entered fields; a concurrent change to saved transformer data still needs review.
     let sourcePoll=null;

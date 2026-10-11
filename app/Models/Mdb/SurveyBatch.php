@@ -54,6 +54,11 @@ class SurveyBatch extends Model
         return $this->hasMany(SourceFile::class, 'batch_id');
     }
 
+    public function generationInputs()
+    {
+        return $this->hasMany(GenerationInput::class, 'batch_id');
+    }
+
     public function waypoints()
     {
         return $this->hasMany(Waypoint::class, 'batch_id');

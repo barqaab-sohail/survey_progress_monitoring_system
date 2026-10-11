@@ -5,6 +5,7 @@ namespace App\Services\Mdb;
 use App\Models\Mdb\EntryRow;
 use App\Models\Mdb\NetworkSection;
 use App\Models\Mdb\NetworkTransformer;
+use App\Models\Mdb\PdfRow;
 use App\Models\Mdb\SurveyBatch;
 use Illuminate\Validation\ValidationException;
 
@@ -17,6 +18,8 @@ class EntryService
         $feeder = $batch->feeder;
 
         return ['batch_id' => $batch->id, 'revision' => $batch->revision, 'status' => $batch->status,
+            'staged_workflow' => $batch->staged_workflow, 'survey_status' => $batch->survey_status,
+            'pdf_rows' => PdfRow::whereIn('source_file_id', $batch->sources->pluck('id'))->orderBy('page')->orderBy('row_number')->get()->toArray(),
             'defaults' => ['feeder_identifier' => $feeder?->feeder_code, 'feeder_name' => $feeder?->feeder_name,
                 'substation_identifier' => $feeder?->gridStation?->code, 'substation_name' => $feeder?->gridStation?->name,
                 'division' => $feeder?->division?->name, 'subdivision' => $feeder?->subDivision?->name,
@@ -56,7 +59,7 @@ class EntryService
         $data['manually_verified'] = (bool) ($data['manually_verified'] ?? false);
         $data['pv_details'] = array_values($data['pv_details'] ?? []);
         $data['inheritance'] = $data['inheritance'] ?? [];
-        unset($data['revision'], $data['save_uuid'], $data['client_uuid']);
+        unset($data['revision'], $data['save_uuid'], $data['client_uuid'], $data['pdf_progress_row_id']);
 
         return $data;
     }

@@ -8,12 +8,60 @@ use Illuminate\Database\Eloquent\Builder;
 
 class WorkflowAccess
 {
-    public const ABILITIES = ['view', 'upload', 'edit', 'verify', 'configure', 'analyze', 'export', 'surveyVerify', 'process', 'generate'];
+    public const ABILITIES = ['view', 'upload', 'edit', 'submit', 'verify', 'configure', 'analyze', 'export', 'surveyVerify', 'process', 'generate', 'prepare'];
+
+    public const SURVEY_ROLE_ABILITIES = [
+        'survey_data_entry_operator' => ['view', 'upload', 'edit', 'submit'],
+        'survey_data_verifier' => ['view', 'surveyVerify'],
+        'mdb_generator' => ['view', 'prepare', 'export', 'generate'],
+    ];
 
     public function allows(User $user, string $ability): bool
     {
-        return $user->isActive() && (! $user->organization_id || $user->organization?->status->value === 'active')
-            && ($user->hasRole('super_admin') || $user->checkPermissionTo('MdbWorkflow:'.ucfirst($ability)));
+        if (! $user->isActive() || ($user->organization_id && $user->organization?->status->value !== 'active')) {
+            return false;
+        }
+        if ($user->hasRole('super_admin')) {
+            return true;
+        }
+        // Supplemental roles or direct grants cannot expand a dedicated survey role.
+        // Multiple dedicated roles retain only their shared abilities.
+        foreach (self::SURVEY_ROLE_ABILITIES as $role => $abilities) {
+            if ($user->hasRole($role) && ! in_array($ability, $abilities, true)) {
+                return false;
+            }
+        }
+
+        return $user->checkPermissionTo('MdbWorkflow:'.ucfirst($ability));
+    }
+
+    public function canEdit(User $user, SurveyBatch $batch): bool
+    {
+        return $this->allowsForBatch($user, $batch, 'edit') && (! $batch->staged_workflow || in_array($batch->survey_status, ['entry', 'returned'], true));
+    }
+
+    public function canUpload(User $user, SurveyBatch $batch): bool
+    {
+        return $this->allowsForBatch($user, $batch, 'upload') && (! $batch->staged_workflow || in_array($batch->survey_status, ['entry', 'returned'], true));
+    }
+
+    public function allowsForBatch(User $user, SurveyBatch $batch, string $ability): bool
+    {
+        if (! $this->allows($user, $ability)) {
+            return false;
+        }
+        if (! $batch->staged_workflow || $user->hasRole('super_admin')) {
+            return true;
+        }
+        $role = match ($ability) {
+            'edit', 'upload', 'submit' => 'survey_data_entry_operator',
+            'surveyVerify' => 'survey_data_verifier',
+            'generate', 'export', 'prepare' => 'mdb_generator',
+            'verify', 'process' => 'super_admin',
+            default => null,
+        };
+
+        return $role === null || $user->hasRole($role);
     }
 
     public function visible(User $user): Builder
@@ -32,21 +80,21 @@ class WorkflowAccess
 
     public function authorize(User $user, SurveyBatch $batch, string $ability = 'view'): void
     {
+        abort_unless($this->allowsForBatch($user, $batch, $ability) && $this->visible($user)->whereKey($batch->id)->exists(), 403);
         if ($batch->staged_workflow) {
-            if (in_array($ability, ['edit', 'upload'], true)) {
+            if (in_array($ability, ['edit', 'upload', 'submit'], true)) {
                 abort_unless(in_array($batch->survey_status, ['entry', 'returned'], true), 403, 'Survey entry is locked.');
-                if ($ability === 'edit') {
+                if (in_array($ability, ['edit', 'submit'], true)) {
                     $this->assertSourcesReady($batch);
                 }
             }
             if ($ability === 'surveyVerify') {
                 abort_if(in_array($user->id, $batch->entry_actor_ids ?? [], true), 403, 'Entry contributors cannot verify their survey.');
             }
-            if (in_array($ability, ['process', 'verify', 'export', 'generate'], true)) {
+            if (in_array($ability, ['process', 'verify', 'export', 'generate', 'prepare'], true)) {
                 abort_unless($batch->survey_status === 'approved', 403, 'Survey approval is required before network processing.');
             }
         }
-        abort_unless($this->allows($user, $ability) && $this->visible($user)->whereKey($batch->id)->exists(), 403);
     }
 
     public function assertSourcesReady(SurveyBatch $batch): void
