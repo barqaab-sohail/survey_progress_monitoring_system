@@ -1,0 +1,21 @@
+{
+  "method_id": "equal_connected_phases_v1",
+  "method_source": "User instruction: single phase consumer are equally divided on each phase",
+  "scope": "Categories established as single-phase; RS, SC and SI in the current printed-code interpretation",
+  "allocation": "customers_per_phase = verified_category_count / number_of_connected_R_Y_B_phases",
+  "neutral": "N is excluded from the allocation denominator",
+  "three_phase_span": "Divide equally between R, Y and B",
+  "two_phase_span": "Divide equally between the two connected phases",
+  "one_phase_span": "Allocate the full count to the connected phase",
+  "fractional_values": "Use fractional equivalent customers without rounding to whole customers",
+  "source_counts": "Keep original surveyed category totals as integers; leave unknown totals unresolved",
+  "demand": "Once a category total demand is defined, the same shares can allocate its kW/kvar/kVA; this method does not determine total demand",
+  "three_phase_customers": "Excluded from this single-phase rule; retain their three-phase classification",
+  "application_status": "Recorded in R&D; not activated in live configuration or implemented as automatic application allocation",
+  "required_application_changes": [
+    "Generate per-phase customer shares from the verified count and connected phases",
+    "Allow fractional equivalent customers for this documented method in NetworkValidator and the demand-entry control",
+    "Validate that allocations sum to the surveyed count using a floating-point tolerance, as the exporter already does",
+    "Preserve original integer counts, method provenance and per-category demand evidence in revision snapshots"
+  ]
+}

@@ -113,6 +113,23 @@ class TransformerMdbBuilderController extends Controller
                     $project->gpx_waypoints = $waypoints;
                 }
                 $project->save();
+                if (config('drive_storage.enabled')) {
+                    foreach (['pdf', 'gpx'] as $kind) {
+                        if (! isset($newPaths[$kind.'_path'])) continue;
+                        $feeder = Feeder::findOrFail($project->feeder_id);
+                        $archive = app(\App\Services\DriveStorage\FileStorage::class)->register('local', $newPaths[$kind.'_path'],
+                            $request->file($kind)->getClientOriginalName(), $kind === 'pdf' ? 'application/pdf' : 'application/gpx+xml', [
+                                'project_id' => $feeder->project_id, 'feeder_id' => $feeder->id, 'feeder_code' => $feeder->feeder_code,
+                                'transformer_workspace_id' => $project->id, 'transformer_code' => $project->transformer_code,
+                                'survey_date' => $project->survey_date?->toDateString(),
+                            ]);
+                        $project->update([$kind.'_drive_stored_file_id' => $archive->id]);
+                    }
+                } else {
+                    foreach (['pdf', 'gpx'] as $kind) {
+                        if (isset($newPaths[$kind.'_path'])) $project->update([$kind.'_drive_stored_file_id' => null]);
+                    }
+                }
                 $audit->record($request->user(), $existing ? 'mdb_workspace.updated' : 'mdb_workspace.created', $project, $old, $project->toArray());
 
                 return $project;
@@ -121,7 +138,10 @@ class TransformerMdbBuilderController extends Controller
             Storage::disk('local')->delete(array_values($newPaths));
             throw $exception;
         }
-        Storage::disk('local')->delete($oldPaths);
+        // Archived versions remain recoverable; only untracked legacy replacements are removed.
+        foreach ($oldPaths as $oldPath) {
+            if (! \App\Models\DriveStoredFile::where('local_path', $oldPath)->exists()) Storage::disk('local')->delete($oldPath);
+        }
 
         return redirect()->route('mdb-builder.edit', $saved)->with('success', 'Transformer survey saved. Review the GPX links and network before creating MDB.');
     }
@@ -165,10 +185,10 @@ class TransformerMdbBuilderController extends Controller
     {
         abort_unless(in_array($kind, ['pdf', 'gpx'], true), 404);
         $path = $project->{$kind.'_path'};
-        abort_unless($path && Storage::disk('local')->exists($path), 404);
-
-        return response()->file(Storage::disk('local')->path($path), ['Content-Type' => $kind === 'pdf' ? 'application/pdf' : 'application/gpx+xml',
-            'Content-Disposition' => ($kind === 'pdf' ? 'inline' : 'attachment').'; filename="survey.'.$kind.'"', 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
+        abort_unless($path, 404);
+        $archive = $project->{$kind.'DriveStoredFile'};
+        return app(\App\Services\DriveStorage\FileStorage::class)->response($archive, 'local', $path,
+            $archive?->original_name ?? 'survey.'.$kind, $kind === 'pdf' ? 'application/pdf' : 'application/gpx+xml', $kind !== 'pdf' || $request->boolean('download'));
     }
 
     private function editor(Request $request): void

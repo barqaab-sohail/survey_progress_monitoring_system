@@ -97,6 +97,24 @@ class WorkflowAccess
         }
     }
 
+    public function authorizeReviewChecks(User $user, SurveyBatch $batch): void
+    {
+        if ($this->canEdit($user, $batch)) {
+            $this->authorize($user, $batch, 'edit');
+            return;
+        }
+
+        $this->authorizeCorrection($user, $batch);
+    }
+
+    public function authorizeCorrection(User $user, SurveyBatch $batch): void
+    {
+        $this->authorize($user, $batch, 'surveyVerify');
+        abort_unless($batch->staged_workflow ? $batch->survey_status === 'awaiting_verification' : in_array($batch->status, ['draft','submitted','returned','awaiting_verification'], true), 403,
+            'Corrections and verification checks are available while the survey is pending verification.');
+        $this->assertSourcesReady($batch);
+    }
+
     public function assertSourcesReady(SurveyBatch $batch): void
     {
         foreach (['pdf', 'gpx'] as $kind) {

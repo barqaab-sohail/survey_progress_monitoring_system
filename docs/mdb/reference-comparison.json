@@ -1,0 +1,273 @@
+{
+  "template_sha256": "5d4ebf8d307e1a9adf130d56c36706a4e63406ee628131f472850cb2897f6a39",
+  "references": [
+    {
+      "file": "Alipur City 2T-11301214359.mdb",
+      "sha256": "0e3eb309a14592f0a8ce56421a46f09e10853658ff61b8162dcb7ee344a5c956",
+      "table_count": 50,
+      "relationship_count": 41,
+      "schema_differences": [],
+      "relationships_match": true,
+      "populated_tables": {
+        "InstDGens": 2,
+        "InstFeeders": 1,
+        "InstMeterPoints": 1,
+        "InstMymDGens": 2,
+        "InstPrimaryTransformers": 1,
+        "InstSection": 18,
+        "Loads": 17,
+        "Node": 20,
+        "SAI_Control": 1
+      },
+      "orphan_devices": {
+        "InstMeterPoints": 0,
+        "InstDGens": 0,
+        "InstMymDGens": 0
+      }
+    },
+    {
+      "file": "Banday ShahT-11280115272.mdb",
+      "sha256": "6683d80665e6fab890d132373c1f5e7e474228c85416074884eaa8c5a55d1b11",
+      "table_count": 50,
+      "relationship_count": 41,
+      "schema_differences": [],
+      "relationships_match": true,
+      "populated_tables": {
+        "InstFeeders": 1,
+        "InstMeterPoints": 1,
+        "InstPrimaryTransformers": 1,
+        "InstSection": 23,
+        "Loads": 22,
+        "Node": 25,
+        "SAI_Control": 1
+      },
+      "orphan_devices": {
+        "InstMeterPoints": 0,
+        "InstDGens": 0,
+        "InstMymDGens": 0
+      }
+    },
+    {
+      "file": "City 2T-11291214281.mdb",
+      "sha256": "d53d50ae8a127049615841f76d8173e657cdf70d2eeabf970e7ab9e7e2269fc2",
+      "table_count": 50,
+      "relationship_count": 41,
+      "schema_differences": [],
+      "relationships_match": true,
+      "populated_tables": {
+        "InstFeeders": 1,
+        "InstMeterPoints": 1,
+        "InstPrimaryTransformers": 1,
+        "InstSection": 18,
+        "Loads": 17,
+        "Node": 20,
+        "SAI_Control": 1
+      },
+      "orphan_devices": {
+        "InstMeterPoints": 0,
+        "InstDGens": 0,
+        "InstMymDGens": 0
+      }
+    },
+    {
+      "file": "Faqeer ShahT-9270420041.mdb",
+      "sha256": "33246ed2add1f3be198578b0bbdbdfb1c99f9bdd4ed31418bcfad51dfa8d4a32",
+      "table_count": 50,
+      "relationship_count": 41,
+      "schema_differences": [],
+      "relationships_match": true,
+      "populated_tables": {
+        "InstFeeders": 1,
+        "InstMeterPoints": 1,
+        "InstPrimaryTransformers": 1,
+        "InstSection": 17,
+        "Loads": 16,
+        "Node": 19,
+        "SAI_Control": 1
+      },
+      "orphan_devices": {
+        "InstMeterPoints": 0,
+        "InstDGens": 0,
+        "InstMymDGens": 0
+      }
+    },
+    {
+      "file": "Kallar WaliT-6170315098.mdb",
+      "sha256": "86014d67a7880c8d15c67d989368a927f93f0196a53848f70956a6712f3b0d23",
+      "table_count": 50,
+      "relationship_count": 41,
+      "schema_differences": [],
+      "relationships_match": true,
+      "populated_tables": {
+        "InstFeeders": 1,
+        "InstMeterPoints": 1,
+        "InstPrimaryTransformers": 1,
+        "InstSection": 17,
+        "Loads": 16,
+        "Node": 19,
+        "SAI_Control": 1
+      },
+      "orphan_devices": {
+        "InstMeterPoints": 0,
+        "InstDGens": 0,
+        "InstMymDGens": 0
+      }
+    },
+    {
+      "file": "Latti-IIT-11120315628.mdb",
+      "sha256": "96700c8630a2dfc396843ed00225513ac5c395d101e3aae6f7ed928f37991917",
+      "table_count": 50,
+      "relationship_count": 41,
+      "schema_differences": [],
+      "relationships_match": true,
+      "populated_tables": {
+        "InstFeeders": 1,
+        "InstMeterPoints": 1,
+        "InstPrimaryTransformers": 1,
+        "InstSection": 19,
+        "Loads": 18,
+        "Node": 21,
+        "SAI_Control": 1
+      },
+      "orphan_devices": {
+        "InstMeterPoints": 0,
+        "InstDGens": 0,
+        "InstMymDGens": 0
+      }
+    },
+    {
+      "file": "Latti-IIT-11120315632.mdb",
+      "sha256": "869e0c1201a6b5c0fb71a078b5a0a14d2968745fa4cb47cf952caf1e26a6dad9",
+      "table_count": 50,
+      "relationship_count": 41,
+      "schema_differences": [],
+      "relationships_match": true,
+      "populated_tables": {
+        "InstFeeders": 1,
+        "InstMeterPoints": 1,
+        "InstPrimaryTransformers": 1,
+        "InstSection": 29,
+        "Loads": 28,
+        "Node": 31,
+        "SAI_Control": 1
+      },
+      "orphan_devices": {
+        "InstMeterPoints": 0,
+        "InstDGens": 0,
+        "InstMymDGens": 0
+      }
+    },
+    {
+      "file": "LattiT-11040315206.mdb",
+      "sha256": "daf7d6ed34ed0d52c784720ea1608d5c87cf91db16b5e5367c567f5a5afa650d",
+      "table_count": 50,
+      "relationship_count": 41,
+      "schema_differences": [],
+      "relationships_match": true,
+      "populated_tables": {
+        "InstFeeders": 1,
+        "InstMeterPoints": 1,
+        "InstPrimaryTransformers": 1,
+        "InstSection": 11,
+        "Loads": 10,
+        "Node": 13,
+        "SAI_Control": 1
+      },
+      "orphan_devices": {
+        "InstMeterPoints": 0,
+        "InstDGens": 0,
+        "InstMymDGens": 0
+      }
+    },
+    {
+      "file": "LattiT-11100315420.mdb",
+      "sha256": "094f81a0053445cee72daadf6f2e80ab36fcc1a418c141eaef6a1325ee43a3e2",
+      "table_count": 50,
+      "relationship_count": 41,
+      "schema_differences": [],
+      "relationships_match": true,
+      "populated_tables": {
+        "InstFeeders": 1,
+        "InstMeterPoints": 1,
+        "InstPrimaryTransformers": 1,
+        "InstSection": 11,
+        "Loads": 10,
+        "Node": 13,
+        "SAI_Control": 1
+      },
+      "orphan_devices": {
+        "InstMeterPoints": 0,
+        "InstDGens": 0,
+        "InstMymDGens": 0
+      }
+    },
+    {
+      "file": "PanjnadT-11070115261.mdb",
+      "sha256": "4808b777083171fd5f92968d78b3a7b2e214dae4143bec093f0a7fc7d0ef2e56",
+      "table_count": 50,
+      "relationship_count": 41,
+      "schema_differences": [],
+      "relationships_match": true,
+      "populated_tables": {
+        "InstFeeders": 1,
+        "InstMeterPoints": 1,
+        "InstPrimaryTransformers": 1,
+        "InstSection": 17,
+        "Loads": 16,
+        "Node": 19,
+        "SAI_Control": 1
+      },
+      "orphan_devices": {
+        "InstMeterPoints": 0,
+        "InstDGens": 0,
+        "InstMymDGens": 0
+      }
+    }
+  ],
+  "phase_codes": {
+    "  BN": 11,
+    " Y N": 23,
+    " YBN": 4,
+    "R  N": 38,
+    "R BN": 7,
+    "RY N": 11,
+    "RYB": 10,
+    "RYBN": 76
+  },
+  "equipment_references_observed_not_approved": {
+    "conductors": [
+      " ",
+      " ANT",
+      " DOG",
+      " GNAT",
+      " WASP",
+      "ANT",
+      "DOG",
+      "GNAT",
+      "WASP"
+    ],
+    "configurations": [
+      "12.5/7.2 kV cross arm C2-2"
+    ],
+    "transformers": [
+      "100 KVA",
+      "200 KVA",
+      "25 KVA",
+      "50 KVA"
+    ]
+  },
+  "control_values_observed_not_defaults": {
+    "Frequency": [
+      60
+    ],
+    "LengthUnits": [
+      "Metric"
+    ],
+    "Product": [
+      "SynerGEE Electric 5.0.0.324"
+    ],
+    "ProjectionFile": [
+      "WGS 1984 UTM Zone 43N"
+    ]
+  }
+}

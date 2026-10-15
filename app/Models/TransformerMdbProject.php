@@ -14,6 +14,16 @@ class TransformerMdbProject extends Model
         return ['survey_date' => 'date', 'header' => 'array', 'rows' => 'array', 'solar' => 'array', 'export_settings' => 'array', 'gpx_waypoints' => 'array'];
     }
 
+    public function pdfDriveStoredFile(): BelongsTo
+    {
+        return $this->belongsTo(DriveStoredFile::class, 'pdf_drive_stored_file_id');
+    }
+
+    public function gpxDriveStoredFile(): BelongsTo
+    {
+        return $this->belongsTo(DriveStoredFile::class, 'gpx_drive_stored_file_id');
+    }
+
     public function feeder(): BelongsTo
     {
         return $this->belongsTo(Feeder::class);

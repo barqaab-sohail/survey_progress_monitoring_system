@@ -51,12 +51,15 @@ def resolve_template(identity: dict) -> Path:
 
 def export_model(body: bytes) -> dict:
     payload = json.loads(body)
-    if payload.get("payload_version") != 1 or payload.get("mapping_version") != "synergee-reviewed-v1":
+    if payload.get("payload_version") != 1 or payload.get("mapping_version") not in {"synergee-reviewed-v1", "synergee-reviewed-v2"}:
         raise ValueError("Unsupported export protocol version.")
     key = payload.get("idempotency_key", "")
     if not isinstance(key, str) or not re.fullmatch(r"[a-f0-9]{64}", key):
         raise ValueError("Invalid export identity.")
-    if set(payload.get("tables", {})) != {"SAI_Control", "Node", "InstFeeders", "InstSection", "InstPrimaryTransformers", "Loads"}:
+    tables = {"SAI_Control", "Node", "InstFeeders", "InstSection", "InstPrimaryTransformers", "Loads"}
+    if payload["mapping_version"] == "synergee-reviewed-v2":
+        tables.update({"InstMeterPoints", "InstDGens", "InstMymDGens"})
+    if set(payload.get("tables", {})) != tables:
         raise ValueError("Invalid MDB table allowlist.")
     template = resolve_template(payload["template"])
     job_dir = (ROOT / key).resolve()

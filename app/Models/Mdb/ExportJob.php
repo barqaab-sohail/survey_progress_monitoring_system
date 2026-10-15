@@ -3,6 +3,7 @@
 namespace App\Models\Mdb;
 
 use App\Casts\MdbUtcDateTime;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class ExportJob extends Model
@@ -19,6 +20,11 @@ class ExportJob extends Model
     public function batch()
     {
         return $this->belongsTo(SurveyBatch::class, 'batch_id');
+    }
+
+    public function generator()
+    {
+        return $this->belongsTo(User::class, 'requested_by');
     }
 
     public function revision()

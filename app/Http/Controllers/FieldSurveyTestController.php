@@ -83,7 +83,16 @@ class FieldSurveyTestController extends Controller
             $path = $request->file('file')->store('field-survey-tests/'.$survey->client_uuid, 'local');
             abort_unless($path, 500, 'Unable to save attachment.');
             try {
-                return $survey->attachments()->create(['client_uuid' => $data['client_uuid'], 'kind' => $data['kind'], 'path' => $path, 'mime_type' => $request->file('file')->getMimeType(), 'file_hash' => $hash]);
+                $attachment = $survey->attachments()->create(['client_uuid' => $data['client_uuid'], 'kind' => $data['kind'], 'path' => $path, 'mime_type' => $request->file('file')->getMimeType(), 'file_hash' => $hash]);
+                if (config('drive_storage.enabled') && $attachment->mime_type === 'application/pdf') {
+                    $feeder = \App\Models\Feeder::findOrFail($survey->payload['feeder_id']);
+                    $archive = app(\App\Services\DriveStorage\FileStorage::class)->register('local', $path, $request->file('file')->getClientOriginalName(), $attachment->mime_type, [
+                        'project_id' => $feeder->project_id, 'feeder_id' => $feeder->id, 'field_survey_test_id' => $survey->id,
+                        'transformer_code' => $survey->payload['transformer_code'] ?? null,
+                    ]);
+                    $attachment->update(['drive_stored_file_id' => $archive->id]);
+                }
+                return $attachment;
             } catch (\Throwable $exception) {
                 Storage::disk('local')->delete($path);
                 throw $exception;
@@ -96,9 +105,8 @@ class FieldSurveyTestController extends Controller
     public function download(Request $request, string $clientUuid): BinaryFileResponse
     {
         $file = FieldSurveyTestAttachment::where('client_uuid', $clientUuid)->whereHas('survey', fn ($query) => $query->where('user_id', $request->user()->id))->firstOrFail();
-        abort_unless(Storage::disk('local')->exists($file->path), 404);
-
-        return response()->file(Storage::disk('local')->path($file->path), ['Content-Type' => $file->mime_type, 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
+        return app(\App\Services\DriveStorage\FileStorage::class)->response($file->driveStoredFile, 'local', $file->path,
+            $file->driveStoredFile?->original_name ?? $file->client_uuid, $file->mime_type, $request->boolean('download'));
     }
 
     private function canonical(mixed $value): mixed

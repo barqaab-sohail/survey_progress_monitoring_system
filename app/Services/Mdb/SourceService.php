@@ -54,13 +54,30 @@ class SourceService
             'sha256' => hash_file('sha256', $path), 'bytes' => $size, 'mime' => $kind === 'pdf' ? 'application/pdf' : 'application/gpx+xml',
             'version' => $parent ? $parent->version + 1 : 1, 'parent_source_id' => $parent?->id, 'uploaded_by' => $actor->id,
             'status' => 'queued', 'metadata' => $metadata + ['uploaded_at_utc' => now('UTC')->toIso8601String()]]);
+        if (config('drive_storage.enabled')) {
+            $batch->loadMissing(['project', 'feeder']);
+            $archive = app(\App\Services\DriveStorage\FileStorage::class)->register('local', $stored, $source->original_name, $source->mime, [
+                'project_id' => $batch->project_id, 'project_code' => $batch->project?->code,
+                'feeder_id' => $batch->feeder_id, 'feeder_code' => $batch->feeder?->feeder_code,
+                'batch_id' => $batch->id, 'source_file_id' => $source->id, 'survey_date' => $batch->survey_date?->toDateString(),
+            ]);
+            $source->update(['drive_stored_file_id' => $archive->id]);
+        }
         app(AuditService::class)->record($actor, 'mdb.source_uploaded', $source, [], $source->toArray());
-        ProcessSourceFile::dispatch($source->id)->afterCommit();
+        \Illuminate\Support\Facades\DB::afterCommit(function () use ($source) {
+            try { \Illuminate\Support\Facades\Bus::dispatch((new ProcessSourceFile($source->id))->beforeCommit()); }
+            catch (\Throwable) { \Illuminate\Support\Facades\Log::warning('Source inspection awaits queue recovery.', ['source_id' => $source->id]); }
+        });
 
         return $source;
     }
 
-    public function importDrive(SurveyBatch $batch, User $actor, string $fileId, ?SourceFile $parent = null): SourceFile
+    public function importDrive(SurveyBatch $batch, User $actor, string $fileId, ?SourceFile $parent = null, ?string $expectedKind = null): SourceFile
+    {
+        return $this->withDriveFile($actor, $fileId, fn ($file, $metadata) => $this->store($batch, $actor, $file, $parent, $metadata), $expectedKind);
+    }
+
+    public function withDriveFile(User $actor, string $fileId, callable $callback, ?string $expectedKind = null): mixed
     {
         if (! preg_match('/^[A-Za-z0-9_-]{10,200}$/', $fileId) || ! config('services.google_drive.enabled') || ! $actor->google_drive_token) {
             throw ValidationException::withMessages(['drive_file_id' => 'Connect Google Drive and supply an authorized Drive file ID.']);
@@ -81,14 +98,23 @@ class SourceService
         }
         $client = Http::withToken($token['access_token'])->timeout(60);
         $info = $client->get('https://www.googleapis.com/drive/v3/files/'.$fileId, ['fields' => 'id,name,size,mimeType,version,capabilities(canDownload)'])->throw()->json();
-        if (empty($info['capabilities']['canDownload']) || empty($info['size']) || (int) $info['size'] > (int) config('mdb_workflow.max_pdf_mb', 100) * 1024 * 1024) {
+        $kind = strtolower(pathinfo($info['name'] ?? '', PATHINFO_EXTENSION));
+        if (! in_array($kind, ['pdf', 'gpx'], true) || ($expectedKind && $kind !== $expectedKind)) {
+            throw ValidationException::withMessages(['drive_file_id' => 'Choose a '.($expectedKind ?? 'PDF or GPX').' file.']);
+        }
+        $limit = $kind === 'gpx' ? 10 : (int) config('mdb_workflow.max_pdf_mb', 100);
+        if (empty($info['capabilities']['canDownload']) || empty($info['size']) || (int) $info['size'] > $limit * 1024 * 1024) {
             throw ValidationException::withMessages(['drive_file_id' => 'Drive file is not downloadable or exceeds the source limit.']);
         }
         $temp = tempnam(sys_get_temp_dir(), 'mdb-drive-');
         try {
-            $response = $client->withOptions(['sink' => $temp])->get('https://www.googleapis.com/drive/v3/files/'.$fileId, ['alt' => 'media'])->throw();
+            $client->withOptions(['sink' => $temp])->get('https://www.googleapis.com/drive/v3/files/'.$fileId, ['alt' => 'media'])->throw();
 
-            return $this->store($batch, $actor, new UploadedFile($temp, $info['name'], $info['mimeType'], null, true), $parent,
+            if (filesize($temp) > $limit * 1024 * 1024) {
+                throw ValidationException::withMessages(['drive_file_id' => 'Drive file exceeds the source limit.']);
+            }
+
+            return $callback(new UploadedFile($temp, $info['name'], $info['mimeType'], null, true),
                 ['drive_file_id' => $fileId, 'drive_version' => $info['version'] ?? null]);
         } finally {
             if (is_file($temp)) {

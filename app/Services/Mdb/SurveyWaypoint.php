@@ -9,11 +9,44 @@ use Illuminate\Validation\ValidationException;
 /** Survey identity is independent of the short GPX name and recording timestamp. */
 class SurveyWaypoint
 {
+    public const DEFAULT_YEAR_START = 2000;
+
+    /** The first pair's E row is the surveyed GPX transformer connection. */
+    public function transformerLocation(array $transformer, array $points): array
+    {
+        $rows = collect($transformer['entry_rows'] ?? $transformer['rows'] ?? []);
+        if ($rows->isEmpty() && ($transformer['header']['location_source'] ?? null) !== 'first_e_gpx') {
+            return $transformer;
+        }
+        $firstPair = $rows->min('pair_number');
+        $end = $rows->first(fn ($row) => $row['pair_number'] == $firstPair && $row['designation'] === 'E');
+        $context = $end ?? [];
+        if (empty($context['composite_identifier'])) {
+            $context['row_date'] = null;
+        }
+        $matches = $end ? $this->matches($context, $points) : [];
+        $point = count($matches) === 1 ? $matches[0] : null;
+        if ($point && (! is_numeric($point['latitude'] ?? null) || ! is_numeric($point['longitude'] ?? null)
+            || ! is_finite((float) $point['latitude']) || ! is_finite((float) $point['longitude'])
+            || abs((float) $point['latitude']) > 90 || abs((float) $point['longitude']) > 180)) {
+            $point = null;
+        }
+        $transformer['source_waypoint_id'] = $point['id'] ?? null;
+        $transformer['header']['location_source'] = 'first_e_gpx';
+        $transformer['header']['location_entry_row_id'] = $end['id'] ?? null;
+        unset($transformer['header']['source_survey_identifier']);
+        if ($point && ! empty($end['composite_identifier'])) {
+            $transformer['header']['source_survey_identifier'] = $end['composite_identifier'];
+        }
+
+        return $transformer;
+    }
+
     public function settings(int $projectId): array
     {
         $entry = Configuration::where('project_id', $projectId)->value('settings')['entry'] ?? [];
 
-        return ['two_digit_year_start' => $entry['two_digit_year_start'] ?? null,
+        return ['two_digit_year_start' => $entry['two_digit_year_start'] ?? self::DEFAULT_YEAR_START,
             'pole_height_unit' => $entry['pole_height_unit'] ?? config('mdb_workflow.entry.pole_height_unit')];
     }
 
@@ -42,9 +75,7 @@ class SurveyWaypoint
         if (! preg_match('/^\d{11}$/D', $identifier)) {
             throw ValidationException::withMessages(['composite_identifier' => 'The complete waypoint must contain exactly 11 digits.']);
         }
-        if ($yearStart === null) {
-            throw ValidationException::withMessages(['composite_identifier' => 'Configure the project two-digit-year window before pasting a complete waypoint.']);
-        }
+        $yearStart ??= self::DEFAULT_YEAR_START;
         $year = intdiv($yearStart, 100) * 100 + (int) substr($identifier, 6, 2);
         if ($year < $yearStart) {
             $year += 100;
@@ -60,8 +91,8 @@ class SurveyWaypoint
     {
         $matches = array_values(array_filter($points, fn ($p) => ($row['waypoint_reference'] ?? null) !== null && (string) $p['name'] === (string) $row['waypoint_reference']
             && (empty($row['gpx_source_id']) || $p['source_file_id'] == $row['gpx_source_id'])));
-        // A recording date never replaces the PDF date. An explicit file choice
-        // remains reviewable evidence; automatic matching rejects known contradictions.
+        // Match the GPS number first. Recording dates only disambiguate repeated
+        // names; a unique point remains valid when the PDF date differs.
         if (! empty($row['row_date'])) {
             $dated = array_values(array_filter($matches, function ($point) use ($row) {
                 $time = $point['recorded_at'] ?? null;
@@ -70,8 +101,7 @@ class SurveyWaypoint
             }));
             if ($dated && count($matches) > 1) {
                 $matches = $dated;
-            } elseif (empty($row['gpx_source_id'])) {
-                $matches = array_values(array_filter($matches, fn ($point) => empty($point['recorded_at']) || Carbon::parse($point['recorded_at'])->timezone('Asia/Karachi')->format('Y-m-d') === $row['row_date']));
+
             }
         }
 

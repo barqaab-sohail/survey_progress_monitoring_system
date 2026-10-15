@@ -149,4 +149,37 @@ class MdbExportPayloadTest extends TestCase
         $this->expectException(ValidationException::class);
         $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
     }
+
+    public function test_v2_devices_resolve_current_section_ids_and_preserve_explicit_year_outputs(): void
+    {
+        [$revision, $template] = $this->fixture();
+        $snapshot = $revision->snapshot;
+        $mapping = &$snapshot['configuration']['settings']['mapping'];
+        $mapping['version'] = ExportPayloadBuilder::EXTENDED_VERSION;
+        $mapping['table_values'] += ['InstMeterPoints' => [], 'InstDGens' => [], 'InstMymDGens' => []];
+        $mapping['networks']['T-fixture']['meter_points'] = [['source_section' => 'supply', 'fields' => []]];
+        $mapping['networks']['T-fixture']['generators'] = [[
+            'pv_record_id' => 8, 'fields' => ['DGenOutputPct' => 100, 'DGenVoltSet' => 120],
+            'years' => [['YearNumber' => 0, 'CapacityFactor' => 1, 'Phase1Kw' => 1, 'Phase2Kw' => 2, 'Phase3Kw' => 3, 'Phase1Kvar' => -0.5, 'Phase2Kvar' => 0, 'Phase3Kvar' => 0]],
+        ]];
+        $snapshot['transformers'][0]['pv_records'] = [['id' => 8, 'section_id' => 1, 'installed_capacity_kw' => 6]];
+        $revision->snapshot = $snapshot;
+        $payload = $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
+        $this->assertSame(ExportPayloadBuilder::EXTENDED_VERSION, $payload['mapping_version']);
+        $this->assertSame($payload['tables']['InstSection'][0]['SectionId'], $payload['tables']['InstMeterPoints'][0]['SectionId']);
+        $this->assertSame($payload['tables']['InstSection'][2]['SectionId'], $payload['tables']['InstDGens'][0]['SectionId']);
+        $this->assertSame($payload['tables']['InstDGens'][0]['SectionId'], $payload['tables']['InstMymDGens'][0]['SectionId']);
+        $this->assertSame(-0.5, $payload['tables']['InstMymDGens'][0]['Phase1Kvar']);
+        $this->assertSame(50, $payload['tables']['SAI_Control'][0]['Frequency']);
+    }
+
+    public function test_v1_cannot_silently_drop_requested_devices(): void
+    {
+        [$revision, $template] = $this->fixture();
+        $snapshot = $revision->snapshot;
+        $snapshot['configuration']['settings']['mapping']['networks']['T-fixture']['meter_points'] = [['source_section' => 'supply']];
+        $revision->snapshot = $snapshot;
+        $this->expectException(ValidationException::class);
+        $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
+    }
 }

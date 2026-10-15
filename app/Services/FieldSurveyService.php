@@ -104,6 +104,13 @@ class FieldSurveyService
                     'client_uuid' => $uuid, 'kind' => $kind, 'path' => $path,
                     'mime_type' => $file->getMimeType(), 'byte_length' => $file->getSize(), 'sha256' => $hash,
                 ]);
+                if (config('drive_storage.enabled') && $attachment->mime_type === 'application/pdf') {
+                    $archive = app(\App\Services\DriveStorage\FileStorage::class)->register('local', $path, $file->getClientOriginalName(), $attachment->mime_type, [
+                        'project_id' => $survey->feeder->project_id, 'feeder_id' => $survey->feeder_id,
+                        'field_survey_id' => $survey->id, 'transformer_id' => $survey->transformer_id, 'transformer_code' => $survey->transformer_code,
+                    ]);
+                    $attachment->update(['drive_stored_file_id' => $archive->id]);
+                }
                 $this->audit->record($actor, 'field_survey.attachment_added', $attachment, new: $attachment->toArray());
 
                 return [$attachment, true];

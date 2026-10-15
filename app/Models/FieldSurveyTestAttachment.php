@@ -9,6 +9,11 @@ class FieldSurveyTestAttachment extends Model
 {
     protected $guarded = ['id'];
 
+    public function driveStoredFile(): BelongsTo
+    {
+        return $this->belongsTo(DriveStoredFile::class);
+    }
+
     public function survey(): BelongsTo
     {
         return $this->belongsTo(FieldSurveyTest::class, 'field_survey_test_id');

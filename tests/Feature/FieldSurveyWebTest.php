@@ -171,6 +171,8 @@ class FieldSurveyWebTest extends TestCase
 
     public function test_attachments_are_private_idempotent_and_separate_from_android(): void
     {
+        config(['drive_storage.enabled' => true]);
+        \Illuminate\Support\Facades\Queue::fake();
         $data = $this->payload();
         $this->actingAs($this->admin)->postJson(route('field-survey-test.sync'), $data)->assertOk();
         $uuid = (string) Str::uuid();
@@ -178,6 +180,7 @@ class FieldSurveyWebTest extends TestCase
         $this->post(route('field-survey-test.attach', $data['client_uuid']), ['client_uuid' => $uuid, 'kind' => 'sketch', 'file' => $upload()], ['Accept' => 'application/json'])->assertOk();
         $this->post(route('field-survey-test.attach', $data['client_uuid']), ['client_uuid' => $uuid, 'kind' => 'sketch', 'file' => $upload()], ['Accept' => 'application/json'])->assertOk();
         $this->assertDatabaseCount('field_survey_test_attachments', 1);
+        $this->assertDatabaseCount('drive_stored_files', 1);
         $this->assertDatabaseCount('field_survey_attachments', 0);
         $file = FieldSurveyTestAttachment::firstOrFail();
         Storage::disk('local')->assertExists($file->path);

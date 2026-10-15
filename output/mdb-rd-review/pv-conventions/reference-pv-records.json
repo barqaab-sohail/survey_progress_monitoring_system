@@ -1,0 +1,298 @@
+{
+  "file_counts": [
+    {
+      "file": "Choper HattaT-3030216724.mdb",
+      "pv_generator_records": 0
+    },
+    {
+      "file": "Choper HattaT-3030216727.mdb",
+      "pv_generator_records": 0
+    },
+    {
+      "file": "Jodh PurT-4101220409.mdb",
+      "pv_generator_records": 0
+    },
+    {
+      "file": "Jodh PurT-4151220461.mdb",
+      "pv_generator_records": 1
+    },
+    {
+      "file": "Jodh PurT-4171220510.mdb",
+      "pv_generator_records": 1
+    },
+    {
+      "file": "Jodh PurT-4171220531.mdb",
+      "pv_generator_records": 2
+    },
+    {
+      "file": "Kot Gohar MT-3150216178.mdb",
+      "pv_generator_records": 0
+    },
+    {
+      "file": "Noor PurT-4070621060.mdb",
+      "pv_generator_records": 0
+    },
+    {
+      "file": "Noor PurT-4221215879.mdb",
+      "pv_generator_records": 0
+    }
+  ],
+  "records": [
+    {
+      "file": "Jodh PurT-4151220461.mdb",
+      "source_sha256": "69bb7b54dc4cdceea067a582b949a37e98b00fc19ddc4ca4add6d86274ae9709",
+      "section_id": "1059082230825566",
+      "section_phases": "RYBN",
+      "generator": {
+        "SectionId": "1059082230825566",
+        "DGenDesc": "PVGEN-1059082230825566",
+        "DGenType": null,
+        "DGenCustClass": null,
+        "DGenLocation": null,
+        "DGenTilt": null,
+        "DGenCapFactor": null,
+        "DGenOutputPct": 100,
+        "DGenVoltSet": 120,
+        "DGenStatus": null
+      },
+      "yearly_generator": {
+        "SectionId": "1059082230825566",
+        "YearNumber": 0,
+        "Phase1Kw": 2.986666666666667,
+        "Phase2Kw": 2.986666666666667,
+        "Phase3Kw": 2.986666666666667,
+        "Phase1Kvar": 0,
+        "Phase2Kvar": 0,
+        "Phase3Kvar": 0,
+        "CapacityFactor": 1
+      },
+      "linked_load_records": [
+        {
+          "SectionId": "1059082230825566",
+          "IsSpotLoad": 0,
+          "Phase1Customers": 0.6666666666666666,
+          "Phase2Customers": 0.6666666666666666,
+          "Phase3Customers": 0.6666666666666666,
+          "Phase1Kw": 0,
+          "Phase2Kw": 0,
+          "Phase3Kw": 0,
+          "Phase1Kvar": 0,
+          "Phase2Kvar": 0,
+          "Phase3Kvar": 0,
+          "Phase1Kva": 3.6666666666666665,
+          "Phase2Kva": 3.6666666666666665,
+          "Phase3Kva": 3.6666666666666665,
+          "Phase1Kwh": null,
+          "Phase2Kwh": null,
+          "Phase3Kwh": null,
+          "LocationToModelSpotLoads": "C",
+          "CapacityFactor": 1,
+          "Description": null
+        }
+      ],
+      "generation_kw_total": 8.96,
+      "generation_kvar_total": 0,
+      "equal_three_phase_generation": true,
+      "linked_load_kw_total": 0,
+      "linked_load_kva_total": 11.0,
+      "inferred_pv_power_factor_from_recorded_p_q": 1.0,
+      "interpretation_limits": [
+        "Original installed PV capacity is not separately labelled in these records",
+        "No consumer reference or original section/service-load wording on these load records",
+        "Recorded balanced generation is a model convention, not proof of measured inverter connection phases"
+      ]
+    },
+    {
+      "file": "Jodh PurT-4171220510.mdb",
+      "source_sha256": "0c75fae87e14b814d67f13e56e8fd467d6eca854cebe2b94b49502ed6e7f07e4",
+      "section_id": "1059082230825622",
+      "section_phases": "RYBN",
+      "generator": {
+        "SectionId": "1059082230825622",
+        "DGenDesc": "PVGEN-1059082230825622",
+        "DGenType": null,
+        "DGenCustClass": null,
+        "DGenLocation": null,
+        "DGenTilt": null,
+        "DGenCapFactor": null,
+        "DGenOutputPct": 100,
+        "DGenVoltSet": 120,
+        "DGenStatus": null
+      },
+      "yearly_generator": {
+        "SectionId": "1059082230825622",
+        "YearNumber": 0,
+        "Phase1Kw": 1.8833333333333335,
+        "Phase2Kw": 1.8833333333333335,
+        "Phase3Kw": 1.8833333333333335,
+        "Phase1Kvar": 0,
+        "Phase2Kvar": 0,
+        "Phase3Kvar": 0,
+        "CapacityFactor": 1
+      },
+      "linked_load_records": [
+        {
+          "SectionId": "1059082230825622",
+          "IsSpotLoad": 0,
+          "Phase1Customers": 7.666666666666667,
+          "Phase2Customers": 7.666666666666667,
+          "Phase3Customers": 7.666666666666667,
+          "Phase1Kw": 0,
+          "Phase2Kw": 0,
+          "Phase3Kw": 0,
+          "Phase1Kvar": 0,
+          "Phase2Kvar": 0,
+          "Phase3Kvar": 0,
+          "Phase1Kva": 23.333333333333332,
+          "Phase2Kva": 23.333333333333332,
+          "Phase3Kva": 23.333333333333332,
+          "Phase1Kwh": null,
+          "Phase2Kwh": null,
+          "Phase3Kwh": null,
+          "LocationToModelSpotLoads": "C",
+          "CapacityFactor": 1,
+          "Description": null
+        }
+      ],
+      "generation_kw_total": 5.65,
+      "generation_kvar_total": 0,
+      "equal_three_phase_generation": true,
+      "linked_load_kw_total": 0,
+      "linked_load_kva_total": 70.0,
+      "inferred_pv_power_factor_from_recorded_p_q": 1.0,
+      "interpretation_limits": [
+        "Original installed PV capacity is not separately labelled in these records",
+        "No consumer reference or original section/service-load wording on these load records",
+        "Recorded balanced generation is a model convention, not proof of measured inverter connection phases"
+      ]
+    },
+    {
+      "file": "Jodh PurT-4171220531.mdb",
+      "source_sha256": "03b25128fc33bb59040906166322693710df664c93b21cc3dd9f51713e2c0379",
+      "section_id": "1059082230825609",
+      "section_phases": "RYBN",
+      "generator": {
+        "SectionId": "1059082230825609",
+        "DGenDesc": "PVGEN-1059082230825609",
+        "DGenType": null,
+        "DGenCustClass": null,
+        "DGenLocation": null,
+        "DGenTilt": null,
+        "DGenCapFactor": null,
+        "DGenOutputPct": 100,
+        "DGenVoltSet": 120,
+        "DGenStatus": null
+      },
+      "yearly_generator": {
+        "SectionId": "1059082230825609",
+        "YearNumber": 0,
+        "Phase1Kw": 2.34,
+        "Phase2Kw": 2.34,
+        "Phase3Kw": 2.34,
+        "Phase1Kvar": 0,
+        "Phase2Kvar": 0,
+        "Phase3Kvar": 0,
+        "CapacityFactor": 1
+      },
+      "linked_load_records": [
+        {
+          "SectionId": "1059082230825609",
+          "IsSpotLoad": 0,
+          "Phase1Customers": 0.6666666666666666,
+          "Phase2Customers": 0.6666666666666666,
+          "Phase3Customers": 0.6666666666666666,
+          "Phase1Kw": 0,
+          "Phase2Kw": 0,
+          "Phase3Kw": 0,
+          "Phase1Kvar": 0,
+          "Phase2Kvar": 0,
+          "Phase3Kvar": 0,
+          "Phase1Kva": 2.3333333333333335,
+          "Phase2Kva": 2.3333333333333335,
+          "Phase3Kva": 2.3333333333333335,
+          "Phase1Kwh": null,
+          "Phase2Kwh": null,
+          "Phase3Kwh": null,
+          "LocationToModelSpotLoads": "C",
+          "CapacityFactor": 1,
+          "Description": null
+        }
+      ],
+      "generation_kw_total": 7.02,
+      "generation_kvar_total": 0,
+      "equal_three_phase_generation": true,
+      "linked_load_kw_total": 0,
+      "linked_load_kva_total": 7.0,
+      "inferred_pv_power_factor_from_recorded_p_q": 1.0,
+      "interpretation_limits": [
+        "Original installed PV capacity is not separately labelled in these records",
+        "No consumer reference or original section/service-load wording on these load records",
+        "Recorded balanced generation is a model convention, not proof of measured inverter connection phases"
+      ]
+    },
+    {
+      "file": "Jodh PurT-4171220531.mdb",
+      "source_sha256": "03b25128fc33bb59040906166322693710df664c93b21cc3dd9f51713e2c0379",
+      "section_id": "1059082230825611",
+      "section_phases": "RYBN",
+      "generator": {
+        "SectionId": "1059082230825611",
+        "DGenDesc": "PVGEN-1059082230825611",
+        "DGenType": null,
+        "DGenCustClass": null,
+        "DGenLocation": null,
+        "DGenTilt": null,
+        "DGenCapFactor": null,
+        "DGenOutputPct": 100,
+        "DGenVoltSet": 120,
+        "DGenStatus": null
+      },
+      "yearly_generator": {
+        "SectionId": "1059082230825611",
+        "YearNumber": 0,
+        "Phase1Kw": 2.513333333333333,
+        "Phase2Kw": 2.513333333333333,
+        "Phase3Kw": 2.513333333333333,
+        "Phase1Kvar": 0,
+        "Phase2Kvar": 0,
+        "Phase3Kvar": 0,
+        "CapacityFactor": 1
+      },
+      "linked_load_records": [
+        {
+          "SectionId": "1059082230825611",
+          "IsSpotLoad": 0,
+          "Phase1Customers": 6,
+          "Phase2Customers": 6,
+          "Phase3Customers": 6,
+          "Phase1Kw": 0,
+          "Phase2Kw": 0,
+          "Phase3Kw": 0,
+          "Phase1Kvar": 0,
+          "Phase2Kvar": 0,
+          "Phase3Kvar": 0,
+          "Phase1Kva": 18.6,
+          "Phase2Kva": 18.6,
+          "Phase3Kva": 18.6,
+          "Phase1Kwh": null,
+          "Phase2Kwh": null,
+          "Phase3Kwh": null,
+          "LocationToModelSpotLoads": "C",
+          "CapacityFactor": 1,
+          "Description": null
+        }
+      ],
+      "generation_kw_total": 7.539999999999999,
+      "generation_kvar_total": 0,
+      "equal_three_phase_generation": true,
+      "linked_load_kw_total": 0,
+      "linked_load_kva_total": 55.800000000000004,
+      "inferred_pv_power_factor_from_recorded_p_q": 1.0,
+      "interpretation_limits": [
+        "Original installed PV capacity is not separately labelled in these records",
+        "No consumer reference or original section/service-load wording on these load records",
+        "Recorded balanced generation is a model convention, not proof of measured inverter connection phases"
+      ]
+    }
+  ]
+}

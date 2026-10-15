@@ -1,0 +1,106 @@
+{
+  "transformer_matches": [
+    {
+      "transformer_code": "T-11131222104",
+      "pdf_pages": [
+        1,
+        2
+      ],
+      "pdf_capacity_kva": 100,
+      "kmz_capacity_kva": 100,
+      "capacity_matches": true,
+      "historical_identity": "11131222104",
+      "latitude": 34.16389095263403,
+      "longitude": 73.25744163787968,
+      "gpx_same_suffix_present": true,
+      "same_suffix_distance_m": 318.2,
+      "nearest_gpx": "001",
+      "nearest_gpx_distance_m": 2.92,
+      "source": "exact full equipment number in client KMZ; PDF header visually read"
+    },
+    {
+      "transformer_code": "T-11230617182",
+      "pdf_pages": [
+        3,
+        4,
+        5,
+        6
+      ],
+      "pdf_capacity_kva": 200,
+      "kmz_capacity_kva": 200,
+      "capacity_matches": true,
+      "historical_identity": "11230617182",
+      "latitude": 34.16531948231746,
+      "longitude": 73.25707599457151,
+      "gpx_same_suffix_present": false,
+      "same_suffix_distance_m": null,
+      "nearest_gpx": "018",
+      "nearest_gpx_distance_m": 0.83,
+      "source": "exact full equipment number in client KMZ; PDF header visually read"
+    },
+    {
+      "transformer_code": "T-11131222107",
+      "pdf_pages": [
+        7,
+        8,
+        9,
+        10
+      ],
+      "pdf_capacity_kva": 200,
+      "kmz_capacity_kva": 200,
+      "capacity_matches": true,
+      "historical_identity": "11131222107",
+      "latitude": 34.16333959889943,
+      "longitude": 73.25798450022158,
+      "gpx_same_suffix_present": true,
+      "same_suffix_distance_m": 404.27,
+      "nearest_gpx": "056",
+      "nearest_gpx_distance_m": 1.12,
+      "source": "exact full equipment number in client KMZ; PDF header visually read"
+    },
+    {
+      "transformer_code": "T-11030717217",
+      "pdf_pages": [
+        11
+      ],
+      "pdf_capacity_kva": 100,
+      "kmz_capacity_kva": 100,
+      "capacity_matches": true,
+      "historical_identity": "11030717217",
+      "latitude": 34.16536959255355,
+      "longitude": 73.25997133476149,
+      "gpx_same_suffix_present": false,
+      "same_suffix_distance_m": null,
+      "nearest_gpx": "091",
+      "nearest_gpx_distance_m": 3.92,
+      "source": "exact full equipment number in client KMZ; PDF header visually read"
+    },
+    {
+      "transformer_code": "T-11030717223",
+      "pdf_pages": [
+        12,
+        13
+      ],
+      "pdf_capacity_kva": 200,
+      "kmz_capacity_kva": 200,
+      "capacity_matches": true,
+      "historical_identity": "11030717223",
+      "latitude": 34.16699493472878,
+      "longitude": 73.25822398517556,
+      "gpx_same_suffix_present": false,
+      "same_suffix_distance_m": null,
+      "nearest_gpx": "101",
+      "nearest_gpx_distance_m": 3.81,
+      "source": "exact full equipment number in client KMZ; PDF header visually read"
+    }
+  ],
+  "sample_counts": {
+    "SAI_Control": 1,
+    "Node": 12,
+    "InstFeeders": 1,
+    "InstSection": 11,
+    "InstPrimaryTransformers": 1,
+    "Loads": 10
+  },
+  "sample_LT_length_m": 398.1337054899772
+}

@@ -61,6 +61,106 @@ class MdbWorkflowTest extends TestCase
         $this->actingAs($this->admin);
     }
 
+    public function test_automatic_drive_storage_keeps_sources_processable_and_private_after_local_cleanup(): void
+    {
+        config(['drive_storage.enabled' => true]);
+        \App\Models\DriveStorageConnection::create(['id' => 1, 'token' => ['access_token' => 'test'], 'account_id' => 'storage-account',
+            'account_email' => 'storage@example.test', 'connected_by' => $this->admin->id]);
+        $this->post(route('mdb-workflow.store'), [
+            'project_id' => $this->batch->project_id, 'feeder_id' => $this->batch->feeder_id,
+            'survey_team_id' => $this->team->id, 'survey_date' => '2026-10-08',
+            'survey_pdf' => UploadedFile::fake()->createWithContent('original.pdf', '%PDF-1.4 fixture'),
+            'gps_gpx' => UploadedFile::fake()->createWithContent('original.gpx', $this->gpx()),
+        ])->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertDatabaseCount('drive_stored_files', 2);
+        $gpx = SourceFile::where('kind', 'gpx')->firstOrFail();
+        $this->assertSame($gpx->batch_id, $gpx->driveStoredFile->context['batch_id']);
+        $this->mock(\App\Services\DriveStorage\DriveClient::class, function ($mock) {
+            $mock->shouldReceive('generateId')->once()->andReturn('archived-file-12345');
+            $mock->shouldReceive('upload')->once();
+            $mock->shouldReceive('download')->once()->andReturnUsing(function ($file, $path) { file_put_contents($path, $this->gpx()); });
+        });
+        app(\App\Services\DriveStorage\FileStorage::class)->transfer($gpx->drive_stored_file_id);
+        Storage::disk('local')->assertMissing($gpx->path);
+        (new ProcessSourceFile($gpx->id))->handle(app(GpxParser::class), app(SnapshotService::class));
+        $this->assertSame('ready', $gpx->fresh()->status);
+        $this->assertSame(2, $gpx->waypoints()->count());
+        $this->assertSame([], Storage::disk('local')->allFiles('drive-storage/work'));
+        $this->actingAs(User::factory()->create(['role' => UserRole::ManagementViewer]))
+            ->get(route('mdb-workflow.source', [$gpx->batch, $gpx]))->assertForbidden();
+    }
+
+    private function fakeDrive(): void
+    {
+        config(['services.google_drive.enabled' => true]);
+        $this->admin->google_drive_token = ['access_token' => 'test-token', 'expires_at' => now()->addHour()->timestamp];
+        $this->admin->save();
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        \Illuminate\Support\Facades\Http::fake(function ($request) {
+            $pdf = str_contains($request->url(), 'pdf-file-12345');
+            $body = $pdf ? '%PDF-1.4 test survey' : $this->gpx();
+            return \Illuminate\Support\Facades\Http::response(str_contains($request->url(), 'alt=media') ? $body : [
+                'name' => $pdf ? 'survey.pdf' : 'survey.gpx', 'size' => strlen($body),
+                'mimeType' => $pdf ? 'application/pdf' : 'application/gpx+xml',
+                'version' => '7', 'capabilities' => ['canDownload' => true],
+            ]);
+        });
+    }
+
+    public function test_create_defaults_to_hazeco_and_leaves_survey_date_for_pdf_entry(): void
+    {
+        $project = Project::create(['code' => 'HAZECO-TDL', 'name' => 'HAZECO', 'status' => 'active']);
+        $html = $this->get(route('mdb-workflow.create'))->assertOk()->assertSee('data-create-pdf', false)->getContent();
+        $this->assertMatchesRegularExpression('/value="'.$project->id.'"\s+selected/', $html);
+        $this->assertStringContainsString('name="survey_date" value=""', $html);
+    }
+
+    public function test_drive_pdf_can_be_previewed_privately_without_creating_a_batch(): void
+    {
+        $this->fakeDrive();
+        $this->postJson(route('mdb-workflow.drive-preview'), ['drive_file_id' => 'pdf-file-12345'])
+            ->assertOk()->assertHeader('Content-Type', 'application/pdf')->assertSee('%PDF-1.4 test survey');
+        $this->assertDatabaseCount('mdb_workflow_batches', 1);
+        $this->assertDatabaseCount('mdb_workflow_sources', 0);
+    }
+
+    public function test_batch_can_import_both_drive_sources_and_preserve_provenance(): void
+    {
+        $this->fakeDrive();
+        $this->post(route('mdb-workflow.store'), [
+            'project_id' => $this->batch->project_id, 'feeder_id' => $this->batch->feeder_id,
+            'survey_team_id' => $this->team->id, 'survey_date' => '2026-10-08',
+            'survey_pdf_drive_id' => 'pdf-file-12345', 'gps_gpx_drive_id' => 'gpx-file-12345',
+        ])->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertDatabaseCount('mdb_workflow_sources', 2);
+        $pdf = SourceFile::where('kind', 'pdf')->firstOrFail();
+        $this->assertSame('pdf-file-12345', $pdf->metadata['drive_file_id']);
+        $this->assertSame('7', $pdf->metadata['drive_version']);
+        Storage::disk('local')->assertExists($pdf->path);
+    }
+
+    public function test_wrong_drive_type_rolls_back_batch_and_removes_other_source(): void
+    {
+        $this->fakeDrive();
+        $this->post(route('mdb-workflow.store'), [
+            'project_id' => $this->batch->project_id, 'feeder_id' => $this->batch->feeder_id,
+            'survey_team_id' => $this->team->id, 'survey_date' => '2026-10-08',
+            'survey_pdf' => UploadedFile::fake()->createWithContent('survey.pdf', '%PDF-1.4 fixture'),
+            'gps_gpx_drive_id' => 'pdf-file-12345',
+        ])->assertSessionHasErrors('gps_gpx');
+        $this->assertDatabaseCount('mdb_workflow_batches', 1);
+        $this->assertDatabaseCount('mdb_workflow_sources', 0);
+        $this->assertSame([], Storage::disk('local')->allFiles());
+    }
+
+    public function test_drive_preview_requires_connection_and_upload_permission(): void
+    {
+        config(['services.google_drive.enabled' => true]);
+        $this->postJson(route('mdb-workflow.drive-preview'), ['drive_file_id' => 'pdf-file-12345'])->assertUnprocessable();
+        $viewer = User::factory()->create(['role' => UserRole::ManagementViewer]);
+        $this->actingAs($viewer)->postJson(route('mdb-workflow.drive-preview'), ['drive_file_id' => 'pdf-file-12345'])->assertForbidden();
+    }
+
     private function gpx(): string
     {
         return '<g:gpx xmlns:g="http://www.topografix.com/GPX/1/1" version="1.1"><g:wpt lat="30.464656" lon="71.917033"><g:name>0001</g:name><g:ele>123.4</g:ele><g:time>2025-08-23T08:15:32Z</g:time><g:desc>Transformer</g:desc></g:wpt><g:wpt lat="30.464641" lon="71.917066"><g:name>SSS</g:name></g:wpt></g:gpx>';

@@ -30,7 +30,8 @@ function ValuesEqual($expected, $actual) {
 }
 try {
     $payload = Get-Content -LiteralPath $InputPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($payload.payload_version -ne 1 -or $payload.mapping_version -ne 'synergee-reviewed-v1') { throw 'Unsupported export payload or mapping version.' }
+    if ($payload.payload_version -ne 1 -or $payload.mapping_version -notin @('synergee-reviewed-v1','synergee-reviewed-v2')) { throw 'Unsupported export payload or mapping version.' }
+    if ($payload.mapping_version -eq 'synergee-reviewed-v2') { $allowed += @('InstMeterPoints','InstDGens','InstMymDGens') }
     if ($payload.idempotency_key -notmatch '^[a-f0-9]{64}$') { throw 'Invalid idempotency key.' }
     if ($payload.revision.sha256 -notmatch '^[a-f0-9]{64}$') { throw 'Invalid revision identity.' }
     $templateHash = (Get-FileHash -LiteralPath $TemplatePath -Algorithm SHA256).Hash.ToLower()
@@ -142,14 +143,22 @@ try {
             $used[$match]=$true
         }
     }
-    foreach($query in @(
+    $referenceQueries = @(
         'SELECT COUNT(*) FROM InstSection AS S LEFT JOIN Node AS N ON S.FromNodeId=N.NodeId WHERE N.NodeId IS NULL',
         'SELECT COUNT(*) FROM InstSection AS S LEFT JOIN Node AS N ON S.ToNodeId=N.NodeId WHERE N.NodeId IS NULL',
         'SELECT COUNT(*) FROM InstFeeders AS F LEFT JOIN Node AS N ON F.FeederId=N.NodeId WHERE N.NodeId IS NULL',
         'SELECT COUNT(*) FROM InstSection AS S LEFT JOIN InstFeeders AS F ON S.FeederId=F.FeederId WHERE F.FeederId IS NULL',
         'SELECT COUNT(*) FROM InstPrimaryTransformers AS T LEFT JOIN InstSection AS S ON T.SectionId=S.SectionId WHERE S.SectionId IS NULL',
         'SELECT COUNT(*) FROM Loads AS L LEFT JOIN InstSection AS S ON L.SectionId=S.SectionId WHERE S.SectionId IS NULL'
-    )) { $rs=$db.OpenRecordset($query,4);if([int]$rs.Fields.Item(0).Value -ne 0){throw 'MDB reference validation failed.'};$rs.Close() }
+    )
+    if ($payload.mapping_version -eq 'synergee-reviewed-v2') {
+        $referenceQueries += @(
+            'SELECT COUNT(*) FROM InstMeterPoints AS M LEFT JOIN InstSection AS S ON M.SectionId=S.SectionId WHERE S.SectionId IS NULL',
+            'SELECT COUNT(*) FROM InstDGens AS G LEFT JOIN InstSection AS S ON G.SectionId=S.SectionId WHERE S.SectionId IS NULL',
+            'SELECT COUNT(*) FROM InstMymDGens AS Y LEFT JOIN InstDGens AS G ON Y.SectionId=G.SectionId WHERE G.SectionId IS NULL'
+        )
+    }
+    foreach($query in $referenceQueries) { $rs=$db.OpenRecordset($query,4);if([int]$rs.Fields.Item(0).Value -ne 0){throw 'MDB reference validation failed.'};$rs.Close() }
     $db.Close();$db=$null
     $result=[ordered]@{output_sha256=(Get-FileHash -LiteralPath $outputFull -Algorithm SHA256).Hash.ToLower();payload_sha256=(Get-FileHash -LiteralPath $InputPath -Algorithm SHA256).Hash.ToLower();readback=[ordered]@{readable=$true;schema_verified=$true;references_verified=$true;mapped_values_verified=$true;counts=$counts;template_sha256=$templateHash;revision_sha256=$payload.revision.sha256};log='Access DAO reopened MDB; schema, relationships, exact mapped values, counts and model references verified. SynerGEE engineering validation remains pending.'}
     $result | ConvertTo-Json -Depth 10 -Compress

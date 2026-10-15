@@ -1,5 +1,9 @@
 # Local MDB module activation
 
+## Manual PDF red-line marks — 13 October 2026
+
+The additive `2026_10_13_000000_create_mdb_pdf_lines.php` migration was applied to local MySQL. The entry viewer now uses a compact Draw line/Undo line bar in place of rectangular page setup. Marks save by PDF/page, stay aligned through zoom/rotation, and are separate from survey records and original PDF bytes. Existing row links remain accessible in a collapsed menu. Verification passed 138 MDB PHP tests (1,579 assertions), 14 entry JavaScript tests, and native browser checks for click/drag drawing, page isolation, undo and rotation. The desktop bar measured 37 px in the rendered fixture.
+
 Activated on 9 October 2026 in `E:\xampp\htdocs\survey_progress_monitoring_system` after the user confirmed MySQL was available. The application environment was verified as `local`, using MySQL. Production was not deployed or modified.
 
 ## Database and access

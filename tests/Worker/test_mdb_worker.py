@@ -74,6 +74,45 @@ class WorkerProtocolTest(unittest.TestCase):
         self.payload["revision"]["sha256"] = "d" * 64
         self.assertEqual(422, self.post()[0])
 
+    def add_v2_devices(self):
+        self.payload['mapping_version'] = 'synergee-reviewed-v2'
+        section = self.payload['tables']['InstSection'][0]['SectionId']
+        self.payload['tables'].update({
+            'InstMeterPoints': [{'SectionId': section}],
+            'InstDGens': [{'SectionId': section, 'DGenOutputPct': 100, 'DGenVoltSet': 120}],
+            'InstMymDGens': [dict(SectionId=section, YearNumber=year, Phase1Kw=1.25 + year,
+                                 Phase2Kw=2.5, Phase3Kw=3.75, Phase1Kvar=-0.5,
+                                 Phase2Kvar=0, Phase3Kvar=0, CapacityFactor=1) for year in (0, 1)],
+        })
+
+    @unittest.skipUnless(Path(worker.POWERSHELL).is_file(), 'Windows Access worker unavailable')
+    def test_v2_devices_and_multiple_years_are_written_and_read_back(self):
+        self.add_v2_devices()
+        status, result = self.post()
+        self.assertEqual(200, status, result)
+        self.assertTrue(result['readback']['mapped_values_verified'])
+        self.assertTrue(result['readback']['references_verified'])
+        self.assertEqual(1, result['readback']['counts']['InstMeterPoints'])
+        self.assertEqual(1, result['readback']['counts']['InstDGens'])
+        self.assertEqual(2, result['readback']['counts']['InstMymDGens'])
+
+    @unittest.skipUnless(Path(worker.POWERSHELL).is_file(), 'Windows Access worker unavailable')
+    def test_v2_orphan_year_is_rejected_even_without_a_database_relationship(self):
+        self.add_v2_devices()
+        self.payload['tables']['InstDGens'] = []
+        status, result = self.post()
+        self.assertEqual(503, status, result)
+        self.assertIn('reference validation failed', result['error'])
+        self.assertFalse((worker.ROOT / self.payload['idempotency_key'] / 'approved.mdb').exists())
+
+    def test_version_table_contract_cannot_silently_drop_devices(self):
+        self.add_v2_devices()
+        self.payload['mapping_version'] = 'synergee-reviewed-v1'
+        self.assertEqual(422, self.post()[0])
+        self.payload['mapping_version'] = 'synergee-reviewed-v2'
+        del self.payload['tables']['InstMymDGens']
+        self.assertEqual(422, self.post()[0])
+
 
 if __name__ == "__main__":
     unittest.main()

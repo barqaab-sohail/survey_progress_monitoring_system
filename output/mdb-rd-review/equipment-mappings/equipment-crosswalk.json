@@ -1,0 +1,402 @@
+{
+  "status": "EXTRACTED_CANDIDATES_NOT_APPLIED_TO_APPLICATION",
+  "sources": [
+    "A081026.pdf",
+    "Waypoints_2026-10-08.gpx",
+    "nine reference MDB inspections"
+  ],
+  "mapping_scope": "equipment vocabulary plus selected example bindings; not a complete transcription of every survey row",
+  "gpx_role": "Coordinates, elevation, timestamps, labels/comments/symbols; no electrical equipment definitions",
+  "crosswalk": [
+    {
+      "kind": "conductor",
+      "pdf_code_or_value": "A",
+      "source_meaning": "Ant",
+      "mdb_target_table": "InstSection",
+      "mdb_fields": [
+        "PhaseConductorId",
+        "PhaseConductor2Id",
+        "PhaseConductor3Id",
+        "NeutralConductorId"
+      ],
+      "target_reference": "ANT",
+      "reference_exact_conductor_ids": {
+        "PhaseConductorId": [
+          "ANT"
+        ],
+        "PhaseConductor2Id": [
+          " ANT"
+        ],
+        "PhaseConductor3Id": [
+          "ANT"
+        ],
+        "NeutralConductorId": [
+          "ANT"
+        ]
+      },
+      "status": "reference_backed_candidate",
+      "evidence": "PDF printed legend; handwritten A e.g. pages 1 and 11; reference MDB conductor IDs",
+      "notes": "Choose the exact library ID; preserve phase-Y leading spaces when matching the reference implementation."
+    },
+    {
+      "kind": "conductor",
+      "pdf_code_or_value": "W",
+      "source_meaning": "Wasp",
+      "mdb_target_table": "InstSection",
+      "mdb_fields": [
+        "PhaseConductorId",
+        "PhaseConductor2Id",
+        "PhaseConductor3Id",
+        "NeutralConductorId"
+      ],
+      "target_reference": "WASP",
+      "reference_exact_conductor_ids": {
+        "PhaseConductorId": [
+          "WASP"
+        ],
+        "PhaseConductor2Id": [
+          " WASP"
+        ],
+        "PhaseConductor3Id": [
+          "WASP"
+        ],
+        "NeutralConductorId": [
+          "WASP"
+        ]
+      },
+      "status": "reference_backed_candidate",
+      "evidence": "PDF printed legend; handwritten W e.g. pages 3, 7 and 12; reference MDB conductor IDs",
+      "notes": ""
+    },
+    {
+      "kind": "conductor",
+      "pdf_code_or_value": "GN",
+      "source_meaning": "Gnat",
+      "mdb_target_table": "InstSection",
+      "mdb_fields": [
+        "PhaseConductorId",
+        "PhaseConductor2Id",
+        "PhaseConductor3Id",
+        "NeutralConductorId"
+      ],
+      "target_reference": "GNAT",
+      "reference_exact_conductor_ids": {
+        "PhaseConductorId": [],
+        "PhaseConductor2Id": [],
+        "PhaseConductor3Id": [
+          "GNAT"
+        ],
+        "NeutralConductorId": [
+          "GNAT"
+        ]
+      },
+      "status": "reference_backed_candidate",
+      "evidence": "PDF printed legend; handwritten GN e.g. pages 7 and 12; GNAT exists in reference MDB B/neutral fields",
+      "notes": "Exact GNAT IDs were not observed in the reference R or Y column. Confirm use in the target library rather than manufacture a spaced ID."
+    },
+    {
+      "kind": "conductor",
+      "pdf_code_or_value": "PVC 7/0.052",
+      "source_meaning": "PVC conductor designation",
+      "mdb_target_table": "InstSection",
+      "mdb_fields": [
+        "PhaseConductorId",
+        "PhaseConductor2Id",
+        "PhaseConductor3Id",
+        "NeutralConductorId"
+      ],
+      "target_reference": null,
+      "reference_exact_conductor_ids": {},
+      "status": "unmatched_in_supplied_mdbs",
+      "evidence": "PDF printed legend; no PVC conductor ID in the nine reference MDBs",
+      "notes": "Legend option only; this record does not assert an installed occurrence. Match exact designation to a target-library entry."
+    },
+    {
+      "kind": "conductor",
+      "pdf_code_or_value": "PVC 19/0.052",
+      "source_meaning": "PVC conductor designation",
+      "mdb_target_table": "InstSection",
+      "mdb_fields": [
+        "PhaseConductorId",
+        "PhaseConductor2Id",
+        "PhaseConductor3Id",
+        "NeutralConductorId"
+      ],
+      "target_reference": null,
+      "reference_exact_conductor_ids": {},
+      "status": "unmatched_in_supplied_mdbs",
+      "evidence": "PDF printed legend; no PVC conductor ID in the nine reference MDBs",
+      "notes": "Legend option only; this record does not assert an installed occurrence. Match exact designation to a target-library entry."
+    },
+    {
+      "kind": "conductor",
+      "pdf_code_or_value": "PVC 19/0.083",
+      "source_meaning": "PVC conductor designation",
+      "mdb_target_table": "InstSection",
+      "mdb_fields": [
+        "PhaseConductorId",
+        "PhaseConductor2Id",
+        "PhaseConductor3Id",
+        "NeutralConductorId"
+      ],
+      "target_reference": null,
+      "reference_exact_conductor_ids": {},
+      "status": "unmatched_in_supplied_mdbs",
+      "evidence": "PDF printed legend; no PVC conductor ID in the nine reference MDBs",
+      "notes": "Legend option only; this record does not assert an installed occurrence. Match exact designation to a target-library entry."
+    },
+    {
+      "kind": "conductor",
+      "pdf_code_or_value": "PVC 7/0.083",
+      "source_meaning": "PVC conductor designation",
+      "mdb_target_table": "InstSection",
+      "mdb_fields": [
+        "PhaseConductorId",
+        "PhaseConductor2Id",
+        "PhaseConductor3Id",
+        "NeutralConductorId"
+      ],
+      "target_reference": null,
+      "reference_exact_conductor_ids": {},
+      "status": "unmatched_in_supplied_mdbs",
+      "evidence": "PDF printed legend; no PVC conductor ID in the nine reference MDBs",
+      "notes": "Legend option only; this record does not assert an installed occurrence. Match exact designation to a target-library entry."
+    },
+    {
+      "kind": "conductor",
+      "pdf_code_or_value": "PVC 37/0.083?",
+      "source_meaning": "Handwritten PVC designation",
+      "mdb_target_table": "InstSection",
+      "mdb_fields": [
+        "PhaseConductorId",
+        "PhaseConductor2Id",
+        "PhaseConductor3Id",
+        "NeutralConductorId"
+      ],
+      "target_reference": null,
+      "reference_exact_conductor_ids": {},
+      "status": "unmatched_and_transcription_review",
+      "evidence": "PDF pages 7 (063->064) and 8 (065->066); handwritten reading appears 37/0.083",
+      "notes": "Preserve the uncertain reading. The legend does not resolve this automatically; do not substitute ABC 50 MM2 or GNAT."
+    },
+    {
+      "kind": "conductor",
+      "pdf_code_or_value": "ABC 50 mm2",
+      "source_meaning": "ABC cable option in legend",
+      "mdb_target_table": "InstSection",
+      "mdb_fields": [
+        "PhaseConductorId",
+        "PhaseConductor2Id",
+        "PhaseConductor3Id",
+        "NeutralConductorId"
+      ],
+      "target_reference": "ABC 50 MM2",
+      "reference_exact_conductor_ids": {
+        "PhaseConductorId": [
+          "ABC 50 MM2"
+        ],
+        "PhaseConductor2Id": [
+          " ABC 50 MM2"
+        ],
+        "PhaseConductor3Id": [
+          "ABC 50 MM2"
+        ],
+        "NeutralConductorId": [
+          "ABC 50 MM2"
+        ]
+      },
+      "status": "legend_reference_backed_candidate",
+      "evidence": "PDF printed legend; exact ABC 50 MM2 reference MDB ID",
+      "notes": "No installed ABC occurrence is asserted by this crosswalk."
+    },
+    {
+      "kind": "conductor",
+      "pdf_code_or_value": "ABC 95 mm2",
+      "source_meaning": "ABC cable option in legend",
+      "mdb_target_table": "InstSection",
+      "mdb_fields": [
+        "PhaseConductorId",
+        "PhaseConductor2Id",
+        "PhaseConductor3Id",
+        "NeutralConductorId"
+      ],
+      "target_reference": null,
+      "reference_exact_conductor_ids": {},
+      "status": "unmatched_in_supplied_mdbs",
+      "evidence": "PDF printed legend; reference MDBs contain ABC 50 MM2 but no ABC 95 entry",
+      "notes": ""
+    },
+    {
+      "kind": "conductor",
+      "pdf_code_or_value": "GSL?",
+      "source_meaning": "Unclear handwritten neutral conductor",
+      "mdb_target_table": "InstSection",
+      "mdb_fields": [
+        "PhaseConductorId",
+        "PhaseConductor2Id",
+        "PhaseConductor3Id",
+        "NeutralConductorId"
+      ],
+      "target_reference": null,
+      "reference_exact_conductor_ids": {},
+      "status": "unresolved_transcription",
+      "evidence": "PDF page 11 span 092->093; remark Half span Gnat",
+      "notes": "Do not treat GSL? as GN automatically. Resolve mixed-material span and required segmentation."
+    },
+    {
+      "kind": "conductor",
+      "pdf_code_or_value": "-",
+      "source_meaning": "Conductor absent in that phase position",
+      "mdb_target_table": "InstSection",
+      "mdb_fields": [
+        "PhaseConductorId",
+        "PhaseConductor2Id",
+        "PhaseConductor3Id",
+        "NeutralConductorId"
+      ],
+      "target_reference": null,
+      "reference_exact_conductor_ids": {},
+      "status": "absence_marker",
+      "evidence": "PDF pages 3, 8 and 11 have dashes for unused phases",
+      "notes": "An absence is not a material. Use NULL only for the confirmed disconnected phase; preserve active-phase unknowns."
+    },
+    {
+      "kind": "transformer",
+      "pdf_code_or_value": "100 kVA",
+      "source_meaning": "100 kVA surveyed transformer",
+      "mdb_target_table": "InstPrimaryTransformers",
+      "mdb_fields": [
+        "TransformerType"
+      ],
+      "target_reference": "100 KVA",
+      "reference_exact_conductor_ids": {},
+      "status": "reference_backed_candidate",
+      "evidence": "PDF transformer headers; same TransformerType text in reference MDBs",
+      "notes": "Capacity supplies a candidate type name, not make-specific impedance, connection, tap or loss specifications."
+    },
+    {
+      "kind": "transformer",
+      "pdf_code_or_value": "200 kVA",
+      "source_meaning": "200 kVA surveyed transformer",
+      "mdb_target_table": "InstPrimaryTransformers",
+      "mdb_fields": [
+        "TransformerType"
+      ],
+      "target_reference": "200 KVA",
+      "reference_exact_conductor_ids": {},
+      "status": "reference_backed_candidate",
+      "evidence": "PDF transformer headers; same TransformerType text in reference MDBs",
+      "notes": "Capacity supplies a candidate type name, not make-specific impedance, connection, tap or loss specifications."
+    },
+    {
+      "kind": "pole_class",
+      "pdf_code_or_value": "S",
+      "source_meaning": "Steel Structure",
+      "mdb_target_table": null,
+      "mdb_fields": [],
+      "target_reference": null,
+      "reference_exact_conductor_ids": {},
+      "status": "source_attribute_preserved",
+      "evidence": "PDF printed equipment/pole-class legend",
+      "notes": "Preserve source pole_class; no exact SynerGEE construction ID can be derived from this abbreviation alone."
+    },
+    {
+      "kind": "pole_class",
+      "pdf_code_or_value": "PCO",
+      "source_meaning": "PC Ordinary",
+      "mdb_target_table": null,
+      "mdb_fields": [],
+      "target_reference": null,
+      "reference_exact_conductor_ids": {},
+      "status": "source_attribute_preserved",
+      "evidence": "PDF printed equipment/pole-class legend",
+      "notes": "Preserve source pole_class; no exact SynerGEE construction ID can be derived from this abbreviation alone."
+    },
+    {
+      "kind": "pole_class",
+      "pdf_code_or_value": "PCS",
+      "source_meaning": "PC Spun",
+      "mdb_target_table": null,
+      "mdb_fields": [],
+      "target_reference": null,
+      "reference_exact_conductor_ids": {},
+      "status": "source_attribute_preserved",
+      "evidence": "PDF printed equipment/pole-class legend",
+      "notes": "Preserve source pole_class; no exact SynerGEE construction ID can be derived from this abbreviation alone."
+    },
+    {
+      "kind": "pole_class",
+      "pdf_code_or_value": "RS",
+      "source_meaning": "Rail Steel",
+      "mdb_target_table": null,
+      "mdb_fields": [],
+      "target_reference": null,
+      "reference_exact_conductor_ids": {},
+      "status": "source_attribute_preserved",
+      "evidence": "PDF printed equipment/pole-class legend",
+      "notes": "Preserve source pole_class; no exact SynerGEE construction ID can be derived from this abbreviation alone."
+    },
+    {
+      "kind": "pole_class",
+      "pdf_code_or_value": "TS",
+      "source_meaning": "Tubular Steel",
+      "mdb_target_table": null,
+      "mdb_fields": [],
+      "target_reference": null,
+      "reference_exact_conductor_ids": {},
+      "status": "source_attribute_preserved",
+      "evidence": "PDF printed equipment/pole-class legend",
+      "notes": "Preserve source pole_class; no exact SynerGEE construction ID can be derived from this abbreviation alone."
+    },
+    {
+      "kind": "pole_class",
+      "pdf_code_or_value": "WB",
+      "source_meaning": "Wall Bracket",
+      "mdb_target_table": null,
+      "mdb_fields": [],
+      "target_reference": null,
+      "reference_exact_conductor_ids": {},
+      "status": "source_attribute_preserved",
+      "evidence": "PDF printed equipment/pole-class legend",
+      "notes": "Preserve source pole_class; no exact SynerGEE construction ID can be derived from this abbreviation alone."
+    },
+    {
+      "kind": "equipment_type",
+      "pdf_code_or_value": "TR",
+      "source_meaning": "Raw handwritten equipment-type code",
+      "mdb_target_table": null,
+      "mdb_fields": [],
+      "target_reference": null,
+      "reference_exact_conductor_ids": {},
+      "status": "source_attribute_preserved",
+      "evidence": "PDF Type column; TR on transformer-root rows, SP on surveyed support rows",
+      "notes": "Preserve raw type. Do not confuse SP in the Type column with PC Spun/PCS in Pole Class."
+    },
+    {
+      "kind": "equipment_type",
+      "pdf_code_or_value": "SP",
+      "source_meaning": "Raw handwritten equipment-type code",
+      "mdb_target_table": null,
+      "mdb_fields": [],
+      "target_reference": null,
+      "reference_exact_conductor_ids": {},
+      "status": "source_attribute_preserved",
+      "evidence": "PDF Type column; TR on transformer-root rows, SP on surveyed support rows",
+      "notes": "Preserve raw type. Do not confuse SP in the Type column with PC Spun/PCS in Pole Class."
+    },
+    {
+      "kind": "construction",
+      "pdf_code_or_value": "Pole class + height",
+      "source_meaning": "Survey construction observations",
+      "mdb_target_table": "InstSection",
+      "mdb_fields": [
+        "ConfigurationId"
+      ],
+      "target_reference": "12.5/7.2 kV cross arm C2-2",
+      "reference_exact_conductor_ids": {},
+      "status": "reference_configuration_candidate_only",
+      "evidence": "This ConfigurationId is used by all 187 sections in the valid reference MDBs",
+      "notes": "The PDF/GPX do not specify full cross-arm geometry or prove this same configuration applies to every new span."
+    }
+  ]
+}

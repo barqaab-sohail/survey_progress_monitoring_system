@@ -1,0 +1,15 @@
+{
+  "waypoint_count": 120,
+  "child_fields": {
+    "ele": 120,
+    "time": 120,
+    "name": 120,
+    "cmt": 120,
+    "sym": 120
+  },
+  "equipment_definition_fields_found": [],
+  "coordinate_attribute_fields": [
+    "lat",
+    "lon"
+  ]
+}

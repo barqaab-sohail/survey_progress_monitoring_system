@@ -79,6 +79,22 @@ class TransformerMdbBuilderTest extends TestCase
         return TransformerMdbProject::firstOrFail();
     }
 
+    public function test_automatic_drive_registration_tracks_workspace_and_keeps_failed_upload_recoverable(): void
+    {
+        config(['drive_storage.enabled' => true]);
+        \Illuminate\Support\Facades\Queue::fake();
+        $project = $this->saveProject();
+        $archive = $project->gpxDriveStoredFile;
+        $this->assertNotNull($archive);
+        $this->assertSame($project->transformer_code, $archive->context['transformer_code']);
+        $this->assertSame($project->id, $archive->context['transformer_workspace_id']);
+        try { app(\App\Services\DriveStorage\FileStorage::class)->transfer($archive->id); $this->fail('Expected missing storage account.'); } catch (\RuntimeException) {}
+        $this->assertSame('failed', $archive->fresh()->status);
+        $this->get(route('mdb-builder.source', [$project, 'gpx']))->assertOk()->assertDownload('survey.gpx');
+        Storage::disk('local')->assertExists($project->gpx_path);
+        foreach (Storage::disk('local')->files('drive-storage/work') as $temporary) Storage::disk('local')->delete($temporary);
+    }
+
     public function test_manual_survey_saves_uploads_matches_gpx_and_preserves_source_values(): void
     {
         $project = $this->saveProject();

@@ -1,0 +1,47 @@
+[
+  {
+    "file": "Choper HattaT-3030216724.mdb",
+    "fractional_customer_rows": 8,
+    "equal_three_phase_fractional_rows": 8
+  },
+  {
+    "file": "Choper HattaT-3030216727.mdb",
+    "fractional_customer_rows": 14,
+    "equal_three_phase_fractional_rows": 14
+  },
+  {
+    "file": "Jodh PurT-4101220409.mdb",
+    "fractional_customer_rows": 11,
+    "equal_three_phase_fractional_rows": 3
+  },
+  {
+    "file": "Jodh PurT-4151220461.mdb",
+    "fractional_customer_rows": 5,
+    "equal_three_phase_fractional_rows": 4
+  },
+  {
+    "file": "Jodh PurT-4171220510.mdb",
+    "fractional_customer_rows": 2,
+    "equal_three_phase_fractional_rows": 2
+  },
+  {
+    "file": "Jodh PurT-4171220531.mdb",
+    "fractional_customer_rows": 13,
+    "equal_three_phase_fractional_rows": 13
+  },
+  {
+    "file": "Kot Gohar MT-3150216178.mdb",
+    "fractional_customer_rows": 2,
+    "equal_three_phase_fractional_rows": 1
+  },
+  {
+    "file": "Noor PurT-4070621060.mdb",
+    "fractional_customer_rows": 14,
+    "equal_three_phase_fractional_rows": 14
+  },
+  {
+    "file": "Noor PurT-4221215879.mdb",
+    "fractional_customer_rows": 11,
+    "equal_three_phase_fractional_rows": 10
+  }
+]

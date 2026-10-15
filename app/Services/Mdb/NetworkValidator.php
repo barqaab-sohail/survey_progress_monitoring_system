@@ -365,11 +365,18 @@ class NetworkValidator
                 if (! empty($pv['section_id']) && ! in_array($pv['section_id'], array_column($transformer['sections'] ?? [], 'id'))) {
                     $issue('foreign_pv_section', 'PV associated section must belong to this transformer.', $pc);
                 }
-                if (($pv['installed_capacity_kw'] ?? 0) > 0) {
+                if (($pv['installed_capacity_kw'] ?? 0) > 0 && ($mapping['version'] ?? '') !== ExportPayloadBuilder::EXTENDED_VERSION) {
                     $exclusion = $mapping['pv_exclusion'] ?? [];
                     if (empty($exclusion['reason']) || empty($exclusion['reviewed_at']) || empty($exclusion['reviewed_by']) || $exclusion['reviewed_by'] != ($config['approved_by'] ?? null)) {
                         $issue('pv_model_unmapped', 'Positive PV capacity needs a supported reviewed SynerGEE generation mapping or an explicit engineering-approved exclusion with reason.', $pc);
                     }
+                }
+            }
+            if (($mapping['version'] ?? '') === ExportPayloadBuilder::EXTENDED_VERSION) {
+                try {
+                    app(SupplementalMapping::class)->build($transformer, $config);
+                } catch (ValidationException $exception) {
+                    $issue('invalid_device_mapping', $exception->getMessage(), $tc);
                 }
             }
         }
@@ -401,6 +408,12 @@ class NetworkValidator
             return null;
         }
         $matches = $source ? ($bySourceName[(string) $source.'|'.(string) $ref] ?? []) : ($byName[(string) $ref] ?? []);
+        if ($end === 'start' && ($section['original_entry']['start_coordinate_source'] ?? null) === 'kmz') {
+            $issue('missing_kmz_coordinates', 'The first S point '.(string) $ref.' is a KMZ reference. Resolve its verified KMZ coordinates before MDB generation.', $context);
+
+            return null;
+        }
+
         if (count($matches) !== 1) {
             $issue(count($matches) === 0 ? 'missing_waypoint' : 'ambiguous_waypoint', 'Waypoint '.(string) $ref.(count($matches) === 0 ? ' is absent from the selected GPX source/batch.' : ' has multiple matches; select the source file and exact verified point.'), $context);
 

@@ -20,3 +20,5 @@ Artisan::command('survey-progress:sync', function () {
 \Illuminate\Support\Facades\Schedule::command('survey-progress:sync')
     ->dailyAt(config('survey_progress.sync_time'))->timezone(config('survey_progress.timezone'))
     ->when(fn () => config('survey_progress.automatic'))->withoutOverlapping(120);
+
+\Illuminate\Support\Facades\Schedule::command('drive-storage:retry')->everyFiveMinutes()->withoutOverlapping(10);

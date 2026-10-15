@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Mdb\PdfLine;
 use App\Models\Mdb\PdfRow;
 use App\Models\Mdb\SourceFile;
 use App\Models\Mdb\SurveyBatch;
@@ -15,6 +16,59 @@ use Illuminate\Validation\ValidationException;
 class MdbPdfProgressController extends Controller
 {
     public function __construct(private WorkflowAccess $access, private EntryService $entries, private AuditService $audit) {}
+
+    public function line(Request $request, SurveyBatch $batch, SourceFile $source)
+    {
+        $this->access->authorize($request->user(), $batch, 'edit');
+        abort_unless($source->batch_id === $batch->id && $source->kind === 'pdf' && $source->status === 'ready', 404);
+        $data = $request->validate(['revision' => 'required|integer', 'page' => 'required|integer|min:1', 'client_uuid' => 'required|uuid',
+            'start' => 'required|array:x,y', 'end' => 'required|array:x,y',
+            'start.x' => 'required|numeric|min:0|max:1', 'start.y' => 'required|numeric|min:0|max:1',
+            'end.x' => 'required|numeric|min:0|max:1', 'end.y' => 'required|numeric|min:0|max:1']);
+        $start = array_map('floatval', $data['start']);
+        $end = array_map('floatval', $data['end']);
+        if ($data['page'] > ($source->metadata['page_count'] ?? 0)
+            || (abs($start['x'] - $end['x']) < .001 && abs($start['y'] - $end['y']) < .001)
+            || (abs($start['x'] - $end['x']) > .000001 && abs($start['y'] - $end['y']) > .000001)) {
+            throw ValidationException::withMessages(['line' => 'Draw a horizontal line within a valid PDF page.']);
+        }
+        DB::transaction(function () use ($request, $batch, $source, $data, $start, $end) {
+            $locked = SurveyBatch::lockForUpdate()->findOrFail($batch->id);
+            $this->access->authorize($request->user(), $locked, 'edit');
+            $existing = PdfLine::where('client_uuid', $data['client_uuid'])->first();
+            if ($existing) {
+                abort_unless($existing->source_file_id === $source->id && $existing->page === (int) $data['page']
+                    && $existing->start == $start && $existing->end == $end, 409, 'This line identity already belongs to another mark.');
+
+                return;
+            }
+            abort_unless($locked->revision === (int) $data['revision'], 409, 'Saved records changed. Refresh before drawing a line.');
+            $line = PdfLine::create(['source_file_id' => $source->id, 'page' => $data['page'], 'client_uuid' => $data['client_uuid'],
+                'start' => $start, 'end' => $end, 'created_by' => $request->user()->id]);
+            $locked->increment('revision');
+            $this->audit->record($request->user(), 'mdb.pdf_line_drawn', $line, [], $line->toArray());
+        });
+
+        return response()->json($this->entries->editorData($batch->fresh()));
+    }
+
+    public function removeLine(Request $request, SurveyBatch $batch, PdfLine $pdfLine)
+    {
+        $this->access->authorize($request->user(), $batch, 'edit');
+        abort_unless($batch->sources()->where('kind', 'pdf')->whereKey($pdfLine->source_file_id)->exists(), 404);
+        $data = $request->validate(['revision' => 'required|integer']);
+        DB::transaction(function () use ($request, $batch, $pdfLine, $data) {
+            $locked = SurveyBatch::lockForUpdate()->findOrFail($batch->id);
+            $this->access->authorize($request->user(), $locked, 'edit');
+            abort_unless($locked->revision === (int) $data['revision'], 409, 'Saved records changed. Refresh before removing a line.');
+            $line = PdfLine::lockForUpdate()->findOrFail($pdfLine->id);
+            $this->audit->record($request->user(), 'mdb.pdf_line_removed', $line, $line->toArray(), []);
+            $line->delete();
+            $locked->increment('revision');
+        });
+
+        return response()->json($this->entries->editorData($batch->fresh()));
+    }
 
     public function layout(Request $request, SurveyBatch $batch, SourceFile $source)
     {

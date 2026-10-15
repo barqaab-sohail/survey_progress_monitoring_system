@@ -57,6 +57,14 @@ class MdbNetworkValidatorTest extends TestCase
         ];
     }
 
+    public function test_kmz_start_requires_its_own_coordinates_for_generation(): void
+    {
+        $data = $this->fixture();
+        $data['transformers'][0]['sections'][0]['original_entry']['start_coordinate_source'] = 'kmz';
+        $result = $this->validator()->validate($data);
+        self::assertContains('missing_kmz_coordinates', array_column($result['errors'], 'code'));
+    }
+
     public function test_branches_follow_exact_pairs_preserving_text_names(): void
     {
         $result = $this->validator()->validate($this->fixture());

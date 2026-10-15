@@ -1,5 +1,7 @@
 # MDB Creation and Verification
 
+The [ten-reference comparison and v2 device mapping](REFERENCE_REVIEW.md) adds explicit meter points and PV generator/year records, backed by native Access write/readback checks. The original v1 mapping remains supported.
+
 The module adds private, versioned survey batches, source processing, manual PDF entry, explicit transformer networks, validation, immutable verification revisions, retryable genuine MDB export and separate SynerGEE analysis results. It reuses the application's project/feeder/team structure, Spatie permissions, Google Drive OAuth and audit trail.
 
 Operators should start with the [simple entry guide](OPERATOR_GUIDE.md): PDF above the transformer header and individual S/E rows, followed by review and existing MDB generation. Advanced engineering tools and legacy sections remain on separate pages. See [deployment instructions](DEPLOYMENT.md), the [full team guide](USER_GUIDE.md), [sample inspection](SAMPLE_INSPECTION.md), [export mapping](MAPPING.md), [Access worker setup/protocol](WORKER.md), and [test results](TEST_RESULTS.md).

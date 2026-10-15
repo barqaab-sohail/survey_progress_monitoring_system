@@ -1,0 +1,159 @@
+<?php
+
+namespace App\Services\DriveStorage;
+
+use App\Jobs\UploadDriveFile;
+use App\Models\DriveStorageConnection;
+use App\Models\DriveStoredFile;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use RuntimeException;
+
+class FileStorage
+{
+    public function register(string $disk, string $path, string $name, string $mime, array $context): DriveStoredFile
+    {
+        $full = Storage::disk($disk)->path($path);
+        if (! is_file($full)) {
+            throw new RuntimeException('Private file staging failed.');
+        }
+        $file = DriveStoredFile::create(['uuid' => (string) Str::uuid(), 'local_disk' => $disk, 'local_path' => $path,
+            'original_name' => mb_substr(basename(str_replace('\\', '/', $name)), 0, 255), 'mime' => $mime,
+            'bytes' => filesize($full), 'sha256' => hash_file('sha256', $full), 'md5' => md5_file($full), 'context' => $context]);
+        // The row is a durable outbox. A queue outage must never discard the accepted file.
+        DB::afterCommit(function () use ($file) {
+            try {
+                UploadDriveFile::dispatch($file->id);
+            } catch (\Throwable) {
+                Log::warning('Drive transfer queued for scheduler recovery.', ['stored_file_id' => $file->id]);
+            }
+        });
+
+        return $file;
+    }
+
+    public function transfer(int $id): void
+    {
+        Cache::lock('drive-storage:file:'.$id, 600)->block(10, function () use ($id) {
+            $file = DriveStoredFile::findOrFail($id);
+            if ($file->status === 'uploaded') {
+                $this->cleanup($file);
+
+                return;
+            }
+            if (! config('drive_storage.enabled')) {
+                throw new RuntimeException('Automatic Drive storage is disabled; the staged file is retained.');
+            }
+            $file->increment('attempts');
+            try {
+                $connection = DriveStorageConnection::find(1);
+                if (! $connection) {
+                    throw new RuntimeException('Connect the application storage account.');
+                }
+                if ($file->account_id && $file->account_id !== $connection->account_id) {
+                    throw new RuntimeException('Reconnect the original storage account.');
+                }
+                $path = Storage::disk($file->local_disk)->path($file->local_path);
+                $this->verifyLocal($file, $path);
+                $client = app(DriveClient::class);
+                if (! $file->drive_file_id) {
+                    $file->update(['drive_file_id' => $client->generateId(), 'account_id' => $connection->account_id]);
+                }
+                $client->upload($file, $path);
+                // Commit the remote pointer before deleting the only local recovery copy.
+                $file->update(['status' => 'uploaded', 'uploaded_at' => now(), 'last_error' => null, 'next_attempt_at' => null]);
+            } catch (\Throwable) {
+                $file->update(['status' => 'failed', 'last_error' => 'Drive transfer failed. The private staged original is retained; check storage connection, quota and worker, then retry.',
+                    'next_attempt_at' => now()->addMinutes(min(360, 2 ** min($file->attempts, 8)))]);
+                // Do not log Google responses, OAuth credentials or resumable session URLs.
+                throw new RuntimeException('Drive transfer failed for stored file #'.$id.'. The original is retained for recovery.');
+            }
+            $this->cleanup($file);
+        });
+    }
+
+    public function cleanup(DriveStoredFile $file): void
+    {
+        if ($file->status !== 'uploaded') {
+            return;
+        }
+        $disk = Storage::disk($file->local_disk);
+        if ($disk->exists($file->local_path) && ! $disk->delete($file->local_path)) {
+            throw new RuntimeException('Confirmed Drive file is awaiting local staging cleanup.');
+        }
+        $file->update(['local_deleted_at' => now()]);
+    }
+
+    public function withPath(?DriveStoredFile $file, string $disk, string $path, callable $callback): mixed
+    {
+        if (! $file) {
+            return $callback(Storage::disk($disk)->path($path));
+        }
+        $temporary = $this->snapshot($file);
+        try {
+            return $callback($temporary);
+        } finally {
+            if (is_file($temporary)) {
+                unlink($temporary);
+            }
+        }
+    }
+
+    private function snapshot(DriveStoredFile $file): string
+    {
+        Storage::disk('local')->makeDirectory('drive-storage/work');
+        $temporary = tempnam(Storage::disk('local')->path('drive-storage/work'), 'source-');
+        try {
+            Cache::lock('drive-storage:file:'.$file->id, 600)->block(10, function () use ($file, $temporary) {
+                $file->refresh();
+                if ($file->status === 'uploaded') {
+                    if ($file->account_id !== DriveStorageConnection::find(1)?->account_id) {
+                        throw new RuntimeException('The original Drive storage account must be connected.');
+                    }
+                    app(DriveClient::class)->download($file, $temporary);
+                } else {
+                    $source = Storage::disk($file->local_disk)->path($file->local_path);
+                    if (! is_file($source) || ! copy($source, $temporary)) {
+                        throw new RuntimeException('The staged original is unavailable.');
+                    }
+                }
+                $this->verifyLocal($file, $temporary);
+            });
+
+            return $temporary;
+        } catch (\Throwable) {
+            if (is_file($temporary)) {
+                unlink($temporary);
+            }
+            throw new RuntimeException('Source file is temporarily unavailable or failed integrity verification. Please retry or contact the administrator.');
+        }
+    }
+
+    public function response(?DriveStoredFile $file, string $disk, string $path, string $name, string $mime, bool $download = false)
+    {
+        try {
+            $full = $file ? $this->snapshot($file) : Storage::disk($disk)->path($path);
+        } catch (RuntimeException) {
+            abort(503, 'Source storage is temporarily unavailable. Please retry later.');
+        }
+        abort_unless(is_file($full), 404);
+        $headers = ['Content-Type' => $mime, 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff'];
+        $response = response()->download($full, $name, $headers, $download ? 'attachment' : 'inline');
+        if ($file) {
+            $response->deleteFileAfterSend(true);
+        }
+
+        return $response;
+    }
+
+    private function verifyLocal(DriveStoredFile $file, string $path): void
+    {
+        clearstatcache(true, $path);
+        if (! is_file($path) || filesize($path) !== $file->bytes || ! hash_equals($file->sha256, hash_file('sha256', $path))) {
+            throw new RuntimeException('Source integrity verification failed.');
+        }
+    }
+}

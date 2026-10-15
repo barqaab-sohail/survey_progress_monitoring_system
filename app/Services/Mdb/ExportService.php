@@ -40,7 +40,8 @@ class ExportService
             $revision = $this->assertApproved($locked);
             $manifest = $locked->staged_workflow ? app(GenerationInputService::class)->manifest($locked) : [];
             $template = Template::findOrFail($revision->snapshot['template']['id'] ?? null);
-            $identity = [$revision->sha256, $transformerId ?? 'feeder', $template->sha256, ExportPayloadBuilder::VERSION];
+            $mappingVersion = $revision->snapshot['configuration']['settings']['mapping']['version'] ?? ExportPayloadBuilder::VERSION;
+            $identity = [$revision->sha256, $transformerId ?? 'feeder', $template->sha256, $mappingVersion];
             if ($manifest) {
                 $identity[] = $this->snapshots->hash($manifest);
             }
@@ -58,7 +59,7 @@ class ExportService
             $job = ExportJob::create([
                 'batch_id' => $locked->id, 'revision_id' => $revision->id, 'transformer_id' => $transformerId,
                 'template_id' => $template->id, 'idempotency_key' => $key, 'status' => 'queued',
-                'mapping_version' => ExportPayloadBuilder::VERSION, 'template_version' => $template->version,
+                'mapping_version' => $mappingVersion, 'template_version' => $template->version,
                 'settings' => $payload['settings'] + ($manifest ? ['generation_inputs' => $manifest] : []), 'requested_by' => $actor->id, 'output_disk' => $disk,
             ]);
             $json = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
@@ -67,7 +68,7 @@ class ExportService
                 throw new \RuntimeException('Could not retain the approved export payload.');
             }
             $job->update(['payload_path' => $path, 'payload_sha256' => hash('sha256', $json)]);
-            $this->audit->record($actor, 'mdb_workflow.export_requested', $job, [], ['revision_id' => $revision->id, 'revision_sha256' => $revision->sha256, 'payload_sha256' => $job->payload_sha256, 'template_version' => $template->version, 'mapping_version' => ExportPayloadBuilder::VERSION]);
+            $this->audit->record($actor, 'mdb_workflow.export_requested', $job, [], ['revision_id' => $revision->id, 'revision_sha256' => $revision->sha256, 'payload_sha256' => $job->payload_sha256, 'template_version' => $template->version, 'mapping_version' => $mappingVersion]);
             GenerateMdbExport::dispatch($job->id)->onQueue(config('mdb_workflow.queue', 'mdb'))->afterCommit();
 
             return $job;

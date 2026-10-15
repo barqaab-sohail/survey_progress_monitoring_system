@@ -261,6 +261,8 @@ class FieldSurveyApiTest extends TestCase
 
     public function test_private_attachments_are_idempotent_and_different_content_conflicts(): void
     {
+        config(['drive_storage.enabled' => true]);
+        \Illuminate\Support\Facades\Queue::fake();
         $data = $this->payload();
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
         $uuid = (string) Str::uuid();
@@ -269,6 +271,8 @@ class FieldSurveyApiTest extends TestCase
         $this->post($url, ['client_uuid' => $uuid, 'kind' => 'sketch', 'file' => $this->pdf()], ['Accept' => 'application/json'])->assertOk();
         $this->post($url, ['client_uuid' => $uuid, 'kind' => 'sketch', 'file' => $this->pdf('Changed')], ['Accept' => 'application/json'])->assertConflict();
         $this->assertDatabaseCount('field_survey_attachments', 1);
+        $this->assertDatabaseCount('drive_stored_files', 1);
+        $this->assertSame($this->feeder->id, FieldSurveyAttachment::first()->driveStoredFile->context['feeder_id']);
         Storage::disk('local')->assertExists(FieldSurveyAttachment::first()->path);
         $this->get('/api/v1/field/attachments/'.$uuid)->assertOk()->assertHeader('Content-Type', 'application/pdf');
         FeederAssignment::query()->update(['status' => 'inactive']);

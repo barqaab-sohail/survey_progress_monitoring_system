@@ -1,4 +1,6 @@
-# Reviewed export mapping v1
+# Reviewed export mapping
+
+The v1 contract below remains supported. Opt-in `synergee-reviewed-v2` adds `InstMeterPoints`, `InstDGens`, and `InstMymDGens` using explicit per-network device mappings. See [v2 configuration and reference evidence](REFERENCE_REVIEW.md). The PV exclusion requirement at the end of this document applies to v1; v2 also accepts a complete reviewed PV mapping.
 
 New operator rows use GGDDMMYYWWW as survey identity while retaining the short GPX name and selected source separately. Frozen sections keep the GPX waypoint IDs plus complete endpoint identities in `original_entry`. Validation/export overlays stable survey node keys, so GPS `104` from 2022 and `104` from 2026 do not merge. Legacy sections without complete identities keep their original mapping. Existing `wp:<GPX ID>` source wiring resolves to the root's unique survey identity; when several identities refer to that root, select `header.source_survey_identifier` explicitly before approval. Conflicting coordinates for one complete identity block export.
 

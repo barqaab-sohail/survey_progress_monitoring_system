@@ -7,9 +7,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FieldSurveyAttachment extends Model
 {
-    protected $fillable = ['client_uuid', 'field_survey_id', 'kind', 'path', 'mime_type', 'byte_length', 'sha256'];
+    protected $fillable = ['client_uuid', 'field_survey_id', 'kind', 'path', 'mime_type', 'byte_length', 'sha256', 'drive_stored_file_id'];
 
     protected $hidden = ['path', 'sha256'];
+
+    public function driveStoredFile(): BelongsTo
+    {
+        return $this->belongsTo(DriveStoredFile::class);
+    }
 
     public function survey(): BelongsTo
     {

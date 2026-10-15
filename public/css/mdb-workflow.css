@@ -6,3 +6,11 @@
 .mdb-workflow pre{white-space:pre-wrap;max-width:100%;overflow-wrap:anywhere;padding:12px;background:#f7f9fb;border-radius:8px}.mdb-workflow fieldset{border:1px solid var(--line);border-radius:8px;padding:12px}.mdb-workflow legend{padding:0 6px;font-size:13px;font-weight:700}.mdb-status-awaiting_verification{background:#fff1d6;color:#9a5b00}
 .mdb-review-table{min-width:550px;font-size:12px}.mdb-review-table td{line-height:1.6}.mdb-review-table small{line-height:1.6}
 .mdb-page-association{padding:10px 0;border-top:1px solid var(--line)}.mdb-page-association p{margin:0 0 6px}.mdb-page-association summary{font-size:12px}
+
+.mdb-tabs a[aria-current=page]{background:#e6f0fa;border-color:#1768b3;font-weight:700}
+.mdb-review-comparison{display:block}
+.mdb-review-source{position:sticky;top:76px;z-index:15;min-width:0;background:#fff}.mdb-review-entries{min-width:0}
+@media(max-width:820px){.mdb-review-source{top:70px}}
+@media print{.mdb-review-source{position:static}}
+.mdb-review-source iframe{display:block;width:100%;height:50vh;min-height:280px;max-height:600px;border:1px solid var(--line);margin-top:12px}
+.mdb-create-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;margin-top:20px;align-items:start}.mdb-create-preview{min-width:0;background:#f4f7fa;padding:12px;border:1px solid var(--line);border-radius:8px}.mdb-create-preview iframe{display:block;width:100%;height:70vh;min-height:400px;border:0;margin-top:12px}.mdb-create-layout .mdb-fields{grid-template-columns:1fr}[data-source-field] .btn{margin-top:10px}@media(max-width:900px){.mdb-create-layout{grid-template-columns:1fr}.mdb-create-preview iframe{height:55vh}}

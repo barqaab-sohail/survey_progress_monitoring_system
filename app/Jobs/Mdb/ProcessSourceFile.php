@@ -11,7 +11,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Process;
 
 class ProcessSourceFile implements ShouldQueue
@@ -20,11 +19,14 @@ class ProcessSourceFile implements ShouldQueue
 
     public int $tries = 3;
 
-    public int $timeout = 180;
+    public int $timeout = 420;
 
     public function __construct(public int $sourceId)
     {
         $this->onQueue('mdb-sources');
+        if (SourceFile::whereKey($sourceId)->whereNotNull('drive_stored_file_id')->exists()) {
+            $this->onConnection(config('drive_storage.connection', 'drive-storage'));
+        }
     }
 
     public function backoff(): array
@@ -34,7 +36,7 @@ class ProcessSourceFile implements ShouldQueue
 
     public function middleware(): array
     {
-        return [(new WithoutOverlapping('mdb-source:'.$this->sourceId))->releaseAfter(10)->expireAfter(240)];
+        return [(new WithoutOverlapping('mdb-source:'.$this->sourceId))->releaseAfter(10)->expireAfter(480)];
     }
 
     public function handle(GpxParser $parser, SnapshotService $snapshots): void
@@ -43,19 +45,22 @@ class ProcessSourceFile implements ShouldQueue
         if ($source->status === 'ready') {
             return;
         }
-        $path = Storage::disk($source->disk)->path($source->path);
-        if (! is_file($path) || ! hash_equals($source->sha256, hash_file('sha256', $path))) {
-            throw new \RuntimeException('Source file hash verification failed.');
-        }
-        $result = [];
-        if ($source->kind === 'gpx') {
-            $result = $parser->parse(file_get_contents($path));
-            $metadata = ['waypoint_count' => count($result['waypoints']), 'warnings' => $result['warnings']];
-        } else {
-            $process = new Process([config('mdb_workflow.python', 'python'), base_path('scripts/mdb-workflow/inspect_pdf.py'), $path]);
-            $process->setTimeout(150)->mustRun();
-            $metadata = json_decode($process->getOutput(), true, 32, JSON_THROW_ON_ERROR);
-        }
+        [$result, $metadata] = app(\App\Services\DriveStorage\FileStorage::class)->withPath(
+            $source->driveStoredFile, $source->disk, $source->path, function ($path) use ($source, $parser) {
+            if (! is_file($path) || ! hash_equals($source->sha256, hash_file('sha256', $path))) {
+                throw new \RuntimeException('Source file hash verification failed.');
+            }
+            $result = [];
+            if ($source->kind === 'gpx') {
+                $result = $parser->parse(file_get_contents($path));
+                $metadata = ['waypoint_count' => count($result['waypoints']), 'warnings' => $result['warnings']];
+            } else {
+                $process = new Process([config('mdb_workflow.python', 'python'), base_path('scripts/mdb-workflow/inspect_pdf.py'), $path]);
+                $process->setTimeout(150)->mustRun();
+                $metadata = json_decode($process->getOutput(), true, 32, JSON_THROW_ON_ERROR);
+            }
+            return [$result, $metadata];
+        });
         DB::transaction(function () use ($source, $result, $metadata, $snapshots): void {
             $batch = SurveyBatch::lockForUpdate()->findOrFail($source->batch_id);
             $locked = SourceFile::lockForUpdate()->findOrFail($source->id);

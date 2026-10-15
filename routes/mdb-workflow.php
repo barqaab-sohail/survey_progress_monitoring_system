@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth', 'active'])->prefix('mdb-workflow')->name('mdb-workflow.')->controller(MdbWorkflowController::class)->group(function () {
     Route::get('/', 'index')->name('index');
     Route::get('/create', 'create')->name('create');
+    Route::post('/drive-preview', 'previewDrive')->middleware('throttle:20,1')->name('drive-preview');
     Route::post('/', 'store')->name('store');
     Route::get('/configuration/{project}', 'configuration')->name('config');
     Route::put('/configuration/{project}', 'saveConfiguration')->name('config.update');
@@ -22,9 +23,16 @@ Route::middleware(['auth', 'active'])->prefix('mdb-workflow')->name('mdb-workflo
     Route::post('/{batch}/generation-inputs', [MdbGenerationInputController::class, 'store'])->name('generation.inputs.store');
     Route::get('/{batch}/generation-inputs/{input}', [MdbGenerationInputController::class, 'download'])->name('generation.inputs.download');
     Route::post('/{batch}/survey-decision', 'surveyDecision')->name('survey.decision');
+    Route::post('/{batch}/reopen', 'reopen')->name('reopen');
+    Route::get('/{batch}/verification/{transformer}', [\App\Http\Controllers\MdbSurveyReviewController::class, 'state'])->name('verification.state');
+    Route::post('/{batch}/verification/{transformer}/checks', [\App\Http\Controllers\MdbSurveyReviewController::class, 'check'])->name('verification.check');
+    Route::put('/{batch}/verification/{transformer}/header', [\App\Http\Controllers\MdbSurveyReviewController::class, 'header'])->name('verification.header');
+    Route::put('/{batch}/verification/{transformer}/rows/{row}', [\App\Http\Controllers\MdbSurveyReviewController::class, 'row'])->name('verification.row');
     Route::get('/{batch}/entry-data', [MdbOperatorEntryController::class, 'data'])->name('entry.data');
     Route::put('/{batch}/sources/{source}/row-layout', [MdbPdfProgressController::class, 'layout'])->name('entry.pdf.layout');
     Route::put('/{batch}/pdf-rows/{pdfRow}', [MdbPdfProgressController::class, 'mark'])->name('entry.pdf.mark');
+    Route::post('/{batch}/sources/{source}/lines', [MdbPdfProgressController::class, 'line'])->name('entry.pdf.line');
+    Route::delete('/{batch}/pdf-lines/{pdfLine}', [MdbPdfProgressController::class, 'removeLine'])->name('entry.pdf.line.delete');
     Route::post('/{batch}/entry-review', [MdbOperatorEntryController::class, 'confirmReview'])->name('entry.review');
     Route::post('/{batch}/entry-headers', [MdbOperatorEntryController::class, 'header'])->name('entry.headers.store');
     Route::put('/{batch}/entry-headers/{transformer}', [MdbOperatorEntryController::class, 'header'])->name('entry.headers.update');

@@ -1,0 +1,21 @@
+{
+  "output_sha256": "7f4e3ac2549d501f7c4e015bac1adb5a547d183cd1862ba7d34062b10ed1df5a",
+  "payload_sha256": "99c8bb801c89f798a7ab153732bedd1496b784a41bb918db896b72b0ccec1998",
+  "readback": {
+    "readable": true,
+    "schema_verified": true,
+    "references_verified": true,
+    "mapped_values_verified": true,
+    "counts": {
+      "SAI_Control": 1,
+      "Node": 12,
+      "InstFeeders": 1,
+      "InstSection": 11,
+      "InstPrimaryTransformers": 1,
+      "Loads": 10
+    },
+    "template_sha256": "5d4ebf8d307e1a9adf130d56c36706a4e63406ee628131f472850cb2897f6a39",
+    "revision_sha256": "3e1de6b57e45661e70a1a968e764ed86f6acfd32b54d66bef1c95a26b13917c5"
+  },
+  "log": "Access DAO reopened MDB; schema, relationships, exact mapped values, counts and model references verified. SynerGEE engineering validation remains pending."
+}

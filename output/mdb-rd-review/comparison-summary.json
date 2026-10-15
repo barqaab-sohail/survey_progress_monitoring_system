@@ -1,0 +1,310 @@
+{
+  "scope": "Physical schema and data audit; no SynerGEE GUI/load-flow acceptance test",
+  "references": [
+    {
+      "file": "Choper HattaT-3030216724.mdb",
+      "tables": 50,
+      "fields": 1065,
+      "indexes": 133,
+      "relationships": 41,
+      "schema_equal_to_template": true,
+      "graph": {
+        "isolated_nodes": [
+          "3030216724"
+        ],
+        "components": 2,
+        "component_sizes": [
+          25,
+          1
+        ],
+        "missing_endpoint_sections": [],
+        "duplicate_edge_sections": [],
+        "undirected_cycle_rank": 0
+      },
+      "required_nulls": [],
+      "frequency": 60,
+      "loads_positive_kva_with_zero_kw": 20
+    },
+    {
+      "file": "Choper HattaT-3030216727.mdb",
+      "tables": 50,
+      "fields": 1065,
+      "indexes": 133,
+      "relationships": 41,
+      "schema_equal_to_template": true,
+      "graph": {
+        "isolated_nodes": [
+          "3030216727"
+        ],
+        "components": 2,
+        "component_sizes": [
+          27,
+          1
+        ],
+        "missing_endpoint_sections": [],
+        "duplicate_edge_sections": [],
+        "undirected_cycle_rank": 0
+      },
+      "required_nulls": [],
+      "frequency": 60,
+      "loads_positive_kva_with_zero_kw": 18
+    },
+    {
+      "file": "Jodh PurT-4101220409.mdb",
+      "tables": 50,
+      "fields": 1065,
+      "indexes": 133,
+      "relationships": 41,
+      "schema_equal_to_template": true,
+      "graph": {
+        "isolated_nodes": [
+          "4101220409"
+        ],
+        "components": 2,
+        "component_sizes": [
+          28,
+          1
+        ],
+        "missing_endpoint_sections": [],
+        "duplicate_edge_sections": [],
+        "undirected_cycle_rank": 0
+      },
+      "required_nulls": [],
+      "frequency": 60,
+      "loads_positive_kva_with_zero_kw": 23
+    },
+    {
+      "file": "Jodh PurT-4151220461.mdb",
+      "tables": 50,
+      "fields": 1065,
+      "indexes": 133,
+      "relationships": 41,
+      "schema_equal_to_template": true,
+      "graph": {
+        "isolated_nodes": [
+          "4151220461"
+        ],
+        "components": 2,
+        "component_sizes": [
+          18,
+          1
+        ],
+        "missing_endpoint_sections": [],
+        "duplicate_edge_sections": [],
+        "undirected_cycle_rank": 0
+      },
+      "required_nulls": [],
+      "frequency": 60,
+      "loads_positive_kva_with_zero_kw": 12
+    },
+    {
+      "file": "Jodh PurT-4171220510.mdb",
+      "tables": 50,
+      "fields": 1065,
+      "indexes": 133,
+      "relationships": 41,
+      "schema_equal_to_template": true,
+      "graph": {
+        "isolated_nodes": [
+          "4171220510"
+        ],
+        "components": 2,
+        "component_sizes": [
+          9,
+          1
+        ],
+        "missing_endpoint_sections": [],
+        "duplicate_edge_sections": [],
+        "undirected_cycle_rank": 0
+      },
+      "required_nulls": [],
+      "frequency": 60,
+      "loads_positive_kva_with_zero_kw": 5
+    },
+    {
+      "file": "Jodh PurT-4171220531.mdb",
+      "tables": 50,
+      "fields": 1065,
+      "indexes": 133,
+      "relationships": 41,
+      "schema_equal_to_template": true,
+      "graph": {
+        "isolated_nodes": [
+          "4171220531"
+        ],
+        "components": 2,
+        "component_sizes": [
+          22,
+          1
+        ],
+        "missing_endpoint_sections": [],
+        "duplicate_edge_sections": [],
+        "undirected_cycle_rank": 0
+      },
+      "required_nulls": [],
+      "frequency": 60,
+      "loads_positive_kva_with_zero_kw": 19
+    },
+    {
+      "file": "Kot Gohar MT-3150216178.mdb",
+      "tables": 50,
+      "fields": 1065,
+      "indexes": 133,
+      "relationships": 41,
+      "schema_equal_to_template": true,
+      "graph": {
+        "isolated_nodes": [
+          "3150216178"
+        ],
+        "components": 2,
+        "component_sizes": [
+          22,
+          1
+        ],
+        "missing_endpoint_sections": [],
+        "duplicate_edge_sections": [],
+        "undirected_cycle_rank": 0
+      },
+      "required_nulls": [],
+      "frequency": 60,
+      "loads_positive_kva_with_zero_kw": 6
+    },
+    {
+      "file": "Noor PurT-4070621060.mdb",
+      "tables": 50,
+      "fields": 1065,
+      "indexes": 133,
+      "relationships": 41,
+      "schema_equal_to_template": true,
+      "graph": {
+        "isolated_nodes": [
+          "4070621060"
+        ],
+        "components": 2,
+        "component_sizes": [
+          24,
+          1
+        ],
+        "missing_endpoint_sections": [],
+        "duplicate_edge_sections": [],
+        "undirected_cycle_rank": 0
+      },
+      "required_nulls": [],
+      "frequency": 60,
+      "loads_positive_kva_with_zero_kw": 19
+    },
+    {
+      "file": "Noor PurT-4221215879.mdb",
+      "tables": 50,
+      "fields": 1065,
+      "indexes": 133,
+      "relationships": 41,
+      "schema_equal_to_template": true,
+      "graph": {
+        "isolated_nodes": [
+          "4221215879"
+        ],
+        "components": 2,
+        "component_sizes": [
+          21,
+          1
+        ],
+        "missing_endpoint_sections": [],
+        "duplicate_edge_sections": [],
+        "undirected_cycle_rank": 0
+      },
+      "required_nulls": [],
+      "frequency": 60,
+      "loads_positive_kva_with_zero_kw": 14
+    }
+  ],
+  "sample": {
+    "file": "HAZECO_T-11030717217_RD-INCOMPLETE.mdb",
+    "tables": 50,
+    "fields": 1065,
+    "indexes": 133,
+    "relationships": 41,
+    "schema_equal_to_template": true,
+    "graph": {
+      "isolated_nodes": [],
+      "components": 1,
+      "component_sizes": [
+        12
+      ],
+      "missing_endpoint_sections": [],
+      "duplicate_edge_sections": [],
+      "undirected_cycle_rank": 0
+    },
+    "required_nulls": [],
+    "frequency": null,
+    "loads_positive_kva_with_zero_kw": 0
+  },
+  "original_file_hash_checks": [
+    {
+      "file": "A081026.pdf",
+      "unchanged": true
+    },
+    {
+      "file": "Choper HattaT-3030216724.mdb",
+      "unchanged": true
+    },
+    {
+      "file": "Choper HattaT-3030216727.mdb",
+      "unchanged": true
+    },
+    {
+      "file": "Jodh PurT-4101220409.mdb",
+      "unchanged": true
+    },
+    {
+      "file": "Jodh PurT-4151220461.mdb",
+      "unchanged": true
+    },
+    {
+      "file": "Jodh PurT-4171220510.mdb",
+      "unchanged": true
+    },
+    {
+      "file": "Jodh PurT-4171220531.mdb",
+      "unchanged": true
+    },
+    {
+      "file": "Kot Gohar MT-3150216178.mdb",
+      "unchanged": true
+    },
+    {
+      "file": "NAWAN SHEHR (000407).kmz",
+      "unchanged": true
+    },
+    {
+      "file": "Noor PurT-4070621060.mdb",
+      "unchanged": true
+    },
+    {
+      "file": "Noor PurT-4221215879.mdb",
+      "unchanged": true
+    },
+    {
+      "file": "Waypoints_2026-10-08.gpx",
+      "unchanged": true
+    }
+  ],
+  "all_originals_unchanged": true,
+  "schema_comparison_scope": [
+    "non-system table names",
+    "field names/order/type/size/required/allow-zero-length/default/validation/attributes",
+    "index names/primary/unique/field names",
+    "relationship names/tables/attributes/field mappings"
+  ],
+  "schema_comparison_limits": "Does not compare Access UI objects, queries, obscure table properties, or external SynerGEE equipment libraries",
+  "sample_LT_sections": 10,
+  "sample_LT_endpoint_length_m": 398.1337054899772,
+  "sample_engineering_limitations": [
+    "Artificial co-located source node and zero-length transformer link; not HT network reconstruction",
+    "TransformerType required by schema: deliberately unmapped placeholder; 100kVA comes from PDF/KMZ",
+    "10 Loads rows carry transcription descriptions only: all phase customers, kW, kvar and kVA are NULL",
+    "Conductor library, configuration, frequency, voltage operating settings, impedance and connections are NULL",
+    "No InstMeterPoints or PV generator records; this sample is limited to page 11",
+    "Metric endpoint estimates are not measured wire length"
+  ]
+}

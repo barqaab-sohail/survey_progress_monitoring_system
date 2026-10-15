@@ -1,20 +1,32 @@
-import {installCompactSelects} from './mdb-entry-select.js';
+import {installCompactSelects} from './mdb-entry-select.js?v=3';
 
-export function isoDate(value) {
+export function transformerCodeKey(code) {
+    return String(code ?? '').toLowerCase().replace(/[\u2010-\u2014\u2212]/g,'-').replace(/\s+/gu,'');
+}
+
+export function isoDate(value, yearStart = null) {
+    yearStart ??= 2000;
+    const compact = /^(\d{2})(\d{2})(\d{2})$/.exec(value || '');
+    if (compact && yearStart !== null && yearStart !== undefined) {
+        let year = Math.floor(Number(yearStart) / 100) * 100 + Number(compact[3]);
+        if (year < Number(yearStart)) year += 100;
+        return `${year}-${compact[2]}-${compact[1]}`;
+    }
     if (/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return value;
     const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value || '');
     return match ? `${match[3]}-${match[2]}-${match[1]}` : value || '';
 }
 export function displayDate(value) {
     const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || '');
-    return match ? `${match[3]}/${match[2]}/${match[1]}` : value || '';
+    return match ? `${match[3]}${match[2]}${match[1].slice(-2)}` : value || '';
 }
 export function completeWaypoint(group, date, gps, yearStart = null) {
     if (!group || !date || !gps) return '';
     if (!/^\d{2}$/.test(group) || !/^\d{3}$/.test(gps)) throw new Error('Use two group digits and three GPS digits.');
-    date = isoDate(date);
+    yearStart ??= 2000;
+    date = isoDate(date, yearStart);
     const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
-    if (!match) throw new Error('Use a valid date in DD/MM/YYYY.');
+    if (!match) throw new Error('Use six date digits in DDMMYY format, for example 131222.');
     const year=Number(match[1]),month=Number(match[2]),day=Number(match[3]);
     const check=new Date(Date.UTC(year,month-1,day));
     if(check.getUTCFullYear()!==year || check.getUTCMonth()!==month-1 || check.getUTCDate()!==day) throw new Error('Enter a valid calendar date.');
@@ -23,7 +35,7 @@ export function completeWaypoint(group, date, gps, yearStart = null) {
 }
 export function parseWaypoint(identifier, yearStart) {
     if(!/^\d{11}$/.test(identifier)) throw new Error('The complete waypoint must contain exactly 11 digits.');
-    if(yearStart===null || yearStart===undefined) throw new Error('Configure the project two-digit-year window first.');
+    yearStart ??= 2000;
     let year=Math.floor(Number(yearStart)/100)*100+Number(identifier.slice(6,8));if(year<Number(yearStart))year+=100;
     const result={group_number:identifier.slice(0,2),row_date:`${year}-${identifier.slice(4,6)}-${identifier.slice(2,4)}`,waypoint_reference:identifier.slice(8)};
     completeWaypoint(result.group_number,result.row_date,result.waypoint_reference,yearStart);return result;
@@ -33,7 +45,6 @@ export function waypointMatches(row, points) {
     if(row.row_date){
         const dated=matches.filter(p=>p.recorded_at && new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Karachi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(p.recorded_at))===row.row_date);
         if(dated.length && matches.length>1)matches=dated;
-        else if(!row.gpx_source_id)matches=matches.filter(p=>!p.recorded_at || new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Karachi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(p.recorded_at))===row.row_date);
     }
     return matches;
 }
@@ -100,6 +111,15 @@ export function rotatedRowBounds(bounds, rotation) {
     }
 }
 
+export function rotatedPdfPoint(point, rotation) {
+    switch (((rotation % 360)+360)%360) {
+        case 90: return {x:1-point.y,y:point.x};
+        case 180: return {x:1-point.x,y:1-point.y};
+        case 270: return {x:point.y,y:1-point.x};
+        default: return {...point};
+    }
+}
+
 export function nextPendingPdfRow(rows, sourceId) {
     return rows.filter(row=>row.source_file_id===Number(sourceId) && !row.entered)
         .sort((a,b)=>a.page-b.page || a.row_number-b.row_number)[0] || null;
@@ -128,13 +148,16 @@ function initialize(boot) {
     const headerForm = $('entry-header-form'), rowForm = $('entry-row-form');
     const syncSelects = installCompactSelects();
     let data = boot, activeId = boot.active_transformer_id || boot.transformers[0]?.id || null;
+    let registeredId = null, manualTransformer = false;
     let rowId = null, clientUuid = uuid(), saveUuid = null, inheritance = {}, headerDirty = false, rowDirty = false, busy = false;
     let pageNumber = 1, rotation = 0, zoom = 1, pdf = null, pdfLoading = null, pdfLib = null, pdfGeneration = 0, renderTask = null, renderChain = Promise.resolve();
-    let selectedPdfRowId = null, drawingRows = false, rowArea = null, dragStart = null;
-    let renderedPdfLocation = null, setupPdfLocation = null;
+    let selectedPdfRowId = null, drawingLines = false, lineStart = null, linePreview = null, linePointer = null;
+    let renderedPdfLocation = null;
     const pdfRows = () => data.pdf_rows || [];
     const selectedPdfRow = () => pdfRows().find(row=>row.id===selectedPdfRowId);
     const active = () => data.transformers.find(t => t.id === Number(activeId));
+    const registered = () => (data.registered_transformers || []).find(t => t.id === Number(registeredId));
+    const transformerSelection = () => activeId ? String(activeId) : registeredId ? `registered:${registeredId}` : manualTransformer ? '__manual__' : '';
     const editable = () => boot.can_edit && (!data.staged_workflow || ['entry','returned'].includes(data.survey_status));
     const field = (form, name) => form?.elements.namedItem(name);
     const set = (form, name, value) => {
@@ -172,10 +195,10 @@ function initialize(boot) {
         clearFieldErrors();
         for (const [key, messages] of Object.entries(errors)) {
             const parts = key.split('.'), name = parts.shift()+parts.map(p=>`[${p}]`).join('');
-            const headerSource=preferredForm===headerForm ? ({source_pdf_id:$('entry-pdf-source'),source_page:$('entry-page')})[key] : null;
+            const headerSource=preferredForm===headerForm ? ({source_pdf_id:$('entry-header-pdf'),source_page:$('entry-header-pdf-page'),registered_transformer_id:$('entry-transformer')})[key] : null;
             const pvMatch=/^pv_details\.(\d+)\.(\w+)$/.exec(key);
             const pvField=pvMatch ? $('entry-pv-records')?.children[Number(pvMatch[1])]?.querySelector(`[data-pv-key="${pvMatch[2]}"]`) : null;
-            const rowSource=preferredForm===rowForm ? ({pdf_progress_row_id:$('entry-pdf-row'),source_pdf_id:$('entry-pdf-source'),source_page:$('entry-page'),pole_height_unit:field(rowForm,'pole_height')})[key] : null;
+            const rowSource=preferredForm===rowForm ? ({pdf_progress_row_id:$('entry-pdf-row'),source_pdf_id:$('entry-pdf-source'),source_page:$('entry-page'),pole_height_unit:field(rowForm,'pole_height_unit')})[key] : null;
             const element = pvField || rowSource || field(preferredForm,name) || headerSource || field(rowForm, name) || field(headerForm, name);
             if (element) {
                 element.setAttribute('aria-invalid', 'true');
@@ -196,7 +219,7 @@ function initialize(boot) {
     function clearCorrectedField(element, scope) {
         const pvKey=element.dataset.pvKey, index=pvKey ? Array.from($('entry-pv-records').children).indexOf(element.closest('.entry-pv-row')) : null;
         const key=pvKey ? `pv_details.${index}.${pvKey}` : (element.name || '').replace(/\[([^\]]+)\]/g,'.$1');
-        if(!key || !element.validity?.valid || (scope==='row' && rowValidationErrors(rowPayload(),data.entry_settings?.two_digit_year_start ?? null)[key]))return;
+        if(!key || !element.validity?.valid || (scope==='row' && rowValidationErrors(rowPayload(),data.entry_settings?.two_digit_year_start ?? 2000)[key]))return;
         const notes=[...document.querySelectorAll('.entry-field-error')].filter(note=>note.dataset.validationKey===key);
         for(const note of notes){
             for(const control of document.querySelectorAll('[aria-describedby]')){
@@ -244,12 +267,14 @@ function initialize(boot) {
         select.value = selected;
     }
     function renderLists() {
-        optionList($('entry-transformer'), data.transformers.map(t=>[t.id,t.code]), 'Add a transformer to begin', String(activeId ?? ''));
+        const available=(data.registered_transformers || []).filter(t=>!data.transformers.some(saved=>transformerCodeKey(saved.code)===transformerCodeKey(t.code)));
+        optionList($('entry-transformer'), [...data.transformers.map(t=>[t.id,t.code]),...(editable() ? available.map(t=>[`registered:${t.id}`,`${t.code} — registered; new survey header`]) : []),...(editable() ? [['__manual__','Transformer not found? Add manually']] : [])], 'Choose a transformer', transformerSelection());
+        if($('entry-transformer-help'))$('entry-transformer-help').textContent='Search to choose a saved or registered transformer. If it is not listed, use Add Transformer to enter it manually.';
         const selectedPdf = $('entry-pdf-source').value;
         optionList($('entry-pdf-source'), data.sources.filter(s=>s.kind==='pdf').map(s=>[s.id,`${s.original_name} · ${s.status}`]), 'Choose PDF', selectedPdf);
         if (!$('entry-pdf-source').value) $('entry-pdf-source').value = String(data.sources.find(s=>s.kind==='pdf')?.id || '');
+        optionList($('entry-header-pdf'), data.sources.filter(s=>s.kind==='pdf').map(s=>[s.id,s.original_name]), 'Choose PDF', val(headerForm,'header[pdf_source_id]'));
         optionList($('entry-gpx'), data.sources.filter(s=>s.kind==='gpx').map(s=>[s.id,s.original_name]), 'Match across batch', val(rowForm,'gpx_source_id'));
-        optionList($('header-waypoint'), data.waypoints.map(p=>[p.id,`${p.name} · ${data.sources.find(s=>s.id===p.source_file_id)?.original_name || 'GPX'}`]), 'Not entered', val(headerForm,'source_waypoint_id'));
         $('entry-waypoint-options').innerHTML = [...new Set(data.waypoints.map(p=>p.name))].map(name=>`<option value="${esc(name)}">`).join('');
         if (rowForm) {
             for (const key of ['R','Y','B','N']) {
@@ -261,26 +286,44 @@ function initialize(boot) {
         }
         document.querySelectorAll('[data-entry-revision]').forEach(input=>input.value=data.revision);
         $('entry-sources-list').innerHTML = '<ul>'+data.sources.map(s=>`<li>${esc(s.original_name)} — ${esc(s.status)}${s.kind==='gpx' ? ` · ${data.waypoints.filter(p=>p.source_file_id===s.id).length} waypoints` : ''}${s.metadata?.error ? ` · ${esc(s.metadata.error)}` : ''}</li>`).join('')+'</ul>';
-        const settings=data.entry_settings || {};
-        if($('entry-project-settings')) $('entry-project-settings').innerHTML=`Height unit: <strong>${esc(settings.pole_height_unit || 'unconfirmed')}</strong> · Year window: <strong>${settings.two_digit_year_start==null ? 'unconfigured' : `${settings.two_digit_year_start}–${Number(settings.two_digit_year_start)+99}`}</strong> · <a href="${esc(boot.settings_url)}" data-entry-leave>Project entry settings</a>`;
-        if($('entry-paste-rule')) $('entry-paste-rule').textContent=settings.two_digit_year_start==null ? 'Configure the project year window before pasting.' : `YY uses ${settings.two_digit_year_start}–${Number(settings.two_digit_year_start)+99}.`;
+        const settings={...data.entry_settings,two_digit_year_start:data.entry_settings?.two_digit_year_start ?? 2000};
+        if($('entry-project-settings')) $('entry-project-settings').innerHTML=`Project default height unit: <strong>${esc(settings.pole_height_unit || 'unconfirmed')}</strong> &middot; Year window: <strong>${settings.two_digit_year_start}&ndash;${Number(settings.two_digit_year_start)+99}</strong>${boot.can_configure ? ` &middot; <a href="${esc(boot.settings_url)}" data-entry-leave>Project entry settings</a>` : ''}`;
+        if($('entry-paste-rule')) $('entry-paste-rule').textContent=`YY uses ${settings.two_digit_year_start} to ${Number(settings.two_digit_year_start)+99}.`;
         syncSelects();
         renderPdfRows();
     }
     function headerPayload() {
         const header = {};
         Array.from(headerForm?.elements || []).forEach(el=>{ const match=el.name?.match(/^header\[(.+)\]$/); if(match) header[match[1]]=el.value || null; });
-        return {code:val(headerForm,'code'),capacity_kva:number(val(headerForm,'capacity_kva')),source_waypoint_id:number(val(headerForm,'source_waypoint_id')),header};
+        return {source_pdf_id:number(val(headerForm,'header[pdf_source_id]')),source_page:number(val(headerForm,'header[pdf_start_page]')),code:active()?.code ?? registered()?.code ?? val(headerForm,'code').trim(),manual_transformer:manualTransformer,registered_transformer_id:active()?.header?.registered_transformer_id ?? registered()?.id ?? null,capacity_kva:number(val(headerForm,'capacity_kva')),header};
     }
     function fillHeader(payload) {
         if (!headerForm) {
-            $('entry-readonly-header').innerHTML = Object.entries(payload.header || {}).filter(([k,v])=>typeof v==='string').map(([k,v])=>`<div>${esc(k.replaceAll('_',' '))}: ${esc(v)}</div>`).join('');
+            $('entry-readonly-header').innerHTML = Object.entries(payload.header || {}).filter(([k,v])=>typeof v==='string' && !['location_source','source_survey_identifier'].includes(k)).map(([k,v])=>`<div>${esc(k.replaceAll('_',' '))}: ${esc(v)}</div>`).join('');
             return;
         }
         headerForm.reset();
-        for (const name of ['code','capacity_kva','source_waypoint_id']) set(headerForm,name,payload[name]);
+        for (const name of ['code','capacity_kva']) set(headerForm,name,payload[name]);
+        if(!active())registeredId=number(payload.registered_transformer_id);
+        const selected=active() || registered(), code=field(headerForm,'code');
+        manualTransformer=!active() && !!payload.manual_transformer;
+        code.readOnly=!manualTransformer;
+        code.placeholder=manualTransformer ? 'Enter transformer code' : 'Filled from Active transformer';
+        code.value=selected?.code || (manualTransformer ? payload.code || '' : '');
+        $('entry-transformer').value=transformerSelection();
         for (const [key,value] of Object.entries(payload.header || {})) set(headerForm,`header[${key}]`,value);
-        $('entry-header-caption').textContent = payload.code ? `— ${payload.code}` : '— new transformer';
+        const savedPage=(payload.header?.pages || []).find(page=>page.role==='header') || payload.header?.pages?.[0];
+        set(headerForm,'header[pdf_source_id]',Object.hasOwn(payload,'source_pdf_id') ? payload.source_pdf_id : payload.header?.pdf_source_id ?? savedPage?.source_pdf_id ?? $('entry-pdf-source').value);
+        set(headerForm,'header[pdf_start_page]',Object.hasOwn(payload,'source_page') ? payload.source_page : payload.header?.pdf_start_page ?? savedPage?.page ?? pageNumber);
+        updateHeaderPdfLimit();
+        syncSelects();
+        $('entry-header-caption').textContent = code.value ? `— ${code.value}` : '— new transformer';
+    }
+    function updateHeaderPdfLimit() {
+        const input=$('entry-header-pdf-page');if(!input)return;
+        const source=data.sources.find(s=>s.id===number(val(headerForm,'header[pdf_source_id]')));
+        const count=Number(source?.metadata?.page_count || 0);
+        if(count>0)input.max=count;else input.removeAttribute('max');
     }
     function pvPayload() {
         return Array.from($('entry-pv-records')?.children || []).map(element=>Object.fromEntries(['reference','service_load_kw','installed_capacity_kw','remarks'].map(key=>{const value=element.querySelector(`[data-pv-key="${key}"]`).value;return [key,key.endsWith('_kw') ? number(value) : (value || null)];})));
@@ -300,7 +343,7 @@ function initialize(boot) {
         payload.conductors=Object.fromEntries(['R','Y','B','N'].map(key=>[key,val(rowForm,`conductors[${key}]`) || null]));
         payload.consumers=Object.fromEntries(Object.keys(data.lookups.consumers).map(key=>[key,number(val(rowForm,`consumers[${key}]`))]));
         payload.intersection=field(rowForm,'intersection').checked; payload.pv_details=pvPayload(); payload.inheritance=inheritance; payload.manually_verified=false;
-        payload.row_date=isoDate(payload.row_date) || null;
+        payload.row_date=isoDate(payload.row_date,data.entry_settings?.two_digit_year_start ?? 2000) || null;
         const saved=active()?.rows.find(row=>row.id===rowId);
         payload.identity_version=saved && !saved.identity_version && !saved.composite_identifier ? null : 2;
         payload.composite_identifier=val(rowForm,'composite_identifier') || null;
@@ -351,15 +394,30 @@ function initialize(boot) {
         $('entry-phase').title=phase.complete ? 'R/Y/B phases derived; neutral stays separate.' : 'Incomplete: choose a conductor or None for each R/Y/B field.';
         $('entry-phase-note').hidden=phase.complete;
         let identityError='';
-        try{set(rowForm,'composite_identifier',completeWaypoint(payload.group_number,payload.row_date,payload.waypoint_reference,data.entry_settings?.two_digit_year_start ?? null));}catch(e){set(rowForm,'composite_identifier','');identityError=e.message;}
+        try{set(rowForm,'composite_identifier',completeWaypoint(payload.group_number,payload.row_date,payload.waypoint_reference,data.entry_settings?.two_digit_year_start ?? 2000));}catch(e){set(rowForm,'composite_identifier','');identityError=e.message;}
         const matches=waypointMatches(payload,data.waypoints);
-        $('entry-gpx-ambiguity').hidden=matches.length<2 && !payload.gpx_source_id;
-        if(payload.gpx_source_id){const unscoped=waypointMatches({...payload,gpx_source_id:null},data.waypoints);$('entry-gpx-ambiguity').hidden=unscoped.length<2;}
+        const firstPair=Math.min(Number(payload.pair_number),...(active()?.rows || []).map(row=>Number(row.pair_number)));
+        const kmzStart=payload.designation==='S' && Number(payload.pair_number)===firstPair && !payload.gpx_source_id;
+
+        const namedPoints=data.waypoints.filter(point=>point.name===payload.waypoint_reference);
+        const automaticMatches=waypointMatches({...payload,gpx_source_id:null},data.waypoints);
+        const sourceConfirmation=namedPoints.length>0 && automaticMatches.length!==1;
+        $('entry-gpx-ambiguity').hidden=kmzStart || !(sourceConfirmation || matches.length>1 || (payload.gpx_source_id && matches.length===0));
+        if($('entry-gpx-help'))$('entry-gpx-help').textContent=sourceConfirmation
+            ? 'This GPS number has more than one possible GPX match. Select the file containing the surveyed point. The PDF date stays unchanged.'
+            : 'Choose the GPX file containing this surveyed GPS point.';
         $('entry-waypoint-status').textContent=!payload.waypoint_reference ? 'Text references keep leading zeros.' : matches.length===1 ? 'Matched to GPX.' : matches.length===0 ? 'Missing from GPX — draft can still be saved.' : 'Multiple GPX matches — choose source.';
+        if(kmzStart && payload.waypoint_reference)$('entry-waypoint-status').textContent='First S point: KMZ reference. Transformer coordinates come from the first E point in GPX.';
         if(identityError)$('entry-waypoint-status').textContent=identityError;
-        else if(matches.length===0 && data.waypoints.some(p=>p.name===payload.waypoint_reference))$('entry-waypoint-status').textContent='No date/source match — check the PDF date and correct GPX file. Draft can still be saved.';
+        else if(!kmzStart && matches.length===0 && namedPoints.length)$('entry-waypoint-status').textContent='GPS number exists in another GPX source. Select the correct GPX file below.';
+        else if(!kmzStart && matches.length===1){
+            const point=matches[0];
+            const recordedDate=point.recorded_at ? new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Karachi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(point.recorded_at)) : null;
+            if(recordedDate && payload.row_date && recordedDate!==payload.row_date)$('entry-waypoint-status').textContent='Matched to GPX by GPS number. Recording date differs from the PDF date; the PDF date stays unchanged.';
+        }
         $('entry-group-date-status').textContent=inheritance.group_date ? `Group/date inherited from saved row #${inheritance.group_date}; correct either field if different.` : '';
-        $('entry-unit-label').textContent=payload.pole_height_unit || data.entry_settings?.pole_height_unit || 'unit unconfirmed';
+        $('entry-height-unit-note').hidden=payload.pole_height===null || !!payload.pole_height_unit;
+        field(rowForm,'pole_height_unit').title=payload.pole_height_unit ? 'Height is recorded in '+(payload.pole_height_unit==='ft' ? 'feet' : 'metres') : 'Select Feet or Metres as printed on the survey PDF before verification.';
         const unit=data.entry_settings?.pole_height_unit;
         $('entry-unit-convert').hidden=!!rowId || !!inheritance.equipment || !['ft','m'].includes(payload.pole_height_unit) || !['ft','m'].includes(unit) || payload.pole_height_unit===unit;
         $('entry-unit-convert').textContent=`Project unit changed: convert draft ${payload.pole_height ?? 'height'} ${payload.pole_height_unit || ''} to ${unit || ''}`;
@@ -372,6 +430,11 @@ function initialize(boot) {
     }
     function renderSaved() {
         const t=active(), rows=t?.rows || [];
+        const point=data.waypoints.find(point=>point.id===t?.source_waypoint_id);
+        if($('entry-transformer-location'))$('entry-transformer-location').textContent=point
+            ? `Transformer location: GPS ${point.name}, selected automatically from the first E row. The first S point is a KMZ reference.`
+            : 'Transformer location will be taken from the first E row with a unique GPX match. The first S point is a KMZ reference.';
+
         $('entry-saved-count').textContent=`${rows.length} rows`;
         $('entry-row-panel')?.classList.toggle('entry-row-panel-disabled',!t);
         $('entry-review-link').href=`${boot.base_url}/review${t ? '?transformer_id='+t.id : ''}`;
@@ -384,9 +447,13 @@ function initialize(boot) {
         $('entry-legacy-records').innerHTML=t?.legacy_sections?.length ? `<p>Existing saved network: ${t.legacy_sections.length} section(s). <a href="${esc(boot.base_url)}/advanced?transformer_id=${t.id}#entry">Review or correct existing sections</a></p>` : '';
     }
     function chooseTransformer(id) {
-        activeId=number(id); clearErrors(); renderLists();
-        fillHeader(active() || {header:data.defaults}); headerDirty=false;
+        const match=/^registered:(\d+)$/.exec(String(id || ''));
+        manualTransformer=id==='__manual__';
+        registeredId=match ? Number(match[1]) : null;activeId=match || manualTransformer ? null : number(id); clearErrors(); renderLists();
+        fillHeader(active() || {registered_transformer_id:registeredId,manual_transformer:manualTransformer,header:data.defaults}); headerDirty=!!registered() || manualTransformer;
         $('entry-header-panel').open=!active(); renderSaved(); newRow(); updateAssociation();
+        if(manualTransformer)status('Enter the missing transformer code, complete its header and save.','dirty');
+        if(registered())status('Registered transformer selected. Complete and save its survey header.','dirty');
         const url=new URL(location.href); activeId ? url.searchParams.set('transformer_id',activeId) : url.searchParams.delete('transformer_id'); history.replaceState(null,'',url);
     }
     function persist() {
@@ -416,19 +483,24 @@ function initialize(boot) {
     async function saveHeader(event) {
         event?.preventDefault(); if(busy || !headerForm || !editable()) return;
         clearErrors();
+        if(!active() && !registered() && !manualTransformer){
+            headerDirty=true;error('Header not saved. Choose a registered transformer from this feeder.',{registered_transformer_id:['Choose a transformer in Active transformer.']},headerForm);revealHeaderErrors();persist();return;
+        }
         if(!headerForm.checkValidity()){
             const errors=Object.fromEntries(Array.from(headerForm.elements).filter(element=>element.name && !element.validity.valid).map(element=>[element.name.replace(/\[([^\]]+)\]/g,'.$1'),[element.validationMessage]]));
             headerDirty=true;error('Header not saved. Correct the highlighted fields and save again.',errors,headerForm);revealHeaderErrors();persist();return;
         }
-        const body=headerPayload(), source=data.sources.find(s=>s.id===number($('entry-pdf-source').value));
-        if(source?.status==='ready') {body.source_pdf_id=source.id;body.source_page=pageNumber;}
+        if(!active() && data.transformers.some(t=>transformerCodeKey(t.code)===transformerCodeKey(val(headerForm,'code')))){
+            headerDirty=true;error('Header not saved.',{code:['This transformer is already added to this survey. Select its saved header in Active transformer to edit it.']},headerForm);revealHeaderErrors();persist();return;
+        }
+        const body=headerPayload();
         body.revision=data.revision; const path=active() ? `/entry-headers/${activeId}` : '/entry-headers';
         headerDirty=true;persist();setBusy(true); status('Saving transformer header…');
         let failed=false;
         try {
             const saved=await api(path,active() ? 'PUT' : 'POST',body);
             if(!saved.transformers?.some(transformer=>transformer.id===Number(saved.active_transformer_id)))throw new Error('The server response did not confirm the saved header. Refresh saved records before retrying. Your fields are retained.');
-            data=saved;activeId=data.active_transformer_id;headerDirty=false;renderLists();fillHeader(active());renderSaved();if(!rowDirty)newRow();$('entry-header-panel').open=false;status('Transformer header saved.');persist();
+            data=saved;activeId=data.active_transformer_id;manualTransformer=false;headerDirty=false;renderLists();fillHeader(active());renderSaved();if(!rowDirty)newRow();$('entry-header-panel').open=false;status('Transformer header saved.');persist();
         }
         catch(e){failed=true;headerDirty=true;error(`Header not saved. ${e.message} Your entered fields are retained.${e.reference ? ' Reference: '+e.reference : ''}`,e.errors || {},headerForm);persist();}
         finally{setBusy(false);if(failed)revealHeaderErrors();}
@@ -442,7 +514,7 @@ function initialize(boot) {
     async function saveRow(advance) {
         if(busy || !editable() || !rowForm || !active()) return;
         clearErrors();
-        const body=rowPayload(), validation=rowValidationErrors(body,data.entry_settings?.two_digit_year_start ?? null);
+        const body=rowPayload(), validation=rowValidationErrors(body,data.entry_settings?.two_digit_year_start ?? 2000);
         for(const element of Array.from(rowForm.elements).filter(el=>el.willValidate && !el.validity.valid)) {
             const pvKey=element.dataset.pvKey, index=pvKey ? Array.from($('entry-pv-records').children).indexOf(element.closest('.entry-pv-row')) : null;
             const key=pvKey ? `pv_details.${index}.${pvKey}` : element.name.replace(/\[([^\]]+)\]/g,'.$1');
@@ -507,14 +579,7 @@ function initialize(boot) {
         const pageRendered=!$('entry-pdf-canvas').hidden && renderedPdfLocation===`${source}:${pageNumber}:${rotation}:${zoom}`;
         overlay.hidden=!pageRendered;
         const progress=pdfPageProgress(rows);
-        for(const [id,area] of [['entry-pdf-table-area',progress.area],['entry-pdf-entered-area',progress.enteredArea]]){
-            const element=$(id);element.hidden=!pageRendered || !area || drawingRows || !!rowArea;
-            if(area){
-                const bounds=rotatedRowBounds(area,rotation);
-                Object.assign(element.style,{left:bounds.x*100+'%',top:bounds.y*100+'%',width:bounds.width*100+'%',height:bounds.height*100+'%'});
-            }
-        }
-        $('entry-pdf-entered-area').querySelector('span').textContent=`Entered through row ${progress.enteredThrough}`;
+        renderPdfLines(pageRendered, rows);
         const focusedRow=document.activeElement?.dataset.pdfRow;
         overlay.innerHTML=rows.map(row=>{
             const bounds=rotatedRowBounds(row.bounds,rotation), next=pending?.id===row.id;
@@ -528,14 +593,31 @@ function initialize(boot) {
         $('entry-pdf-progress').textContent=rows.length ? `${rows.length-progress.remaining}/${rows.length} entered on this page; ${progress.remaining} remaining. ${progress.enteredThrough ? `Entered area reaches row ${progress.enteredThrough}. ` : ''}${pending ? `Next pending: page ${pending.page}, row ${pending.row_number}.` : 'All configured rows entered.'} ${configuredPages}/${pdf?.numPages || data.sources.find(s=>s.id===source)?.metadata?.page_count || '?'} pages set up.` : 'Rows are not set up for this page. Set up its S/E table first.';
         if($('entry-pdf-mark'))$('entry-pdf-mark').disabled=busy || !editable() || !selected?.entry_row_id || selected.entered || rowDirty;
         if($('entry-pdf-undo'))$('entry-pdf-undo').disabled=busy || !editable() || !selected?.entered;
-        if($('entry-pdf-draw'))$('entry-pdf-draw').disabled=busy || !pdf || !pageRendered;
-        if($('entry-pdf-row-count')){
-            const setupLocation=`${source}:${pageNumber}`;
-            if(rows.length && (setupPdfLocation!==setupLocation || rows.some(row=>row.entry_row_id)))$('entry-pdf-row-count').value=rows.length;
-            setupPdfLocation=setupLocation;
-            $('entry-pdf-row-count').disabled=busy || rows.some(row=>row.entry_row_id);
+        if($('entry-legacy-progress'))$('entry-legacy-progress').hidden=!rows.length;
+    }
+    function pageLines() {
+        return (data.pdf_lines || []).filter(line=>line.source_file_id===number($('entry-pdf-source').value) && line.page===pageNumber);
+    }
+    function renderPdfLines(pageRendered, rows) {
+        const svg=$('entry-pdf-lines');
+        if(!svg)return;
+        svg.toggleAttribute('hidden',!pageRendered);
+        const lines=pageLines().map(line=>({id:line.id,start:rotatedPdfPoint(line.start,rotation),end:rotatedPdfPoint(line.end,rotation)}));
+        for(const row of rows.filter(row=>row.entered)){
+            const bounds=row.bounds;
+            lines.push({id:`row-${row.id}`,start:rotatedPdfPoint({x:bounds.x,y:bounds.y+bounds.height},rotation),end:rotatedPdfPoint({x:bounds.x+bounds.width,y:bounds.y+bounds.height},rotation)});
         }
-        if($('entry-pdf-layout-save'))$('entry-pdf-layout-save').disabled=busy || !editable() || !rowArea;
+        if(linePreview)lines.push({id:'preview',...linePreview});
+        svg.innerHTML=lines.map(line=>`<line data-pdf-line="${esc(line.id)}" x1="${line.start.x}" y1="${line.start.y}" x2="${line.end.x}" y2="${line.end.y}" vector-effect="non-scaling-stroke" />`).join('');
+        if($('entry-pdf-draw')){
+            $('entry-pdf-draw').disabled=busy || !editable() || !pageRendered || data.sources.find(source=>source.id===number($('entry-pdf-source').value))?.status!=='ready';
+            $('entry-pdf-draw').setAttribute('aria-pressed',String(drawingLines));
+        }
+        if($('entry-line-undo')){
+            $('entry-line-undo').hidden=!pageLines().length;
+            $('entry-line-undo').disabled=busy || !editable();
+        }
+        if($('entry-line-status'))$('entry-line-status').textContent=drawingLines ? 'Click a row or drag across it. Esc to stop.' : (lines.length ? `${lines.length} red ${lines.length===1 ? 'line' : 'lines'} on this page` : '');
     }
     function selectPdfRow(id, checkDraft = true) {
         const marker=pdfRows().find(row=>row.id===Number(id));
@@ -567,29 +649,30 @@ function initialize(boot) {
         catch(e){error('PDF row marker was not changed.',e.errors || {save:[e.message]});}
         finally{setBusy(false);}
     }
-    function cancelRowDrawing() {
-        drawingRows=false;dragStart=null;rowArea=null;
-        $('entry-pdf-stage').dataset.drawing='false';$('entry-pdf-area').hidden=true;
+    function cancelLineDrawing() {
+        drawingLines=false;lineStart=null;linePreview=null;linePointer=null;
+        $('entry-pdf-stage').dataset.drawing='false';
         renderPdfRows();
-        if($('entry-pdf-layout-save'))$('entry-pdf-layout-save').disabled=true;
     }
     function drawPoint(event) {
         const rect=$('entry-pdf-canvas').getBoundingClientRect();
         return {x:Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width)),y:Math.max(0,Math.min(1,(event.clientY-rect.top)/rect.height))};
     }
-    function previewRowArea() {
-        const area=$('entry-pdf-area');area.hidden=!rowArea;if(!rowArea)return;
-        Object.assign(area.style,{left:rowArea.x*100+'%',top:rowArea.y*100+'%',width:rowArea.width*100+'%',height:rowArea.height*100+'%',backgroundImage:'linear-gradient(to bottom, #1768b3 1px, transparent 1px)',backgroundSize:`100% ${100/Number($('entry-pdf-row-count').value || 1)}%`});
-        $('entry-pdf-layout-save').disabled=busy;
-    }
-    async function savePdfLayout() {
-        if(busy || !rowArea || !$('entry-pdf-row-count').reportValidity())return;
-        const source=number($('entry-pdf-source').value);
+    async function savePdfLine(preview) {
+        const source=number($('entry-pdf-source').value), page=pageNumber;
+        const start=rotatedPdfPoint(preview.start,-rotation),end=rotatedPdfPoint(preview.end,-rotation);
         setBusy(true);clearErrors();
-        try{
-            data=await api(`/sources/${source}/row-layout`,'PUT',{revision:data.revision,page:pageNumber,row_count:Number($('entry-pdf-row-count').value),bounds:rowArea});
-            if(!selectedPdfRow())selectedPdfRowId=null;cancelRowDrawing();$('entry-pdf-setup').open=false;renderPdfRows();status('Page rows saved. Select the first pending row to begin.');persist();
-        }catch(e){error('Page rows were not saved.',e.errors || {save:[e.message]});}
+        try {
+            data=await api(`/sources/${source}/lines`,'POST',{revision:data.revision,page,client_uuid:uuid(),start,end});
+            status('Red line saved.');persist();
+        }catch(e){error('Red line was not confirmed. Refresh saved records before retrying.',e.errors || {line:[e.message]});}
+        finally{linePreview=null;setBusy(false);}
+    }
+    async function undoPdfLine() {
+        const line=pageLines().at(-1);if(busy || !editable() || !line)return;
+        setBusy(true);clearErrors();
+        try{data=await api(`/pdf-lines/${line.id}`,'DELETE',{revision:data.revision});status('Last red line removed.');persist();}
+        catch(e){error('Red line could not be removed.',e.errors || {line:[e.message]});}
         finally{setBusy(false);}
     }
     function renderPdf() {
@@ -618,7 +701,7 @@ function initialize(boot) {
         const previousLoading=pdfLoading;
         renderTask?.cancel();pdfLoading=null;pdf=null;
         $('entry-pdf-canvas').hidden=true;$('entry-pdf-message').hidden=false;$('entry-pdf-message').textContent=source ? 'Loading PDF…' : 'Upload a PDF and GPX to begin.';
-        cancelRowDrawing();renderPdfRows();
+        cancelLineDrawing();renderPdfRows();
         try {
             // The loading task owns the worker and document resources. Destroy it
             // once; document proxies in the bundled PDF.js have no destroy method.
@@ -635,7 +718,7 @@ function initialize(boot) {
     function setPage(numberValue) {
         pageNumber=Math.max(1,Math.min(pdf?.numPages || data.sources.find(s=>s.id===number($('entry-pdf-source').value))?.metadata?.page_count || 1,numberValue));
         $('entry-page').value=pageNumber;$('entry-page-total').textContent=`of ${pdf?.numPages || 0}`;$('entry-page-previous').disabled=pageNumber<=1;$('entry-page-next').disabled=!pdf || pageNumber>=pdf.numPages;
-        cancelRowDrawing();
+        cancelLineDrawing();
         if(rowForm && !rowId && !busy && !selectedPdfRowId){set(rowForm,'source_pdf_id',number($('entry-pdf-source').value));set(rowForm,'source_page',pageNumber);updateRowHints();}
         renderPdfRows();
         updateAssociation();persist();renderPdf();
@@ -664,45 +747,47 @@ function initialize(boot) {
     $('entry-pdf-pending').addEventListener('click',()=>{const pending=nextPendingPdfRow(pdfRows(),$('entry-pdf-source').value);if(pending)selectPdfRow(pending.id);});
     $('entry-pdf-mark')?.addEventListener('click',()=>markPdfRow(true));$('entry-pdf-undo')?.addEventListener('click',()=>markPdfRow(false));
     $('entry-pdf-draw')?.addEventListener('click',()=>{
-        if(busy || !pdf)return;
-        cancelRowDrawing();drawingRows=true;$('entry-pdf-stage').dataset.drawing='true';
-        renderPdfRows();
-        if(rotation!==0){rotation=0;renderPdf();}
-        $('entry-pdf-setup-help').textContent='Drag around the S/E table body, excluding headings and blank rows. Check the preview lines, then save page rows.';
+        if(busy || !pdf || !editable())return;
+        if(drawingLines){cancelLineDrawing();return;}
+        drawingLines=true;$('entry-pdf-stage').dataset.drawing='true';renderPdfRows();
     });
+    $('entry-line-undo')?.addEventListener('click',undoPdfLine);
     $('entry-pdf-stage').addEventListener('pointerdown',event=>{
-        if(!drawingRows || busy || event.button!==0)return;
-        event.preventDefault();dragStart=drawPoint(event);$('entry-pdf-stage').setPointerCapture?.(event.pointerId);
+        if(!drawingLines || busy || event.button!==0 || lineStart)return;
+        event.preventDefault();lineStart=drawPoint(event);linePointer=event.pointerId;
+        linePreview={start:lineStart,end:lineStart};
+        $('entry-pdf-stage').setPointerCapture?.(event.pointerId);
     });
     $('entry-pdf-stage').addEventListener('pointermove',event=>{
-        if(!drawingRows || !dragStart)return;
-        const point=drawPoint(event);rowArea={x:Math.min(point.x,dragStart.x),y:Math.min(point.y,dragStart.y),width:Math.abs(point.x-dragStart.x),height:Math.abs(point.y-dragStart.y)};
-        previewRowArea();
+        if(!drawingLines || !lineStart || event.pointerId!==linePointer)return;
+        linePreview={start:lineStart,end:{x:drawPoint(event).x,y:lineStart.y}};renderPdfRows();
     });
-    $('entry-pdf-stage').addEventListener('pointerup',()=>{
-        if(!drawingRows)return;
-        drawingRows=false;dragStart=null;$('entry-pdf-stage').dataset.drawing='false';
-        if(!rowArea || rowArea.width<.02 || rowArea.height<.02)cancelRowDrawing();
-        renderPdfRows();
+    $('entry-pdf-stage').addEventListener('pointerup',event=>{
+        if(!drawingLines || !lineStart || event.pointerId!==linePointer || busy)return;
+        const point=drawPoint(event),start=lineStart;
+        linePreview=Math.abs(point.x-start.x)<.01 ? {start:{x:.01,y:start.y},end:{x:.99,y:start.y}} : {start,end:{x:point.x,y:start.y}};
+        lineStart=null;linePointer=null;
+        $('entry-pdf-stage').releasePointerCapture?.(event.pointerId);
+        savePdfLine(linePreview);
     });
-    $('entry-pdf-stage').addEventListener('pointercancel',cancelRowDrawing);
-    $('entry-pdf-row-count')?.addEventListener('input',previewRowArea);
-    $('entry-pdf-layout-save')?.addEventListener('click',savePdfLayout);
+    $('entry-pdf-stage').addEventListener('pointercancel',cancelLineDrawing);
+    document.addEventListener('keydown',event=>{if(event.key==='Escape' && drawingLines){event.preventDefault();cancelLineDrawing();}});
     if(!data.sources.some(s=>s.kind==='pdf'))document.querySelector('.entry-source-files').open=true;
+    $('entry-header-pdf')?.addEventListener('change',updateHeaderPdfLimit);
     headerForm?.addEventListener('submit',saveHeader);headerForm?.addEventListener('input',event=>markDirty(event,'header'));headerForm?.addEventListener('change',event=>markDirty(event,'header'));
     $('entry-submit-form')?.addEventListener('submit',event=>{
         if(busy || !editable() || headerDirty || rowDirty){event.preventDefault();error('Save the header and all row changes before submitting for verification. Your entered fields are retained.');}
     });
     rowForm?.addEventListener('submit',event=>{event.preventDefault();saveRow(true);});rowForm?.addEventListener('input',event=>markDirty(event,'row'));rowForm?.addEventListener('change',event=>markDirty(event,'row'));
     $('entry-save-draft')?.addEventListener('click',()=>saveRow(false));$('entry-row-new')?.addEventListener('click',()=>{if(allowSwitch()){newRow();status('New draft row.');}});
-    $('entry-transformer').addEventListener('change',()=>{if(allowSwitch())chooseTransformer($('entry-transformer').value);else $('entry-transformer').value=String(activeId || '');});
-    document.querySelectorAll('[data-entry-add-transformer]').forEach(button=>button.addEventListener('click',()=>{if(!allowSwitch())return;chooseTransformer(null);$('entry-header-panel').open=true;field(headerForm,'code')?.focus();}));
+    $('entry-transformer').addEventListener('change',()=>{if(allowSwitch()){chooseTransformer($('entry-transformer').value);persist();}else $('entry-transformer').value=transformerSelection();});
+    document.querySelectorAll('[data-entry-add-transformer]').forEach(button=>button.addEventListener('click',()=>{if(!allowSwitch())return;chooseTransformer('__manual__');$('entry-header-panel').open=true;$('entry-transformer-search').value='';filterSelect($('entry-transformer'),'');field(headerForm,'code')?.focus();persist();}));
     $('entry-transformer-search').addEventListener('input',e=>filterSelect($('entry-transformer'),e.target.value));document.querySelectorAll('[data-entry-filter]').forEach(input=>input.addEventListener('input',()=>filterSelect($(input.dataset.entryFilter),input.value)));
     $('entry-copy-conductors')?.addEventListener('click',()=>copyValues('conductors'));$('entry-copy-equipment')?.addEventListener('click',()=>copyValues('equipment'));$('entry-copy-both')?.addEventListener('click',()=>copyValues('both'));
     $('entry-paste-apply')?.addEventListener('click',()=>{
         try{
             const parsed=parseWaypoint($('entry-paste-waypoint').value.trim(),data.entry_settings?.two_digit_year_start);
-            if(Object.entries(parsed).some(([key,value])=>val(rowForm,key) && isoDate(val(rowForm,key))!==value) && !window.confirm('Replace the entered group, date or GPS number with this pasted waypoint?'))return;
+            if(Object.entries(parsed).some(([key,value])=>val(rowForm,key) && (key==='row_date' ? isoDate(val(rowForm,key),data.entry_settings?.two_digit_year_start) : val(rowForm,key))!==value) && !window.confirm('Replace the entered group, date or GPS number with this pasted waypoint?'))return;
             for(const [key,value] of Object.entries(parsed))set(rowForm,key,value);
             set(rowForm,'gpx_source_id',null);delete inheritance.group_date;rowDirty=true;saveUuid=null;clearErrors();updateRowHints();persist();status('Complete waypoint applied. Check the PDF date and GPS match.','dirty');
         }catch(e){error(e.message);}
@@ -722,7 +807,7 @@ function initialize(boot) {
     $('entry-continue')?.addEventListener('click',async()=>{if(busy || !active())return;setBusy(true);try{data=await api(`/transformers/${activeId}/pages`,'POST',{revision:data.revision,source_pdf_id:number($('entry-pdf-source').value),page:pageNumber,role:'continuation',confirmed:true});renderLists();updateAssociation();status('Current transformer retained; continuation page confirmed.');persist();}catch(e){error('Continuation page could not be confirmed.',e.errors || {page:[e.message]});}finally{setBusy(false);}});
     $('entry-refresh').addEventListener('click',async()=>{if(busy)return;const h=headerPayload(),r=rowPayload(),id=rowId,identity=clientUuid;setBusy(true);try{data=await api('/entry-data');clearErrors();renderLists();renderSaved();if(headerDirty)fillHeader(h);else fillHeader(active() || {header:data.defaults});if(rowDirty){fillRow(r,id,identity);rowDirty=true;}else newRow();status('Saved records refreshed. Review retained fields before saving.',headerDirty || rowDirty ? 'dirty' : 'saved');persist();await loadPdf();}catch(e){error(e.message);}finally{setBusy(false);}});
     $('entry-pdf-source').addEventListener('change',()=>{pageNumber=1;loadPdf();persist();});$('entry-page').addEventListener('change',()=>setPage(Number($('entry-page').value)||1));$('entry-page-previous').addEventListener('click',()=>setPage(pageNumber-1));$('entry-page-next').addEventListener('click',()=>setPage(pageNumber+1));
-    $('entry-zoom-out').addEventListener('click',()=>{zoom=Math.max(.25,zoom/1.25);renderPdf();persist();});$('entry-zoom-in').addEventListener('click',()=>{zoom=Math.min(3,zoom*1.25);renderPdf();persist();});$('entry-zoom-fit').addEventListener('click',()=>{zoom=1;renderPdf();persist();});$('entry-rotate').addEventListener('click',()=>{cancelRowDrawing();rotation=(rotation+90)%360;renderPdf();persist();});
+    $('entry-zoom-out').addEventListener('click',()=>{cancelLineDrawing();zoom=Math.max(.25,zoom/1.25);renderPdf();persist();});$('entry-zoom-in').addEventListener('click',()=>{cancelLineDrawing();zoom=Math.min(3,zoom*1.25);renderPdf();persist();});$('entry-zoom-fit').addEventListener('click',()=>{cancelLineDrawing();zoom=1;renderPdf();persist();});$('entry-rotate').addEventListener('click',()=>{cancelLineDrawing();rotation=(rotation+90)%360;renderPdf();persist();});
     $('entry-viewer-height').addEventListener('input',()=>{$('entry-pdf-scroll').style.height=$('entry-viewer-height').value+'px';$('entry-height-value').textContent=$('entry-viewer-height').value+' px';persist();});
     let resizeTimer;new ResizeObserver(()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(renderPdf,150);}).observe($('entry-pdf-scroll'));
     new ResizeObserver(()=>{$('mdb-entry-workspace').style.setProperty('--entry-document-height',Math.ceil(document.querySelector('.entry-document').getBoundingClientRect().height)+'px');}).observe(document.querySelector('.entry-document'));

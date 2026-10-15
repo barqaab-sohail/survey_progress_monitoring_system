@@ -15,6 +15,11 @@ class SourceFile extends Model
         return ['metadata' => 'array', 'bytes' => 'integer', 'version' => 'integer'];
     }
 
+    public function driveStoredFile()
+    {
+        return $this->belongsTo(\App\Models\DriveStoredFile::class);
+    }
+
     public function batch()
     {
         return $this->belongsTo(SurveyBatch::class, 'batch_id');

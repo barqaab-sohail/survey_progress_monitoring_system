@@ -11,6 +11,8 @@ class ExportPayloadBuilder
 {
     public const VERSION = 'synergee-reviewed-v1';
 
+    public const EXTENDED_VERSION = 'synergee-reviewed-v2';
+
     public const TABLES = ['SAI_Control', 'Node', 'InstFeeders', 'InstSection', 'InstPrimaryTransformers', 'Loads'];
 
     public function __construct(private readonly ProjectionService $projection) {}
@@ -22,7 +24,8 @@ class ExportPayloadBuilder
         $settings = $configuration['settings'] ?? [];
         $mapping = $settings['mapping'] ?? [];
         $this->require(! empty($configuration['approved_by']) && ! empty($configuration['approved_at']), 'Project configuration needs engineering approval.');
-        $this->require(($mapping['version'] ?? '') === self::VERSION && ! empty($mapping['reviewed_by']) && ! empty($mapping['reviewed_at']), 'A reviewed synergee-reviewed-v1 mapping is required.');
+        $version = $mapping['version'] ?? '';
+        $this->require(in_array($version, [self::VERSION, self::EXTENDED_VERSION], true) && ! empty($mapping['reviewed_by']) && ! empty($mapping['reviewed_at']), 'A reviewed supported SynerGEE mapping is required.');
         $this->require((float) ($settings['frequency_hz'] ?? 0) > 0 && (float) ($settings['nominal_voltage_kv'] ?? 0) > 0, 'Approved frequency and nominal voltage are required.');
         $epsg = (int) ($configuration['epsg'] ?? 0);
         $this->require($epsg > 0, 'An approved projected CRS is required.');
@@ -40,6 +43,9 @@ class ExportPayloadBuilder
         $this->require(($control['LengthUnits'] ?? '') === 'Metric' && (float) ($control['Frequency'] ?? 0) === (float) $settings['frequency_hz'], 'SAI_Control must use approved frequency and metric length units.');
         $this->require(($control['Product'] ?? '') === $template->synergee_version && ! empty($control['ProjectionFile']), 'SAI_Control needs matching SynerGEE product and projection metadata.');
         $tables = array_fill_keys(self::TABLES, []);
+        if ($version === self::EXTENDED_VERSION) {
+            $tables += array_fill_keys(SupplementalMapping::TABLES, []);
+        }
         $tables['SAI_Control'][] = $control;
         $waypoints = [];
         foreach ($snapshot['waypoints'] ?? [] as $point) {
@@ -53,11 +59,15 @@ class ExportPayloadBuilder
             $waypoints = $identityNetwork['points'];
             $transformer['sections'] = $identityNetwork['sections'];
             $identityAliases = $identityNetwork['aliases'];
-            foreach ($transformer['pv_records'] ?? [] as $pv) {
+            foreach ($version === self::VERSION ? ($transformer['pv_records'] ?? []) : [] as $pv) {
                 if ((float) ($pv['installed_capacity_kw'] ?? 0) > 0) {
                     $exclusion = $mapping['pv_exclusion'] ?? [];
                     $this->require(! empty($exclusion['reason']) && ! empty($exclusion['reviewed_at']) && (int) ($exclusion['reviewed_by'] ?? 0) === (int) $configuration['approved_by'], 'Positive PV capacity needs a reviewed generator mapping or a documented exclusion approved by the configuration verifier.');
                 }
+            }
+            if ($version === self::VERSION) {
+                $legacyNetwork = $mapping['networks'][$transformer['code']] ?? [];
+                $this->require(empty($legacyNetwork['meter_points']) && empty($legacyNetwork['generators']), 'Meter points and generators require a reviewed v2 mapping.');
             }
             $network = $mapping['networks'][$transformer['code']] ?? [];
             $this->require(! empty($network['source_nodes']) && ! empty($network['source_sections']), 'Approved source and transformer supply topology is required for '.$transformer['code'].'.');
@@ -168,6 +178,18 @@ class ExportPayloadBuilder
                 }
                 $provenance[] = ['section_id' => $id, 'survey_section_id' => $section['id'], 'pdf_id' => $section['source_pdf_id'] ?? null, 'page' => $section['source_page'] ?? null, 'row' => $section['source_row'] ?? null, 'length_source' => $lengthSource];
             }
+            if ($version === self::EXTENDED_VERSION) {
+                $extra = app(SupplementalMapping::class)->build($transformer, $configuration);
+                foreach ($extra as $table => $rows) {
+                    foreach ($rows as $row) {
+                        $reference = $row['SectionId'];
+                        $row['SectionId'] = str_starts_with($reference, 'source:')
+                            ? $sourceSectionIds[substr($reference, 7)]
+                            : $this->id('s', $revision->batch_id.':section:'.substr($reference, 7));
+                        $tables[$table][] = $row;
+                    }
+                }
+            }
             $reachable = [$feederId => true];
             do {
                 $before = count($reachable);
@@ -212,7 +234,7 @@ class ExportPayloadBuilder
         }
 
         return [
-            'payload_version' => 1, 'mapping_version' => self::VERSION, 'idempotency_key' => $idempotencyKey,
+            'payload_version' => 1, 'mapping_version' => $version, 'idempotency_key' => $idempotencyKey,
             'revision' => ['id' => $revision->id, 'number' => $revision->number, 'sha256' => $revision->sha256],
             'template' => ['code' => $template->code, 'version' => $template->version, 'sha256' => $template->sha256, 'synergee_version' => $template->synergee_version, 'permitted_static_tables' => $template->metadata['permitted_static_tables'] ?? []],
             'settings' => ['epsg' => $epsg, 'configuration_revision' => $configuration['revision'] ?? null, 'electrical' => $settings],

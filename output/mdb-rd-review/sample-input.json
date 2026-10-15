@@ -1,0 +1,336 @@
+{
+  "payload_version": 1,
+  "mapping_version": "synergee-reviewed-v1",
+  "idempotency_key": "50a6ebdd23c0ef7220f02217595432943f098805cc8e655174a809ce7e15d4dd",
+  "revision": {
+    "id": null,
+    "number": null,
+    "sha256": "3e1de6b57e45661e70a1a968e764ed86f6acfd32b54d66bef1c95a26b13917c5"
+  },
+  "template": {
+    "sha256": "5d4ebf8d307e1a9adf130d56c36706a4e63406ee628131f472850cb2897f6a39",
+    "permitted_static_tables": []
+  },
+  "engineering_acceptance": "INCOMPLETE_R&D_NOT_FOR_ANALYSIS_OR_CLIENT_DELIVERY",
+  "workflow_approval": "NONE: offline low-level writer experiment; no application revision created or approved",
+  "tables": {
+    "SAI_Control": [
+      {
+        "LengthUnits": "Metric",
+        "Phase1": "R",
+        "Phase2": "Y",
+        "Phase3": "B",
+        "Product": "SynerGEE Electric 5.0.0.324",
+        "ProjectionFile": "WGS 1984 UTM Zone 43N"
+      }
+    ],
+    "Node": [
+      {
+        "NodeId": "11030717217",
+        "X": 339615.0000000298,
+        "Y": 3781860.0,
+        "Description": "R&D KMZ transformer root 11030717217"
+      },
+      {
+        "NodeId": "01081026091",
+        "X": 339611.2054902723,
+        "Y": 3781860.997393228,
+        "Description": "R&D GPX 2026-10-08 091"
+      },
+      {
+        "NodeId": "01081026092",
+        "X": 339608.662170568,
+        "Y": 3781863.2594305137,
+        "Description": "R&D GPX 2026-10-08 092"
+      },
+      {
+        "NodeId": "01081026093",
+        "X": 339630.9922855976,
+        "Y": 3781831.706508085,
+        "Description": "R&D GPX 2026-10-08 093"
+      },
+      {
+        "NodeId": "01081026094",
+        "X": 339600.4395563973,
+        "Y": 3781927.185811621,
+        "Description": "R&D GPX 2026-10-08 094"
+      },
+      {
+        "NodeId": "01081026095",
+        "X": 339590.12471794814,
+        "Y": 3781987.3762127236,
+        "Description": "R&D GPX 2026-10-08 095"
+      },
+      {
+        "NodeId": "01081026096",
+        "X": 339577.064829741,
+        "Y": 3782043.398052249,
+        "Description": "R&D GPX 2026-10-08 096"
+      },
+      {
+        "NodeId": "01081026097",
+        "X": 339570.9604071563,
+        "Y": 3782101.7417297675,
+        "Description": "R&D GPX 2026-10-08 097"
+      },
+      {
+        "NodeId": "01081026098",
+        "X": 339563.4413885994,
+        "Y": 3782142.027582244,
+        "Description": "R&D GPX 2026-10-08 098"
+      },
+      {
+        "NodeId": "01081026099",
+        "X": 339588.45342227037,
+        "Y": 3782148.8113337965,
+        "Description": "R&D GPX 2026-10-08 099"
+      },
+      {
+        "NodeId": "01081026100",
+        "X": 339596.9637699085,
+        "Y": 3782108.7635799246,
+        "Description": "R&D GPX 2026-10-08 100"
+      },
+      {
+        "NodeId": "RD_EQUIV_SOURCE_000407",
+        "X": 339615.0000000298,
+        "Y": 3781860.0,
+        "Description": "R&D equivalent supply at transformer; NOT actual substation location"
+      }
+    ],
+    "InstFeeders": [
+      {
+        "FeederId": "RD_EQUIV_SOURCE_000407",
+        "SubstationId": "Abbottabad",
+        "NominalKvll": 11,
+        "Note_": "R&D incomplete equivalent supply. 11kV from KMZ; no approved source electrical model."
+      }
+    ],
+    "InstSection": [
+      {
+        "SectionId": "RD_TRANSFORMER_LINK",
+        "FeederId": "RD_EQUIV_SOURCE_000407",
+        "FromNodeId": "RD_EQUIV_SOURCE_000407",
+        "ToNodeId": "11030717217",
+        "SectionPhases": "RYB",
+        "SectionLength_MUL": 0,
+        "Description": "R&D co-located transformer link; artificial topology, not a measured HT span"
+      },
+      {
+        "SectionId": "RD_P11_01",
+        "FeederId": "RD_EQUIV_SOURCE_000407",
+        "FromNodeId": "11030717217",
+        "ToNodeId": "01081026091",
+        "SectionPhases": "RYBN",
+        "SectionLength_MUL": 3.923403822082827,
+        "Description": "R&D PDF p11 pair 1, 217->091; straight endpoint estimate"
+      },
+      {
+        "SectionId": "RD_P11_02",
+        "FeederId": "RD_EQUIV_SOURCE_000407",
+        "FromNodeId": "01081026091",
+        "ToNodeId": "01081026092",
+        "SectionPhases": "RYBN",
+        "SectionLength_MUL": 3.403716762562986,
+        "Description": "R&D PDF p11 pair 2, 091->092; straight endpoint estimate"
+      },
+      {
+        "SectionId": "RD_P11_03",
+        "FeederId": "RD_EQUIV_SOURCE_000407",
+        "FromNodeId": "01081026092",
+        "ToNodeId": "01081026093",
+        "SectionPhases": "  BN",
+        "SectionLength_MUL": 38.65515426199961,
+        "Description": "R&D PDF p11 pair 3, 092->093; straight endpoint estimate"
+      },
+      {
+        "SectionId": "RD_P11_04",
+        "FeederId": "RD_EQUIV_SOURCE_000407",
+        "FromNodeId": "01081026091",
+        "ToNodeId": "01081026094",
+        "SectionPhases": "RYBN",
+        "SectionLength_MUL": 67.05827362503945,
+        "Description": "R&D PDF p11 pair 4, 091->094; straight endpoint estimate"
+      },
+      {
+        "SectionId": "RD_P11_05",
+        "FeederId": "RD_EQUIV_SOURCE_000407",
+        "FromNodeId": "01081026094",
+        "ToNodeId": "01081026095",
+        "SectionPhases": "RYBN",
+        "SectionLength_MUL": 61.067833407633046,
+        "Description": "R&D PDF p11 pair 5, 094->095; straight endpoint estimate"
+      },
+      {
+        "SectionId": "RD_P11_06",
+        "FeederId": "RD_EQUIV_SOURCE_000407",
+        "FromNodeId": "01081026095",
+        "ToNodeId": "01081026096",
+        "SectionPhases": "RYBN",
+        "SectionLength_MUL": 57.52397051498651,
+        "Description": "R&D PDF p11 pair 6, 095->096; straight endpoint estimate"
+      },
+      {
+        "SectionId": "RD_P11_07",
+        "FeederId": "RD_EQUIV_SOURCE_000407",
+        "FromNodeId": "01081026096",
+        "ToNodeId": "01081026097",
+        "SectionPhases": "RYBN",
+        "SectionLength_MUL": 58.662157149787866,
+        "Description": "R&D PDF p11 pair 7, 096->097; straight endpoint estimate"
+      },
+      {
+        "SectionId": "RD_P11_08",
+        "FeederId": "RD_EQUIV_SOURCE_000407",
+        "FromNodeId": "01081026097",
+        "ToNodeId": "01081026098",
+        "SectionPhases": "RYBN",
+        "SectionLength_MUL": 40.98152693369009,
+        "Description": "R&D PDF p11 pair 8, 097->098; straight endpoint estimate"
+      },
+      {
+        "SectionId": "RD_P11_09",
+        "FeederId": "RD_EQUIV_SOURCE_000407",
+        "FromNodeId": "01081026098",
+        "ToNodeId": "01081026099",
+        "SectionPhases": " YBN",
+        "SectionLength_MUL": 25.915653830899718,
+        "Description": "R&D PDF p11 pair 9, 098->099; straight endpoint estimate"
+      },
+      {
+        "SectionId": "RD_P11_10",
+        "FeederId": "RD_EQUIV_SOURCE_000407",
+        "FromNodeId": "01081026099",
+        "ToNodeId": "01081026100",
+        "SectionPhases": " YBN",
+        "SectionLength_MUL": 40.942015181295105,
+        "Description": "R&D PDF p11 pair 10, 099->100; straight endpoint estimate"
+      }
+    ],
+    "InstPrimaryTransformers": [
+      {
+        "SectionId": "RD_TRANSFORMER_LINK",
+        "UniqueDeviceId": "T-11030717217",
+        "ConnectedPhases": "RYB",
+        "TransformerType": "R&D-UNMAPPED-100KVA",
+        "Note_": "100kVA verified PDF/KMZ; placeholder type is NOT an approved equipment library reference."
+      }
+    ],
+    "Loads": [
+      {
+        "SectionId": "RD_P11_01",
+        "Description": "R&D UNALLOCATED p11 WP 091; RS=1, SC=?"
+      },
+      {
+        "SectionId": "RD_P11_02",
+        "Description": "R&D UNALLOCATED p11 WP 092; RS=1, SC=5"
+      },
+      {
+        "SectionId": "RD_P11_03",
+        "Description": "R&D UNALLOCATED p11 WP 093; RS=4, SC=7"
+      },
+      {
+        "SectionId": "RD_P11_04",
+        "Description": "R&D UNALLOCATED p11 WP 094; RS=5, SC=4, LC=1"
+      },
+      {
+        "SectionId": "RD_P11_05",
+        "Description": "R&D UNALLOCATED p11 WP 095; RS=12, SC=1"
+      },
+      {
+        "SectionId": "RD_P11_06",
+        "Description": "R&D UNALLOCATED p11 WP 096; RS=9, SC=1"
+      },
+      {
+        "SectionId": "RD_P11_07",
+        "Description": "R&D UNALLOCATED p11 WP 097; RS=9"
+      },
+      {
+        "SectionId": "RD_P11_08",
+        "Description": "R&D UNALLOCATED p11 WP 098; RS=2"
+      },
+      {
+        "SectionId": "RD_P11_09",
+        "Description": "R&D UNALLOCATED p11 WP 099; RS=3"
+      },
+      {
+        "SectionId": "RD_P11_10",
+        "Description": "R&D UNALLOCATED p11 WP 100; RS=8"
+      }
+    ]
+  },
+  "settings": {
+    "epsg": 32643,
+    "projection_basis": "R&D metric projection of supplied WGS84 coordinates"
+  },
+  "assumptions": [
+    "Artificial co-located source node and zero-length transformer link; not HT network reconstruction",
+    "TransformerType required by schema: deliberately unmapped placeholder; 100kVA comes from PDF/KMZ",
+    "10 Loads rows carry transcription descriptions only: all phase customers, kW, kvar and kVA are NULL",
+    "Conductor library, configuration, frequency, voltage operating settings, impedance and connections are NULL",
+    "No InstMeterPoints or PV generator records; this sample is limited to page 11",
+    "Metric endpoint estimates are not measured wire length"
+  ],
+  "sources": [
+    {
+      "file": "A081026.pdf",
+      "bytes": 7184122,
+      "sha256": "170b782cb55a9923e4590b5dcc3a46e30224ce4f0d5ccfc317b800a637c9f969"
+    },
+    {
+      "file": "Choper HattaT-3030216724.mdb",
+      "bytes": 3973120,
+      "sha256": "a13f0d2599a7c998ff9554bee70b67aed7c5140d86604631b4b82901851c486b"
+    },
+    {
+      "file": "Choper HattaT-3030216727.mdb",
+      "bytes": 3973120,
+      "sha256": "461191191194fe8e9c9104b038bea9ad880b38032ee486d88e61c8dff7b4eefa"
+    },
+    {
+      "file": "Jodh PurT-4101220409.mdb",
+      "bytes": 3973120,
+      "sha256": "9d128dfa9b4410a603ecd644c4bb9d041f48d4e326b04c5b9396eb4909180058"
+    },
+    {
+      "file": "Jodh PurT-4151220461.mdb",
+      "bytes": 3973120,
+      "sha256": "69bb7b54dc4cdceea067a582b949a37e98b00fc19ddc4ca4add6d86274ae9709"
+    },
+    {
+      "file": "Jodh PurT-4171220510.mdb",
+      "bytes": 3973120,
+      "sha256": "0c75fae87e14b814d67f13e56e8fd467d6eca854cebe2b94b49502ed6e7f07e4"
+    },
+    {
+      "file": "Jodh PurT-4171220531.mdb",
+      "bytes": 3973120,
+      "sha256": "03b25128fc33bb59040906166322693710df664c93b21cc3dd9f51713e2c0379"
+    },
+    {
+      "file": "Kot Gohar MT-3150216178.mdb",
+      "bytes": 3973120,
+      "sha256": "2732263e8b8583b310c5e033f9f4f0a696921814b60b231ce51d7cef054a41a3"
+    },
+    {
+      "file": "NAWAN SHEHR (000407).kmz",
+      "bytes": 55320,
+      "sha256": "597d53cfe2cbc05cd1a6080eae69204663b6c9d2d66fe1afd31d8e529fb6a3e5"
+    },
+    {
+      "file": "Noor PurT-4070621060.mdb",
+      "bytes": 3973120,
+      "sha256": "094f3d22306aeaf9371959d8cd9b0fd2e26ff6ae08b4920fac1ba1e283272aae"
+    },
+    {
+      "file": "Noor PurT-4221215879.mdb",
+      "bytes": 3973120,
+      "sha256": "222eb09014d897fe01a84c164529096e7ddc376db672b6f12b6ade53da4bc190"
+    },
+    {
+      "file": "Waypoints_2026-10-08.gpx",
+      "bytes": 20908,
+      "sha256": "59f376830b3119a81f3f79cd607abc1cc71798ea4d8ff147c3b0ac1f3fde1fe6"
+    }
+  ]
+}

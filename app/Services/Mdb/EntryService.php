@@ -5,12 +5,22 @@ namespace App\Services\Mdb;
 use App\Models\Mdb\EntryRow;
 use App\Models\Mdb\NetworkSection;
 use App\Models\Mdb\NetworkTransformer;
+use App\Models\Mdb\PdfLine;
 use App\Models\Mdb\PdfRow;
 use App\Models\Mdb\SurveyBatch;
 use Illuminate\Validation\ValidationException;
 
 class EntryService
 {
+    public function synchronizeTransformerLocation(NetworkTransformer $transformer): void
+    {
+        $value = app(SurveyWaypoint::class)->transformerLocation([
+            'header' => $transformer->header ?? [], 'source_waypoint_id' => $transformer->source_waypoint_id,
+            'entry_rows' => $transformer->entryRows()->get()->map->surveyData()->all(),
+        ], $transformer->batch->waypoints()->get()->toArray());
+        $transformer->update(['source_waypoint_id' => $value['source_waypoint_id'], 'header' => $value['header']]);
+    }
+
     public function editorData(SurveyBatch $batch): array
     {
         $batch->load(['feeder.gridStation', 'feeder.division', 'feeder.subDivision', 'surveyTeam', 'sources', 'waypoints',
@@ -20,21 +30,24 @@ class EntryService
         return ['batch_id' => $batch->id, 'revision' => $batch->revision, 'status' => $batch->status,
             'staged_workflow' => $batch->staged_workflow, 'survey_status' => $batch->survey_status,
             'pdf_rows' => PdfRow::whereIn('source_file_id', $batch->sources->pluck('id'))->orderBy('page')->orderBy('row_number')->get()->toArray(),
+            'pdf_lines' => PdfLine::whereIn('source_file_id', $batch->sources->pluck('id'))->orderBy('id')->get()->toArray(),
             'defaults' => ['feeder_identifier' => $feeder?->feeder_code, 'feeder_name' => $feeder?->feeder_name,
                 'substation_identifier' => $feeder?->gridStation?->code, 'substation_name' => $feeder?->gridStation?->name,
                 'division' => $feeder?->division?->name, 'subdivision' => $feeder?->subDivision?->name,
                 'subdivision_code' => $feeder?->subDivision?->code, 'survey_date' => $batch->survey_date->format('Y-m-d'),
                 'team_group' => $batch->surveyTeam?->code],
             'sources' => $batch->sources->map(fn ($source) => $source->only(['id', 'kind', 'original_name', 'status', 'version', 'metadata']))->values()->all(),
+            'registered_transformers' => $feeder?->transformers()->orderBy('transformer_code')->get(['id', 'transformer_code'])
+                ->map(fn ($transformer) => ['id' => $transformer->id, 'code' => $transformer->transformer_code])->all() ?? [],
             'entry_settings' => app(SurveyWaypoint::class)->settings($batch->project_id),
             'waypoints' => $batch->waypoints->map(fn ($point) => $point->only(['id', 'name', 'source_file_id']) + ['recorded_at' => $point->recorded_at?->utc()->toIso8601String()])->values()->all(),
-            'transformers' => $batch->transformers->map(fn ($transformer) => [
+            'transformers' => $batch->transformers->map(fn ($transformer) => app(SurveyWaypoint::class)->transformerLocation([
                 'id' => $transformer->id, 'code' => $transformer->code, 'capacity_kva' => $transformer->capacity_kva,
                 'source_waypoint_id' => $transformer->source_waypoint_id, 'header' => $transformer->header,
                 'rows' => $transformer->entryRows->map->surveyData()->values()->all(),
                 'legacy_sections' => $transformer->sections->filter(fn ($section) => ! ($section->original_entry['entry_rows_managed'] ?? false))->values()->toArray(),
                 'pv_records' => $transformer->pvRecords->toArray(),
-            ])->values()->all(), 'lookups' => app(EntryLookups::class)->options(), 'issues' => $this->issues($batch)];
+            ], $batch->waypoints->toArray()))->values()->all(), 'lookups' => app(EntryLookups::class)->options(), 'issues' => $this->issues($batch)];
     }
 
     public function normalized(array $data): array
@@ -100,6 +113,12 @@ class EntryService
                 unset($original[$endpoint.'_survey_identifier'], $original[$endpoint.'_row_date']);
             }
         }
+        $firstPair = $transformer->entryRows()->min('pair_number');
+        if ($pairNumber == $firstPair && $start && empty($start->gpx_source_id)) {
+            $original['start_coordinate_source'] = 'kmz';
+        } else {
+            unset($original['start_coordinate_source']);
+        }
         $values = ['start_reference' => $start?->waypoint_reference, 'end_reference' => $end?->waypoint_reference,
             'start_source_file_id' => $start?->gpx_source_id, 'end_source_file_id' => $end?->gpx_source_id,
             'start_waypoint_id' => null, 'end_waypoint_id' => null, 'phases' => $phases, 'conductors' => $conductors,
@@ -154,6 +173,7 @@ class EntryService
                 'section_id' => $row->section_id, 'source_pdf_id' => $row->source_pdf_id, 'source_page' => $row->source_page, 'source_row' => $row->source_row];
         };
         foreach ($data['transformers'] ?? [] as $transformerData) {
+            $transformerData = app(SurveyWaypoint::class)->transformerLocation($transformerData, $data['waypoints'] ?? []);
             $transformer = (object) $transformerData;
             if (! empty($transformerData['entry_rows']) || ! empty($transformerData['header']['operator_entry'])) {
                 $headerIssue = function (string $code, string $message) use (&$issues, $transformer): void {
@@ -169,12 +189,13 @@ class EntryService
                     $headerIssue('missing_operator_capacity', 'Transformer header: enter positive capacity in kVA.');
                 }
                 if (empty($transformerData['source_waypoint_id'])) {
-                    $headerIssue('missing_operator_root', 'Transformer header: select its surveyed GPS waypoint.');
+                    $headerIssue('missing_operator_root', 'The first S/E pair needs an E row with one matching GPX point and valid coordinates for the transformer location.');
                 }
                 if (empty($transformerData['entry_rows']) && ($transformerData['section_count'] ?? count($transformerData['sections'] ?? [])) === 0) {
                     $headerIssue('missing_operator_rows', 'Enter at least one complete S/E pair for this transformer.');
                 }
             }
+            $firstPair = collect($transformerData['entry_rows'] ?? [])->min('pair_number');
             foreach (collect($transformerData['entry_rows'] ?? [])->map(fn ($row) => (object) $row)->groupBy('pair_number') as $number => $rows) {
                 if ($rows->count() !== 2 || $rows->pluck('designation')->sort()->values()->all() !== ['E', 'S']) {
                     $add('incomplete_entry_pair', 'Pair '.$number.' needs both an S row and an E row.', $rows->first());
@@ -194,13 +215,10 @@ class EntryService
                     if (($row->identity_version ?? null) === 2 && empty($row->composite_identifier)) {
                         $add('incomplete_survey_identifier', $label.'enter two group digits, a valid row date and three GPS digits.', $row);
                     }
-                    if (($row->identity_version ?? null) === 2 && ($data['entry_settings']['two_digit_year_start'] ?? $data['configuration']['settings']['entry']['two_digit_year_start'] ?? null) === null) {
-                        $add('missing_entry_year_rule', $label.'configure the project two-digit-year window before final verification.', $row);
-                    }
                     if (($row->identity_version ?? null) === 2) {
                         try {
                             $expected = app(SurveyWaypoint::class)->compose($row->group_number, $row->row_date, $row->waypoint_reference,
-                                $data['entry_settings']['two_digit_year_start'] ?? $data['configuration']['settings']['entry']['two_digit_year_start'] ?? null);
+                                $data['entry_settings']['two_digit_year_start'] ?? $data['configuration']['settings']['entry']['two_digit_year_start'] ?? SurveyWaypoint::DEFAULT_YEAR_START);
                             if ($expected !== ($row->composite_identifier ?? null)) {
                                 $add('invalid_survey_identifier', $label.'complete waypoint differs from its recorded components.', $row);
                             }
@@ -208,8 +226,14 @@ class EntryService
                             $add('invalid_survey_identifier', $label.implode(' ', array_merge(...array_values($exception->errors()))), $row);
                         }
                     }
-                    if ($matches->count() !== 1) {
-                        $add($matches->isEmpty() ? 'entry_missing_waypoint' : 'entry_ambiguous_waypoint', $label.($matches->isEmpty() ? 'waypoint is missing from GPX.' : 'waypoint has multiple matches; choose its GPX source.'), $row);
+                    $kmzStart = $number == $firstPair && $row->designation === 'S' && empty($row->gpx_source_id);
+                    if ($matches->count() !== 1 && ! $kmzStart) {
+                        $namedPoints = collect($data['waypoints'] ?? [])->filter(fn ($point) => (string) $point['name'] === (string) $row->waypoint_reference);
+                        if ($matches->isEmpty() && $namedPoints->isNotEmpty()) {
+                            $add('entry_waypoint_source_mismatch', $label.'GPS '.$row->waypoint_reference.' exists in another GPX source. Select the correct GPX file in the row editor.', $row);
+                        } else {
+                            $add($matches->isEmpty() ? 'entry_missing_waypoint' : 'entry_ambiguous_waypoint', $label.($matches->isEmpty() ? 'GPS '.$row->waypoint_reference.' is missing from the uploaded GPX files.' : 'GPS '.$row->waypoint_reference.' has multiple matches; choose its GPX source.'), $row);
+                        }
                     }
                     $phase = EntryLookups::phase($row->conductors);
                     if (! $phase['complete'] || ($row->conductors['N'] ?? null) === null) {
@@ -217,17 +241,22 @@ class EntryService
                     } elseif ($phase['display'] === '') {
                         $add('entry_no_active_phase', $label.'at least one R/Y/B conductor is required.', $row);
                     }
-                    if (! $row->equipment_type || ! $row->pole_class || ! $row->pole_height || ! in_array($row->pole_height_unit, ['m', 'ft'], true)) {
-                        $add('incomplete_entry_equipment', $label.'check type, pole class, positive height and confirmed unit.', $row);
+                    $missingEquipment = [];
+                    if (! $row->equipment_type) $missingEquipment[] = 'equipment type';
+                    if (! $row->pole_class) $missingEquipment[] = 'pole class';
+                    if (! is_numeric($row->pole_height) || $row->pole_height <= 0) $missingEquipment[] = 'positive pole/tower height';
+                    if ($missingEquipment) {
+                        $add('incomplete_entry_equipment', $label.'enter '.implode(', ', $missingEquipment).'.', $row);
+                    }
+                    if (! in_array($row->pole_height_unit, ['m', 'ft'], true)) {
+                        $add('missing_entry_height_unit', $label.'select the pole/tower height unit (Feet or Metres) beside the height before verification.', $row);
                     }
                     if (! $row->group_number || ! $row->row_date) {
                         $add('incomplete_entry_date_group', $label.'group/team and date need entry.', $row);
                     }
                     $pdf = collect($data['sources'] ?? [])->firstWhere('id', $row->source_pdf_id);
-                    $pages = $transformer->header['pages'] ?? [];
-                    if (! $pdf || $pdf['kind'] !== 'pdf' || ! $row->source_page || ! $row->source_row || $row->source_page > ($pdf['metadata']['page_count'] ?? 0)
-                        || ! collect($pages)->contains(fn ($page) => ($page['source_pdf_id'] ?? null) === $row->source_pdf_id && ($page['page'] ?? null) === $row->source_page && ($page['confirmed'] ?? false))) {
-                        $add('entry_page_unconfirmed', $label.'confirm the source PDF page with Continue Current Transformer.', $row);
+                    if (! $pdf || $pdf['kind'] !== 'pdf' || ! $row->source_page || $row->source_page < 1 || ! $row->source_row || $row->source_page > ($pdf['metadata']['page_count'] ?? 0)) {
+                        $add('invalid_entry_pdf_source', $label.'select a valid source PDF, page and survey row.', $row);
                     }
                     if (($row->consumers['pv'] ?? 0) > 0 && empty($row->pv_details)) {
                         $add('missing_entry_pv_details', $label.'enter details for the recorded PV consumers.', $row);

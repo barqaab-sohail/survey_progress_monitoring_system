@@ -60,15 +60,7 @@ class FieldSurveyApiController extends Controller
     {
         $attachment = FieldSurveyAttachment::with('survey')->where('client_uuid', $clientUuid)->firstOrFail();
         $access->authorizeOwner($request->user(), $attachment->survey);
-        abort_unless(Storage::disk('local')->exists($attachment->path), 404);
-        $extension = match ($attachment->mime_type) {
-            'image/png' => 'png', 'image/jpeg' => 'jpg', default => 'pdf'
-        };
-
-        return response()->file(Storage::disk('local')->path($attachment->path), [
-            'Content-Type' => $attachment->mime_type,
-            'Content-Disposition' => 'inline; filename="'.$attachment->client_uuid.'.'.$extension.'"',
-            'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff',
-        ]);
+        return app(\App\Services\DriveStorage\FileStorage::class)->response($attachment->driveStoredFile, 'local', $attachment->path,
+            $attachment->driveStoredFile?->original_name ?? $attachment->client_uuid, $attachment->mime_type, $request->boolean('download'));
     }
 }

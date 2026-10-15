@@ -42,6 +42,7 @@ class SnapshotService
             $locked->forceFill(['approved_revision_id' => null, 'status' => 'draft'])->save();
             if ($locked->staged_workflow && $locked->survey_status === 'approved') {
                 $locked->update(['survey_status' => 'returned',
+                    'survey_verifier_id' => null, 'survey_verified_at' => null,
                     'survey_remarks' => 'Approval was invalidated because survey data or engineering settings changed. Submit the updated survey for verification.']);
             }
             $locked->exports()->whereNull('superseded_at')->update(['superseded_at' => now('UTC'), 'updated_at' => now('UTC')]);
@@ -89,8 +90,12 @@ class SnapshotService
         // Resolve exact references only. Retain original text and source provenance;
         // no connection is inferred from waypoint names or observation times.
         foreach ($data['transformers'] as &$transformer) {
+            $transformer = app(SurveyWaypoint::class)->transformerLocation($transformer, $data['waypoints']);
             foreach ($transformer['sections'] as &$section) {
                 foreach (['start', 'end'] as $endpoint) {
+                    if ($endpoint === 'start' && ($section['original_entry']['start_coordinate_source'] ?? null) === 'kmz' && empty($section['start_waypoint_id'])) {
+                        continue; // A coincident GPX number must not replace KMZ coordinate evidence.
+                    }
                     if (($section[$endpoint.'_waypoint_id'] ?? null) !== null) {
                         continue;
                     }

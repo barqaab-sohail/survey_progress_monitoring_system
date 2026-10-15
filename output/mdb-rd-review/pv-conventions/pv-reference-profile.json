@@ -1,0 +1,39 @@
+{
+  "status": "EXTRACTED_REFERENCE_CONVENTIONS_NOT_IMPLEMENTED_OR_ACTIVATED",
+  "reference_file_count": 9,
+  "files_with_pv": 3,
+  "pv_records": 4,
+  "load_representation": {
+    "load_table": "Loads",
+    "generator_tables": [
+      "InstDGens",
+      "InstMymDGens"
+    ],
+    "association": "SectionId; demand and generation are separate records",
+    "original_input_meaning": "Not recoverable: per-consumer/whole-span and gross/net/sanctioned/measured meaning are not labelled",
+    "observed_linked_loads": "All four PV sections have Phase1/2/3Kw=0 and positive Phase1/2/3Kva; do not copy zeros as new consumer demand"
+  },
+  "phase_rule": {
+    "observed": "All four records split generator kW equally across R/Y/B on RYBN sections",
+    "candidate_use": "Use as a balanced three-phase model convention for matching RYB spans; connected-phase exceptions need an explicit rule",
+    "not_established": "Actual per-consumer inverter phase connection"
+  },
+  "saved_generator_settings": {
+    "DGenOutputPct": 100,
+    "DGenVoltSet": 120,
+    "YearNumber": 0,
+    "Phase1Kvar": 0,
+    "Phase2Kvar": 0,
+    "Phase3Kvar": 0,
+    "CapacityFactor": 1
+  },
+  "reactive_power_interpretation": "Recorded positive generation kW with zero kvar corresponds to unity power factor in the stored P/Q values; PF is not stored as a separate field here",
+  "capacity_interpretation": "100% output and CapacityFactor=1 describe the saved scenario. The files do not prove total model kW equals originally installed nameplate capacity.",
+  "client_input_treatment": "The user says load and installed capacity will be supplied for each PV consumer. Preserve both values separately and associate each consumer with its surveyed section; establish gross/net and repeated-section-total meanings.",
+  "export_development": [
+    "Add InstDGens and InstMymDGens to reviewed mapping, DAO writer and readback validation",
+    "Preserve load value, installed capacity, consumer reference, section link and mapping provenance in snapshots",
+    "Both generator tables have section-based primary keys; aggregate multiple PV consumers on one modeled section/year or define reviewed distinct connection sections",
+    "Prevent adding the same service/section demand twice when it already appears in Loads"
+  ]
+}

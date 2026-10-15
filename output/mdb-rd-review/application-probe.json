@@ -1,0 +1,29 @@
+{
+    "gpx": {
+        "waypoint_count": 120,
+        "warnings": []
+    },
+    "kmz": {
+        "source_feeder_name": "Nshehr",
+        "source_substation_name": null,
+        "total_placemarks": 615,
+        "point_placemarks": 310,
+        "transformer_count": 140,
+        "count_only": false,
+        "warnings": []
+    },
+    "generation_kmz_validation": "passed",
+    "unapproved_input_gate": {
+        "export": [
+            "Project configuration needs engineering approval."
+        ]
+    },
+    "local_runtime": {
+        "queue_connection": "database",
+        "queue_name": "mdb",
+        "export_driver": "windows",
+        "python": "python"
+    },
+    "local_configurations": [],
+    "local_templates": []
+}

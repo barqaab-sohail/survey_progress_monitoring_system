@@ -1,0 +1,235 @@
+{
+  "source_pdf": "A081026.pdf",
+  "page": 11,
+  "transformer_code": "T-11030717217",
+  "capacity_kva": 100,
+  "survey_date": "2026-10-08",
+  "group": "01",
+  "historical_root_group": "11",
+  "historical_root_date": "2017-07-03",
+  "review_status": "independent R&D reading; NOT operator/verifier approval",
+  "ambiguities": [
+    "WP091 small commercial overwritten digit looks like 3; numeric value left null",
+    "092->093 neutral conductor GSL? and half-span Gnat need clarification",
+    "Ditto arrows interpreted within branch only; blank consumer categories remain unknown"
+  ],
+  "sections": [
+    {
+      "page": 11,
+      "pair": 1,
+      "section_id": "RD_P11_01",
+      "start_identity": "11030717217",
+      "end_identity": "01081026091",
+      "phase_code_interpreted": "RYBN",
+      "consumer_counts_read": {
+        "RS": 1,
+        "SC": null
+      },
+      "unlisted_consumer_categories": "blank/unknown; not confirmed zero",
+      "conductor_marks": {
+        "R": "A",
+        "Y": "A",
+        "B": "A",
+        "N": "A"
+      },
+      "remarks": "",
+      "endpoint_estimated_length_m": 3.923403822082827,
+      "confirmed_by_project_verifier": false
+    },
+    {
+      "page": 11,
+      "pair": 2,
+      "section_id": "RD_P11_02",
+      "start_identity": "01081026091",
+      "end_identity": "01081026092",
+      "phase_code_interpreted": "RYBN",
+      "consumer_counts_read": {
+        "RS": 1,
+        "SC": 5
+      },
+      "unlisted_consumer_categories": "blank/unknown; not confirmed zero",
+      "conductor_marks": {
+        "R": "A",
+        "Y": "A",
+        "B": "A",
+        "N": "A"
+      },
+      "remarks": "",
+      "endpoint_estimated_length_m": 3.403716762562986,
+      "confirmed_by_project_verifier": false
+    },
+    {
+      "page": 11,
+      "pair": 3,
+      "section_id": "RD_P11_03",
+      "start_identity": "01081026092",
+      "end_identity": "01081026093",
+      "phase_code_interpreted": "  BN",
+      "consumer_counts_read": {
+        "RS": 4,
+        "SC": 7
+      },
+      "unlisted_consumer_categories": "blank/unknown; not confirmed zero",
+      "conductor_marks": {
+        "R": "-",
+        "Y": "-",
+        "B": "A",
+        "N": "GSL?"
+      },
+      "remarks": "Half span Gnat; neutral GSL? needs confirmation",
+      "endpoint_estimated_length_m": 38.65515426199961,
+      "confirmed_by_project_verifier": false
+    },
+    {
+      "page": 11,
+      "pair": 4,
+      "section_id": "RD_P11_04",
+      "start_identity": "01081026091",
+      "end_identity": "01081026094",
+      "phase_code_interpreted": "RYBN",
+      "consumer_counts_read": {
+        "RS": 5,
+        "SC": 4,
+        "LC": 1
+      },
+      "unlisted_consumer_categories": "blank/unknown; not confirmed zero",
+      "conductor_marks": {
+        "R": "A",
+        "Y": "A",
+        "B": "A",
+        "N": "A"
+      },
+      "remarks": "",
+      "endpoint_estimated_length_m": 67.05827362503945,
+      "confirmed_by_project_verifier": false
+    },
+    {
+      "page": 11,
+      "pair": 5,
+      "section_id": "RD_P11_05",
+      "start_identity": "01081026094",
+      "end_identity": "01081026095",
+      "phase_code_interpreted": "RYBN",
+      "consumer_counts_read": {
+        "RS": 12,
+        "SC": 1
+      },
+      "unlisted_consumer_categories": "blank/unknown; not confirmed zero",
+      "conductor_marks": {
+        "R": "A",
+        "Y": "A",
+        "B": "A",
+        "N": "A"
+      },
+      "remarks": "",
+      "endpoint_estimated_length_m": 61.067833407633046,
+      "confirmed_by_project_verifier": false
+    },
+    {
+      "page": 11,
+      "pair": 6,
+      "section_id": "RD_P11_06",
+      "start_identity": "01081026095",
+      "end_identity": "01081026096",
+      "phase_code_interpreted": "RYBN",
+      "consumer_counts_read": {
+        "RS": 9,
+        "SC": 1
+      },
+      "unlisted_consumer_categories": "blank/unknown; not confirmed zero",
+      "conductor_marks": {
+        "R": "A",
+        "Y": "A",
+        "B": "A",
+        "N": "A"
+      },
+      "remarks": "",
+      "endpoint_estimated_length_m": 57.52397051498651,
+      "confirmed_by_project_verifier": false
+    },
+    {
+      "page": 11,
+      "pair": 7,
+      "section_id": "RD_P11_07",
+      "start_identity": "01081026096",
+      "end_identity": "01081026097",
+      "phase_code_interpreted": "RYBN",
+      "consumer_counts_read": {
+        "RS": 9
+      },
+      "unlisted_consumer_categories": "blank/unknown; not confirmed zero",
+      "conductor_marks": {
+        "R": "A",
+        "Y": "A",
+        "B": "A",
+        "N": "A"
+      },
+      "remarks": "",
+      "endpoint_estimated_length_m": 58.662157149787866,
+      "confirmed_by_project_verifier": false
+    },
+    {
+      "page": 11,
+      "pair": 8,
+      "section_id": "RD_P11_08",
+      "start_identity": "01081026097",
+      "end_identity": "01081026098",
+      "phase_code_interpreted": "RYBN",
+      "consumer_counts_read": {
+        "RS": 2
+      },
+      "unlisted_consumer_categories": "blank/unknown; not confirmed zero",
+      "conductor_marks": {
+        "R": "A",
+        "Y": "A",
+        "B": "A",
+        "N": "A"
+      },
+      "remarks": "",
+      "endpoint_estimated_length_m": 40.98152693369009,
+      "confirmed_by_project_verifier": false
+    },
+    {
+      "page": 11,
+      "pair": 9,
+      "section_id": "RD_P11_09",
+      "start_identity": "01081026098",
+      "end_identity": "01081026099",
+      "phase_code_interpreted": " YBN",
+      "consumer_counts_read": {
+        "RS": 3
+      },
+      "unlisted_consumer_categories": "blank/unknown; not confirmed zero",
+      "conductor_marks": {
+        "R": "-",
+        "Y": "A",
+        "B": "A",
+        "N": "A"
+      },
+      "remarks": "",
+      "endpoint_estimated_length_m": 25.915653830899718,
+      "confirmed_by_project_verifier": false
+    },
+    {
+      "page": 11,
+      "pair": 10,
+      "section_id": "RD_P11_10",
+      "start_identity": "01081026099",
+      "end_identity": "01081026100",
+      "phase_code_interpreted": " YBN",
+      "consumer_counts_read": {
+        "RS": 8
+      },
+      "unlisted_consumer_categories": "blank/unknown; not confirmed zero",
+      "conductor_marks": {
+        "R": "-",
+        "Y": "A",
+        "B": "A",
+        "N": "A"
+      },
+      "remarks": "",
+      "endpoint_estimated_length_m": 40.942015181295105,
+      "confirmed_by_project_verifier": false
+    }
+  ]
+}

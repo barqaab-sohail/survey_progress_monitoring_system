@@ -1,0 +1,35 @@
+{
+  "line_features": 304,
+  "line_types": {
+    "Primary": 303,
+    "Secondary": 1
+  },
+  "line_phases": {
+    "R-Y-B": 303,
+    "R-Y-B-N": 1
+  },
+  "adjacent_duplicate_vertices": 627,
+  "selected_transformer_endpoint_proximity": [
+    {
+      "transformer_code": "T-11131222104",
+      "nearest_HT_line_endpoint_m": 0.0
+    },
+    {
+      "transformer_code": "T-11230617182",
+      "nearest_HT_line_endpoint_m": 0.0
+    },
+    {
+      "transformer_code": "T-11131222107",
+      "nearest_HT_line_endpoint_m": 0.0
+    },
+    {
+      "transformer_code": "T-11030717217",
+      "nearest_HT_line_endpoint_m": 0.0
+    },
+    {
+      "transformer_code": "T-11030717223",
+      "nearest_HT_line_endpoint_m": 0.0
+    }
+  ],
+  "interpretation": "Proximity is evidence for reviewed snapping, not proof of electrical connectivity."
+}

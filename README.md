@@ -329,7 +329,7 @@ Follow [Deploy on another computer](#deploy-on-another-computer). This project i
 
 ## Development users
 
-All seeded accounts use `Password123!` locally. Change or remove them before deployment.
+New seeded accounts use `Password123!` locally; reseeding preserves existing passwords. Change or remove them before deployment.
 
 | Role | Email |
 |---|---|
@@ -339,6 +339,10 @@ All seeded accounts use `Password123!` locally. Change or remove them before dep
 | MDB User | `mdb@hazeco.test` |
 | Third-Party Processor | `thirdparty@hazeco.test` |
 | Management Viewer | `viewer@hazeco.test` |
+| PDF Data Entry Operator | `dataentry@hazeco.test` |
+| Data Verifier | `dataverifier@hazeco.test` |
+| MDB Creator | `mdbcreator@hazeco.test` |
+| Final MDB Verifier | `mdbverifier@hazeco.test` |
 
 ## Filament control centre
 
@@ -566,3 +570,7 @@ The companion Android app in [mobile/field_survey](mobile/field_survey) collects
 Apply the additive `2026_10_07_000300_create_field_survey_tables` migration and clear cached routes when upgrading. Survey-team-leader accounts and Super Admin can sign in from the phone. Management roles can review synced records through **Field Surveys** in the web navigation; attachments remain private.
 
 See [Android setup and delivery](docs/mobile/DELIVERY.md), [app build/install instructions](mobile/field_survey/README.md), [API contract](docs/mobile/API_CONTRACT.md), and [paper field mapping](docs/mobile/FORM_MAPPING.md). The PDF's handwritten MEPCO examples are not imported or used as defaults.
+
+## Automatic Google Drive source storage
+
+Survey PDFs/GPX files and PDF sketch attachments can transfer automatically to a private organizational Drive account while the application and database stay on this host. Transfers retain a private recovery original until Drive verification succeeds, then remove it; existing local files and authorized view/download URLs remain supported. See [credential setup, queue/scheduler configuration, recovery and optional legacy migration](docs/GOOGLE_DRIVE_STORAGE.md) before enabling `GOOGLE_DRIVE_STORAGE_ENABLED`.

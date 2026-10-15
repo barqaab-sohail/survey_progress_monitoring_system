@@ -1,0 +1,317 @@
+[
+  {
+    "file": "application-kmz-inspection.json",
+    "bytes": 599266,
+    "sha256": "ab6701a1e97c341ee392900a1567a3a6c94ac471634690c872bb47509c7147f2"
+  },
+  {
+    "file": "application-probe.json",
+    "bytes": 724,
+    "sha256": "500f49378a1b5266cc5f4d83dcec3e3282fd4d8e6c602eb145ea622c085ba9ff"
+  },
+  {
+    "file": "application-probe.php",
+    "bytes": 2596,
+    "sha256": "e61c52836f86a5240531eaaf5a33bd691b40165aa9630051c936877bbd135b72"
+  },
+  {
+    "file": "audit-comparison.py",
+    "bytes": 7011,
+    "sha256": "21e4b2d4031923f6e5594fcb4ea6b18bbdf76cbe85bf8fa1eff4733751284f41"
+  },
+  {
+    "file": "build-rd-sample.py",
+    "bytes": 7659,
+    "sha256": "3dc9af0258be22cf11965d423aae2b6c4e8a23bf8421fb4776050f64640a9799"
+  },
+  {
+    "file": "build-result.json",
+    "bytes": 3128,
+    "sha256": "44a42e41ab5beaab6e3669f42f9ec2c8761df3b5424af4a0e8b386399c381415"
+  },
+  {
+    "file": "Choper HattaT-3030216724.inspection.json",
+    "bytes": 874362,
+    "sha256": "08dfbf5beececfc0f645932158ccee8734365dd9e8391f10d44c1d83734d621b"
+  },
+  {
+    "file": "Choper HattaT-3030216727.inspection.json",
+    "bytes": 886741,
+    "sha256": "9dbbf9a329c29698d3ed21d90408bc3dfb20b993f8a9fcb089b953ed41c49a34"
+  },
+  {
+    "file": "code-evidence-hashes.json",
+    "bytes": 1187,
+    "sha256": "2fb7287b590c20e1a1616c5cbccae88256eb2a5152606d22e2d5cad2137fdba9"
+  },
+  {
+    "file": "comparison-summary.json",
+    "bytes": 8242,
+    "sha256": "c7a984bf05cace6c465640f883793a72f463c314b8777cbcc07c87dc87bb5368"
+  },
+  {
+    "file": "consider-equal-phase-allocation.py",
+    "bytes": 8016,
+    "sha256": "f293e421b517925b0ddeb53d19f793bbaef235227fcaf85bd5406d0a04d90715"
+  },
+  {
+    "file": "electrical-settings/exact-values.csv",
+    "bytes": 1084572,
+    "sha256": "42c4ac345df351d1f66700057663147959512e15c6ad3859c49d12d96fcfbd40"
+  },
+  {
+    "file": "electrical-settings/exact-values.json",
+    "bytes": 618087,
+    "sha256": "421d1b4d4ac3a1b0b50bac7fc28a1de9a912f603f01e86d73baec94bfc4bf192"
+  },
+  {
+    "file": "electrical-settings/EXTRACTED_SETTINGS.md",
+    "bytes": 5589,
+    "sha256": "5ca86273f8bea8c8ad5b9bf1e995e486f5ef0d76950dae013856877977733c78"
+  },
+  {
+    "file": "electrical-settings/field-comparison.csv",
+    "bytes": 205466,
+    "sha256": "74dc5e8b451b06e6d234aee24410d2d043ce46a4dc69dae4bbe611714008ffd8"
+  },
+  {
+    "file": "electrical-settings/reference-profile.json",
+    "bytes": 6747,
+    "sha256": "aa5c0eee566ac6fd9eafc9c1f003d0213e47390255e3c2b5cb10ea8332e403a7"
+  },
+  {
+    "file": "electrical-settings/transformer-settings.csv",
+    "bytes": 847,
+    "sha256": "c70f310330efd35dfdd6d5d6a43ac5366a67a2f0139152d7c4abdeb71ef31dd9"
+  },
+  {
+    "file": "electrical-settings/value-comparison.json",
+    "bytes": 348103,
+    "sha256": "9a16bdb5ea40f9be46035c14ca108e3262088c78ef211681e1beea5950f8353c"
+  },
+  {
+    "file": "equipment-mappings/equipment-crosswalk.csv",
+    "bytes": 6681,
+    "sha256": "42a5745bae0da347c91aecc1586c8c16468b3c4ceda678b6aee401f071e5fadb"
+  },
+  {
+    "file": "equipment-mappings/equipment-crosswalk.json",
+    "bytes": 15151,
+    "sha256": "ee89daccac89a77934cedbe4b686099ec214f49e976875949bc3a63fbc7a2ee7"
+  },
+  {
+    "file": "equipment-mappings/EQUIPMENT_MAPPING_REPORT.md",
+    "bytes": 5489,
+    "sha256": "4535ff6fd4be8ea95d3b13691e6eee0faf5b4e23edbd9076c2aa755e30a03358"
+  },
+  {
+    "file": "equipment-mappings/example-pdf-gpx-bindings.csv",
+    "bytes": 1924,
+    "sha256": "9c5d58182239c20230d014ce5666b0f5a38c3e46f26035d58cd216be7aeed599"
+  },
+  {
+    "file": "equipment-mappings/example-pdf-gpx-bindings.json",
+    "bytes": 4167,
+    "sha256": "fa1e5c8fb9deb2fed3c6651c141941da312660be84252b8d5a413e21fa125cc1"
+  },
+  {
+    "file": "equipment-mappings/gpx-field-inventory.json",
+    "bytes": 251,
+    "sha256": "952ce274009b4693c3c4da0103a20346ee97e80e472522915b5381f55e7b47f4"
+  },
+  {
+    "file": "equipment-mappings/gpx-waypoints.csv",
+    "bytes": 11100,
+    "sha256": "547d6c8cb8bc85fa846053d3c9f01e8b7a5d6c12f3ac375c61e3f40db5de78db"
+  },
+  {
+    "file": "extract-electrical-settings.py",
+    "bytes": 11576,
+    "sha256": "3b57103098f440e2accf726d186f21cdd6016cfe8e35cec95b0e80873c6146f6"
+  },
+  {
+    "file": "extract-equipment-mappings.py",
+    "bytes": 14472,
+    "sha256": "0dc937248605f9c178bcea6eb85d05850602b5f75acffbaca61640ad01e25fef"
+  },
+  {
+    "file": "extract-pv-conventions.py",
+    "bytes": 9715,
+    "sha256": "5e519f419fb877b23ae7bb7f3a1714beb64b48849bdf3c6a1f006d9e6fd4d216"
+  },
+  {
+    "file": "field-completeness.csv",
+    "bytes": 58972,
+    "sha256": "1954ab621f17b352cd1c8d1d83f8350c8c52875d8cb9ac89aa5a626edd6c5896"
+  },
+  {
+    "file": "HAZECO_T-11030717217_RD-INCOMPLETE.mdb",
+    "bytes": 1327104,
+    "sha256": "7f4e3ac2549d501f7c4e015bac1adb5a547d183cd1862ba7d34062b10ed1df5a"
+  },
+  {
+    "file": "ht-geometry-audit.json",
+    "bytes": 856,
+    "sha256": "9966c1d8bf0ae2c5de968f072be255d06816d6509a886f732ecf2a56f702c78c"
+  },
+  {
+    "file": "inspect-mdb.ps1",
+    "bytes": 1734,
+    "sha256": "78fff222c4a2f1c7133ddef17261fc63cc58c4bf6ff066884562ed3ebbdd572c"
+  },
+  {
+    "file": "inspect-sources.py",
+    "bytes": 2764,
+    "sha256": "55a353c8cc7141f49893c443050733a2f1f95adec1252df60616194c245014fb"
+  },
+  {
+    "file": "Jodh PurT-4101220409.inspection.json",
+    "bytes": 891317,
+    "sha256": "a0565d47a1889f057fe36caf77810ae2f13ac72da572e069e5300bba8e01756a"
+  },
+  {
+    "file": "Jodh PurT-4151220461.inspection.json",
+    "bytes": 835169,
+    "sha256": "10c588531228a6e3ba7c0d77633705a57da536522e00a89e6db26d9fb75ec2f6"
+  },
+  {
+    "file": "Jodh PurT-4171220510.inspection.json",
+    "bytes": 783131,
+    "sha256": "6e93f04c133ffdcbeae1231449fc41a7005b441e7d1867de0a2170f8e23f3cd2"
+  },
+  {
+    "file": "Jodh PurT-4171220531.inspection.json",
+    "bytes": 859987,
+    "sha256": "b17247746b624e718caed4f29a34d521646f23cd2ab9ca5382214169068bef37"
+  },
+  {
+    "file": "Kot Gohar MT-3150216178.inspection.json",
+    "bytes": 856686,
+    "sha256": "75e2e28f1ab295689b74a6fd28abdb3fed717fb8ad82e7ff3ccb4afe69ba8df5"
+  },
+  {
+    "file": "Noor PurT-4070621060.inspection.json",
+    "bytes": 868692,
+    "sha256": "a9a20f8f0426f489d26c22d3a79d4f04d271da9a7eb25029a7006bd3ee5b871c"
+  },
+  {
+    "file": "Noor PurT-4221215879.inspection.json",
+    "bytes": 851200,
+    "sha256": "bbbb2a4914600a583070800691e55ab106e6720bcf207140a01841ff985c1bd6"
+  },
+  {
+    "file": "package-review.py",
+    "bytes": 3104,
+    "sha256": "be813f8335b21b689561a1bf72febafc11e9fa6a63e936c79c05f1f420198d02"
+  },
+  {
+    "file": "phase-allocation/equal-phase-method.json",
+    "bytes": 1708,
+    "sha256": "d4542ca0ba3b2ba4a77d55e5b7fcebcecc7a4e0ec05ea330b61cdcb638ce287c"
+  },
+  {
+    "file": "phase-allocation/page11-customer-allocation.csv",
+    "bytes": 1674,
+    "sha256": "db869be58afffe0fb5b2c31f7ee2b39c8ba9f79c9fda7e70b7d025a3ad590b15"
+  },
+  {
+    "file": "phase-allocation/page11-customer-allocation.json",
+    "bytes": 7459,
+    "sha256": "777b0adea4b998bc6e1446075ab2f3f72c0a70bde3deba6e4254ab7cc19c15f0"
+  },
+  {
+    "file": "phase-allocation/PHASE_ALLOCATION_METHOD.md",
+    "bytes": 3439,
+    "sha256": "c83cec386e4bdca0a6c6aa3dc9b440cee99aa118eb98c602f5b04fc0d6607d36"
+  },
+  {
+    "file": "phase-allocation/reference-allocation-evidence.json",
+    "bytes": 1211,
+    "sha256": "f7e0f1910b7843628ff5dce18df39d069dfe91ce83d79214c4e7fd8a56b5e1b6"
+  },
+  {
+    "file": "pv-conventions/pv-comparison.csv",
+    "bytes": 694,
+    "sha256": "472fb334d7e87153bbe8538b395fc359a0210521481c1fe93b4e8761e6bd8bdd"
+  },
+  {
+    "file": "pv-conventions/pv-reference-profile.json",
+    "bytes": 2321,
+    "sha256": "c7ff0e3aee367d80bbdb4ddf363182c3fcba655a5d1790d85178c5cf8c0f186c"
+  },
+  {
+    "file": "pv-conventions/PV_CONVENTIONS_REPORT.md",
+    "bytes": 3868,
+    "sha256": "e6b26a83ec8d3a3ab59806e6388c3810b8d41ee923dc4f94567d98fdc84176b3"
+  },
+  {
+    "file": "pv-conventions/reference-pv-records.json",
+    "bytes": 9885,
+    "sha256": "d1986233e5f09390abbebb51e8df2157db34d595a8528ea2368512b794ab4455"
+  },
+  {
+    "file": "relationships.csv",
+    "bytes": 4449,
+    "sha256": "4cb51ff54887b396a4107315f8ed6f4a33c9e52bbe41da0a8f7adbf853ff95ee"
+  },
+  {
+    "file": "REVIEW.md",
+    "bytes": 21315,
+    "sha256": "32e779db3ec0241327583f298d672513e66003e5d9301f46b655cb0ad4532de3"
+  },
+  {
+    "file": "sample-input.json",
+    "bytes": 11387,
+    "sha256": "99c8bb801c89f798a7ab153732bedd1496b784a41bb918db896b72b0ccec1998"
+  },
+  {
+    "file": "sample-sections.csv",
+    "bytes": 678,
+    "sha256": "a6639528811fbc4c986d2c20c4b2b0853f6f501cf6c3e1e138d928f436f46f76"
+  },
+  {
+    "file": "sample-transcription.json",
+    "bytes": 6599,
+    "sha256": "3e1de6b57e45661e70a1a968e764ed86f6acfd32b54d66bef1c95a26b13917c5"
+  },
+  {
+    "file": "sample.inspection.json",
+    "bytes": 799464,
+    "sha256": "044a76fc950b43cc06b4bcc5d96f2eaa88774d524163eccb798984413c9fe86b"
+  },
+  {
+    "file": "source-inspection.json",
+    "bytes": 1942327,
+    "sha256": "d5cbb48c5b86c59f7c28f6b01451bf106f21ffb0361eb3ea1b7d39fe68645f8a"
+  },
+  {
+    "file": "source-manifest.json",
+    "bytes": 1881,
+    "sha256": "511c971a8b780cc51c15b034a477d8c32fd6569398e596397349f405c3f091d3"
+  },
+  {
+    "file": "table-count-comparison.csv",
+    "bytes": 22353,
+    "sha256": "13fdc7650ccf314d9c9574117bae4d14c6141051900ae163f3d23b98e1b0eef1"
+  },
+  {
+    "file": "template.inspection.json",
+    "bytes": 725657,
+    "sha256": "36ce673f93167359223c7fcbb345b6f7a4e666799bf64d46795a1874596aaeaa"
+  },
+  {
+    "file": "transformer-matches.json",
+    "bytes": 2698,
+    "sha256": "6083399cf20834259afacf8afa7d3e1de288829901543e0d4258490e66eeb5e3"
+  },
+  {
+    "file": "writer-result.json",
+    "bytes": 855,
+    "sha256": "1bb39d6927649fbc776e16f162b7916f5f08e7a05ad3f9b9a9fd55a2f048bbfa"
+  },
+  {
+    "file": "pdf-pages/page-11.png",
+    "bytes": 1074050,
+    "sha256": "26d6bbf9a3660f0ee8d5345c755311475fdbed691e6a3bde7d2bafd667bb5a6c"
+  }
+]

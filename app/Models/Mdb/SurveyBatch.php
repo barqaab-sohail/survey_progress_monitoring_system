@@ -14,6 +14,21 @@ class SurveyBatch extends Model
 
     protected $guarded = ['id'];
 
+    public function getWorkflowLabelAttribute(): string
+    {
+        if ($this->exports()->where('status', 'generated')->whereNull('superseded_at')->exists()) {
+            return 'MDB Created';
+        }
+
+        return match ($this->staged_workflow ? $this->survey_status : $this->status) {
+            'entry', 'draft' => 'Draft',
+            'submitted', 'awaiting_verification' => 'Pending Verification',
+            'returned' => 'Returned for Correction',
+            'approved' => 'Verified',
+            default => str($this->status)->replace('_', ' ')->title()->toString(),
+        };
+    }
+
     protected function casts(): array
     {
         return ['survey_date' => 'date', 'revision' => 'integer', 'staged_workflow' => 'boolean', 'entry_actor_ids' => 'array', 'entry_completed_at' => 'datetime', 'survey_verified_at' => 'datetime'];

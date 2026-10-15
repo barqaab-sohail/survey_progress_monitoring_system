@@ -1,0 +1,14 @@
+<div id="review-pdf-viewer">
+    <div class="entry-pdf-toolbar">
+        <label class="entry-pdf-file">Survey PDF<select id="review-pdf-source" aria-label="Survey PDF">@foreach($batch->sources->where('kind', 'pdf') as $source)<option value="{{ route('mdb-workflow.source', [$batch, $source]) }}" @selected($source->id === $pdf->id)>{{ $source->original_name }}</option>@endforeach</select></label>
+        <div class="entry-page-controls"><button type="button" class="btn btn-sm btn-light" id="review-pdf-previous" aria-label="Previous PDF page" disabled>&larr;</button><label>Page <input id="review-pdf-page" type="number" min="1" value="1" aria-label="Current PDF page" disabled></label><span id="review-pdf-total">of 0</span><button type="button" class="btn btn-sm btn-light" id="review-pdf-next" aria-label="Next PDF page" disabled>&rarr;</button></div>
+        <div class="actions"><button type="button" class="btn btn-sm btn-light" id="review-pdf-zoom-out" aria-label="Zoom out" disabled>&minus;</button><button type="button" class="btn btn-sm btn-light" id="review-pdf-fit" disabled>Fit width</button><button type="button" class="btn btn-sm btn-light" id="review-pdf-zoom-in" aria-label="Zoom in" disabled>+</button><button type="button" class="btn btn-sm btn-light" id="review-pdf-rotate" aria-label="Rotate PDF clockwise" disabled>Rotate &#8635;</button><a class="btn btn-sm btn-light" id="review-pdf-open" href="{{ route('mdb-workflow.source', [$batch, $pdf]) }}#page={{ $pdfStartPage }}" target="_blank" rel="noopener">Open PDF</a></div>
+        <label class="entry-height">Viewing height <input id="review-pdf-height" type="range" min="180" max="800" step="20" value="340"><output id="review-pdf-height-value">340 px</output></label>
+    </div>
+    <div id="review-pdf-scroll" class="entry-pdf-scroll" style="height:340px"><canvas id="review-pdf-canvas" aria-label="Current survey PDF page for verification" hidden></canvas><p id="review-pdf-message" role="status">Loading PDF...</p></div>
+    <noscript><p>Enable JavaScript to use the PDF controls, or use Open PDF.</p><iframe title="Source survey PDF for verification" src="{{ route('mdb-workflow.source', [$batch, $pdf]) }}#page={{ $pdfStartPage }}"></iframe></noscript>
+</div>
+@push('scripts')
+<script>window.mdbReviewPdfBoot = {{ \Illuminate\Support\Js::from(['initial_source_url' => route('mdb-workflow.source', [$batch, $pdf]), 'initial_page' => (int) $pdfStartPage, 'pdfjs_url' => asset('vendor/pdfjs/build/pdf.min.mjs'), 'pdfjs_worker' => asset('vendor/pdfjs/build/pdf.worker.min.mjs'), 'pdfjs_assets' => asset('vendor/pdfjs').'/']) }};</script>
+<script type="module" src="{{ asset('js/mdb-review-pdf.js').'?v='.filemtime(public_path('js/mdb-review-pdf.js')) }}"></script>
+@endpush

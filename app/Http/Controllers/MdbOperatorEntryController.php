@@ -35,7 +35,7 @@ class MdbOperatorEntryController extends Controller
 
     public function save(Request $request, SurveyBatch $batch, NetworkTransformer $transformer, ?EntryRow $row = null)
     {
-        $this->access->authorize($request->user(), $batch, 'edit');
+        $this->authorizeEntry($request, $batch);
         abort_unless($transformer->batch_id === $batch->id && (! $row || $row->transformer_id === $transformer->id), 404);
         $rules = ['revision' => 'required|integer', 'client_uuid' => 'required|uuid', 'save_uuid' => 'required|uuid',
             'pair_number' => 'required|integer|min:1|max:100000', 'designation' => 'required|in:S,E', 'group_number' => 'nullable|string|max:40', 'row_date' => 'nullable|date_format:Y-m-d',
@@ -104,16 +104,18 @@ class MdbOperatorEntryController extends Controller
         if ($strict) {
             $copiedEquipment = ! empty($validated['inheritance']['equipment']) ? $transformer->entryRows()->findOrFail($validated['inheritance']['equipment']) : null;
             $unit = $row?->pole_height_unit ?? $copiedEquipment?->pole_height_unit ?? $settings['pole_height_unit'];
-            if (! empty($validated['pole_height_unit']) && $validated['pole_height_unit'] !== $unit) {
-                throw ValidationException::withMessages(['pole_height_unit' => 'Project unit differs from this draft. Refresh saved records and check the pole height before saving.']);
+            if (! $request->attributes->get('mdb_verifier_correction') && $unit !== null && ! empty($validated['pole_height_unit']) && $validated['pole_height_unit'] !== $unit) {
+                throw ValidationException::withMessages(['pole_height_unit' => 'This row or project already uses '.$unit.'. Keep that unit and verify the height value before saving.']);
             }
-            $validated['pole_height_unit'] = $unit;
+            $validated['pole_height_unit'] = $request->attributes->get('mdb_verifier_correction') ? ($validated['pole_height_unit'] ?? $unit) : ($unit ?? ($validated['pole_height_unit'] ?? null));
             unset($validated['source_row']);
         }
         if (empty($validated['source_pdf_id'])) {
             $validated['source_pdf_id'] = $batch->sources()->where('kind', 'pdf')->where('status', 'ready')->count() === 1 ? $batch->sources()->where('kind', 'pdf')->where('status', 'ready')->value('id') : null;
         }
-        if (empty($validated['gpx_source_id'])) {
+        $firstPair = min((int) $validated['pair_number'], (int) ($transformer->entryRows()->min('pair_number') ?? $validated['pair_number']));
+        $kmzStart = $validated['designation'] === 'S' && (int) $validated['pair_number'] === $firstPair && empty($validated['gpx_source_id']);
+        if (empty($validated['gpx_source_id']) && ! $kmzStart) {
             $matches = $identity->matches($validated, $batch->waypoints->toArray());
             if (count($matches) === 1) {
                 $validated['gpx_source_id'] = $matches[0]['source_file_id'];
@@ -127,6 +129,7 @@ class MdbOperatorEntryController extends Controller
                 }
             }
         }
+        if ($request->attributes->get('mdb_verifier_correction')) $validated['manually_verified'] = false;
         $data = $this->entries->normalized($validated);
         if (strlen(json_encode($data, JSON_THROW_ON_ERROR)) > 256 * 1024) {
             throw ValidationException::withMessages(['pv_details' => 'This row exceeds the 256 KB entry limit.']);
@@ -141,8 +144,8 @@ class MdbOperatorEntryController extends Controller
             if (! $row && $existing) {
                 throw ValidationException::withMessages(['client_uuid' => 'This row already exists. Reload it before making changes.']);
             }
-            $this->access->authorize($request->user(), $locked, 'edit');
-            $this->access->recordEntry($locked, $request->user());
+            $this->authorizeEntry($request, $locked);
+            if (! $request->attributes->get('mdb_verifier_correction')) $this->access->recordEntry($locked, $request->user());
             $this->assertRevision($locked, (int) $validated['revision']);
             if ($row && ($row->pair_number !== (int) $data['pair_number'] || $row->designation !== $data['designation'] || $row->client_uuid !== $validated['client_uuid'])) {
                 throw ValidationException::withMessages(['designation' => 'Keep the saved pair and S/E designation. Delete and add a corrected row to move it.']);
@@ -183,7 +186,7 @@ class MdbOperatorEntryController extends Controller
                 }
             }
             $old = $this->snapshots->snapshot($locked);
-            $this->snapshots->invalidate($locked);
+            $this->invalidateEntry($request, $locked);
             $values = $data + ['client_uuid' => $validated['client_uuid'], 'save_uuid' => $validated['save_uuid'], 'save_hash' => $hash];
             if (($data['identity_version'] ?? null) == 2) {
                 $values['entry_sequence'] = $existing?->entry_sequence ?? ((int) $locked->transformers()->withMax('entryRows', 'entry_sequence')->get()->max('entry_rows_max_entry_sequence') + 1);
@@ -198,9 +201,10 @@ class MdbOperatorEntryController extends Controller
                 $progress->update(['entry_row_id' => $record->id, 'entered' => true]);
             }
             $this->entries->synchronizePair($transformer, $record->pair_number);
+            $this->entries->synchronizeTransformerLocation($transformer);
             $this->entries->synchronizePv($record->fresh());
             $locked->increment('revision');
-            $this->audit->record($request->user(), 'mdb.entry_row_saved', $record, $old, $this->snapshots->snapshot($locked));
+            $this->audit->record($request->user(), $request->attributes->get('mdb_verifier_correction') ? 'mdb.verifier_row_corrected' : 'mdb.entry_row_saved', $record, $old, $this->snapshots->snapshot($locked), $request->input('correction_reason'));
         });
 
         return response()->json($this->entries->editorData($batch->fresh()));
@@ -222,6 +226,7 @@ class MdbOperatorEntryController extends Controller
             PdfRow::where('entry_row_id', $row->id)->update(['entry_row_id' => null, 'entered' => false]);
             $row->delete();
             $this->entries->synchronizePair($transformer, $row->pair_number);
+            $this->entries->synchronizeTransformerLocation($transformer);
             $locked->increment('revision');
             $this->audit->record($request->user(), 'mdb.entry_row_deleted', $locked, $old, $this->snapshots->snapshot($locked), 'Operator confirmed row deletion.');
         });
@@ -268,19 +273,29 @@ class MdbOperatorEntryController extends Controller
 
     private function persistHeader(Request $request, SurveyBatch $batch, ?NetworkTransformer $transformer)
     {
-        $this->access->authorize($request->user(), $batch, 'edit');
+        $this->authorizeEntry($request, $batch);
         abort_unless(! $transformer || $transformer->batch_id === $batch->id, 404);
-        $rules = ['revision' => 'required|integer', 'code' => ['required', 'string', 'max:255', Rule::unique('mdb_workflow_transformers', 'code')->where('batch_id', $batch->id)->ignore($transformer?->id)],
+        if ($transformer) {
+            $request->merge(['code' => $transformer->code]);
+        } elseif (! $request->boolean('manual_transformer')) {
+            $selection = $request->validate(['registered_transformer_id' => ['required', 'integer', Rule::exists('transformers', 'id')->where('feeder_id', $batch->feeder_id)]], [
+                'registered_transformer_id.required' => 'Choose a registered transformer from this feeder in Active transformer.',
+                'registered_transformer_id.exists' => 'Choose a registered transformer belonging to this survey feeder.',
+            ]);
+            $registered = $batch->feeder->transformers()->findOrFail($selection['registered_transformer_id']);
+            $request->merge(['code' => $registered->transformer_code]);
+        }
+        if (! $transformer && is_string($request->input('code'))) {
+            $request->merge(['code' => trim($request->input('code'))]);
+        }
+        $rules = ['manual_transformer' => 'sometimes|boolean', 'revision' => 'required|integer', 'code' => ['required', 'string', 'max:255', Rule::unique('mdb_workflow_transformers', 'code')->where('batch_id', $batch->id)->ignore($transformer?->id)],
             'capacity_kva' => 'nullable|numeric|min:0.001|max:1000000', 'source_waypoint_id' => 'nullable|integer', 'header' => 'required|array',
             'header.survey_date' => 'nullable|date_format:Y-m-d', 'header.mounting' => ['nullable', Rule::in(array_filter(['Single Pole', 'Double Pole', 'Pad', $transformer?->header['mounting'] ?? null]))],
-            'header.service_category' => 'nullable|in:General Duty,Dedicated', 'header.source_survey_identifier' => 'nullable|string|regex:/^\d{11}$/D', 'source_pdf_id' => 'nullable|integer', 'source_page' => 'nullable|integer|min:1'];
+            'header.service_category' => 'nullable|in:General Duty,Dedicated', 'header.source_survey_identifier' => 'nullable|string|regex:/^\d{11}$/D', 'source_pdf_id' => 'required|integer', 'source_page' => 'required|integer|min:1'];
         $fields = ['substation_name', 'substation_identifier', 'feeder_identifier', 'feeder_name', 'division', 'subdivision', 'subdivision_code',
             'make', 'inspector', 'location', 'survey_date', 'mounting', 'service_category', 'team_group', 'source_survey_identifier', 'client_transformer_information'];
         foreach ($fields as $field) {
             $rules['header.'.$field] ??= 'nullable|string|max:500';
-        }
-        if ($batch->staged_workflow && (! $batch->transformers()->exists() || $transformer?->id === $batch->transformers()->min('id'))) {
-            $rules['header.client_transformer_information'] = 'required|string|max:500';
         }
         $attributes = ['code' => 'transformer code', 'capacity_kva' => 'transformer capacity (kVA)', 'source_waypoint_id' => 'transformer GPS waypoint',
             'source_pdf_id' => 'source PDF', 'source_page' => 'PDF page'];
@@ -288,9 +303,10 @@ class MdbOperatorEntryController extends Controller
             $attributes['header.'.$field] = str_replace('_', ' ', $field);
         }
         $data = $request->validate($rules, [
-            'code.required' => 'Enter the transformer code shown on the survey PDF.',
-            'code.unique' => 'This transformer code already exists in this survey. Select its saved header to edit it, or enter a different code.',
-            'header.client_transformer_information.required' => 'Enter the client-provided transformer information for the first transformer.',
+            'source_pdf_id.required' => 'Choose the PDF containing this transformer.',
+            'source_page.required' => 'Enter the starting PDF page number for this transformer.',
+            'code.required' => 'Enter a transformer code or choose a registered transformer.',
+            'code.unique' => 'This transformer is already added to this survey. Select its saved header in Active transformer to edit it.',
             'header.source_survey_identifier.regex' => 'Enter an 11-digit complete transformer waypoint (GGDDMMYYWWW), or leave it blank.',
             'header.survey_date.date_format' => 'Enter a valid survey date in YYYY-MM-DD format.',
         ], $attributes);
@@ -313,20 +329,36 @@ class MdbOperatorEntryController extends Controller
         $record = null;
         DB::transaction(function () use ($request, $batch, $transformer, $data, $fields, $page, &$record) {
             $locked = SurveyBatch::lockForUpdate()->findOrFail($batch->id);
-            $this->access->authorize($request->user(), $locked, 'edit');
-            $this->access->recordEntry($locked, $request->user());
+            $this->authorizeEntry($request, $locked);
+            if (! $request->attributes->get('mdb_verifier_correction')) $this->access->recordEntry($locked, $request->user());
             $this->assertRevision($locked, (int) $data['revision']);
             $old = $this->snapshots->snapshot($locked);
-            $this->snapshots->invalidate($locked);
+            $this->invalidateEntry($request, $locked);
             $header = array_replace($transformer?->header ?? [], array_intersect_key($data['header'], array_flip($fields)), ['manually_verified' => false, 'operator_entry' => true]);
+            app(\App\Services\Mdb\TransformerIdentity::class)->assertAvailable($locked, $data['code'], $transformer);
+            if (! $transformer && $request->boolean('manual_transformer')) {
+                if ($locked->feeder->transformers()->whereRaw('LOWER(TRIM(transformer_code)) = ?', [mb_strtolower($data['code'])])->exists()) {
+                    throw ValidationException::withMessages(['code' => 'This transformer is registered with this feeder. Choose it in Active transformer to add its survey header.']);
+                }
+                $header['manual_transformer'] = true;
+            } elseif (! $transformer) {
+                $registered = $locked->feeder->transformers()->lockForUpdate()->find($request->input('registered_transformer_id'));
+                if (! $registered || $registered->transformer_code !== $data['code']) {
+                    throw ValidationException::withMessages(['registered_transformer_id' => 'The selected feeder registration changed. Refresh saved records and select the transformer again.']);
+                }
+                $header['registered_transformer_id'] = $registered->id;
+            }
+            $header['pdf_source_id'] = (int) $data['source_pdf_id'];
+            $header['pdf_start_page'] = (int) $data['source_page'];
             if ($page && ! collect($header['pages'] ?? [])->contains(fn ($existing) => $existing['source_pdf_id'] === $page['source_pdf_id'] && $existing['page'] === $page['page'])) {
                 $header['pages'][] = $page;
             }
-            $values = ['code' => $data['code'], 'capacity_kva' => $data['capacity_kva'] ?? null, 'source_waypoint_id' => $data['source_waypoint_id'] ?? null,
+            $values = ['code' => $data['code'], 'capacity_kva' => $data['capacity_kva'] ?? null, 'source_waypoint_id' => $transformer?->source_waypoint_id,
                 'header' => $header, 'original_header' => $transformer?->original_header ?? ($transformer ? ['code' => $transformer->code, 'capacity_kva' => $transformer->capacity_kva] + ($transformer->header ?? []) : ['code' => $data['code'], 'capacity_kva' => $data['capacity_kva'] ?? null] + $data['header'])];
             $record = $transformer ? tap($transformer)->update($values) : $locked->transformers()->create($values);
+            $this->entries->synchronizeTransformerLocation($record);
             $locked->increment('revision');
-            $this->audit->record($request->user(), 'mdb.operator_header_saved', $record, $old, $this->snapshots->snapshot($locked));
+            $this->audit->record($request->user(), $request->attributes->get('mdb_verifier_correction') ? 'mdb.verifier_header_corrected' : 'mdb.operator_header_saved', $record, $old, $this->snapshots->snapshot($locked), $request->input('correction_reason'));
         });
 
         return response()->json($this->entries->editorData($batch->fresh()) + ['active_transformer_id' => $record->id]);
@@ -348,6 +380,7 @@ class MdbOperatorEntryController extends Controller
             }
             $old = $this->snapshots->snapshot($locked);
             $this->snapshots->invalidate($locked);
+            $this->entries->synchronizeTransformerLocation($transformer);
             $transformer->update(['header' => array_replace($transformer->header ?? [], ['manually_verified' => true])]);
             $transformer->entryRows()->update(['manually_verified' => true]);
             foreach ($transformer->entryRows()->pluck('pair_number')->unique() as $number) {
@@ -359,6 +392,19 @@ class MdbOperatorEntryController extends Controller
         });
 
         return back()->with('success', 'Header and S/E rows checked and saved. Engineering verification is still required before export.');
+    }
+
+    private function authorizeEntry(Request $request, SurveyBatch $batch): void
+    {
+        if ($request->attributes->get('mdb_verifier_correction')) $this->access->authorizeCorrection($request->user(), $batch);
+        else $this->access->authorize($request->user(), $batch, 'edit');
+    }
+
+    private function invalidateEntry(Request $request, SurveyBatch $batch): void
+    {
+        $status = $batch->status;
+        $this->snapshots->invalidate($batch);
+        if ($request->attributes->get('mdb_verifier_correction')) $batch->update(['status' => $status]);
     }
 
     private function assertRevision(SurveyBatch $batch, int $revision): void

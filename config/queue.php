@@ -29,6 +29,15 @@ return [
     */
 
     'connections' => [
+        'drive-storage' => [
+            'driver' => 'database',
+            'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => env('DB_QUEUE_TABLE', 'jobs'),
+            'queue' => 'drive-storage',
+            'retry_after' => 600,
+            'after_commit' => true,
+        ],
+
 
         'sync' => [
             'driver' => 'sync',

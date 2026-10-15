@@ -2,6 +2,8 @@
 
 Open **MDB Creation & Verification**, create a batch and select its project, feeder, survey team and date. Upload PDF and GPX together, or add them under **Upload PDF + GPX** later. Existing source processing, permissions and private downloads remain in use.
 
+Selecting an **Active transformer** automatically fills its read-only **Transformer code**. The list includes saved survey transformers and additional transformers registered under this batch's feeder. To add a survey header, click **Add Transformer**, select a registered transformer, complete its header and save. New codes come from the feeder register; existing survey records keep their saved code. Register or import missing transformers under the feeder before adding their survey headers. Client-provided transformer information is optional.
+
 For staged survey entry, both PDF and GPX must show **ready** before saving. A PDF preview can display while its processing job is still queued; the preview does not confirm processing completion. If files remain queued, ask the administrator to check the `mdb-sources` queue worker. Processing checks the original PDF and imports GPX waypoints without altering the uploaded files. After processing finishes, choose **Refresh saved records** and retry with the retained fields. A save error appears once beside that refresh control; its reference identifies the server log entry.
 
 The PDF stays above the form. Use previous/next, page number, zoom, rotation and the viewing-height slider. Zoomed pages scroll inside the viewer. Changing pages keeps the selected transformer and entered fields. A new row records the currently displayed PDF page automatically. Editing an already saved row preserves its recorded page unless **Use displayed PDF page** is chosen.
@@ -27,19 +29,14 @@ The complete waypoint is the survey/node identity; the GPS-number component matc
 
 PDF page and GPX association are recorded automatically. Rows selected through the PDF progress controls receive a physical page reference such as `PDF row 1`. Rows saved on pages without a configured row layout retain an **application entry sequence** such as `Entry 1`; this sequence does not identify a physical PDF row. Legacy PDF row references remain labelled separately.
 
-## PDF row progress
+## PDF red lines
 
-For each survey page, open **Set up page rows**, count each S and E as a separate row, then choose **Select row area**. Drag around the table body from the top of the first S/E row to the bottom of the last, excluding headings and unused lines. The viewer returns to its original rotation for setup. Check the equal-height preview against the scan and choose **Save page rows**. Once records are linked, the count stays fixed; the area can still be redrawn to improve alignment.
+After entering a row, choose **Draw line** in the compact bar below the PDF. Click the row to add a full-width horizontal red line, or drag across it for a shorter line. The tool stays active so you can mark several rows. Click **Draw line** again or press Escape to stop. Each line saves automatically; **Undo line** removes the most recent manually drawn line on the displayed page.
 
-Click a row on the PDF or choose it in **PDF row** before entering its record. The blue outline identifies the selection. **Save Draft** and **Save & Add Next** mark the selected row green with a checkmark only after the server successfully saves its record. Save & Add Next selects the earliest pending row in the same PDF. The amber dashed row and **Go to next pending** identify the earliest pending page/row among configured pages, even if later rows have already been entered. The page counter shows how many pages have been set up; configure every page containing S/E records.
+Lines are saved by source PDF and page and return after a reload. They scale and rotate with the page. A line is a manual visual reminder; draw it after confirming that the corresponding S/E data is saved. A failed line save shows an error and does not leave a saved-looking mark. Lines do not edit or delete survey records and do not alter the source PDF.
 
-Selecting a row with a saved record opens that record for editing, including its transformer. To link a record saved before page setup, first use its **Edit** button, then select its physical PDF row and save. **Undo Entered** clears the marker while retaining the record and its link. **Mark Entered** restores the marker after saving; it is unavailable for unsaved records or unsaved field changes. Deleting a saved record resets its physical row to pending. Changes by another operator require a refresh before saving stale progress.
+Pages configured with the earlier row-link feature retain their saved record links. **Saved row links** is collapsed by default and only appears for those pages. Selecting an existing row opens its record; **Go to next pending**, **Mark Entered** and **Undo Entered** remain available there. Completed linked rows also show individual red lines. Their completion remains tied to saving the corresponding record, while manually drawn lines can be undone separately.
 
-Markers are stored in the application database by source PDF, page and physical row. They remain after reopening and are shared with authorized operators. Highlights rotate and scale with the viewer; the source PDF bytes and downloads remain unchanged.
-
-The saved table area stays outlined. A green area grows downward from the first row through the consecutively entered rows as each record is saved, with an **Entered through row** label and remaining-row count. A skipped row stops this growing area; any later entered rows retain their individual green checkmarks. Undo shrinks the area back to the first pending row. Reopening reconstructs the area from saved markers automatically.
-
-Existing section-only records were not rewritten or guessed into S/E rows. They remain an existing saved network with a link to the original editor. Engineering settings, templates, demand approval, source corrections, verification and SynerGEE acceptance are on separate review/advanced pages.
 
 ## Form lookup limits
 
