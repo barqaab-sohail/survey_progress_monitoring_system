@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Mdb\Configuration;
+use App\Models\Mdb\Template;
 use App\Models\TransformerMdbProject;
+use App\Services\Mdb\EngineeringConfiguration;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
@@ -12,9 +15,28 @@ class TransformerMdbNetworkService
 
     public function __construct(private readonly GpxWaypointService $gpx, private readonly UtmProjection $projection) {}
 
-    public function build(TransformerMdbProject $project): array
+    public function build(TransformerMdbProject $project, ?Configuration $central = null): array
     {
         $settings = $project->export_settings;
+        if ($central) {
+            $this->require($central->project_id === $project->feeder->project_id && $central->approved_by && $central->approved_at, 'Central engineering configuration must be approved for this project.');
+            $engineering = $central->settings['engineering'];
+            $this->require($central->epsg >= 32601 && $central->epsg <= 32660, 'The older transformer builder supports WGS84 northern UTM only. Use MDB Creation & Verification for the configured CRS.');
+            $this->require(($central->load_assumptions['mode'] ?? '') === 'category_rates', 'The older builder requires centrally approved category rates. Use MDB Creation & Verification for explicit verified phase demand.');
+            $settings = array_replace($settings, ['utm_zone' => $central->epsg - 32600, 'frequency' => $central->settings['frequency_hz'],
+                'nominal_kv' => $central->settings['nominal_voltage_kv'], 'configuration_id' => $engineering['configuration_id'],
+                'phase_spacing_cm' => $engineering['phase_spacing_cm'], 'neutral_spacing_cm' => $engineering['neutral_spacing_cm'],
+                'conductor_height_m' => $engineering['conductor_height_m'], 'blank_consumers_zero' => $engineering['blank_consumers_zero'], 'engineering_reviewed' => true,
+                'central_configuration' => $central->toArray()]);
+            $type = null;
+            foreach ($engineering['transformer_types'] as $capacity => $reference) {
+                if ((float) $capacity === (float) ($project->header['capacity_kva'] ?? 0)) {
+                    $type = $reference;
+                }
+            }
+            $this->require($type !== null, 'Map this transformer capacity in Engineering Configuration before export.');
+            $settings['transformer_type'] = $type;
+        }
         $this->require($project->feeder !== null, 'Select a feeder before building the network.');
         $this->require(! empty($settings['engineering_reviewed']), 'Review and confirm the engineering settings before export.');
         $this->require(($project->header['capacity_kva'] ?? 0) > 0, 'Enter transformer capacity in kVA.');
@@ -28,6 +50,9 @@ class TransformerMdbNetworkService
         $this->require($rootLat !== null && $rootLon !== null, 'Enter confirmed transformer latitude and longitude. Use its GPX waypoint or existing GIS reference.');
         $root = $this->project((float) $rootLat, (float) $rootLon, $zone);
         $defaults = json_decode(file_get_contents(resource_path('mdb/defaults.json')), true, 512, JSON_THROW_ON_ERROR);
+        if ($central) {
+            $defaults = $central->settings['mapping']['table_values'];
+        }
         $feederId = $this->identifier($project->feeder->feeder_name);
         $code = $project->transformer_code;
         $baseId = preg_replace('/^T[-\s]*/i', '', $code);
@@ -46,8 +71,8 @@ class TransformerMdbNetworkService
             $secondaryId => ['NodeId' => $secondaryId] + $root + ['Description' => $code, 'IsPadMountGear' => (int) (($project->header['mounting'] ?? '') === 'Pad')],
         ];
         $sections = [
-            $this->section($defaults['InstSection'], $settings, $primarySectionId, $feederId, $sourceId, $primaryId, 'RYB', ['r' => 'DOG', 'y' => 'DOG', 'b' => 'DOG', 'neutral' => ''], 0, 'Transformer supply'),
-            $this->section($defaults['InstSection'], $settings, $secondarySectionId, $feederId, $primaryId, $secondaryId, 'RYBN', ['r' => 'ANT', 'y' => 'ANT', 'b' => 'ANT', 'neutral' => 'ANT'], 0, 'Transformer secondary connection'),
+            $this->section($defaults['InstSection'], $settings, $primarySectionId, $feederId, $sourceId, $primaryId, 'RYB', ['r' => $central ? $engineering['supply_conductor_id'] : 'DOG', 'y' => $central ? $engineering['supply_conductor_id'] : 'DOG', 'b' => $central ? $engineering['supply_conductor_id'] : 'DOG', 'neutral' => ''], 0, 'Transformer supply'),
+            $this->section($defaults['InstSection'], $settings, $secondarySectionId, $feederId, $primaryId, $secondaryId, 'RYBN', array_fill_keys(['r', 'y', 'b', 'neutral'], $central ? $engineering['secondary_conductor_id'] : 'ANT'), 0, 'Transformer secondary connection'),
         ];
         $links = [];
         $loads = [];
@@ -109,6 +134,9 @@ class TransformerMdbNetworkService
         $control['Frequency'] = (int) ($settings['frequency'] ?? 50);
         $control['ProjectionFile'] = 'WGS 1984 UTM Zone '.$zone.'N';
         $control['ProjectionWKT'] = '';
+        if ($central) {
+            $control = $defaults['SAI_Control'];
+        }
         foreach (['B' => 0, '1' => 1, '2' => 2, '3' => 3, '4' => 4, '5' => 5, '6' => 6, '7' => 7, '8' => 8, '9' => 9, '10' => 10] as $suffix => $offset) {
             $control['MYM_YearDesc'.((string) $suffix === '10' ? '10' : '_'.$suffix)] = (string) ($year + $offset);
         }
@@ -128,6 +156,23 @@ class TransformerMdbNetworkService
                 'SurveyHeader' => [['SourceJson' => json_encode($header, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)]], 'SurveyRows' => $auditRows,
                 'SurveySolar' => array_map(fn ($entry) => ['SourceJson' => json_encode($entry, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)], $project->solar),
             ]];
+        if ($central) {
+            $template = Template::findOrFail($central->settings['template_id']);
+            $this->require($template->active && $template->approved_by && $template->approved_at, 'The configured MDB template is no longer approved.');
+            $libraries = $template->metadata['equipment_references'];
+            $this->require(in_array($settings['transformer_type'], $libraries['transformers'], true), 'Transformer type is no longer present in the approved library.');
+            foreach ($sections as $section) {
+                foreach (['PhaseConductorId', 'PhaseConductor2Id', 'PhaseConductor3Id', 'NeutralConductorId'] as $column) {
+                    $reference = $section[$column] ?? null;
+                    $this->require($reference === null || $reference === '' || in_array($reference, $libraries['conductors'], true), 'All conductors must belong to the centrally approved equipment library.');
+                }
+            }
+            foreach ($project->solar ?? [] as $pv) {
+                $this->require((float) ($pv['installed_pv_kw'] ?? 0) === 0, 'Use MDB Creation & Verification for reviewed PV generator mapping or exclusion.');
+            }
+            $network['engineering_template_id'] = $template->id;
+            $network['engineering_template_sha256'] = $template->sha256;
+        }
         $limits = json_decode(file_get_contents(resource_path('mdb/string-limits.json')), true, 512, JSON_THROW_ON_ERROR);
         foreach ($network['tables'] as $table => $tableRows) {
             foreach ($tableRows as $tableRow) {
@@ -175,6 +220,11 @@ class TransformerMdbNetworkService
             }
         }
 
+        if (isset($settings['central_configuration'])) {
+            $phaseConductor = $conductors['r'];
+            $phases = rtrim(implode('', array_map(fn ($phase) => str_contains($phases, $phase) ? $phase : ' ', ['R', 'Y', 'B', 'N'])));
+        }
+
         return array_replace($defaults, ['SectionId' => $id, 'FeederId' => $feeder, 'FromNodeId' => $from, 'ToNodeId' => $to,
             'SectionPhases' => $phases, 'Description' => $description, 'PhaseConductorId' => $phaseConductor,
             'PhaseConductor2Id' => $conductors['y'], 'PhaseConductor3Id' => $conductors['b'], 'NeutralConductorId' => $conductors['neutral'],
@@ -186,6 +236,26 @@ class TransformerMdbNetworkService
 
     private function load(array $defaults, string $section, array $end, string $phases, array $settings, string $label): array
     {
+        if (isset($settings['central_configuration'])) {
+            $load = array_replace($defaults, ['SectionId' => $section, 'Description' => 'Centrally approved category demand']);
+            foreach (['R', 'Y', 'B'] as $index => $phase) {
+                foreach (['Customers', 'Kw', 'Kvar', 'Kva'] as $quantity) {
+                    $load['Phase'.($index + 1).$quantity] = 0;
+                }
+            }
+            foreach (self::CONSUMERS as $category) {
+                $count = $end['consumers'][$category] ?? null;
+                $this->require($count !== null || ! empty($settings['blank_consumers_zero']), $label.': resolve blank consumer counts.');
+                $demand = app(EngineeringConfiguration::class)->demand((int) ($count ?? 0), $category, $phases, $settings['central_configuration']);
+                foreach (['R', 'Y', 'B'] as $index => $phase) {
+                    foreach (['Customers' => 'customers', 'Kw' => 'kw', 'Kvar' => 'kvar', 'Kva' => 'kva'] as $column => $key) {
+                        $load['Phase'.($index + 1).$column] += $demand['phase_values'][$phase][$key] ?? 0;
+                    }
+                }
+            }
+
+            return $load;
+        }
         $count = 0;
         $kva = 0;
         foreach (self::CONSUMERS as $category) {

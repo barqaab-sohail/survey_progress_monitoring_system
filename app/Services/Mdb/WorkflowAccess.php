@@ -24,6 +24,9 @@ class WorkflowAccess
         if ($user->hasRole('super_admin')) {
             return true;
         }
+        if ($ability === 'configure') {
+            return false;
+        }
         // Supplemental roles or direct grants cannot expand a dedicated survey role.
         // Multiple dedicated roles retain only their shared abilities.
         foreach (self::SURVEY_ROLE_ABILITIES as $role => $abilities) {
@@ -101,6 +104,7 @@ class WorkflowAccess
     {
         if ($this->canEdit($user, $batch)) {
             $this->authorize($user, $batch, 'edit');
+
             return;
         }
 
@@ -110,7 +114,7 @@ class WorkflowAccess
     public function authorizeCorrection(User $user, SurveyBatch $batch): void
     {
         $this->authorize($user, $batch, 'surveyVerify');
-        abort_unless($batch->staged_workflow ? $batch->survey_status === 'awaiting_verification' : in_array($batch->status, ['draft','submitted','returned','awaiting_verification'], true), 403,
+        abort_unless($batch->staged_workflow ? $batch->survey_status === 'awaiting_verification' : in_array($batch->status, ['draft', 'submitted', 'returned', 'awaiting_verification'], true), 403,
             'Corrections and verification checks are available while the survey is pending verification.');
         $this->assertSourcesReady($batch);
     }

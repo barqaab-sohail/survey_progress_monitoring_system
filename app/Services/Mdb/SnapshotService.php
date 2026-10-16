@@ -54,7 +54,9 @@ class SnapshotService
     {
         $batch->load(['sources', 'waypoints', 'transformers.sections.consumers', 'transformers.sections.pvRecords', 'transformers.pvRecords', 'transformers.entryRows']);
         $configuration = Configuration::where('project_id', $batch->project_id)->first();
-        $template = Template::where('active', true)->whereNotNull('approved_at')->whereNotNull('approved_by')->orderByDesc('id')->first();
+        $templateQuery = Template::where('active', true)->whereNotNull('approved_at')->whereNotNull('approved_by');
+        $templateId = $configuration?->settings['template_id'] ?? null;
+        $template = $templateId ? $templateQuery->whereKey($templateId)->first() : $templateQuery->orderByDesc('id')->first();
         $data = [
             'schema_version' => 1,
             'batch' => $batch->only(['id', 'project_id', 'feeder_id', 'survey_team_id', 'survey_date', 'revision']),
@@ -117,7 +119,7 @@ class SnapshotService
         unset($transformer);
 
         // JSON round-trip removes Carbon instances before hashing or persisting.
-        return json_decode(json_encode($data, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+        return app(EngineeringConfiguration::class)->apply(json_decode(json_encode($data, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR));
     }
 
     public function hash(array $snapshot): string

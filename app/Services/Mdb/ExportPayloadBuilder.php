@@ -70,6 +70,19 @@ class ExportPayloadBuilder
                 $this->require(empty($legacyNetwork['meter_points']) && empty($legacyNetwork['generators']), 'Meter points and generators require a reviewed v2 mapping.');
             }
             $network = $mapping['networks'][$transformer['code']] ?? [];
+            $engineering = $settings['engineering'] ?? null;
+            if ($engineering) {
+                $type = null;
+                foreach ($engineering['transformer_types'] ?? [] as $capacity => $reference) {
+                    if ((float) $capacity === (float) ($transformer['capacity_kva'] ?? 0)) {
+                        $type = $reference;
+                        break;
+                    }
+                }
+                $this->require($type !== null, 'Configure an approved transformer library type for capacity '.($transformer['capacity_kva'] ?? 'unknown').' kVA.');
+                $network['transformer_fields'] = array_replace($network['transformer_fields'] ?? [], $base['InstPrimaryTransformers'], ['TransformerType' => $type]);
+                $network['feeder_fields']['NominalKvll'] = (float) $settings['nominal_voltage_kv'];
+            }
             $this->require(! empty($network['source_nodes']) && ! empty($network['source_sections']), 'Approved source and transformer supply topology is required for '.$transformer['code'].'.');
             $aliases = [];
             foreach ($network['source_nodes'] as $sourceNode) {

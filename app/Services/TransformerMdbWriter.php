@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Mdb\Template;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Symfony\Component\Process\Process;
@@ -12,7 +14,15 @@ class TransformerMdbWriter
 {
     public function write(array $network): string
     {
-        if (PHP_OS_FAMILY !== 'Windows' || ! is_file(config('mdb.powershell')) || ! is_file(config('mdb.template'))) {
+        $templatePath = config('mdb.template');
+        if (isset($network['engineering_template_id'])) {
+            $template = Template::findOrFail($network['engineering_template_id']);
+            $templatePath = Storage::disk($template->disk)->path($template->path);
+            if (! $template->active || ! $template->approved_by || ! $template->approved_at || ! is_file($templatePath) || ! hash_equals($network['engineering_template_sha256'], hash_file('sha256', $templatePath))) {
+                throw new RuntimeException('The centrally approved MDB template is unavailable or changed.');
+            }
+        }
+        if (PHP_OS_FAMILY !== 'Windows' || ! is_file(config('mdb.powershell')) || ! is_file($templatePath)) {
             throw new RuntimeException('MDB export requires the Windows server, 32-bit Microsoft Access Database Engine, and the configured empty MDB template.');
         }
         $directory = storage_path('app/private/mdb-exports/'.Str::uuid());
@@ -31,7 +41,7 @@ class TransformerMdbWriter
                 }
             }
             $process = new Process([config('mdb.powershell'), '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File',
-                base_path('scripts/mdb/write-mdb.ps1'), '-InputPath', $input, '-TemplatePath', config('mdb.template'), '-OutputPath', $output], null, $environment);
+                base_path('scripts/mdb/write-mdb.ps1'), '-InputPath', $input, '-TemplatePath', $templatePath, '-OutputPath', $output], null, $environment);
             $process->setTimeout((int) config('mdb.timeout', 90));
             $process->run();
             if (! $process->isSuccessful() || ! is_file($output) || filesize($output) < 4096) {

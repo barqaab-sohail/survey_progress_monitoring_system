@@ -6,7 +6,7 @@
 <section class="card"><h2>Complete the network before creating MDB</h2><ul>@foreach($problems as $messages)@foreach($messages as $message)<li>{{ $message }}</li>@endforeach @endforeach</ul><p>Your survey remains saved. Correct the fields, save, and review again.</p></section>
 @else
 <section class="card"><h2>Network ready to export</h2><p>{{ $network['node_count'] }} nodes &middot; {{ $network['section_count'] }} sections &middot; {{ count($project->rows) }} paper rows &middot; {{ count($project->solar) }} solar entries</p>
-<p>Coordinates: WGS84 / UTM {{ $project->export_settings['utm_zone'] }}N. Section lengths are calculated in metres from the linked positions.</p>
+<p>Coordinates: {{ $network['tables']['SAI_Control'][0]['ProjectionFile'] }}. Section lengths are calculated in metres from the linked positions.</p>
 <ul>@foreach($network['warnings'] as $warning)<li>{{ $warning }}</li>@endforeach</ul>
 @if(auth()->user()->hasRole('super_admin'))<form method="POST" action="{{ route('mdb-builder.export', $project) }}">@csrf<input type="hidden" name="revision" value="{{ $project->revision }}"><button class="btn btn-primary">Create and download MDB</button></form>@endif
 </section>

@@ -1,10 +1,18 @@
 <?php
 
+use App\Http\Controllers\EngineeringConfigurationController;
 use App\Http\Controllers\MdbGenerationInputController;
 use App\Http\Controllers\MdbOperatorEntryController;
 use App\Http\Controllers\MdbPdfProgressController;
+use App\Http\Controllers\MdbSurveyReviewController;
 use App\Http\Controllers\MdbWorkflowController;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware(['auth', 'active', 'role:super_admin'])->prefix('admin/engineering')->name('engineering.')->controller(EngineeringConfigurationController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/{project}', 'edit')->name('edit');
+    Route::put('/{project}', 'update')->name('update');
+});
 
 Route::middleware(['auth', 'active'])->prefix('mdb-workflow')->name('mdb-workflow.')->controller(MdbWorkflowController::class)->group(function () {
     Route::get('/', 'index')->name('index');
@@ -24,10 +32,10 @@ Route::middleware(['auth', 'active'])->prefix('mdb-workflow')->name('mdb-workflo
     Route::get('/{batch}/generation-inputs/{input}', [MdbGenerationInputController::class, 'download'])->name('generation.inputs.download');
     Route::post('/{batch}/survey-decision', 'surveyDecision')->name('survey.decision');
     Route::post('/{batch}/reopen', 'reopen')->name('reopen');
-    Route::get('/{batch}/verification/{transformer}', [\App\Http\Controllers\MdbSurveyReviewController::class, 'state'])->name('verification.state');
-    Route::post('/{batch}/verification/{transformer}/checks', [\App\Http\Controllers\MdbSurveyReviewController::class, 'check'])->name('verification.check');
-    Route::put('/{batch}/verification/{transformer}/header', [\App\Http\Controllers\MdbSurveyReviewController::class, 'header'])->name('verification.header');
-    Route::put('/{batch}/verification/{transformer}/rows/{row}', [\App\Http\Controllers\MdbSurveyReviewController::class, 'row'])->name('verification.row');
+    Route::get('/{batch}/verification/{transformer}', [MdbSurveyReviewController::class, 'state'])->name('verification.state');
+    Route::post('/{batch}/verification/{transformer}/checks', [MdbSurveyReviewController::class, 'check'])->name('verification.check');
+    Route::put('/{batch}/verification/{transformer}/header', [MdbSurveyReviewController::class, 'header'])->name('verification.header');
+    Route::put('/{batch}/verification/{transformer}/rows/{row}', [MdbSurveyReviewController::class, 'row'])->name('verification.row');
     Route::get('/{batch}/entry-data', [MdbOperatorEntryController::class, 'data'])->name('entry.data');
     Route::put('/{batch}/sources/{source}/row-layout', [MdbPdfProgressController::class, 'layout'])->name('entry.pdf.layout');
     Route::put('/{batch}/pdf-rows/{pdfRow}', [MdbPdfProgressController::class, 'mark'])->name('entry.pdf.mark');

@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', $project->code.' MDB engineering configuration')
 @section('content')
+<section class="card"><a class="btn btn-primary" href="{{ route('engineering.edit', $project) }}">Engineering Configuration</a><p>Use the central engineering module for labelled settings and automatic load mappings. This page retains clean-template registration and legacy mapping administration.</p></section>
 @php
     $settingsExample = ['frequency_hz'=>null, 'nominal_voltage_kv'=>null, 'conductor_library_revision'=>'', 'transformer_library_revision'=>'', 'mapping'=>['version'=>'synergee-reviewed-v1', 'reviewed_by'=>null, 'reviewed_at'=>null, 'table_values'=>['SAI_Control'=>(object) [], 'Node'=>(object) [], 'InstSection'=>(object) [], 'InstFeeders'=>(object) [], 'InstPrimaryTransformers'=>(object) [], 'Loads'=>(object) []], 'networks'=>(object) [], 'consolidated_supported'=>false]];
     $loadExample = ['method'=>'', 'evidence'=>'', 'reviewer'=>'', 'notes'=>'Customer counts remain separate from verified per-phase kW, kvar and kVA.'];

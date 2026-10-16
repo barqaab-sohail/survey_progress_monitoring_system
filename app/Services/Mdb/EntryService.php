@@ -47,7 +47,7 @@ class EntryService
                 'rows' => $transformer->entryRows->map->surveyData()->values()->all(),
                 'legacy_sections' => $transformer->sections->filter(fn ($section) => ! ($section->original_entry['entry_rows_managed'] ?? false))->values()->toArray(),
                 'pv_records' => $transformer->pvRecords->toArray(),
-            ], $batch->waypoints->toArray()))->values()->all(), 'lookups' => app(EntryLookups::class)->options(), 'issues' => $this->issues($batch)];
+            ], $batch->waypoints->toArray()))->values()->all(), 'lookups' => app(EntryLookups::class)->options($batch->project_id), 'issues' => $this->issues($batch)];
     }
 
     public function normalized(array $data): array
@@ -242,9 +242,15 @@ class EntryService
                         $add('entry_no_active_phase', $label.'at least one R/Y/B conductor is required.', $row);
                     }
                     $missingEquipment = [];
-                    if (! $row->equipment_type) $missingEquipment[] = 'equipment type';
-                    if (! $row->pole_class) $missingEquipment[] = 'pole class';
-                    if (! is_numeric($row->pole_height) || $row->pole_height <= 0) $missingEquipment[] = 'positive pole/tower height';
+                    if (! $row->equipment_type) {
+                        $missingEquipment[] = 'equipment type';
+                    }
+                    if (! $row->pole_class) {
+                        $missingEquipment[] = 'pole class';
+                    }
+                    if (! is_numeric($row->pole_height) || $row->pole_height <= 0) {
+                        $missingEquipment[] = 'positive pole/tower height';
+                    }
                     if ($missingEquipment) {
                         $add('incomplete_entry_equipment', $label.'enter '.implode(', ', $missingEquipment).'.', $row);
                     }

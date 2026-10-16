@@ -2,6 +2,7 @@
 
 namespace App\Services\Mdb;
 
+use App\Models\Mdb\Configuration;
 use App\Models\Mdb\Template;
 
 class EntryLookups
@@ -10,13 +11,15 @@ class EntryLookups
         'lc' => 'Commercial (LC; confirm classification)', 'si' => '1-phase industrial', 'li' => '3-phase industrial',
         'pb' => 'Public buildings', 'ag' => 'Agriculture', 'st' => 'Street lights', 'pv' => 'PV solar'];
 
-    public function options(): array
+    public function options(?int $projectId = null): array
     {
         // Printed legend values. They are observations, not approval of an equipment library.
         $conductors = ['A' => 'A — Ant', 'W' => 'W — Wasp', 'GN' => 'GN — Gnat', '2/0 AWG' => '2/0 AWG',
             'PVC 7/0.052' => 'PVC 7/0.052', 'PVC 19/0.052' => 'PVC 19/0.052', 'PVC 19/0.083' => 'PVC 19/0.083',
             'PVC 0.083' => 'PVC 0.083', 'PVC 37/0.083' => 'PVC 37/0.083 — as written in form', 'ABC 50mm2' => 'ABC cable — 50 mm²', 'ABC 95mm2' => 'ABC cable — 95 mm²'];
-        $metadata = Template::where('active', true)->whereNotNull('approved_by')->whereNotNull('approved_at')->latest('id')->first()?->metadata ?? [];
+        $templateId = $projectId ? (Configuration::where('project_id', $projectId)->value('settings')['template_id'] ?? null) : null;
+        $templates = Template::where('active', true)->whereNotNull('approved_by')->whereNotNull('approved_at');
+        $metadata = ($templateId ? $templates->whereKey($templateId)->first() : $templates->latest('id')->first())?->metadata ?? [];
         foreach ($metadata['equipment_references']['conductors'] ?? [] as $code) {
             $conductors[$code] ??= $code.' — approved library';
         }

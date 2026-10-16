@@ -26,9 +26,6 @@ class ProjectionService
                 throw new InvalidArgumentException('WGS84 coordinates are outside valid ranges.');
             }
         }
-        if ($points === []) {
-            return [];
-        }
         $worker = new Process([(string) config('mdb_workflow.projection.python', 'python'), base_path('scripts/mdb/project_coordinates.py')]);
         $worker->setTimeout((float) config('mdb_workflow.projection.timeout', 30));
         $worker->setInput(json_encode(['epsg' => $epsg, 'points' => $points], JSON_THROW_ON_ERROR));

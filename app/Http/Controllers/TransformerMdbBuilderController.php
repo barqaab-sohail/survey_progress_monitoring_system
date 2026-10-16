@@ -3,11 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\SaveTransformerMdbRequest;
+use App\Models\DriveStoredFile;
 use App\Models\Feeder;
 use App\Models\FieldSurvey;
+use App\Models\Mdb\Configuration;
+use App\Models\Mdb\Template;
 use App\Models\TransformerMdbProject;
 use App\Services\AuditService;
+use App\Services\DriveStorage\FileStorage;
 use App\Services\GpxWaypointService;
+use App\Services\Mdb\EngineeringConfiguration;
 use App\Services\TransformerMdbNetworkService;
 use App\Services\TransformerMdbWriter;
 use Illuminate\Http\Request;
@@ -115,9 +120,11 @@ class TransformerMdbBuilderController extends Controller
                 $project->save();
                 if (config('drive_storage.enabled')) {
                     foreach (['pdf', 'gpx'] as $kind) {
-                        if (! isset($newPaths[$kind.'_path'])) continue;
+                        if (! isset($newPaths[$kind.'_path'])) {
+                            continue;
+                        }
                         $feeder = Feeder::findOrFail($project->feeder_id);
-                        $archive = app(\App\Services\DriveStorage\FileStorage::class)->register('local', $newPaths[$kind.'_path'],
+                        $archive = app(FileStorage::class)->register('local', $newPaths[$kind.'_path'],
                             $request->file($kind)->getClientOriginalName(), $kind === 'pdf' ? 'application/pdf' : 'application/gpx+xml', [
                                 'project_id' => $feeder->project_id, 'feeder_id' => $feeder->id, 'feeder_code' => $feeder->feeder_code,
                                 'transformer_workspace_id' => $project->id, 'transformer_code' => $project->transformer_code,
@@ -127,7 +134,9 @@ class TransformerMdbBuilderController extends Controller
                     }
                 } else {
                     foreach (['pdf', 'gpx'] as $kind) {
-                        if (isset($newPaths[$kind.'_path'])) $project->update([$kind.'_drive_stored_file_id' => null]);
+                        if (isset($newPaths[$kind.'_path'])) {
+                            $project->update([$kind.'_drive_stored_file_id' => null]);
+                        }
                     }
                 }
                 $audit->record($request->user(), $existing ? 'mdb_workspace.updated' : 'mdb_workspace.created', $project, $old, $project->toArray());
@@ -140,7 +149,9 @@ class TransformerMdbBuilderController extends Controller
         }
         // Archived versions remain recoverable; only untracked legacy replacements are removed.
         foreach ($oldPaths as $oldPath) {
-            if (! \App\Models\DriveStoredFile::where('local_path', $oldPath)->exists()) Storage::disk('local')->delete($oldPath);
+            if (! DriveStoredFile::where('local_path', $oldPath)->exists()) {
+                Storage::disk('local')->delete($oldPath);
+            }
         }
 
         return redirect()->route('mdb-builder.edit', $saved)->with('success', 'Transformer survey saved. Review the GPX links and network before creating MDB.');
@@ -151,7 +162,8 @@ class TransformerMdbBuilderController extends Controller
         $network = null;
         $problems = [];
         try {
-            $network = $builder->build($project);
+            $configuration = Configuration::where('project_id', $project->feeder->project_id)->first();
+            $network = $builder->build($project, ! empty($configuration?->settings['engineering']) ? $configuration : null);
         } catch (ValidationException $exception) {
             $problems = $exception->errors();
         }
@@ -164,14 +176,22 @@ class TransformerMdbBuilderController extends Controller
         $this->editor($request);
         $request->validate(['revision' => ['required', 'integer']]);
         abort_unless($request->integer('revision') === $project->revision, 409, 'Workspace changed. Review the latest revision before export.');
-        $network = $builder->build($project);
+        $configuration = app(EngineeringConfiguration::class)->approved($project->feeder->project_id);
+        $network = $builder->build($project, $configuration);
         try {
             $path = $writer->write($network);
         } catch (RuntimeException $exception) {
             return back()->withErrors(['export' => $exception->getMessage()]);
         }
+        $currentConfiguration = $configuration->fresh();
+        $template = Template::find($network['engineering_template_id']);
+        if (! $currentConfiguration || $currentConfiguration->revision !== $configuration->revision || ! $currentConfiguration->approved_by
+            || ! $template?->active || ! $template->approved_by || ! $template->approved_at || ! hash_equals($network['engineering_template_sha256'], $template->sha256)) {
+            File::delete($path);
+            throw ValidationException::withMessages(['engineering' => 'Engineering configuration changed during generation. Review and generate again.']);
+        }
         try {
-            $audit->record($request->user(), 'mdb_workspace.exported', $project, new: ['revision' => $project->revision, 'nodes' => $network['node_count'], 'sections' => $network['section_count']]);
+            $audit->record($request->user(), 'mdb_workspace.exported', $project, new: ['revision' => $project->revision, 'engineering_configuration_id' => $configuration->id, 'engineering_configuration_revision' => $configuration->revision, 'nodes' => $network['node_count'], 'sections' => $network['section_count']]);
         } catch (Throwable $exception) {
             File::deleteDirectory(dirname($path));
             throw $exception;
@@ -187,7 +207,8 @@ class TransformerMdbBuilderController extends Controller
         $path = $project->{$kind.'_path'};
         abort_unless($path, 404);
         $archive = $project->{$kind.'DriveStoredFile'};
-        return app(\App\Services\DriveStorage\FileStorage::class)->response($archive, 'local', $path,
+
+        return app(FileStorage::class)->response($archive, 'local', $path,
             $archive?->original_name ?? 'survey.'.$kind, $kind === 'pdf' ? 'application/pdf' : 'application/gpx+xml', $kind !== 'pdf' || $request->boolean('download'));
     }
 

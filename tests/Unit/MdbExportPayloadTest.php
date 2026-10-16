@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\Mdb\Revision;
 use App\Models\Mdb\Template;
+use App\Services\Mdb\EngineeringConfiguration;
 use App\Services\Mdb\ExportPayloadBuilder;
 use App\Services\Mdb\ProjectionService;
 use Illuminate\Validation\ValidationException;
@@ -54,6 +55,32 @@ class MdbExportPayloadTest extends TestCase
         $this->assertSame(1.0, $payload['tables']['Loads'][0]['Phase1Kva']);
         $this->assertSame('endpoint_estimate', $payload['provenance'][0]['length_source']);
         $this->assertSame($payload['tables'], $this->builder()->build($revision, $template, 1, str_repeat('d', 64))['tables']);
+    }
+
+    public function test_central_configuration_applies_library_type_impedance_mode_and_category_demand_to_export(): void
+    {
+        [$revision, $template] = $this->fixture();
+        $snapshot = $revision->snapshot;
+        $snapshot['configuration']['revision'] = 4;
+        $snapshot['configuration']['settings']['engineering'] = ['configuration_id' => 'reviewed-config', 'transformer_types' => ['100' => 'reviewed-100']];
+        $snapshot['configuration']['settings']['mapping']['table_values']['InstPrimaryTransformers'] = ['UseInstanceImpedance' => 0, 'SpecNomKv' => 0.4];
+        $snapshot['configuration']['load_assumptions'] = ['mode' => 'category_rates', 'method' => 'Approved synthetic rates', 'evidence' => 'fixture', 'rates' => ['rs' => ['kva' => 3, 'power_factor' => 0.8]]];
+        $snapshot['transformers'][0]['capacity_kva'] = 100;
+        foreach ($snapshot['transformers'][0]['sections'] as &$section) {
+            $section['consumers'][0]['category'] = 'rs';
+        }
+        unset($section);
+        $snapshot['configuration']['settings']['mapping']['networks']['T-fixture']['transformer_fields'] = ['TransformerType' => 'local-wrong-type', 'UseInstanceImpedance' => 1, 'SpecNomKv' => 4.16];
+        $revision->snapshot = app(EngineeringConfiguration::class)->apply($snapshot);
+        $payload = $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
+        $transformer = $payload['tables']['InstPrimaryTransformers'][0];
+        $this->assertSame('reviewed-100', $transformer['TransformerType']);
+        $this->assertSame(0, $transformer['UseInstanceImpedance']);
+        $this->assertSame(0.4, $transformer['SpecNomKv']);
+        $load = $payload['tables']['Loads'][0];
+        $this->assertEqualsWithDelta(2.4, $load['Phase1Kw'], 1e-8);
+        $this->assertEqualsWithDelta(1.8, $load['Phase1Kvar'], 1e-8);
+        $this->assertSame(3.0, $load['Phase1Kva']);
     }
 
     public function test_composite_node_ids_keep_repeated_gps_names_from_different_surveys_distinct(): void

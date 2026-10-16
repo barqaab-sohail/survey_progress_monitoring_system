@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Feeder;
 use App\Models\Mdb\Configuration;
 use App\Models\Mdb\Consumer;
+use App\Models\Mdb\EntryRow;
 use App\Models\Mdb\ExportJob;
 use App\Models\Mdb\ModelValidation;
 use App\Models\Mdb\NetworkSection;
@@ -20,13 +21,17 @@ use App\Models\Mdb\Waypoint;
 use App\Models\Project;
 use App\Models\SurveyTeam;
 use App\Services\AuditService;
+use App\Services\DriveStorage\FileStorage;
 use App\Services\Mdb\EntryService;
 use App\Services\Mdb\ExporterFactory;
 use App\Services\Mdb\ExportService;
 use App\Services\Mdb\NetworkValidator;
 use App\Services\Mdb\SnapshotService;
 use App\Services\Mdb\SourceService;
+use App\Services\Mdb\TransformerIdentity;
 use App\Services\Mdb\WorkflowAccess;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -138,7 +143,7 @@ class MdbWorkflowController extends Controller
 
                 return response($body, 200, ['Content-Type' => 'application/pdf', 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
             }, 'pdf');
-        } catch (\Illuminate\Http\Client\RequestException|\Illuminate\Http\Client\ConnectionException $exception) {
+        } catch (RequestException|ConnectionException $exception) {
             throw ValidationException::withMessages(['drive_file_id' => 'Could not retrieve this file. Check your Drive connection and file access, then retry.']);
         }
     }
@@ -177,7 +182,7 @@ class MdbWorkflowController extends Controller
                         $storedPaths[] = $source->path;
                     } catch (ValidationException $exception) {
                         throw ValidationException::withMessages([$field => collect($exception->errors())->flatten()->all()]);
-                    } catch (\Illuminate\Http\Client\RequestException|\Illuminate\Http\Client\ConnectionException $exception) {
+                    } catch (RequestException|ConnectionException $exception) {
                         throw ValidationException::withMessages([$field => 'Could not retrieve this Drive file. Check your connection and file access, then retry.']);
                     }
                 }
@@ -188,7 +193,9 @@ class MdbWorkflowController extends Controller
 
         } catch (\Throwable $exception) {
             foreach ($storedPaths as $storedPath) {
-                if (! SourceFile::where('path', $storedPath)->exists()) Storage::disk('local')->delete($storedPath);
+                if (! SourceFile::where('path', $storedPath)->exists()) {
+                    Storage::disk('local')->delete($storedPath);
+                }
             }
             throw $exception;
         }
@@ -211,14 +218,14 @@ class MdbWorkflowController extends Controller
         $batch->load(['project', 'feeder', 'surveyTeam', 'sources', 'waypoints', 'transformers.entryRows', 'transformers.sections.consumers', 'exports.transformer', 'exports.revision', 'exports.generator', 'approvedRevision']);
 
         return view('mdb-workflow.review', ['batch' => $batch, 'entryIssues' => app(EntryService::class)->issues($batch),
-            'canCorrect' => $this->access->allowsForBatch($request->user(), $batch, 'surveyVerify') && ! in_array($request->user()->id, $batch->entry_actor_ids ?? [], true) && ($batch->staged_workflow ? $batch->survey_status === 'awaiting_verification' : in_array($batch->status, ['draft','submitted','returned','awaiting_verification'], true)),
+            'canCorrect' => $this->access->allowsForBatch($request->user(), $batch, 'surveyVerify') && ! in_array($request->user()->id, $batch->entry_actor_ids ?? [], true) && ($batch->staged_workflow ? $batch->survey_status === 'awaiting_verification' : in_array($batch->status, ['draft', 'submitted', 'returned', 'awaiting_verification'], true)),
             'canEdit' => $this->access->canEdit($request->user(), $batch),
             'canVerify' => $this->access->allowsForBatch($request->user(), $batch, 'surveyVerify') && ! in_array($request->user()->id, $batch->entry_actor_ids ?? [], true),
             'canCreateMdb' => (! $batch->staged_workflow || $batch->survey_status === 'approved') && $this->access->allowsForBatch($request->user(), $batch, $batch->staged_workflow ? 'generate' : 'export') && $this->access->allowsForBatch($request->user(), $batch, 'export'),
             'validation' => app(NetworkValidator::class)->validate($batch), 'workerConfigured' => ExporterFactory::make()->configured(),
             'workflowHistory' => AuditLog::with('user')->where(function ($query) use ($batch) {
-                $query->where(fn ($scope) => $scope->where('auditable_type', (new \App\Models\Mdb\NetworkTransformer)->getMorphClass())->whereIn('auditable_id', $batch->transformers()->select('id')))
-                    ->orWhere(fn ($scope) => $scope->where('auditable_type', (new \App\Models\Mdb\EntryRow)->getMorphClass())->whereIn('auditable_id', \App\Models\Mdb\EntryRow::whereIn('transformer_id', $batch->transformers()->select('id'))->select('id')))
+                $query->where(fn ($scope) => $scope->where('auditable_type', (new NetworkTransformer)->getMorphClass())->whereIn('auditable_id', $batch->transformers()->select('id')))
+                    ->orWhere(fn ($scope) => $scope->where('auditable_type', (new EntryRow)->getMorphClass())->whereIn('auditable_id', EntryRow::whereIn('transformer_id', $batch->transformers()->select('id'))->select('id')))
                     ->orWhere(fn ($scope) => $scope->where('auditable_type', $batch->getMorphClass())->where('auditable_id', $batch->id))
                     ->orWhere(fn ($scope) => $scope->where('auditable_type', (new ExportJob)->getMorphClass())->whereIn('auditable_id', $batch->exports()->select('id')));
             })->whereIn('action', ['mdb.verifier_row_corrected', 'mdb.verifier_header_corrected', 'mdb.survey_submit', 'mdb.survey_approve', 'mdb.survey_return', 'mdb.survey_flag', 'mdb.survey_reopened', 'mdb_workflow.export_requested',
@@ -277,7 +284,7 @@ class MdbWorkflowController extends Controller
             abort_unless(hash_equals($source->sha256, hash_file('sha256', $disk->path($source->path))), 409, 'Original source hash verification failed.');
         }
 
-        return app(\App\Services\DriveStorage\FileStorage::class)->response($source->driveStoredFile, $source->disk, $source->path,
+        return app(FileStorage::class)->response($source->driveStoredFile, $source->disk, $source->path,
             $source->original_name, $source->mime, $request->boolean('download') || $source->kind !== 'pdf');
     }
 
@@ -290,7 +297,9 @@ class MdbWorkflowController extends Controller
         if ($transformer) {
             abort_unless($transformer->batch_id === $batch->id, 404);
         }
-        if (is_string($request->input('code'))) $request->merge(['code' => trim($request->input('code'))]);
+        if (is_string($request->input('code'))) {
+            $request->merge(['code' => trim($request->input('code'))]);
+        }
         $data = $request->validate(['code' => ['required', 'string', 'max:255', Rule::unique('mdb_workflow_transformers')->where('batch_id', $batch->id)->ignore($transformer?->id)],
             'capacity_kva' => 'nullable|numeric|min:0.001|max:1000000', 'source_waypoint_id' => 'nullable|integer', 'header' => 'nullable|array', 'original_header' => 'nullable|array']);
         $data['header'] = array_replace($transformer?->header ?? [], $this->sanitizeJson($data['header'] ?? []));
@@ -302,7 +311,7 @@ class MdbWorkflowController extends Controller
             $batch->waypoints()->findOrFail($data['source_waypoint_id']);
         }
         $this->mutate($request, $batch, function ($locked) use ($transformer, $data) {
-            app(\App\Services\Mdb\TransformerIdentity::class)->assertAvailable($locked, $data['code'], $transformer);
+            app(TransformerIdentity::class)->assertAvailable($locked, $data['code'], $transformer);
 
             return $transformer ? tap($transformer)->update($data) : $locked->transformers()->create($data);
         });
@@ -546,9 +555,11 @@ class MdbWorkflowController extends Controller
                     app(EntryService::class)->assertComplete($locked);
                     foreach ($locked->transformers()->get() as $transformer) {
                         app(EntryService::class)->synchronizeTransformerLocation($transformer);
-                        $transformer->update(['header'=>array_replace($transformer->header ?? [],['manually_verified'=>true])]);
-                        $transformer->entryRows()->update(['manually_verified'=>true]);
-                        foreach ($transformer->entryRows()->pluck('pair_number')->unique() as $pair) app(EntryService::class)->synchronizePair($transformer,$pair);
+                        $transformer->update(['header' => array_replace($transformer->header ?? [], ['manually_verified' => true])]);
+                        $transformer->entryRows()->update(['manually_verified' => true]);
+                        foreach ($transformer->entryRows()->pluck('pair_number')->unique() as $pair) {
+                            app(EntryService::class)->synchronizePair($transformer, $pair);
+                        }
                     }
                 }
                 if ($data['action'] === 'return') {
@@ -713,11 +724,18 @@ class MdbWorkflowController extends Controller
     public function saveConfiguration(Request $request, Project $project)
     {
         Gate::authorize('mdb-workflow.configure');
+        if (data_get(Configuration::where('project_id', $project->id)->first()?->settings, 'engineering.version')) {
+            throw ValidationException::withMessages(['configuration' => 'Update the central Engineering Configuration module for this project.']);
+        }
         $data = $request->validate(['epsg' => 'nullable|integer|between:1000,999999', 'settings_json' => 'required|json|max:262144', 'load_assumptions_json' => 'required|json|max:262144',
             'approved' => 'nullable|boolean', 'revision' => 'required|integer', 'reason' => 'required|string|min:5|max:4000',
             'entry_year_start' => 'nullable|integer|min:1800|max:9900', 'entry_height_unit' => 'nullable|in:ft,m']);
         DB::transaction(function () use ($request, $project, $data) {
+            Project::whereKey($project->id)->lockForUpdate()->firstOrFail();
             $config = Configuration::where('project_id', $project->id)->lockForUpdate()->first();
+            if (data_get($config?->settings, 'engineering.version')) {
+                throw ValidationException::withMessages(['configuration' => 'Update the central Engineering Configuration module for this project.']);
+            }
             if (($config?->revision ?? 0) !== (int) $data['revision']) {
                 throw ValidationException::withMessages(['revision' => 'Configuration changed. Reload before saving.']);
             }

@@ -8,18 +8,22 @@ use App\Models\Division;
 use App\Models\Feeder;
 use App\Models\FieldSurvey;
 use App\Models\GridStation;
+use App\Models\Mdb\Configuration;
+use App\Models\Mdb\Template;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\SubDivision;
 use App\Models\SurveyTeam;
 use App\Models\TransformerMdbProject;
 use App\Models\User;
+use App\Services\DriveStorage\FileStorage;
 use App\Services\GpxWaypointService;
 use App\Services\TransformerMdbNetworkService;
 use App\Services\UtmProjection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -82,17 +86,23 @@ class TransformerMdbBuilderTest extends TestCase
     public function test_automatic_drive_registration_tracks_workspace_and_keeps_failed_upload_recoverable(): void
     {
         config(['drive_storage.enabled' => true]);
-        \Illuminate\Support\Facades\Queue::fake();
+        Queue::fake();
         $project = $this->saveProject();
         $archive = $project->gpxDriveStoredFile;
         $this->assertNotNull($archive);
         $this->assertSame($project->transformer_code, $archive->context['transformer_code']);
         $this->assertSame($project->id, $archive->context['transformer_workspace_id']);
-        try { app(\App\Services\DriveStorage\FileStorage::class)->transfer($archive->id); $this->fail('Expected missing storage account.'); } catch (\RuntimeException) {}
+        try {
+            app(FileStorage::class)->transfer($archive->id);
+            $this->fail('Expected missing storage account.');
+        } catch (\RuntimeException) {
+        }
         $this->assertSame('failed', $archive->fresh()->status);
         $this->get(route('mdb-builder.source', [$project, 'gpx']))->assertOk()->assertDownload('survey.gpx');
         Storage::disk('local')->assertExists($project->gpx_path);
-        foreach (Storage::disk('local')->files('drive-storage/work') as $temporary) Storage::disk('local')->delete($temporary);
+        foreach (Storage::disk('local')->files('drive-storage/work') as $temporary) {
+            Storage::disk('local')->delete($temporary);
+        }
     }
 
     public function test_manual_survey_saves_uploads_matches_gpx_and_preserves_source_values(): void
@@ -213,6 +223,22 @@ class TransformerMdbBuilderTest extends TestCase
             $this->markTestSkipped('Native MDB integration requires the Windows Access Database Engine.');
         }
         $project = $this->saveProject();
+        // Synthetic engineering approval for this integration test, never production defaults.
+        $templateBytes = file_get_contents(resource_path('mdb/synergee-empty.mdb'));
+        Storage::disk('local')->put('native-template.mdb', $templateBytes);
+        $template = Template::create(['code' => 'native-fixture', 'version' => '1', 'disk' => 'local', 'path' => 'native-template.mdb',
+            'sha256' => hash('sha256', $templateBytes), 'synergee_version' => 'SynerGEE Electric 5.0.0.324', 'approved_by' => $this->user->id, 'approved_at' => now('UTC'), 'active' => true,
+            'metadata' => ['equipment_references' => ['conductors' => ['DOG', 'ANT', 'WASP', 'GNAT'], 'transformers' => ['100 KVA'], 'configurations' => ['12.5/7.2 kV cross arm C2-2']]]]);
+        $mapping = json_decode(file_get_contents(resource_path('mdb/defaults.json')), true);
+        $mapping['SAI_Control']['Frequency'] = 50;
+        $mapping['SAI_Control']['ProjectionFile'] = 'WGS 1984 UTM Zone 42N';
+        Configuration::create(['project_id' => $this->feeder->project_id, 'epsg' => 32642,
+            'settings' => ['frequency_hz' => 50, 'nominal_voltage_kv' => 11, 'template_id' => $template->id, 'mapping' => ['table_values' => $mapping],
+                'engineering' => ['configuration_id' => '12.5/7.2 kV cross arm C2-2', 'supply_conductor_id' => 'DOG', 'secondary_conductor_id' => 'ANT',
+                    'transformer_types' => ['100' => '100 KVA'], 'phase_spacing_cm' => 121.9, 'neutral_spacing_cm' => 91.4, 'conductor_height_m' => 9.1, 'blank_consumers_zero' => true]],
+            'load_assumptions' => ['mode' => 'category_rates', 'method' => 'Synthetic integration fixture', 'evidence' => 'fixture',
+                'rates' => array_fill_keys(TransformerMdbNetworkService::CONSUMERS, ['kva' => 3, 'power_factor' => 1])],
+            'approved_by' => $this->user->id, 'approved_at' => now('UTC')]);
         $response = $this->post(route('mdb-builder.export', $project), ['revision' => $project->revision])->assertOk()->assertDownload('Feeder-T-0001.mdb');
         $path = $response->baseResponse->getFile()->getPathname();
         try {

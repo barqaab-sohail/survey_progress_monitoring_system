@@ -41,6 +41,7 @@
 </section>
 <section class="card"><div class="section-title"><h2>4. Solar / net metering</h2><button class="btn btn-light" type="button" id="add-solar">Add solar entry</button></div><p>These entries are preserved in the MDB survey tables. Assign generator locations and electrical models in SynerGEE.</p><div id="mdb-solar"></div></section>
 <section class="card"><h2>5. Transformer connection and engineering settings</h2>
+<p>MDB generation applies the project's <a href="{{ route('engineering.index') }}">centrally approved Engineering Configuration</a>. Local electrical settings below remain available for historical drafts; they do not override that configuration during generation.</p>
 <p>Identify all paper waypoints that refer to the transformer connection, for example <strong>878,879</strong>. They connect to the transformer rather than creating separate distribution nodes. Confirm its actual coordinates.</p>
 <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
 <label>Transformer waypoint aliases<input data-setting="transformer_waypoints" maxlength="200" placeholder="878,879"></label>
