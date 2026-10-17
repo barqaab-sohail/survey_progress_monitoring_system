@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
 import 'field_controller.dart';
 import 'models.dart';
@@ -46,6 +47,11 @@ class _SurveyEditorState extends State<SurveyEditor>
     record = widget.record;
     WidgetsBinding.instance.addObserver(this);
     controller.addListener(controllerChanged);
+    if (editable) {
+      record.data['team_group'] = teamGroupIdentifier(
+        controller.team(record.data['survey_team_id']),
+      );
+    }
     if (editable && record.ensurePairIds()) {
       // Save linkage without turning a viewed synced survey into an edited draft.
       dirty = true;
@@ -120,12 +126,14 @@ class _SurveyEditorState extends State<SurveyEditor>
           saveLabel = dirty ? 'Saving changes…' : 'Saved on this phone';
         });
       }
-    } catch (_) {
+    } catch (error) {
       dirty = true;
       if (mounted) {
         setState(() {
           saving = false;
-          saveLabel = 'Save failed — retry before leaving';
+          saveLabel = error is FormatException
+              ? error.message
+              : 'Save failed — retry before leaving';
         });
       }
       rethrow;
@@ -136,8 +144,12 @@ class _SurveyEditorState extends State<SurveyEditor>
     if (submitting) return;
     try {
       await flush();
-    } catch (_) {
-      notice('Unable to save. Check phone storage and retry before leaving.');
+    } catch (error) {
+      notice(
+        error is FormatException
+            ? error.message
+            : 'Unable to save. Check phone storage and retry before leaving.',
+      );
       return;
     }
     if (!mounted) return;
@@ -151,8 +163,12 @@ class _SurveyEditorState extends State<SurveyEditor>
     try {
       await flush();
       notice('Draft saved on this phone. Submit when complete.');
-    } catch (_) {
-      notice('Unable to save. Check the phone has available storage.');
+    } catch (error) {
+      notice(
+        error is FormatException
+            ? error.message
+            : 'Unable to save. Check the phone has available storage.',
+      );
     }
   }
 
@@ -247,9 +263,8 @@ class _SurveyEditorState extends State<SurveyEditor>
   }
 
   Future<void> chooseTransformer() async {
-    final items = controller.transformers
-        .where((t) => t['feeder_id'] == record.data['feeder_id'])
-        .toList();
+    final items = await controller.availableTransformers(record);
+    if (!mounted) return;
     String query = '';
     final chosen = await showDialog<Json>(
       context: context,
@@ -323,6 +338,16 @@ class _SurveyEditorState extends State<SurveyEditor>
   }
 
   Future<void> addRow() async {
+    final group = teamGroupIdentifier(
+      controller.team(record.data['survey_team_id']),
+    );
+    if (group == null) {
+      notice(
+        'No valid assigned team number. Refresh assignments or ask the administrator to correct the team.',
+      );
+      return;
+    }
+    record.data['team_group'] = group;
     final rowErrors = SurveyValidation.errors(
       record,
       submitting: true,
@@ -381,6 +406,18 @@ class _SurveyEditorState extends State<SurveyEditor>
             onChanged: () => touch(),
             onSave: flush,
             showRequired: true,
+            extrasBuilder: (refresh) => Column(
+              children: [
+                solarSection(
+                  rowId: record.rows[currentIndex]['row_id'],
+                  refresh: refresh,
+                ),
+                photosSection(
+                  rowId: record.rows[currentIndex]['row_id'],
+                  refresh: refresh,
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -389,6 +426,27 @@ class _SurveyEditorState extends State<SurveyEditor>
   }
 
   Future<void> deleteRow(int index) async {
+    final pairId = record.rows[index]['pair_id'];
+    final rowIds = record.rows
+        .where((row) => row['pair_id'] == pairId)
+        .map((row) => row['row_id'])
+        .toSet();
+    final attached = await controller.store.attachments(
+      record.scope,
+      record.id,
+    );
+    if (record.solar.any(
+          (pv) => pv['row_id'] != null && rowIds.contains(pv['row_id']),
+        ) ||
+        attached.any(
+          (photo) =>
+              photo['row_id'] != null && rowIds.contains(photo['row_id']),
+        )) {
+      notice(
+        'This pair has linked PV or photos. Remove its pending media first; rows with uploaded photos must be retained.',
+      );
+      return;
+    }
     final accepted = await confirmRemoval(
       'Remove this S/E pair?',
       message:
@@ -422,11 +480,17 @@ class _SurveyEditorState extends State<SurveyEditor>
         ),
       ) ??
       false;
-  Future<void> attach(ImageSource source, String kind) async {
+  Future<void> attach(
+    ImageSource source,
+    String kind, {
+    String? rowId,
+    VoidCallback? refresh,
+  }) async {
     try {
       await flush();
-      await controller.pickPhoto(record, source, kind);
+      await controller.pickPhoto(record, source, kind, rowId: rowId);
       await loadPhotos();
+      refresh?.call();
     } on FormatException catch (e) {
       notice(e.message);
     } on Object {
@@ -444,6 +508,7 @@ class _SurveyEditorState extends State<SurveyEditor>
     bool number = false,
     int lines = 1,
     String? helper,
+    VoidCallback? refresh,
   }) => EntryField(
     key: ValueKey(
       '$headerGeneration:${record.revision}:$path:$key:${identityHashCode(target)}',
@@ -459,6 +524,7 @@ class _SurveyEditorState extends State<SurveyEditor>
       target[key] = value;
       if (key == 'transformer_code') record.data['transformer_id'] = null;
       touch(path ?? key);
+      refresh?.call();
     },
   );
   Widget choice(Json target, String key, String label, List<String> values) =>
@@ -660,7 +726,7 @@ class _SurveyEditorState extends State<SurveyEditor>
     );
   }
 
-  Widget solarSection() => Column(
+  Widget solarSection({String? rowId, VoidCallback? refresh}) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Text(
@@ -673,8 +739,12 @@ class _SurveyEditorState extends State<SurveyEditor>
       const Text(
         'Optional. Record the consumer reference or meter number, service load and solar capacity.',
       ),
+      if (rowId == null)
+        const Text(
+          'Open an S/E row to add or view linked PV. Existing unlinked observations are retained below.',
+        ),
       const SizedBox(height: 14),
-      if (editable)
+      if (editable && rowId != null)
         FilledButton.tonalIcon(
           onPressed: () {
             if (record.solar.length >= 100) {
@@ -682,6 +752,8 @@ class _SurveyEditorState extends State<SurveyEditor>
               return;
             }
             record.solar.add({
+              'pv_id': const Uuid().v4(),
+              'row_id': rowId,
               'consumer_reference': '',
               'service_load_kw': '',
               'installed_pv_kw': '',
@@ -689,72 +761,83 @@ class _SurveyEditorState extends State<SurveyEditor>
               'remarks': '',
             });
             touch();
+            refresh?.call();
           },
           icon: const Icon(Icons.add),
           label: const Text('Add solar installation'),
         ),
       const SizedBox(height: 16),
-      ...record.solar.asMap().entries.map(
-        (entry) => SectionCard(
-          title: 'Installation ${entry.key + 1}',
-          children: [
-            text(
-              entry.value,
-              'consumer_reference',
-              'Consumer reference number',
-              path: 'solar.${entry.key}.consumer_reference',
+      ...record.solar
+          .asMap()
+          .entries
+          .where((entry) => entry.value['row_id'] == rowId)
+          .map(
+            (entry) => SectionCard(
+              title: 'Installation ${entry.key + 1}',
+              children: [
+                text(
+                  entry.value,
+                  'consumer_reference',
+                  'Consumer reference number',
+                  path: 'solar.${entry.key}.consumer_reference',
+                  refresh: refresh,
+                ),
+                text(
+                  entry.value,
+                  'service_load_kw',
+                  'PV Service Load (kW)',
+                  number: true,
+                  path: 'solar.${entry.key}.service_load_kw',
+                  refresh: refresh,
+                ),
+                text(
+                  entry.value,
+                  'installed_pv_kw',
+                  'PV Solar Capacity (kW)',
+                  number: true,
+                  path: 'solar.${entry.key}.installed_pv_kw',
+                  refresh: refresh,
+                ),
+                text(
+                  entry.value,
+                  'meter_number',
+                  'Meter Number',
+                  path: 'solar.${entry.key}.meter_number',
+                  refresh: refresh,
+                ),
+                text(
+                  entry.value,
+                  'remarks',
+                  'Remarks',
+                  lines: 2,
+                  path: 'solar.${entry.key}.remarks',
+                  refresh: refresh,
+                ),
+                if (editable)
+                  TextButton.icon(
+                    onPressed: () async {
+                      if (await confirmRemoval(
+                        'Remove installation ${entry.key + 1}?',
+                      )) {
+                        record.solar.removeAt(entry.key);
+                        touch();
+                        refresh?.call();
+                      }
+                    },
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Remove installation'),
+                  ),
+              ],
             ),
-            text(
-              entry.value,
-              'service_load_kw',
-              'PV Service Load (kW)',
-              number: true,
-              path: 'solar.${entry.key}.service_load_kw',
-            ),
-            text(
-              entry.value,
-              'installed_pv_kw',
-              'PV Solar Capacity (kW)',
-              number: true,
-              path: 'solar.${entry.key}.installed_pv_kw',
-            ),
-            text(
-              entry.value,
-              'meter_number',
-              'Meter Number',
-              path: 'solar.${entry.key}.meter_number',
-            ),
-            text(
-              entry.value,
-              'remarks',
-              'Remarks',
-              lines: 2,
-              path: 'solar.${entry.key}.remarks',
-            ),
-            if (editable)
-              TextButton.icon(
-                onPressed: () async {
-                  if (await confirmRemoval(
-                    'Remove installation ${entry.key + 1}?',
-                  )) {
-                    record.solar.removeAt(entry.key);
-                    touch();
-                  }
-                },
-                icon: const Icon(Icons.delete_outline),
-                label: const Text('Remove installation'),
-              ),
-          ],
-        ),
-      ),
-      if (record.solar.isEmpty)
+          ),
+      if (record.solar.where((pv) => pv['row_id'] == rowId).isEmpty)
         const SectionCard(
           title: 'No solar installations recorded',
           children: [Text('Leave this section empty when it does not apply.')],
         ),
     ],
   );
-  Widget photosSection() => Column(
+  Widget photosSection({String? rowId, VoidCallback? refresh}) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Text(
@@ -767,101 +850,160 @@ class _SurveyEditorState extends State<SurveyEditor>
       const Text(
         'Images are copied into the app storage and uploaded after the survey is confirmed. Photograph a sketch using the sketch button.',
       ),
+      if (rowId == null)
+        const Text(
+          'Open an S/E row to add or view linked photos. Legacy unlinked images stay here until you explicitly choose a row.',
+        ),
       const SizedBox(height: 14),
-      if (editable)
+      if (editable && rowId != null)
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
             FilledButton.tonalIcon(
-              onPressed: () => attach(ImageSource.camera, 'photo'),
+              onPressed: () => attach(
+                ImageSource.camera,
+                'photo',
+                rowId: rowId,
+                refresh: refresh,
+              ),
               icon: const Icon(Icons.camera_alt_outlined),
               label: const Text('Take photo'),
             ),
             OutlinedButton.icon(
-              onPressed: () => attach(ImageSource.gallery, 'photo'),
+              onPressed: () => attach(
+                ImageSource.gallery,
+                'photo',
+                rowId: rowId,
+                refresh: refresh,
+              ),
               icon: const Icon(Icons.photo_library_outlined),
               label: const Text('Choose image'),
             ),
             OutlinedButton.icon(
-              onPressed: () => attach(ImageSource.camera, 'sketch'),
+              onPressed: () => attach(
+                ImageSource.camera,
+                'sketch',
+                rowId: rowId,
+                refresh: refresh,
+              ),
               icon: const Icon(Icons.draw_outlined),
               label: const Text('Photograph sketch'),
             ),
           ],
         ),
       const SizedBox(height: 16),
-      ...photos.map(
-        (photo) => Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.file(
-                    File(photo['path']),
-                    height: 170,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const SizedBox(
-                      height: 90,
-                      child: Center(child: Text('Image missing from phone')),
+      ...photos
+          .where((photo) => photo['row_id'] == rowId)
+          .map(
+            (photo) => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.file(
+                        File(photo['path']),
+                        height: 170,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => const SizedBox(
+                          height: 90,
+                          child: Center(
+                            child: Text('Image missing from phone'),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${photo['kind'] == 'sketch' ? 'Sketch' : 'Photo'} · ${photo['state'] == 'synced'
-                      ? 'Uploaded'
-                      : photo['state'] == 'pending'
-                      ? 'Waiting to upload'
-                      : photo['state'] == 'uploading'
-                      ? 'Uploading…'
-                      : 'Needs attention'}',
-                ),
-                if ((photo['error'] as String).isNotEmpty)
-                  Text(
-                    photo['error'],
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
+                    const SizedBox(height: 8),
+                    Text(
+                      '${photo['kind'] == 'sketch' ? 'Sketch' : 'Photo'} · ${photo['state'] == 'synced'
+                          ? 'Uploaded'
+                          : photo['state'] == 'pending'
+                          ? 'Waiting to upload'
+                          : photo['state'] == 'uploading'
+                          ? 'Uploading…'
+                          : 'Needs attention'}',
                     ),
-                  ),
-                if (editable &&
-                    !controller.syncing &&
-                    photo['state'] != 'synced' &&
-                    photo['state'] != 'uploading')
-                  TextButton.icon(
-                    onPressed: () async {
-                      if (await confirmRemoval('Remove this image?')) {
-                        if (controller.syncing) {
-                          notice(
-                            'Wait for sync to finish before removing an image.',
+                    if ((photo['error'] as String).isNotEmpty)
+                      Text(
+                        photo['error'],
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    if (editable &&
+                        rowId == null &&
+                        ['pending', 'error'].contains(photo['state']))
+                      TextButton(
+                        onPressed: () async {
+                          final chosen = await showDialog<String>(
+                            context: context,
+                            builder: (context) => SimpleDialog(
+                              title: const Text('Link this photo to a row'),
+                              children: record.rows
+                                  .map(
+                                    (row) => SimpleDialogOption(
+                                      onPressed: () =>
+                                          Navigator.pop(context, row['row_id']),
+                                      child: Text(
+                                        '${row['se']} ? GPS ${row['gps_waypoint']} ? ${row['date']}',
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
                           );
-                          return;
-                        }
-                        final removed = await controller.store.deleteAttachment(
-                          record.scope,
-                          photo['uuid'],
-                        );
-                        if (!removed) {
-                          notice(
-                            'The image is being uploaded or already confirmed. It was kept.',
-                          );
-                        }
-                        await loadPhotos();
-                      }
-                    },
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Remove image'),
-                  ),
-              ],
+                          if (chosen != null) {
+                            await flush();
+                            if (await controller.store.linkAttachment(
+                              record,
+                              photo['uuid'],
+                              chosen,
+                            )) {
+                              touch();
+                            }
+                            await loadPhotos();
+                            refresh?.call();
+                          }
+                        },
+                        child: const Text('Link this existing photo to a row'),
+                      ),
+                    if (editable &&
+                        !controller.syncing &&
+                        photo['state'] != 'synced' &&
+                        photo['state'] != 'uploading')
+                      TextButton.icon(
+                        onPressed: () async {
+                          if (await confirmRemoval('Remove this image?')) {
+                            if (controller.syncing) {
+                              notice(
+                                'Wait for sync to finish before removing an image.',
+                              );
+                              return;
+                            }
+                            final removed = await controller.store
+                                .deleteAttachment(record.scope, photo['uuid']);
+                            if (!removed) {
+                              notice(
+                                'The image is being uploaded or already confirmed. It was kept.',
+                              );
+                            }
+                            await loadPhotos();
+                            refresh?.call();
+                          }
+                        },
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Remove image'),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
-      if (photos.isEmpty)
+      if (photos.where((photo) => photo['row_id'] == rowId).isEmpty)
         const SectionCard(
           title: 'No images attached',
           children: [Text('Photos and sketches are optional.')],
@@ -1038,11 +1180,13 @@ class RowEditor extends StatefulWidget {
     required this.onChanged,
     required this.onSave,
     this.showRequired = false,
+    this.extrasBuilder,
     this.equipmentOptions = const {},
     this.yearStart = 2000,
   });
   final SurveyRecord record;
   final int index;
+  final Widget Function(VoidCallback refresh)? extrasBuilder;
   final bool editable, showRequired;
   final Map<String, String> equipmentOptions;
   final int yearStart;
@@ -1118,6 +1262,8 @@ class _RowEditorState extends State<RowEditor> {
             content: Text(
               error is StateError
                   ? error.message
+                  : error is FormatException
+                  ? error.message
                   : 'Unable to save. Retry after checking phone storage.',
             ),
           ),
@@ -1147,6 +1293,7 @@ class _RowEditorState extends State<RowEditor> {
     enabled: widget.editable,
     number: number,
     digits: digits,
+    readOnly: key == 'group',
     helper: helper,
     error: errors['$prefix.$key'],
     onChanged: (value) {
@@ -1196,7 +1343,13 @@ class _RowEditorState extends State<RowEditor> {
                   changed();
                 },
               ),
-              field('group', 'Group identifier', digits: true),
+              field(
+                'group',
+                'Group identifier',
+                digits: true,
+                helper:
+                    'From your assigned survey team. Saved rows retain their original value.',
+              ),
               DateEntry(
                 label: 'Row date',
                 yearStart: widget.yearStart,
@@ -1362,6 +1515,8 @@ class _RowEditorState extends State<RowEditor> {
               ),
             ],
           ),
+          if (widget.extrasBuilder != null)
+            widget.extrasBuilder!(() => setState(() {})),
         ],
       ),
     ),
@@ -1422,13 +1577,14 @@ class EntryField extends StatelessWidget {
     this.number = false,
     this.integer = false,
     this.digits = false,
+    this.readOnly = false,
     this.lines = 1,
     this.error,
     this.helper,
   });
   final String label;
   final dynamic value;
-  final bool enabled, number, integer, digits;
+  final bool enabled, number, integer, digits, readOnly;
   final int lines;
   final String? error, helper;
   final ValueChanged<String> onChanged;
@@ -1436,6 +1592,7 @@ class EntryField extends StatelessWidget {
   Widget build(BuildContext context) => TextFormField(
     initialValue: value?.toString() ?? '',
     enabled: enabled,
+    readOnly: readOnly,
     maxLines: lines,
     inputFormatters: digits ? [FilteringTextInputFormatter.digitsOnly] : null,
     keyboardType: integer || digits

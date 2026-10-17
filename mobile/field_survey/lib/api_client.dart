@@ -123,6 +123,7 @@ class FieldApi {
           ..fields.addAll({
             'client_uuid': attachment['uuid'],
             'kind': attachment['kind'],
+            if (attachment['row_id'] != null) 'row_id': attachment['row_id'],
           })
           ..files.add(
             await http.MultipartFile.fromPath(

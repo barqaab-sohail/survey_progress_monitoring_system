@@ -8,6 +8,36 @@ const applicationBaseUrl = 'https://hazeco.barqaab.pk';
 String dayString(DateTime date) => date.toIso8601String().substring(0, 10);
 Json copyJson(Json value) => jsonDecode(jsonEncode(value)) as Json;
 
+String? teamGroupIdentifier(Json? team) {
+  if (team == null) return null;
+  if (team.containsKey('group_identifier')) {
+    return team['group_identifier'] as String?;
+  }
+  final numbers = <String>{};
+  for (final value in [team['code'], team['name']]) {
+    final match = RegExp(r'([0-9]+)\s*$').firstMatch((value ?? '').toString());
+    if (match != null) {
+      final digits = match[1]!.padLeft(2, '0');
+      numbers.add(digits.substring(digits.length - 2));
+    }
+  }
+  return numbers.length == 1 ? numbers.single : null;
+}
+
+String transformerIdentity(dynamic code) => (code ?? '')
+    .toString()
+    .replaceAll(RegExp('[‐‑‒–—−]'), '-')
+    .replaceAll(RegExp(r'\s+'), '')
+    .toUpperCase();
+
+bool sameTransformer(Json a, Json b) =>
+    a['feeder_id'] == b['feeder_id'] &&
+    ((a['transformer_id'] != null &&
+            a['transformer_id'] == b['transformer_id']) ||
+        (transformerIdentity(a['transformer_code']).isNotEmpty &&
+            transformerIdentity(a['transformer_code']) ==
+                transformerIdentity(b['transformer_code'])));
+
 class FieldSession {
   const FieldSession({
     required this.url,
@@ -61,12 +91,19 @@ class SurveyRecord {
   );
 
   factory SurveyRecord.create(FieldSession session, Json team, Json feeder) {
+    final group = teamGroupIdentifier(team);
+    if (group == null) {
+      throw const FormatException(
+        'The assigned survey team needs a valid team number. Ask the administrator to correct its code/name.',
+      );
+    }
     return SurveyRecord(
       scope: session.scope,
       data: {
         'client_uuid': const Uuid().v4(),
         'base_revision': 0,
         'survey_team_id': team['id'],
+        'team_group': group,
         'feeder_id': feeder['id'],
         'transformer_id': null,
         'transformer_code': '',
@@ -92,6 +129,7 @@ class SurveyRecord {
   }
 
   static Json newRow(String date, {String? pairId}) => {
+    'row_id': const Uuid().v4(),
     'pair_id': pairId ?? const Uuid().v4(),
     'entry_version': 2,
     'se': 'S',
@@ -124,13 +162,30 @@ class SurveyRecord {
             : null,
       )
       ..['se'] = previous?['se'] == 'S' ? 'E' : 'S'
-      ..['group'] = previous?['group'] ?? '';
+      ..['group'] = requiredTeamGroup;
+  }
+
+  String get requiredTeamGroup {
+    final group = data['team_group'];
+    if (group is! String || !RegExp(r'^[0-9]{2}$').hasMatch(group)) {
+      throw const FormatException(
+        'No valid assigned team number is available. Refresh assignments or contact the administrator before adding a row.',
+      );
+    }
+    return group;
   }
 
   /// Link legacy adjacent pairs once; never rewrite observation values or a queued snapshot.
   bool ensurePairIds() {
     if (locked) return false;
     var changed = false;
+    for (var i = 0; i < rows.length; i++) {
+      if ((rows[i]['row_id'] ?? '').toString().isEmpty) {
+        rows[i]['row_id'] = const Uuid().v4();
+        rows[i]['legacy_row_index'] = i;
+        changed = true;
+      }
+    }
     for (final indices in surveyPairGroups(rows)) {
       final saved = (rows[indices.first]['pair_id'] ?? '').toString();
       final id = saved.isEmpty ? const Uuid().v4() : saved;
@@ -172,7 +227,7 @@ class SurveyRecord {
           pairId: start['pair_id'],
         )
         ..['se'] = partnerRole
-        ..['group'] = start['group'] ?? '',
+        ..['group'] = requiredTeamGroup,
     );
     return insertAt;
   }
@@ -219,6 +274,9 @@ class SurveyRecord {
 
   Json payload({bool submitted = false}) {
     final result = copyJson(data);
+    result.remove(
+      'team_group',
+    ); // Cached default is local; backend uses the authorized team.
     result['status'] = submitted ? 'submitted' : 'draft';
     final header = result['header'] as Json;
     header['capacity_kva'] = parseNumber(header['capacity_kva']);
@@ -548,6 +606,11 @@ class SurveyValidation {
     }
     for (var index = 0; index < record.solar.length; index++) {
       final item = record.solar[index];
+      if (item['row_id'] != null &&
+          !record.rows.any((row) => row['row_id'] == item['row_id'])) {
+        result['solar.$index.row_id'] =
+            'This PV record must belong to a row in this survey.';
+      }
       number(
         'solar.$index.installed_pv_kw',
         item['installed_pv_kw'],

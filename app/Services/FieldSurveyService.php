@@ -6,6 +6,9 @@ use App\Models\FieldSurvey;
 use App\Models\FieldSurveyAttachment;
 use App\Models\Transformer;
 use App\Models\User;
+use App\Services\DriveStorage\FileStorage;
+use App\Support\FieldTransformerIdentity;
+use App\Support\SurveyTeamGroup;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +26,10 @@ class FieldSurveyService
             return DB::transaction(function () use ($actor, $data): array {
                 $actor = User::query()->whereKey($actor->id)->lockForUpdate()->firstOrFail();
                 [$team, $feeder] = $this->access->authorizeCollection($actor, $data['survey_team_id'], $data['feeder_id']);
+                DB::table('feeders')->where('id', $feeder->id)->lockForUpdate()->first();
                 $survey = FieldSurvey::where('client_uuid', $data['client_uuid'])->lockForUpdate()->first();
+                abort_if($survey && $survey->collected_by !== $actor->id, 409, 'This survey UUID belongs to another account.');
+                $this->validateRowOwnershipAndGroups($data, $survey, SurveyTeamGroup::identifier($team));
                 $hashData = $data;
                 unset($hashData['base_revision']);
                 $hash = hash('sha256', json_encode($this->canonical($hashData), JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION));
@@ -41,9 +47,27 @@ class FieldSurveyService
                 if (! empty($data['transformer_id']) && ! $transformer) {
                     throw ValidationException::withMessages(['transformer_id' => 'The reference transformer is unavailable or belongs to another feeder. Download reference data again or select an unlinked transformer.']);
                 }
+                $key = FieldTransformerIdentity::key($data['transformer_code'] ?? null);
+                $identityChanged = ! $survey || $survey->feeder_id !== $feeder->id
+                    || $survey->transformer_id !== $transformer?->id || FieldTransformerIdentity::key($survey->transformer_code) !== $key;
+                if ($identityChanged && ($key !== null || $transformer)) {
+                    $duplicate = FieldSurvey::where('feeder_id', $feeder->id)->where('client_uuid', '!=', $data['client_uuid'])
+                        ->where(function ($query) use ($key, $transformer): void {
+                            if ($key !== null) {
+                                $query->where('transformer_key', $key);
+                            }
+                            if ($transformer) {
+                                $query->orWhere('transformer_id', $transformer->id);
+                            }
+                        })->exists();
+                    if ($duplicate) {
+                        throw ValidationException::withMessages(['transformer_code' => 'This transformer already has a saved survey. Open the saved survey to edit it.']);
+                    }
+                }
                 $old = $survey?->toArray() ?? [];
                 $isNew = $survey === null;
                 $survey ??= new FieldSurvey(['client_uuid' => $data['client_uuid'], 'collected_by' => $actor->id]);
+                $survey->forceFill(['transformer_key' => $key]);
                 if ($isNew || $survey->feeder_id !== $feeder->id) {
                     $survey->reference_snapshot = [
                         'project_id' => $team->project_id,
@@ -81,31 +105,34 @@ class FieldSurveyService
         }
     }
 
-    public function attach(User $actor, FieldSurvey $survey, string $uuid, string $kind, UploadedFile $file): array
+    public function attach(User $actor, FieldSurvey $survey, string $uuid, string $kind, UploadedFile $file, ?string $rowId = null): array
     {
         $path = null;
         try {
-            return DB::transaction(function () use ($actor, $survey, $uuid, $kind, $file, &$path): array {
+            return DB::transaction(function () use ($actor, $survey, $uuid, $kind, $file, $rowId, &$path): array {
                 $actor = User::query()->whereKey($actor->id)->lockForUpdate()->firstOrFail();
                 $survey = FieldSurvey::query()->lockForUpdate()->findOrFail($survey->id);
                 $this->access->authorizeOwner($actor, $survey);
                 $hash = hash_file('sha256', $file->getRealPath());
                 $existing = FieldSurveyAttachment::where('client_uuid', $uuid)->first();
                 if ($existing) {
-                    abort_unless($existing->field_survey_id === $survey->id && $existing->kind === $kind && hash_equals($existing->sha256, $hash), 409, 'This attachment UUID already identifies another file.');
+                    abort_unless($existing->field_survey_id === $survey->id && $existing->kind === $kind && $existing->row_id === $rowId && hash_equals($existing->sha256, $hash), 409, 'This attachment UUID already identifies another file or row.');
 
                     return [$existing, false];
+                }
+                if (! $rowId || ! collect($survey->rows)->contains(fn ($row) => ($row['row_id'] ?? null) === $rowId)) {
+                    throw ValidationException::withMessages(['row_id' => 'Select an S/E row belonging to this saved survey before uploading the photo.']);
                 }
                 $path = $file->store('field-surveys/'.$survey->client_uuid, 'local');
                 if (! $path) {
                     abort(503, 'The attachment could not be stored. Keep the file on your device and retry.');
                 }
                 $attachment = $survey->attachments()->create([
-                    'client_uuid' => $uuid, 'kind' => $kind, 'path' => $path,
+                    'client_uuid' => $uuid, 'row_id' => $rowId, 'kind' => $kind, 'path' => $path,
                     'mime_type' => $file->getMimeType(), 'byte_length' => $file->getSize(), 'sha256' => $hash,
                 ]);
                 if (config('drive_storage.enabled') && $attachment->mime_type === 'application/pdf') {
-                    $archive = app(\App\Services\DriveStorage\FileStorage::class)->register('local', $path, $file->getClientOriginalName(), $attachment->mime_type, [
+                    $archive = app(FileStorage::class)->register('local', $path, $file->getClientOriginalName(), $attachment->mime_type, [
                         'project_id' => $survey->feeder->project_id, 'feeder_id' => $survey->feeder_id,
                         'field_survey_id' => $survey->id, 'transformer_id' => $survey->transformer_id, 'transformer_code' => $survey->transformer_code,
                     ]);
@@ -123,6 +150,63 @@ class FieldSurveyService
                 abort(409, 'This attachment UUID was uploaded concurrently. Retry with the same file.');
             }
             throw $exception;
+        }
+    }
+
+    private function validateRowOwnershipAndGroups(array &$data, ?FieldSurvey $survey, ?string $group): void
+    {
+        $oldRows = $survey?->rows ?? [];
+        $claimedLegacy = [];
+        if (! $survey && $group === null) {
+            throw ValidationException::withMessages(['survey_team_id' => 'The assigned survey team needs a valid, unambiguous team number. Ask the administrator to correct its code/name.']);
+        }
+        foreach ($data['rows'] as $index => &$row) {
+            $old = null;
+            if (! empty($row['row_id'])) {
+                $old = collect($oldRows)->first(fn ($saved) => ($saved['row_id'] ?? null) === $row['row_id']);
+                $legacyIndex = $row['legacy_row_index'] ?? null;
+                if (! $old && $legacyIndex !== null && isset($oldRows[$legacyIndex]) && empty($oldRows[$legacyIndex]['row_id'])
+                    && ! isset($claimedLegacy[$legacyIndex]) && ($oldRows[$legacyIndex]['se'] ?? null) === ($row['se'] ?? null)) {
+                    $old = $oldRows[$legacyIndex];
+                    $claimedLegacy[$legacyIndex] = true;
+                }
+            } elseif (isset($oldRows[$index])) {
+                $old = $oldRows[$index];
+                if (! empty($old['row_id'])) {
+                    $row['row_id'] = $old['row_id'];
+                }
+            }
+            if ($old !== null) {
+                if (($row['group'] ?? null) === null && ! empty($old['group'])) {
+                    $row['group'] = $old['group'];
+                }
+                if (($row['group'] ?? null) !== ($old['group'] ?? null)) {
+                    throw ValidationException::withMessages(["rows.$index.group" => 'The original Group Identifier of a saved row must be preserved.']);
+                }
+            } else {
+                if ($group === null) {
+                    throw ValidationException::withMessages(['survey_team_id' => 'The assigned survey team needs a valid team number before new rows can be created.']);
+                }
+                if (isset($row['group']) && $row['group'] !== '' && $row['group'] !== $group) {
+                    throw ValidationException::withMessages(["rows.$index.group" => 'Group Identifier must be '.$group.' from your assigned survey team.']);
+                }
+                $row['group'] = $group;
+            }
+        }
+        unset($row);
+        $ids = collect($data['rows'])->pluck('row_id')->filter()->all();
+        foreach ($data['solar'] as $index => $pv) {
+            $oldPv = ! empty($pv['pv_id']) ? collect($survey?->solar ?? [])->firstWhere('pv_id', $pv['pv_id'])
+                : (($survey?->solar ?? [])[$index] ?? null);
+            if (! empty($pv['row_id']) && ! in_array($pv['row_id'], $ids, true)) {
+                throw ValidationException::withMessages(["solar.$index.row_id" => 'PV must belong to an S/E row in this survey.']);
+            }
+            if (empty($pv['row_id']) && (! $oldPv || ! empty($oldPv['row_id']))) {
+                throw ValidationException::withMessages(["solar.$index.row_id" => 'Select the S/E row for this PV observation. Existing unlinked records remain unlinked.']);
+            }
+        }
+        if ($survey && $survey->attachments()->whereNotNull('row_id')->whereNotIn('row_id', $ids)->exists()) {
+            throw ValidationException::withMessages(['rows' => 'A row with uploaded photos cannot be removed. Keep its stable row identifier.']);
         }
     }
 

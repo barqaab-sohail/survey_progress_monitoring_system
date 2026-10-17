@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FieldSurveyAttachment extends Model
 {
-    protected $fillable = ['client_uuid', 'field_survey_id', 'kind', 'path', 'mime_type', 'byte_length', 'sha256', 'drive_stored_file_id'];
+    protected $fillable = ['client_uuid', 'field_survey_id', 'row_id', 'kind', 'path', 'mime_type', 'byte_length', 'sha256', 'drive_stored_file_id'];
 
     protected $hidden = ['path', 'sha256'];
 

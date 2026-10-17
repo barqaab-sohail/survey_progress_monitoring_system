@@ -1,6 +1,14 @@
 @extends('layouts.app')
 @section('title', $survey->transformer_code ?: 'Field survey draft')
 @section('content')
+@php
+    $rowLabels = [];
+    foreach ($survey->rows as $index => $observation) {
+        if (!empty($observation['row_id'])) {
+            $rowLabels[$observation['row_id']] = 'Row '.($index + 1).' · '.($observation['se'] ?? '-').' · Waypoint '.($observation['gps_waypoint'] ?? '-');
+        }
+    }
+@endphp
 <div class="page-head"><div><h1>{{ $survey->transformer_code ?: 'Untitled draft' }}</h1><p>{{ $survey->reference_snapshot['feeder_code'] ?? $survey->feeder->feeder_code }} &middot; {{ $survey->reference_snapshot['feeder_name'] ?? $survey->feeder->feeder_name }}</p></div><a class="btn btn-light" href="{{ route('field-surveys.index') }}">Back to field surveys</a></div>
 <section class="card"><div class="section-title"><h2>Survey details</h2><span class="status">{{ ucfirst($survey->status) }}</span></div><dl class="detail-list">
     <div><dt>Survey date</dt><dd>{{ $survey->survey_date->format('d M Y') }}</dd></div><div><dt>Collected by / team</dt><dd>{{ $survey->collector->name }} / {{ $survey->team->name }}</dd></div>
@@ -23,12 +31,16 @@
 </section>
 <section class="card"><h2>Solar / net metering ({{ count($survey->solar) }})</h2>
 @forelse($survey->solar as $solar)
+<p><strong>S/E observation:</strong> {{ $rowLabels[$solar['row_id'] ?? ''] ?? 'Existing unlinked observation' }}</p>
 <dl class="detail-list" style="margin-bottom:16px"><div><dt>Consumer reference</dt><dd>{{ $solar['consumer_reference'] ?? '-' }}</dd></div><div><dt>PV Service Load (kW)</dt><dd>{{ $solar['service_load_kw'] ?? '-' }}</dd></div><div><dt>Installed PV (kW)</dt><dd>{{ $solar['installed_pv_kw'] ?? '-' }}</dd></div><div><dt>Meter Number</dt><dd>{{ $solar['meter_number'] ?? '-' }}</dd></div><div><dt>Remarks</dt><dd>{{ $solar['remarks'] ?? '-' }}</dd></div></dl>
 @empty<p>No solar entries recorded.</p>@endforelse
 </section>
 <section class="card"><h2>Photos and sketches ({{ $survey->attachments->count() }})</h2><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
 @forelse($survey->attachments as $attachment)
+<div>
+<p><strong>S/E observation:</strong> {{ $rowLabels[$attachment->row_id ?? ''] ?? 'Existing unlinked observation' }}</p>
 <div><a href="{{ route('field-surveys.attachment', $attachment->client_uuid) }}" target="_blank" rel="noopener">@if(str_starts_with($attachment->mime_type, 'image/'))<img loading="lazy" src="{{ route('field-surveys.attachment', $attachment->client_uuid) }}" alt="{{ ucfirst($attachment->kind) }} for {{ $survey->transformer_code }}" style="display:block;max-width:100%;max-height:250px;object-fit:contain;margin-bottom:8px">@endif Open {{ $attachment->kind }} {{ $loop->iteration }}</a><p>{{ number_format($attachment->byte_length / 1024) }} KB</p></div>
+</div>
 @empty<p>No attachments uploaded.</p>@endforelse
 </div></section>
 @endsection

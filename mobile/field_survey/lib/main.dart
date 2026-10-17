@@ -332,8 +332,12 @@ class _SurveyHomeState extends State<SurveyHome> {
                 DropdownButtonFormField<int>(
                   initialValue: selectedTeam['id'],
                   isExpanded: true,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Assigned survey team',
+                    errorText: teamGroupIdentifier(selectedTeam) == null
+                        ? 'No valid team number. Ask the administrator to correct this team.'
+                        : null,
+                    errorMaxLines: 3,
                   ),
                   items: eligible
                       .map(
@@ -371,7 +375,9 @@ class _SurveyHomeState extends State<SurveyHome> {
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: teamGroupIdentifier(selectedTeam) == null
+                  ? null
+                  : () => Navigator.pop(context, true),
               child: const Text('Create survey'),
             ),
           ],

@@ -1,6 +1,6 @@
 ﻿# LT field survey mobile API contract (v1)
 
-Reference: B2308.pdf, 27 scanned LT survey sheets. Use blank schema, not handwritten sample values. API base: configured application URL + `/api/v1/field`. Android user enters application URL, not API path. Assigned survey-team-leader accounts or super admin can collect. First login and download require internet; collection afterwards is offline.
+Reference: B2308.pdf, 27 scanned LT survey sheets. Use blank schema, not handwritten sample values. API base: `https://hazeco.barqaab.pk/api/v1/field`. Android uses the fixed application URL. Assigned survey-team-leader accounts or super admin can collect. First login and download require internet; collection afterwards is offline.
 
 ## Endpoints
 
@@ -8,7 +8,7 @@ Reference: B2308.pdf, 27 scanned LT survey sheets. Use blank schema, not handwri
 - POST `/logout` -> 204 (current device token).
 - GET `/bootstrap` -> {user:{id,name},teams:[{id,name,project_id}],feeders:[{id,feeder_code,feeder_name,grid_station_name,division_name,sub_division_name,sub_division_code,team_ids:[int]}],transformers:[{id,feeder_id,transformer_code,capacity_kva,equipment_make,equipment_location}]}. Restrict to active projects/teams/feeders and current user memberships/assignments. Super admin uses all active teams/assignments.
 - POST `/surveys/sync` JSON payload below -> {id,client_uuid,revision,status}. 201 first sync, 200 idempotent replay/update. 409 stale base_revision or UUID collision with different owner; 422 field validation; 403 revoked assignment/account.
-- POST `/surveys/{client_uuid}/attachments` multipart {client_uuid,kind,file} -> {id,client_uuid}. Stable attachment UUID, retries do not duplicate, different bytes for same UUID ->409. kind=photo or sketch. File JPEG/PNG/PDF <=10MB; private server storage. Survey owner must still be assigned. The phone retains its attached image copy for retry and offline viewing.
+- POST `/surveys/{client_uuid}/attachments` multipart {client_uuid,row_id,kind,file} -> {id,client_uuid,row_id}. New uploads require a row_id already saved within this survey. Stable attachment UUID, retries do not duplicate; different bytes or row for the same UUID ->409. Legacy unlinked upload replays remain idempotent. kind=photo or sketch. File JPEG/PNG/PDF <=10MB; private server storage. Survey owner must still be assigned. The phone retains its attached image copy for retry and offline viewing.
 - GET `/attachments/{attachment_uuid}` -> authenticated private file download. The API permits the survey owner with current assignment access; web management access uses its separate scoped route.
 
 ## Survey sync payload
@@ -22,6 +22,12 @@ Rows model each printed S/E row, not an invented whole transformer total. Keys: 
 Solar keys: `consumer_reference` nullable string<=255, `service_load_kw` and `installed_pv_kw` nullable numbers 0..1,000,000, `meter_number` nullable string<=255, `remarks` nullable string<=4000. Meter Number preserves zeros, letters and separators and may be entered without a consumer reference. Old payloads without the added keys remain valid (including their previous capacity limit). Mobile/UI dates use DDMMYY; the API still receives YYYY-MM-DD.
 
 Rows can include optional `pair_id` (UUID), shared by exactly one S and one E. Legacy rows without IDs pair only by adjacent S/E order. Explicit IDs cannot fall back to positional pairing; duplicate or orphan pairs cause a 422 on submission. The mobile app creates/reuses E after S completion and confirms whole-pair deletion. No SQL migration is required.
+
+Each new row also includes a distinct stable `row_id` UUID; it is not a list index or pair ID. When first upgrading a saved legacy row without a UUID, the phone supplies `legacy_row_index` to identify its original row, preserving its Group Identifier even if rows have since moved. New PV includes stable `pv_id` UUID and `row_id`; foreign/missing row links are rejected, while already-saved legacy unlinked PV may stay unlinked. Uploaded photo links cannot be orphaned by deleting a row. Row UUIDs and media links persist through revisions and immutable sync retries; phone metadata `team_group` is excluded from API payloads.
+
+Bootstrap teams now include `code` and nullable `group_identifier`. For new rows the backend derives the last two digits of the authorized team's number (with leading zero padding); conflicting/missing team numbers produce a validation error. Client overrides are rejected. Existing rows retain their original groups even after team renumbering. Existing access/assignment checks still apply.
+
+Bootstrap omits imported transformers already claimed by saved surveys in the same feeder. New claims are serialized by locking the feeder, checking normalized code/imported ID across collectors, and returning 422 `transformer_code` on duplicate. Revisions of an existing survey with unchanged identity remain allowed, including historical duplicates. The phone also filters local saved drafts; separate offline phones may require duplicate reconciliation at sync time. Deploy the additive attachment/key migration before the updated phone build. Existing records and unlinked media are not deleted or assigned to arbitrary rows.
 
 The application uses fixed production base URL `https://hazeco.barqaab.pk`. API helpers still accept a URL internally for tests; the mobile login does not expose server selection.
 

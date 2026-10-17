@@ -18,8 +18,11 @@ use App\Models\SurveyDailyEntry;
 use App\Models\SurveyTeam;
 use App\Models\Transformer;
 use App\Models\User;
+use App\Services\Mdb\EntryLookups;
+use App\Support\SurveyTeamGroup;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -55,7 +58,7 @@ class FieldSurveyApiTest extends TestCase
         $subDivision = SubDivision::create(['project_id' => $this->project->id, 'division_id' => $division->id, 'code' => 'SD', 'name' => 'Sub division']);
         $grid = GridStation::create(['project_id' => $this->project->id, 'sub_division_id' => $subDivision->id, 'code' => 'G', 'name' => 'Substation']);
         $this->feeder = Feeder::create(['project_id' => $this->project->id, 'circle_id' => $circle->id, 'division_id' => $division->id, 'sub_division_id' => $subDivision->id, 'grid_station_id' => $grid->id, 'feeder_code' => '0012', 'feeder_name' => 'Assigned feeder', 'total_transformers' => 0, 'baseline_pending' => true, 'status' => 'active']);
-        $this->team = SurveyTeam::create(['project_id' => $this->project->id, 'code' => 'ST', 'name' => 'Survey Team', 'status' => 'active']);
+        $this->team = SurveyTeam::create(['project_id' => $this->project->id, 'code' => 'ST', 'name' => 'Survey Team 01', 'status' => 'active']);
         $this->team->members()->attach($this->leader->id, ['is_leader' => true]);
         FeederAssignment::create(['feeder_id' => $this->feeder->id, 'survey_team_id' => $this->team->id, 'assigned_by' => $this->admin->id, 'start_date' => today()->subDay(), 'status' => 'active']);
         $this->token = $this->tokenFor($this->leader);
@@ -72,15 +75,18 @@ class FieldSurveyApiTest extends TestCase
 
     private function payload(string $status = 'submitted'): array
     {
+        $startId = (string) Str::uuid();
+        $endId = (string) Str::uuid();
+
         return [
             'client_uuid' => (string) Str::uuid(), 'base_revision' => 0,
             'survey_team_id' => $this->team->id, 'feeder_id' => $this->feeder->id,
             'transformer_id' => null, 'transformer_code' => 'B2308',
             'survey_date' => today()->toDateString(), 'status' => $status,
             'header' => ['substation' => 'Substation', 'capacity_kva' => 50, 'inspectors' => 'Field inspector', 'location' => 'Street 1', 'mounting' => 'D.Pole', 'duty' => 'General Duty'],
-            'rows' => [['se' => 'S', 'group' => '01', 'date' => today()->toDateString(), 'gps_waypoint' => '0008', 'phase' => '3', 'conductor_r' => 'A', 'equipment_type' => 'TR', 'pole_class' => 'PCO', 'pole_height_ft' => 36, 'consumers' => ['rs' => 5, 'lc' => 1], 'intersection' => true],
-                ['se' => 'E', 'group' => '01', 'date' => today()->toDateString(), 'gps_waypoint' => '0009', 'phase' => 'R', 'conductor_r' => 'A', 'equipment_type' => 'TR', 'pole_class' => 'PCO', 'pole_height_ft' => 0]],
-            'solar' => [['consumer_reference' => '0000123', 'installed_pv_kw' => 5.5, 'remarks' => 'Rooftop']], 'remarks' => 'Field visit',
+            'rows' => [['row_id' => $startId, 'se' => 'S', 'group' => '01', 'date' => today()->toDateString(), 'gps_waypoint' => '0008', 'phase' => '3', 'conductor_r' => 'A', 'equipment_type' => 'TR', 'pole_class' => 'PCO', 'pole_height_ft' => 36, 'consumers' => ['rs' => 5, 'lc' => 1], 'intersection' => true],
+                ['row_id' => $endId, 'se' => 'E', 'group' => '01', 'date' => today()->toDateString(), 'gps_waypoint' => '0009', 'phase' => 'R', 'conductor_r' => 'A', 'equipment_type' => 'TR', 'pole_class' => 'PCO', 'pole_height_ft' => 0]],
+            'solar' => [['row_id' => $startId, 'consumer_reference' => '0000123', 'installed_pv_kw' => 5.5, 'remarks' => 'Rooftop']], 'remarks' => 'Field visit',
         ];
     }
 
@@ -177,10 +183,10 @@ class FieldSurveyApiTest extends TestCase
             ->assertJsonValidationErrors('rows.1.conductor_neutral');
         $data['rows'][1]['conductor_neutral'] = 'A';
         $data['rows'][1]['pole_height_ft'] = 0;
-        $data['rows'][1]['group'] = '0';
+        $data['rows'][1]['group'] = '01';
         $data['rows'][1]['gps_waypoint'] = '000';
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
-        $this->assertSame('0', FieldSurvey::firstOrFail()->rows[1]['group']);
+        $this->assertSame('01', FieldSurvey::firstOrFail()->rows[1]['group']);
         $this->assertSame('000', FieldSurvey::firstOrFail()->rows[1]['gps_waypoint']);
     }
 
@@ -188,7 +194,9 @@ class FieldSurveyApiTest extends TestCase
     {
         $data = $this->payload();
         $pair = (string) Str::uuid();
-        foreach ($data['rows'] as &$row) { $row['pair_id'] = $pair; }
+        foreach ($data['rows'] as &$row) {
+            $row['pair_id'] = $pair;
+        }
         unset($row);
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
         $this->assertSame($pair, FieldSurvey::firstOrFail()->rows[1]['pair_id']);
@@ -196,7 +204,7 @@ class FieldSurveyApiTest extends TestCase
         $bad = $this->payload();
         $bad['rows'][0]['pair_id'] = (string) Str::uuid();
         $bad['rows'][1]['pair_id'] = (string) Str::uuid();
-        $this->postJson('/api/v1/field/surveys/sync', $bad)->assertUnprocessable()->assertJsonValidationErrors(['rows.0.pair','rows.1.pair']);
+        $this->postJson('/api/v1/field/surveys/sync', $bad)->assertUnprocessable()->assertJsonValidationErrors(['rows.0.pair', 'rows.1.pair']);
         $bad['rows'][1]['pair_id'] = $bad['rows'][0]['pair_id'];
         $bad['rows'][] = $bad['rows'][1];
         $this->postJson('/api/v1/field/surveys/sync', $bad)->assertUnprocessable()->assertJsonValidationErrors('rows.2.pair');
@@ -204,25 +212,27 @@ class FieldSurveyApiTest extends TestCase
         array_pop($bad['rows']);
         $this->postJson('/api/v1/field/surveys/sync', $bad)->assertUnprocessable()->assertJsonValidationErrors('rows.0.pair');
         $bad['status'] = 'draft';
+        $bad['transformer_code'] = 'OTHER-DRAFT';
         unset($bad['rows'][0]['group'], $bad['rows'][0]['equipment_type'], $bad['rows'][0]['pole_class'], $bad['rows'][0]['pole_height_ft']);
         $this->postJson('/api/v1/field/surveys/sync', $bad)->assertCreated();
         $this->assertDatabaseHas('field_surveys', ['client_uuid' => $bad['client_uuid'], 'status' => 'draft']);
-        $legacy = $this->payload(); // Adjacent legacy pairs without IDs continue to submit.
+        $legacy = $this->payload(); // Adjacent legacy pairs without pair IDs continue to submit.
+        $legacy['transformer_code'] = 'OTHER-LEGACY';
         $this->postJson('/api/v1/field/surveys/sync', $legacy)->assertCreated();
     }
 
     public function test_mobile_entry_options_and_meter_only_pv_survive_sync_and_edit(): void
     {
         $options = $this->getJson('/api/v1/field/bootstrap')->assertOk()->json('feeders.0.entry_lookups');
-        $this->assertSame(app(\App\Services\Mdb\EntryLookups::class)->options($this->project->id)['equipment_types'], $options['equipment_types']);
+        $this->assertSame(app(EntryLookups::class)->options($this->project->id)['equipment_types'], $options['equipment_types']);
         $data = $this->payload();
-        $data['rows'][0] = array_replace($data['rows'][0], ['entry_version' => 2, 'group' => '001', 'gps_waypoint' => '017', 'equipment_type' => 'TR', 'phase' => 'WRONG']);
-        $data['solar'] = [['consumer_reference' => '', 'service_load_kw' => 2.25, 'installed_pv_kw' => 3.5, 'meter_number' => '001-AB/09', 'remarks' => 'Meter only']];
+        $data['rows'][0] = array_replace($data['rows'][0], ['entry_version' => 2, 'group' => '01', 'gps_waypoint' => '017', 'equipment_type' => 'TR', 'phase' => 'WRONG']);
+        $data['solar'] = [['row_id' => $data['rows'][0]['row_id'], 'consumer_reference' => '', 'service_load_kw' => 2.25, 'installed_pv_kw' => 3.5, 'meter_number' => '001-AB/09', 'remarks' => 'Meter only']];
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
         $survey = FieldSurvey::firstOrFail();
         $this->assertSame('001-AB/09', $survey->solar[0]['meter_number']);
         $this->assertSame(2.25, $survey->solar[0]['service_load_kw']);
-        $this->assertSame('001', $survey->rows[0]['group']);
+        $this->assertSame('01', $survey->rows[0]['group']);
         $this->assertSame('017', $survey->rows[0]['gps_waypoint']);
         $this->assertSame('R', $survey->rows[0]['phase']);
         $this->assertTrue($survey->rows[0]['intersection']);
@@ -337,17 +347,149 @@ class FieldSurveyApiTest extends TestCase
         return UploadedFile::fake()->createWithContent('sketch.pdf', "%PDF-1.7\n".$text."\n%%EOF");
     }
 
+    public function test_assigned_team_group_is_authoritative_and_saved_groups_survive_team_renumbering(): void
+    {
+        $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonPath('teams.0.group_identifier', '01');
+        $data = $this->payload();
+        $data['rows'][0]['group'] = '12';
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()->assertJsonValidationErrors('rows.0.group');
+        $data['rows'][0]['group'] = '01';
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
+        $this->team->update(['name' => 'Survey Team 12']);
+        $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonPath('teams.0.group_identifier', '12');
+        $data['base_revision'] = 1;
+        $data['remarks'] = 'Saved groups retained';
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk();
+        $this->assertSame('01', FieldSurvey::firstOrFail()->rows[0]['group']);
+        $data['base_revision'] = 2;
+        $data['rows'][0]['group'] = '12';
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()->assertJsonValidationErrors('rows.0.group');
+        $this->team->update(['name' => 'Survey Team', 'code' => 'ST']);
+        $new = $this->payload();
+        $new['transformer_code'] = 'NEW';
+        $this->postJson('/api/v1/field/surveys/sync', $new)->assertUnprocessable()->assertJsonValidationErrors('survey_team_id');
+        $this->team->update(['name' => 'Survey Team 01', 'code' => 'ST12']);
+        $this->assertNull(SurveyTeamGroup::identifier($this->team->fresh()));
+        $this->team->update(['name' => 'Survey Team 101', 'code' => 'ST01']);
+        $this->assertSame('01', SurveyTeamGroup::identifier($this->team->fresh()));
+    }
+
+    public function test_pv_and_photo_links_survive_reordering_and_reject_foreign_or_missing_rows(): void
+    {
+        $data = $this->payload('draft');
+        $data['solar'][0]['pv_id'] = (string) Str::uuid();
+        $start = $data['rows'][0]['row_id'];
+        $end = $data['rows'][1]['row_id'];
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
+        $url = '/api/v1/field/surveys/'.$data['client_uuid'].'/attachments';
+        $photo = ['client_uuid' => (string) Str::uuid(), 'row_id' => $end, 'kind' => 'sketch'];
+        $this->post($url, $photo + ['file' => $this->pdf()], ['Accept' => 'application/json'])->assertCreated()->assertJsonPath('row_id', $end);
+        $this->post($url, array_replace($photo, ['row_id' => $start, 'file' => $this->pdf()]), ['Accept' => 'application/json'])->assertConflict();
+        $this->post($url, ['client_uuid' => (string) Str::uuid(), 'row_id' => (string) Str::uuid(), 'kind' => 'sketch', 'file' => $this->pdf()], ['Accept' => 'application/json'])->assertUnprocessable()->assertJsonValidationErrors('row_id');
+        $this->post($url, ['client_uuid' => (string) Str::uuid(), 'kind' => 'sketch', 'file' => $this->pdf()], ['Accept' => 'application/json'])->assertUnprocessable()->assertJsonValidationErrors('row_id');
+        $data['base_revision'] = 1;
+        $data['rows'] = array_reverse($data['rows']);
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk();
+        $this->assertSame($start, FieldSurvey::firstOrFail()->solar[0]['row_id']);
+        $this->assertSame($end, FieldSurveyAttachment::firstOrFail()->row_id);
+        $data['base_revision'] = 2;
+        $bad = $data;
+        $bad['solar'][0]['row_id'] = (string) Str::uuid();
+        $this->postJson('/api/v1/field/surveys/sync', $bad)->assertUnprocessable()->assertJsonValidationErrors('solar.0.row_id');
+        $bad = $data;
+        unset($bad['solar'][0]['row_id']);
+        $this->postJson('/api/v1/field/surveys/sync', $bad)->assertUnprocessable()->assertJsonValidationErrors('solar.0.row_id');
+        array_shift($data['rows']);
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()->assertJsonValidationErrors('rows');
+    }
+
+    public function test_legacy_unlinked_media_and_original_groups_are_preserved_when_row_ids_are_added(): void
+    {
+        $data = $this->payload('draft');
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
+        $legacy = $data;
+        foreach ($legacy['rows'] as &$row) {
+            unset($row['row_id']);
+            $row['group'] = '001';
+        }
+        unset($row);
+        unset($legacy['solar'][0]['row_id']);
+        $survey = FieldSurvey::firstOrFail();
+        $survey->update(['rows' => $legacy['rows'], 'solar' => $legacy['solar']]);
+        $attachment = $survey->attachments()->create(['client_uuid' => (string) Str::uuid(), 'kind' => 'photo', 'path' => 'legacy.jpg', 'mime_type' => 'image/jpeg', 'byte_length' => 10, 'sha256' => str_repeat('a', 64)]);
+        $legacy['base_revision'] = 1;
+        foreach ($legacy['rows'] as $i => &$row) {
+            $row['row_id'] = (string) Str::uuid();
+            $row['legacy_row_index'] = $i;
+        }
+        unset($row);
+        $legacy['rows'] = array_reverse($legacy['rows']);
+        $this->postJson('/api/v1/field/surveys/sync', $legacy)->assertOk();
+        $this->assertSame('001', $survey->fresh()->rows[0]['group']);
+        $this->assertArrayNotHasKey('row_id', $survey->fresh()->solar[0]);
+        $this->assertNull($attachment->fresh()->row_id);
+    }
+
+    public function test_saved_transformers_are_hidden_and_duplicate_codes_or_references_rejected_across_collectors(): void
+    {
+        $transformer = Transformer::create(['feeder_id' => $this->feeder->id, 'transformer_code' => 'B2308', 'capacity_kva' => 100, 'latitude' => 33.1, 'longitude' => 73.1]);
+        $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonCount(1, 'transformers');
+        $data = $this->payload();
+        $data['transformer_id'] = $transformer->id;
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
+        $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonCount(0, 'transformers');
+        $other = User::factory()->create(['organization_id' => $this->organization->id, 'role' => UserRole::SurveyTeamLeader]);
+        $this->team->members()->attach($other->id);
+        $this->withHeader('Authorization', 'Bearer '.$this->tokenFor($other));
+        $duplicate = $this->payload();
+        $duplicate['transformer_code'] = ' b 2308 ';
+        $this->postJson('/api/v1/field/surveys/sync', $duplicate)->assertUnprocessable()->assertJsonValidationErrors('transformer_code');
+        $duplicate['transformer_code'] = 'Different label';
+        $duplicate['transformer_id'] = $transformer->id;
+        $this->postJson('/api/v1/field/surveys/sync', $duplicate)->assertUnprocessable()->assertJsonValidationErrors('transformer_code');
+        $this->withHeader('Authorization', 'Bearer '.$this->token);
+        $data['base_revision'] = 1;
+        $data['remarks'] = 'Edit remains possible';
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk();
+        $this->assertDatabaseCount('field_surveys', 1);
+    }
+
+    public function test_additive_migration_preserves_legacy_records_and_duplicates_remain_editable(): void
+    {
+        $data = $this->payload('draft');
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
+        $original = FieldSurvey::firstOrFail();
+        $original->update(['transformer_code' => ' b 2308 ']);
+        $duplicate = $original->replicate();
+        $duplicate->client_uuid = (string) Str::uuid();
+        $duplicate->save();
+        $migration = require database_path('migrations/2026_10_17_000200_link_field_media_and_index_transformer_identity.php');
+        $migration->down();
+        $migration->up();
+        $this->assertDatabaseCount('field_surveys', 2);
+        $this->assertSame('B2308', $original->fresh()->transformer_key);
+        $this->assertSame($data['solar'], $original->fresh()->solar);
+        $this->assertSame($data['rows'][0]['row_id'], $original->fresh()->rows[0]['row_id']);
+        $data['base_revision'] = 1;
+        $data['remarks'] = 'Existing duplicate still editable';
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk();
+        $this->assertSame('Existing duplicate still editable', $original->fresh()->remarks);
+        $data['client_uuid'] = (string) Str::uuid();
+        $data['base_revision'] = 0;
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()->assertJsonValidationErrors('transformer_code');
+    }
+
     public function test_private_attachments_are_idempotent_and_different_content_conflicts(): void
     {
         config(['drive_storage.enabled' => true]);
-        \Illuminate\Support\Facades\Queue::fake();
+        Queue::fake();
         $data = $this->payload();
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
         $uuid = (string) Str::uuid();
         $url = '/api/v1/field/surveys/'.$data['client_uuid'].'/attachments';
-        $this->post($url, ['client_uuid' => $uuid, 'kind' => 'sketch', 'file' => $this->pdf()], ['Accept' => 'application/json'])->assertCreated();
-        $this->post($url, ['client_uuid' => $uuid, 'kind' => 'sketch', 'file' => $this->pdf()], ['Accept' => 'application/json'])->assertOk();
-        $this->post($url, ['client_uuid' => $uuid, 'kind' => 'sketch', 'file' => $this->pdf('Changed')], ['Accept' => 'application/json'])->assertConflict();
+        $this->post($url, ['client_uuid' => $uuid, 'row_id' => $data['rows'][0]['row_id'], 'kind' => 'sketch', 'file' => $this->pdf()], ['Accept' => 'application/json'])->assertCreated();
+        $this->post($url, ['client_uuid' => $uuid, 'row_id' => $data['rows'][0]['row_id'], 'kind' => 'sketch', 'file' => $this->pdf()], ['Accept' => 'application/json'])->assertOk();
+        $this->post($url, ['client_uuid' => $uuid, 'row_id' => $data['rows'][0]['row_id'], 'kind' => 'sketch', 'file' => $this->pdf('Changed')], ['Accept' => 'application/json'])->assertConflict();
         $this->assertDatabaseCount('field_survey_attachments', 1);
         $this->assertDatabaseCount('drive_stored_files', 1);
         $this->assertSame($this->feeder->id, FieldSurveyAttachment::first()->driveStoredFile->context['feeder_id']);
@@ -355,7 +497,7 @@ class FieldSurveyApiTest extends TestCase
         $this->get('/api/v1/field/attachments/'.$uuid)->assertOk()->assertHeader('Content-Type', 'application/pdf');
         FeederAssignment::query()->update(['status' => 'inactive']);
         $this->getJson('/api/v1/field/attachments/'.$uuid)->assertForbidden();
-        $this->post($url, ['client_uuid' => $uuid, 'kind' => 'sketch', 'file' => $this->pdf()], ['Accept' => 'application/json'])->assertForbidden();
+        $this->post($url, ['client_uuid' => $uuid, 'row_id' => $data['rows'][0]['row_id'], 'kind' => 'sketch', 'file' => $this->pdf()], ['Accept' => 'application/json'])->assertForbidden();
     }
 
     public function test_upload_type_size_and_owner_are_enforced(): void

@@ -74,7 +74,7 @@ void main() {
       expect(end, 1);
       expect(second['se'], 'E');
       expect(second['pair_id'], first['pair_id']);
-      expect(second['group'], first['group']);
+      expect(second['group'], '01'); // Assigned team, not the legacy S group.
       expect(second['date'], first['date']);
       expect(second['gps_waypoint'], '');
       expect(second['equipment_type'], '');
@@ -234,6 +234,81 @@ void main() {
     expect(urls.every((url) => url.startsWith('$applicationBaseUrl/')), true);
   });
 
+  testWidgets('PV entry and photo actions belong to the opened row', (
+    tester,
+  ) async {
+    final record = readySurvey();
+    record.solar.add({'consumer_reference': 'LEGACY', 'installed_pv_kw': '1'});
+    final uiStore = WidgetSurveyStore(store.database);
+    controller.dispose();
+    controller = FieldController(uiStore)
+      ..reference = {
+        'teams': [
+          {'id': 4, 'name': 'Survey Team 01'},
+        ],
+      };
+    await uiStore.save(record);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SurveyEditor(controller: controller, record: record),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('S/E rows'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Row 1 ·'));
+    await tester.pumpAndSettle();
+    final add = find.text('Add solar installation');
+    await tester.scrollUntilVisible(
+      add,
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await Scrollable.ensureVisible(tester.element(add), alignment: 0.5);
+    await tester.pumpAndSettle();
+    await tester.tap(add);
+    await tester.pumpAndSettle();
+    expect(record.solar, hasLength(2));
+    expect(record.solar[0], isNot(contains('row_id')));
+    expect(record.solar[1]['row_id'], record.rows.first['row_id']);
+    final meter = find.widgetWithText(TextFormField, 'Meter Number');
+    await tester.scrollUntilVisible(
+      meter,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await Scrollable.ensureVisible(tester.element(meter), alignment: 0.5);
+    await tester.pumpAndSettle();
+    await tester.enterText(meter, '001-A/9');
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.scrollUntilVisible(
+      find.text('Take photo'),
+      350,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Choose image'), findsOneWidget);
+    expect(record.solar[1]['meter_number'], '001-A/9');
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Row 2 ·'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      add,
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.widgetWithText(TextFormField, 'Meter Number'), findsNothing);
+    await Scrollable.ensureVisible(tester.element(add), alignment: 0.5);
+    await tester.pumpAndSettle();
+    await tester.tap(add);
+    await tester.pumpAndSettle();
+    expect(record.solar[2]['row_id'], record.rows[1]['row_id']);
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    expect(uiStore.saved[record.id]!.solar[1]['meter_number'], '001-A/9');
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('login screen does not request a server URL', (tester) async {
     await tester.pumpWidget(
       MaterialApp(home: LoginPage(controller: controller)),
@@ -248,7 +323,12 @@ void main() {
       final record = readySurvey(paired: false);
       final uiStore = WidgetSurveyStore(store.database);
       controller.dispose();
-      controller = FieldController(uiStore);
+      controller = FieldController(uiStore)
+        ..reference = {
+          'teams': [
+            {'id': 4, 'name': 'Survey Team 01'},
+          ],
+        };
       await uiStore.save(record);
       await tester.pumpWidget(
         MaterialApp(
@@ -409,7 +489,12 @@ void main() {
       record.rows.addAll(other.rows);
       final uiStore = WidgetSurveyStore(store.database);
       controller.dispose();
-      controller = FieldController(uiStore);
+      controller = FieldController(uiStore)
+        ..reference = {
+          'teams': [
+            {'id': 4, 'name': 'Survey Team 01'},
+          ],
+        };
       await tester.pumpWidget(
         MaterialApp(
           home: SurveyEditor(controller: controller, record: record),

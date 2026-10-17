@@ -21,9 +21,15 @@ void main() {
         ),
       );
       final group = find.widgetWithText(TextFormField, 'Group identifier');
-      await tester.enterText(group, '0007');
-      await tester.pump();
-      expect(record.rows.first['group'], '0007');
+      expect(
+        tester
+            .widget<TextField>(
+              find.descendant(of: group, matching: find.byType(TextField)),
+            )
+            .readOnly,
+        true,
+      );
+      expect(record.rows.first['group'], '001');
       final waypoint = find.widgetWithText(
         TextFormField,
         'GPS waypoint identifier',
@@ -41,7 +47,7 @@ void main() {
       expect(find.widgetWithText(TextFormField, 'Longitude'), findsNothing);
       expect(record.rows.first['latitude'], isNull);
       expect(record.rows.first['longitude'], isNull);
-      expect(changed, greaterThanOrEqualTo(3));
+      expect(changed, greaterThanOrEqualTo(2));
     },
   );
   testWidgets(

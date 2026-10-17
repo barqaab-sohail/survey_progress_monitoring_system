@@ -41,9 +41,13 @@ Phone GPS capture and manual latitude/longitude entry have been removed. The app
 
 ## Build and verify
 
-The field-entry update adds offline feeder search through a transformer-style dialog, automatic S/E pairing, direct six-digit DDMMYY dates, numeric group/waypoint identifiers, shared equipment choices and Copy Previous Values. A new survey and its first row default to the phone's local date; subsequent rows inherit group/date and alternate S/E. Editing does not rewrite existing dates or adjacent rows. Pair IDs preserve the relationship; deleting a row asks for confirmation before removing its entire pair. Legacy adjacent S/E rows receive IDs without rewriting their observation values. Copy Previous Values transfers conductors, equipment, pole class and height; GPS, identifiers, consumers, intersection and remarks stay unchanged.
+The field-entry update adds offline feeder search through a transformer-style dialog, automatic S/E pairing, direct six-digit DDMMYY dates, numeric waypoint identifiers, shared equipment choices and Copy Previous Values. New rows use the assigned team's last two number digits as their read-only Group Identifier (for example Survey Team 01 → 01). Missing or conflicting team numbers block new collection and need an administrator's correction. Existing groups and dates stay unchanged. Subsequent rows inherit the date and alternate S/E. Pair IDs preserve the relationship; deleting a row asks for confirmation before removing its entire pair. Legacy adjacent S/E rows receive IDs without rewriting their observation values. Copy Previous Values transfers conductors, equipment, pole class and height; GPS, identifiers, consumers, intersection and remarks stay unchanged.
 
 PV observations include service load, solar capacity and a text Meter Number before Remarks. A meter number can identify a PV observation without a consumer reference. Mobile stores these additions in its existing SQLite JSON records and immutable outgoing queue; no phone database reset is needed.
+
+Open an S/E row to add/view its PV observations and photos. Every new row has a stable UUID, distinct from the pair UUID, so media remains attached when row order changes. Previously unlinked media stays in the survey's Solar/Photos tabs; pending local photos can be explicitly linked to a chosen row before uploading. Existing uploaded unlinked photos remain viewable. Photos wait until the latest survey revision is acknowledged. Pairs with linked media cannot be deleted until removable media is removed; rows with uploaded photos must be retained.
+
+Saved transformers disappear from imported selection on the server and on this phone, including saved drafts awaiting sync. Open the saved survey from the survey list to edit it. New duplicate surveys are rejected using feeder plus imported ID or normalized code. Historical duplicates are retained and stay editable. Separate offline phones cannot know about each other's drafts until synchronization; the backend resolves duplicate claims by rejecting the later new survey and preserving its local data for review.
 
 Deploy the backend **before installing the updated APK**. From the production Laravel directory after pulling the changes:
 
@@ -54,7 +58,7 @@ php artisan view:clear
 php artisan queue:restart
 ```
 
-The migration adds a nullable `meter_number` column to MDB PV records. Existing records need no backfill. Old snapshots omit this field when null, retaining their existing hashes. Download assignments again to refresh the cached project equipment options and two-digit-year window (default 2000–2099). Keep the same signing key/application ID when updating the app, and preserve its data.
+Migrations add nullable `meter_number` to MDB PV records, nullable attachment `row_id`, and an indexed normalized transformer key (backfilled without deleting historical duplicates). The phone upgrades SQLite from v1 to v2 without resetting saved surveys/photos. Old snapshots omit null meter numbers, retaining their existing hashes. Download assignments again to refresh team numbers, project equipment options and the two-digit-year window (default 2000–2099). Keep the same signing key/application ID when updating the app, and preserve its data.
 
 The checked scaffold uses Flutter 3.44 / Dart 3.12, Android SDK 36, Android Studio JDK, and NDK `28.2.13676358` (Flutter's selected NDK, also used by the JNI dependency). Install it through Android Studio SDK Manager when it is missing; incomplete downloads need to be repaired before building.
 

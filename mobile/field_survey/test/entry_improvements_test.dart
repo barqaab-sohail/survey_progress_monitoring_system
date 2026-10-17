@@ -97,7 +97,7 @@ void main() {
       expect(first, original);
       final next = record.nextRow();
       expect(next['se'], 'E');
-      expect(next['group'], '001');
+      expect(next['group'], '01');
       expect(next['date'], '2024-02-29');
       expect(next['gps_waypoint'], '');
       record.rows.add(next);
@@ -246,10 +246,10 @@ void main() {
         ),
       ),
     );
-    final input = find.widgetWithText(TextFormField, 'Group identifier');
+    final input = find.widgetWithText(TextFormField, 'GPS waypoint identifier');
     await tester.enterText(input, '00a1-');
     await tester.pump();
-    expect(record.rows.first['group'], '001');
+    expect(record.rows.first['gps_waypoint'], '001');
     final editable = tester.widget<TextField>(
       find.descendant(of: input, matching: find.byType(TextField)),
     );

@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Feeder;
+use App\Services\Mdb\EntryLookups;
 use App\Support\ConductorPhase;
-use App\Support\IntersectionFlag;
 use App\Support\FieldSurveyPairs;
+use App\Support\IntersectionFlag;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class SyncFieldSurveyRequest extends FormRequest
 {
@@ -35,7 +38,9 @@ class SyncFieldSurveyRequest extends FormRequest
             'header.mounting' => ['nullable', Rule::in(['S.Pole', 'D.Pole', 'Pad'])],
             'header.duty' => ['nullable', Rule::in(['General Duty', 'Dedicated'])],
             'rows' => ['present', 'array', $submitted ? 'min:1' : 'min:0', 'max:500'],
-            'rows.*' => ['array:pair_id,entry_version,se,group,date,gps_waypoint,latitude,longitude,gps_accuracy_m,phase,conductor_r,conductor_y,conductor_b,conductor_neutral,equipment_type,pole_class,pole_height_ft,consumers,intersection,remarks'],
+            'rows.*' => ['array:row_id,legacy_row_index,pair_id,entry_version,se,group,date,gps_waypoint,latitude,longitude,gps_accuracy_m,phase,conductor_r,conductor_y,conductor_b,conductor_neutral,equipment_type,pole_class,pole_height_ft,consumers,intersection,remarks'],
+            'rows.*.row_id' => ['nullable', 'uuid', 'distinct'],
+            'rows.*.legacy_row_index' => ['nullable', 'integer', 'between:0,499'],
             'rows.*.pair_id' => ['nullable', 'uuid'],
             'rows.*.entry_version' => ['sometimes', 'integer', Rule::in([2])],
             'rows.*.se' => [$paper, Rule::in(['S', 'E'])],
@@ -53,7 +58,9 @@ class SyncFieldSurveyRequest extends FormRequest
             'rows.*.intersection' => ['nullable', 'boolean'],
             'rows.*.remarks' => ['nullable', 'string', 'max:1000'],
             'solar' => ['present', 'array', 'max:100'],
-            'solar.*' => ['array:consumer_reference,service_load_kw,installed_pv_kw,meter_number,remarks'],
+            'solar.*' => ['array:pv_id,row_id,consumer_reference,service_load_kw,installed_pv_kw,meter_number,remarks'],
+            'solar.*.pv_id' => ['nullable', 'uuid', 'distinct'],
+            'solar.*.row_id' => ['nullable', 'uuid'],
             'solar.*.consumer_reference' => ['nullable', 'string', 'max:255'],
             'solar.*.service_load_kw' => ['nullable', 'numeric', 'between:0,1000000'],
             'solar.*.meter_number' => ['nullable', 'string', 'max:255'],
@@ -77,8 +84,8 @@ class SyncFieldSurveyRequest extends FormRequest
             if (is_array($row) && ($row['entry_version'] ?? null) === 2) {
                 $rules["rows.$index.group"] = [$paper, 'string', 'max:20', 'regex:/^[0-9]+$/D'];
                 $rules["rows.$index.gps_waypoint"] = [$paper, 'string', 'max:50', 'regex:/^[0-9]+$/D'];
-                $equipment ??= array_keys(app(\App\Services\Mdb\EntryLookups::class)->options(
-                    \App\Models\Feeder::whereKey($this->integer('feeder_id'))->value('project_id'))['equipment_types']);
+                $equipment ??= array_keys(app(EntryLookups::class)->options(
+                    Feeder::whereKey($this->integer('feeder_id'))->value('project_id'))['equipment_types']);
                 $rules["rows.$index.equipment_type"] = [$paper, 'string', Rule::in($equipment)];
             }
         }
@@ -112,7 +119,7 @@ class SyncFieldSurveyRequest extends FormRequest
 
     public function after(): array
     {
-        return [function (\Illuminate\Validation\Validator $validator): void {
+        return [function (Validator $validator): void {
             if ($this->input('status') !== 'submitted' || ! is_array($this->input('rows'))) {
                 return;
             }

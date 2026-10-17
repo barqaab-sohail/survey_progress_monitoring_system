@@ -13,7 +13,12 @@ class LocalStore {
     final database = await (factory ?? databaseFactory).openDatabase(
       path ?? p.join(await getDatabasesPath(), 'field_surveys.db'),
       options: OpenDatabaseOptions(
-        version: 1,
+        version: 2,
+        onUpgrade: (db, oldVersion, _) async {
+          if (oldVersion < 2) {
+            await db.execute('ALTER TABLE attachments ADD COLUMN row_id TEXT');
+          }
+        },
         onCreate: (db, _) async {
           await db.execute(
             'CREATE TABLE surveys (scope TEXT NOT NULL, uuid TEXT NOT NULL, data TEXT NOT NULL, state TEXT NOT NULL, error TEXT NOT NULL DEFAULT "", updated_at TEXT NOT NULL, outbound TEXT, PRIMARY KEY(scope,uuid))',
@@ -22,7 +27,7 @@ class LocalStore {
             'CREATE TABLE bootstrap (scope TEXT PRIMARY KEY, data TEXT NOT NULL, downloaded_at TEXT NOT NULL)',
           );
           await db.execute(
-            'CREATE TABLE attachments (uuid TEXT PRIMARY KEY, scope TEXT NOT NULL, survey_uuid TEXT NOT NULL, kind TEXT NOT NULL, path TEXT NOT NULL, state TEXT NOT NULL, error TEXT NOT NULL DEFAULT "")',
+            'CREATE TABLE attachments (uuid TEXT PRIMARY KEY, scope TEXT NOT NULL, survey_uuid TEXT NOT NULL, row_id TEXT, kind TEXT NOT NULL, path TEXT NOT NULL, state TEXT NOT NULL, error TEXT NOT NULL DEFAULT "")',
           );
           await db.execute(
             'CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
@@ -115,8 +120,42 @@ class LocalStore {
   Future<void> save(SurveyRecord record) async {
     await database.transaction((transaction) async {
       await ensureEditable(transaction, record);
+      await ensureUniqueTransformer(transaction, record);
       await put(transaction, record);
     });
+  }
+
+  Future<void> ensureUniqueTransformer(
+    DatabaseExecutor executor,
+    SurveyRecord record,
+  ) async {
+    final original = await executor.query(
+      'surveys',
+      where: 'scope = ? AND uuid = ?',
+      whereArgs: [record.scope, record.id],
+    );
+    // Historical duplicates stay editable; enforce uniqueness on new selections.
+    if (original.isNotEmpty) {
+      final old = decode(original.first).data;
+      if (old['feeder_id'] == record.data['feeder_id'] &&
+          old['transformer_id'] == record.data['transformer_id'] &&
+          transformerIdentity(old['transformer_code']) ==
+              transformerIdentity(record.data['transformer_code'])) {
+        return;
+      }
+    }
+    final others = await executor.query(
+      'surveys',
+      where: 'scope = ? AND uuid != ?',
+      whereArgs: [record.scope, record.id],
+    );
+    if (others
+        .map(decode)
+        .any((other) => sameTransformer(other.data, record.data))) {
+      throw const FormatException(
+        'This transformer already has a saved survey on this phone. Open the saved survey to edit it.',
+      );
+    }
   }
 
   Future<void> queue(SurveyRecord record) async {
@@ -144,6 +183,7 @@ class LocalStore {
     queued.error = '';
     await database.transaction((transaction) async {
       await ensureEditable(transaction, record);
+      await ensureUniqueTransformer(transaction, record);
       await put(transaction, queued);
     });
     record.data = queued.data;
@@ -242,6 +282,24 @@ class LocalStore {
       where: 'uuid = ?',
       whereArgs: [id],
     );
+  }
+
+  Future<bool> linkAttachment(
+    SurveyRecord record,
+    String id,
+    String rowId,
+  ) async {
+    if (!record.rows.any((row) => row['row_id'] == rowId)) {
+      throw const FormatException('Select a row in this survey.');
+    }
+    return await database.update(
+          'attachments',
+          {'row_id': rowId, 'error': '', 'state': 'pending'},
+          where:
+              'uuid = ? AND scope = ? AND survey_uuid = ? AND row_id IS NULL AND state IN (?,?)',
+          whereArgs: [id, record.scope, record.id, 'pending', 'error'],
+        ) ==
+        1;
   }
 
   Future<bool> claimAttachment(String scope, String id) async =>

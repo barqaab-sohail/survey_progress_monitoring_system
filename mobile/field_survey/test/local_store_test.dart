@@ -129,7 +129,7 @@ void main() {
       expect(conflicted.state, 'conflict');
       expect(jsonEncode(conflicted.outbound), outbound);
       await expectLater(store.save(conflicted), throwsStateError);
-      final fixable = readySurvey();
+      final fixable = readySurvey()..data['transformer_code'] = 'OTHER';
       await store.save(fixable);
       await store.queue(fixable);
       final uuid = fixable.id;

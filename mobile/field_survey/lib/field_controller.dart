@@ -41,6 +41,25 @@ class FieldController extends ChangeNotifier {
   Json? feeder(int id) => feeders.where((item) => item['id'] == id).firstOrNull;
   Json? team(int id) => teams.where((item) => item['id'] == id).firstOrNull;
 
+  Future<List<Json>> availableTransformers(SurveyRecord record) async {
+    final saved = await store.surveys(record.scope);
+    return transformers
+        .where(
+          (t) =>
+              t['feeder_id'] == record.data['feeder_id'] &&
+              !saved.any(
+                (survey) =>
+                    survey.id != record.id &&
+                    sameTransformer(survey.data, {
+                      'feeder_id': t['feeder_id'],
+                      'transformer_id': t['id'],
+                      'transformer_code': t['transformer_code'],
+                    }),
+              ),
+        )
+        .toList();
+  }
+
   Future<void> initialize() async {
     await store.recoverInterruptedUploads();
     try {
@@ -227,6 +246,7 @@ class FieldController extends ChangeNotifier {
       if (!networkStopped) {
         for (final record in await store.surveys(current.scope)) {
           if (record.revision == 0 ||
+              record.state != 'synced' ||
               record.state == 'conflict' ||
               record.outbound != null) {
             continue;
@@ -236,6 +256,15 @@ class FieldController extends ChangeNotifier {
             record.id,
           )) {
             if (!['pending', 'error'].contains(photo['state'])) continue;
+            if (photo['row_id'] == null) {
+              await store.attachmentState(
+                photo['uuid'],
+                'error',
+                'Link this existing photo to an S/E row before uploading.',
+              );
+              failures++;
+              continue;
+            }
             if (!await store.claimAttachment(current.scope, photo['uuid'])) {
               continue;
             }
@@ -292,9 +321,13 @@ class FieldController extends ChangeNotifier {
   Future<void> pickPhoto(
     SurveyRecord record,
     ImageSource source,
-    String kind,
-  ) async {
+    String kind, {
+    String? rowId,
+  }) async {
     if (capturing) throw StateError('A photo capture is already open.');
+    if (rowId == null || !record.rows.any((row) => row['row_id'] == rowId)) {
+      throw const FormatException('Open an S/E row before adding a photo.');
+    }
     capturing = true;
     notifyListeners();
     final capture = {
@@ -302,6 +335,7 @@ class FieldController extends ChangeNotifier {
       'scope': record.scope,
       'survey_uuid': record.id,
       'kind': kind,
+      'row_id': rowId,
     };
     try {
       await store.setSetting('pending_capture', jsonEncode(capture));
@@ -361,6 +395,7 @@ class FieldController extends ChangeNotifier {
     await store.addAttachment({
       ...capture,
       'path': path,
+      'row_id': capture['row_id'],
       'state': 'pending',
       'error': '',
     });

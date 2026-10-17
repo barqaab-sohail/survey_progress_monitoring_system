@@ -9,7 +9,7 @@ const testSession = FieldSession(
 );
 SurveyRecord newSurvey() => SurveyRecord.create(
   testSession,
-  {'id': 4, 'name': 'Test team'},
+  {'id': 4, 'name': 'Survey Team 01'},
   {'id': 7, 'feeder_name': 'Test feeder', 'division_name': 'Test division'},
 );
 SurveyRecord readySurvey({bool paired = true}) {
