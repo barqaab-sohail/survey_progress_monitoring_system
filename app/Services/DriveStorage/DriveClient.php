@@ -3,7 +3,9 @@
 namespace App\Services\DriveStorage;
 
 use App\Models\DriveStorageConnection;
+use App\Models\DriveStorageFolder;
 use App\Models\DriveStoredFile;
+use App\Models\Feeder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -62,7 +64,7 @@ class DriveClient
     public function info(string $id): ?array
     {
         $this->assertId($id);
-        $response = $this->client()->get(self::API.'/'.$id, ['fields' => 'id,size,md5Checksum,trashed,mimeType', 'supportsAllDrives' => 'true']);
+        $response = $this->client()->get(self::API.'/'.$id, ['fields' => 'id,size,md5Checksum,trashed,mimeType,parents', 'supportsAllDrives' => 'true']);
         if ($response->status() === 404) {
             return null;
         }
@@ -111,7 +113,7 @@ class DriveClient
         }
         $response = $this->client()->withHeaders(['X-Upload-Content-Type' => $file->mime, 'X-Upload-Content-Length' => (string) $file->bytes])
             ->post('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', [
-                'id' => $file->drive_file_id, 'name' => $file->original_name, 'mimeType' => $file->mime, 'parents' => [$this->folder()],
+                'id' => $file->drive_file_id, 'name' => $file->original_name, 'mimeType' => $file->mime, 'parents' => [$this->destinationFolder($file)],
                 'appProperties' => ['storage_uuid' => $file->uuid, 'project_id' => (string) ($file->context['project_id'] ?? ''),
                     'feeder_id' => (string) ($file->context['feeder_id'] ?? ''), 'batch_id' => (string) ($file->context['batch_id'] ?? '')],
             ]);
@@ -131,6 +133,90 @@ class DriveClient
             }
         }
         $this->verify($file, $this->info($file->drive_file_id) ?? []);
+    }
+
+    private function destinationFolder(DriveStoredFile $file, ?string $root = null): string
+    {
+        $root ??= $this->folder();
+        $feederId = (int) ($file->context['feeder_id'] ?? 0);
+        if ($feederId <= 0) {
+            return $root;
+        }
+        $connection = DriveStorageConnection::findOrFail(1);
+        $key = hash('sha256', $connection->account_id.'|'.$root.'|'.$feederId);
+
+        return Cache::lock('drive-storage:folder:'.$key, 60)->block(10, function () use ($connection, $root, $feederId, $file) {
+            $folder = DriveStorageFolder::where('account_id', $connection->account_id)
+                ->where('root_folder_id', $root)->where('feeder_id', $feederId)->first();
+            if (! $folder) {
+                $feeder = Feeder::find($feederId);
+                $code = trim((string) ($feeder?->feeder_code ?: ($file->context['feeder_code'] ?? '')));
+                $name = trim((string) ($feeder?->feeder_name ?: ($file->context['feeder_name'] ?? '')));
+                $label = $code !== '' ? $code : 'Feeder-'.$feederId;
+                if ($name !== '') {
+                    $label .= '-'.$name;
+                }
+                $label = mb_substr(trim(preg_replace('/[\x00-\x1F\x7F\/\\\\]+/u', '-', $label)), 0, 200);
+                // Persist the reserved ID before calling Google so retries cannot create duplicate folders.
+                $folder = DriveStorageFolder::create(['account_id' => $connection->account_id, 'root_folder_id' => $root,
+                    'feeder_id' => $feederId, 'drive_folder_id' => $this->generateId(), 'name' => $label]);
+            }
+            $info = $this->info($folder->drive_folder_id);
+            if (! $info) {
+                $response = $this->client()->post(self::API.'?supportsAllDrives=true', [
+                    'id' => $folder->drive_folder_id, 'name' => $folder->name,
+                    'mimeType' => 'application/vnd.google-apps.folder', 'parents' => [$root],
+                    'appProperties' => ['feeder_id' => (string) $feederId],
+                ]);
+                if (! $response->successful()) {
+                    throw new RuntimeException('The feeder Drive folder could not be created.');
+                }
+                $info = $this->info($folder->drive_folder_id);
+            }
+            if (! $info || ($info['trashed'] ?? false) || ($info['mimeType'] ?? '') !== 'application/vnd.google-apps.folder'
+                || ! in_array($root, $info['parents'] ?? [], true)) {
+                throw new RuntimeException('The feeder Drive folder is unavailable or outside the storage root.');
+            }
+
+            return $folder->drive_folder_id;
+        });
+    }
+
+    public function organize(DriveStoredFile $file): bool
+    {
+        return Cache::lock('drive-storage:file:'.$file->id, 600)->block(10, function () use ($file) {
+            $file->refresh();
+            if ($file->status !== 'uploaded' || (int) ($file->context['feeder_id'] ?? 0) <= 0) {
+                return false;
+            }
+            if ($file->account_id !== DriveStorageConnection::find(1)?->account_id) {
+                throw new RuntimeException('Reconnect the original Drive storage account before organizing files.');
+            }
+            $info = $this->info($file->drive_file_id) ?? [];
+            $this->verify($file, $info);
+            $root = $this->folder();
+            $destination = $this->destinationFolder($file, $root);
+            $parents = $info['parents'] ?? [];
+            if (in_array($destination, $parents, true)) {
+                return false;
+            }
+            if (! in_array($root, $parents, true)) {
+                throw new RuntimeException('The file is outside the current storage root; it was left unchanged.');
+            }
+            $query = http_build_query(['addParents' => $destination, 'removeParents' => $root,
+                'supportsAllDrives' => 'true', 'fields' => 'id']);
+            $response = $this->client()->withBody('{}', 'application/json')->patch(self::API.'/'.$file->drive_file_id.'?'.$query);
+            if (! $response->successful()) {
+                throw new RuntimeException('Drive could not move the file into its feeder folder.');
+            }
+            $updated = $this->info($file->drive_file_id) ?? [];
+            $this->verify($file, $updated);
+            if (! in_array($destination, $updated['parents'] ?? [], true)) {
+                throw new RuntimeException('Drive has not confirmed the feeder folder move; retry safely.');
+            }
+
+            return true;
+        });
     }
 
     private function verify(DriveStoredFile $file, array $info): void

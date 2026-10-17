@@ -59,6 +59,7 @@ class SourceService
             $archive = app(\App\Services\DriveStorage\FileStorage::class)->register('local', $stored, $source->original_name, $source->mime, [
                 'project_id' => $batch->project_id, 'project_code' => $batch->project?->code,
                 'feeder_id' => $batch->feeder_id, 'feeder_code' => $batch->feeder?->feeder_code,
+                'feeder_name' => $batch->feeder?->feeder_name,
                 'batch_id' => $batch->id, 'source_file_id' => $source->id, 'survey_date' => $batch->survey_date?->toDateString(),
             ]);
             $source->update(['drive_stored_file_id' => $archive->id]);

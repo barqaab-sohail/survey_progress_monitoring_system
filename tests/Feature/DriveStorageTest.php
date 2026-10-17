@@ -8,6 +8,7 @@ use App\Models\DriveStoredFile;
 use App\Models\User;
 use App\Services\DriveStorage\FileStorage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -27,6 +28,10 @@ class DriveStorageTest extends TestCase
     private bool $corrupt = false;
 
     private int $uploads = 0;
+
+    private int $ids = 0;
+
+    private array $folders = [];
 
     protected function setUp(): void
     {
@@ -50,10 +55,19 @@ class DriveStorageTest extends TestCase
                 return Http::response(['user' => ['permissionId' => 'account-12345', 'emailAddress' => 'storage@example.test']]);
             }
             if (str_contains($url, 'generateIds')) {
-                return Http::response(['ids' => ['drive-file-12345']]);
+                return Http::response(['ids' => [++$this->ids === 1 ? 'drive-file-12345' : 'feeder-folder-'.$this->ids]]);
             }
             if (str_contains($url, 'folder-file-12345')) {
                 return Http::response(['id' => 'folder-file-12345', 'mimeType' => 'application/vnd.google-apps.folder']);
+            }
+            if ($request->method() === 'POST' && $request['mimeType'] === 'application/vnd.google-apps.folder') {
+                $this->folders[$request['id']] = ['id' => $request['id'], 'mimeType' => $request['mimeType'], 'parents' => $request['parents']];
+
+                return Http::response($this->folders[$request['id']]);
+            }
+            $id = basename(parse_url($url, PHP_URL_PATH));
+            if (str_starts_with($id, 'feeder-folder-')) {
+                return isset($this->folders[$id]) ? Http::response($this->folders[$id]) : Http::response([], 404);
             }
             if ($request->method() === 'POST') {
                 return Http::response([], 200, ['Location' => 'https://www.googleapis.com/upload/drive/v3/files?upload_id=session-private']);
@@ -170,7 +184,7 @@ class DriveStorageTest extends TestCase
             }
             $response = app(FileStorage::class)->response($file, 'local', $file->local_path, 'original.pdf', 'application/pdf');
             $snapshot = $response->getFile()->getPathname();
-            $response->prepare(\Illuminate\Http\Request::create('/source.pdf'));
+            $response->prepare(Request::create('/source.pdf'));
             $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
             $this->assertStringStartsWith('inline;', $response->headers->get('Content-Disposition'));
             $this->assertSame((string) strlen($this->body), $response->headers->get('Content-Length'));

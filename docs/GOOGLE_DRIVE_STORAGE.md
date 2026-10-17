@@ -116,6 +116,42 @@ Disabling `GOOGLE_DRIVE_STORAGE_ENABLED` stops new automatic registrations/trans
 
 ## Existing originals
 
+### Feeder folders
+
+New uploads with an associated feeder are stored as:
+
+```text
+Survey Source Files/
+  407-Nawan Shehra/
+    A_10102026_05.pdf
+    A_10102026_05.gpx
+  408-Other Feeder/
+    ...
+```
+
+The child folder uses the application's feeder code and name. It is shared by that feeder's batches, dates and upload types; original filenames are preserved. The root is still controlled by `GOOGLE_DRIVE_STORAGE_FOLDER_ID` or created by the application when that value is empty. Files with no feeder association stay at the root. Feeder IDs, rather than filenames or folder-name searches, determine associations. A durable `drive_storage_folders` mapping separates accounts, storage roots and feeders and reuses reserved Google folder IDs after interrupted requests. An unavailable, trashed or externally moved feeder folder blocks that upload safely rather than silently saving in the wrong location.
+
+After deploying the updated `DriveClient`, source service, folder model, organizer command and migration, run as the application account from the project root:
+
+```sh
+php artisan migrate --path=database/migrations/2026_10_17_020000_create_drive_storage_folders_table.php --force
+php artisan config:cache
+php artisan queue:restart
+php artisan drive-storage:retry --force
+php artisan drive-storage:organize --limit=100
+```
+
+The organizer moves already uploaded application originals out of the current root into their feeder folders. It verifies the original account and remote size/checksum, updates only Google parent metadata and checks the resulting parent. File IDs, source URLs, filenames and contents stay the same; no local recovery original or second upload is needed. Re-running is safe, including after an interrupted move. Separate uploads with identical names remain separate originals. Files outside the current root, mismatched accounts or failed integrity checks are reported for inspection rather than moved. Files without a feeder are skipped.
+
+For larger archives, use the last inspected stored-file ID printed by the command:
+
+```sh
+php artisan drive-storage:organize --after-id=100 --limit=100
+php artisan drive-storage:organize --id=123
+```
+
+`--id` and `--after-id` refer to `drive_stored_files` row IDs. The organizer is an explicit maintenance command, not a recurring scheduler task. No additional Google OAuth scope or manually created folder is required for app-created feeder folders. Confirm a new PDF/GPX upload and an existing source's authenticated view/download after activation.
+
 Existing local originals continue working without changes. No bulk deletion or automatic migration occurs when the schema is applied or the feature is enabled. To move existing source originals after the small-file checks succeed:
 
 ```sh
