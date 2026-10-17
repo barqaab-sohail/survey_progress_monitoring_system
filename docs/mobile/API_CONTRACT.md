@@ -21,9 +21,13 @@ Rows model each printed S/E row, not an invented whole transformer total. Keys: 
 
 Solar keys: `consumer_reference` nullable string<=255, `service_load_kw` and `installed_pv_kw` nullable numbers 0..1,000,000, `meter_number` nullable string<=255, `remarks` nullable string<=4000. Meter Number preserves zeros, letters and separators and may be entered without a consumer reference. Old payloads without the added keys remain valid (including their previous capacity limit). Mobile/UI dates use DDMMYY; the API still receives YYYY-MM-DD.
 
+Rows can include optional `pair_id` (UUID), shared by exactly one S and one E. Legacy rows without IDs pair only by adjacent S/E order. Explicit IDs cannot fall back to positional pairing; duplicate or orphan pairs cause a 422 on submission. The mobile app creates/reuses E after S completion and confirms whole-pair deletion. No SQL migration is required.
+
+The application uses fixed production base URL `https://hazeco.barqaab.pk`. API helpers still accept a URL internally for tests; the mobile login does not expose server selection.
+
 New mobile rows include optional `entry_version: 2`, which validates group/waypoint as digit strings and equipment against the project EntryLookups source. Older rows may omit this marker. Bootstrap feeders include `entry_lookups` and `entry_settings` for cached/offline equipment choices and the two-digit-year window.
 
-Submitted records require transformer_code, capacity_kva, inspectors, at least 1 row with gps_waypoint; all submitted rows need se/date/gps_waypoint. Drafts may leave paper fields blank but team/feeder/date required. Do not invent requirements for solar/photos/GPS fix; Android retains waypoint identifiers but no longer captures phone coordinates or requests location permission. Submitted remains editable via revision sync until a future detailed review module exists. Do not write progress transaction tables or alter existing imported GIS records. Always preserve snapshot header values even if reference import changes.
+Submitted records require transformer_code, capacity_kva, inspectors and at least one complete S/E pair. Every pair needs exactly one S and one E. Every submitted row requires se, group, date, gps_waypoint, equipment_type, pole_class, pole_height_ft and at least one entered R/Y/B/N conductor. A valid zero is not blank. Drafts may leave paper fields blank but team/feeder/date are required. Do not invent requirements for solar/photos/GPS fix; Android retains waypoint identifiers but no longer captures phone coordinates or requests location permission. Submitted remains editable via revision sync until a future detailed review module exists. Do not write progress transaction tables or alter existing imported GIS records. Always preserve snapshot header values even if reference import changes.
 
 ## Phone state
 

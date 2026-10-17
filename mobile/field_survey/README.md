@@ -5,16 +5,16 @@ An Android first release connected to the existing Laravel survey monitoring sys
 ## Install and connect
 
 1. Install the provided **debug APK** on an Android 7.0 / API 24 or newer phone. Android may ask you to allow installation from the application used to open the APK.
-2. Open **HAZECO Field Survey**. Enter the application URL, your existing account email, and password. Survey-team leaders need an active team with assigned feeders; super administrators can also collect.
+2. Open **HAZECO Field Survey**. The application connects to `https://hazeco.barqaab.pk` automatically. Enter your existing account email and password; no server URL is requested. Survey-team leaders need an active team with assigned feeders; super administrators can also collect.
 3. Sign in while connected and download assignments. Select **New survey**, team, and feeder. Imported transformer selection prefills values; check them in the field and edit as necessary.
-4. Enter the details and add separate S/E rows. Changes autosave after 500 ms, on app pause, and before navigating back. **Save draft** immediately writes changes. The save indicator reports storage errors.
-5. Add optional solar installations and photographs. Select **Submit survey** when required details are complete, then **Sync now**. Keep the app open until the forms and images are confirmed.
+4. Enter the details, then open **S/E rows** and add a pair. Complete S and tap **Done** to open its automatically created E row. Reopening S reuses its linked E. Back saves unfinished work without completing the row. Changes autosave after 500 ms, on app pause, and before navigating back. **Save draft** immediately writes changes. The save indicator reports storage errors.
+5. Add optional solar installations and photographs. **Submit survey** is shown only in the S/E stage after at least one valid pair exists. Every pair must be complete and every required field valid before submission, then use **Sync now**. Keep the app open until the forms and images are confirmed.
 
-A phone cannot reach the PC server using `127.0.0.1` or `localhost`; those addresses refer to the phone itself. For local XAMPP testing use the PC's LAN address, for example `http://192.168.1.20:8000`. Run Laravel on the LAN interface (`php artisan serve --host=0.0.0.0 --port=8000`) and make that port reachable from the phone on the same Wi-Fi. Include an installation subdirectory in the URL if your server uses one. The Android emulator can use `http://10.0.2.2:8000` to reach the host PC. Enter the application URL rather than an API endpoint.
+The production base URL is fixed. Previously stored notebooks for other server URLs remain in SQLite and are not uploaded to production. Sign in again if an older session points to another server; do not clear app data.
 
 On Apache CGI/FastCGI hosting, preserve the `Authorization` header for PHP. The supplied `public/.htaccess` enables `CGIPassAuth On` alongside Laravel's existing authorization rewrite rule. If a host disallows this directive in `.htaccess`, configure it in the virtual host/directory through the hosting administrator. A login followed by “Sign in again to synchronize” can indicate that the bootstrap request's bearer header was stripped. Test with a dummy 128-character token: the expected response is HTTP 401 with “This device session has expired or was revoked.” A response saying “Sign in again to synchronize” means Laravel did not receive a bearer token of the required length. Do not use or publish real device tokens for this diagnostic. No APK rebuild is needed for this server configuration change. Production should use `APP_DEBUG=false` to avoid returning stack traces.
 
-Debug builds allow HTTP only for private/local development hosts. **Use an HTTPS server for field deployments.** HTTP development traffic is unencrypted; the app never retains the password. Release builds reject HTTP and need an organization-owned signing key configured before distribution. The current debug signing configuration is for testing, not a published production package.
+The mobile login always uses production HTTPS. Release distribution needs the organization's signing key. The debug APK remains available for installation and field testing.
 
 The Laravel endpoints and migration setup are documented in [the delivery guide](../../docs/mobile/DELIVERY.md) and [API contract](../../docs/mobile/API_CONTRACT.md).
 
@@ -33,7 +33,7 @@ The Laravel endpoints and migration setup are documented in [the delivery guide]
 
 ## Printed-form conventions
 
-Codes, group identifiers, waypoints, transformer codes, and consumer references remain text to preserve leading zeros. Blank consumer counts mean **not recorded**, while `0` is a recorded zero. Both S and E observations remain separate; they do not automatically change the monitoring system's progress totals or approvals. Existing GIS reference data is used for selection and never rewritten by mobile collection.
+Codes, group identifiers, waypoints, transformer codes, and consumer references remain text to preserve leading zeros. Blank consumer counts mean **not recorded**, while `0` is a recorded zero. Both S and E observations remain separate, linked by an optional UUID pair ID; they do not automatically change the monitoring system's progress totals or approvals. Existing GIS reference data is used for selection and never rewritten by mobile collection.
 
 The printed form omits several definitions. S/E codes are displayed without inventing expanded meanings; LC stays labelled Commercial (LC). Int is an Intersection checkbox and is never counted as a consumer. Capacity in kVA and pole height in feet are application conventions because the scanned form does not state these units; confirm units with the survey lead. Other conductor text remains editable. [Form mapping](../../docs/mobile/FORM_MAPPING.md) records the remaining interpretation assumptions.
 
@@ -41,7 +41,7 @@ Phone GPS capture and manual latitude/longitude entry have been removed. The app
 
 ## Build and verify
 
-The field-entry update adds offline feeder search, S/E defaults, direct six-digit DDMMYY dates, numeric group/waypoint identifiers, shared equipment choices and Copy Previous Values. A new survey and its first row default to the phone's local date; subsequent rows inherit group/date and alternate S/E. Editing does not rewrite existing dates or adjacent rows. Copy Previous Values transfers conductors, equipment, pole class and height; GPS, identifiers, consumers, intersection and remarks stay unchanged.
+The field-entry update adds offline feeder search through a transformer-style dialog, automatic S/E pairing, direct six-digit DDMMYY dates, numeric group/waypoint identifiers, shared equipment choices and Copy Previous Values. A new survey and its first row default to the phone's local date; subsequent rows inherit group/date and alternate S/E. Editing does not rewrite existing dates or adjacent rows. Pair IDs preserve the relationship; deleting a row asks for confirmation before removing its entire pair. Legacy adjacent S/E rows receive IDs without rewriting their observation values. Copy Previous Values transfers conductors, equipment, pole class and height; GPS, identifiers, consumers, intersection and remarks stay unchanged.
 
 PV observations include service load, solar capacity and a text Meter Number before Remarks. A meter number can identify a PV observation without a consumer reference. Mobile stores these additions in its existing SQLite JSON records and immutable outgoing queue; no phone database reset is needed.
 
@@ -71,3 +71,7 @@ flutter build apk --debug
 The APK is written to `build/app/outputs/flutter-apk/app-debug.apk`. Connect a test phone or start an emulator, then use `flutter run` for interactive testing.
 
 Automated tests cover local SQLite restart persistence, immutable retries, revision/conflict handling, account/server isolation, attachment upload/deletion races, validation, HTTP payloads, printed consumer fields, leading zeros, waypoint input focus, and absence of phone GPS controls. Test real camera/gallery, denied camera permissions, low storage, poor networks, and force-stop/reopen on the survey team's phones before general rollout. A debug APK is a testable first release; it is not a Play Store publication.
+
+## Required row fields and submission
+
+Every S and E row needs S/E, group identifier, row date, GPS waypoint identifier, equipment type, pole class, pole height and at least one entered R/Y/B/N conductor. Numeric zero is accepted where the existing field rules allow it (including pole height); identifiers remain strings. Errors are shown beside inputs and unfinished rows are highlighted. Incomplete drafts can still be saved. Both the local submission queue and the API reject incomplete, duplicate or mismatched pairs. No database migration is needed for pair IDs because rows already use JSON. Existing immutable queued payloads remain intact; an older incomplete submission rejected by the API must be completed and submitted again.

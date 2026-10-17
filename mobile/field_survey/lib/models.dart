@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 typedef Json = Map<String, dynamic>;
+const applicationBaseUrl = 'https://hazeco.barqaab.pk';
 
 String dayString(DateTime date) => date.toIso8601String().substring(0, 10);
 Json copyJson(Json value) => jsonDecode(jsonEncode(value)) as Json;
@@ -90,7 +91,8 @@ class SurveyRecord {
     );
   }
 
-  static Json newRow(String date) => {
+  static Json newRow(String date, {String? pairId}) => {
+    'pair_id': pairId ?? const Uuid().v4(),
     'entry_version': 2,
     'se': 'S',
     'group': '',
@@ -113,10 +115,90 @@ class SurveyRecord {
   };
 
   Json nextRow() {
+    ensurePairIds();
     final previous = rows.lastOrNull;
-    return newRow(previous?['date'] ?? dayString(DateTime.now()))
+    return newRow(
+        previous?['date'] ?? dayString(DateTime.now()),
+        pairId: previous != null && previous['se'] == 'S'
+            ? previous['pair_id']
+            : null,
+      )
       ..['se'] = previous?['se'] == 'S' ? 'E' : 'S'
       ..['group'] = previous?['group'] ?? '';
+  }
+
+  /// Link legacy adjacent pairs once; never rewrite observation values or a queued snapshot.
+  bool ensurePairIds() {
+    if (locked) return false;
+    var changed = false;
+    for (final indices in surveyPairGroups(rows)) {
+      final saved = (rows[indices.first]['pair_id'] ?? '').toString();
+      final id = saved.isEmpty ? const Uuid().v4() : saved;
+      for (final index in indices) {
+        if ((rows[index]['pair_id'] ?? '').toString().isEmpty) {
+          rows[index]['pair_id'] = id;
+          changed = true;
+        }
+      }
+    }
+    return changed;
+  }
+
+  int ensureEndRow(int startIndex) {
+    if (rows[startIndex]['se'] != 'S') {
+      throw StateError('Only an S row creates an E row.');
+    }
+    return ensurePartnerRow(startIndex);
+  }
+
+  int ensurePartnerRow(int startIndex) {
+    ensurePairIds();
+    final start = rows[startIndex];
+    final partnerRole = start['se'] == 'S' ? 'E' : 'S';
+    final existing = rows.indexWhere(
+      (row) => row['pair_id'] == start['pair_id'] && row['se'] == partnerRole,
+    );
+    if (existing >= 0) return existing;
+    if (rows.length >= 500) {
+      throw StateError(
+        'Maximum 500 rows. Remove an unused pair before adding E.',
+      );
+    }
+    final insertAt = start['se'] == 'S' ? startIndex + 1 : startIndex;
+    rows.insert(
+      insertAt,
+      newRow(
+          start['date'] ?? dayString(DateTime.now()),
+          pairId: start['pair_id'],
+        )
+        ..['se'] = partnerRole
+        ..['group'] = start['group'] ?? '',
+    );
+    return insertAt;
+  }
+
+  void removePairAt(int index) {
+    ensurePairIds();
+    final id = rows[index]['pair_id'];
+    rows.removeWhere((row) => row['pair_id'] == id);
+  }
+
+  bool get hasCompleteValidPair => hasCompletePairWithEquipment(null);
+
+  bool hasCompletePairWithEquipment(Iterable<String>? equipmentCodes) {
+    final errors = SurveyValidation.errors(
+      this,
+      submitting: true,
+      equipmentCodes: equipmentCodes,
+    );
+    return surveyPairGroups(rows).any(
+      (indices) =>
+          isCompletePair(rows, indices) &&
+          indices.every(
+            (index) =>
+                !errors.keys.any((key) => key.startsWith('rows.$index.')),
+          ),
+    );
   }
 
   void copyPreviousValues(int index) {
@@ -169,6 +251,41 @@ class SurveyRecord {
     return result;
   }
 }
+
+List<List<int>> surveyPairGroups(List<Json> rows) {
+  final groups = <String, List<int>>{};
+  for (var i = 0; i < rows.length; i++) {
+    final id = (rows[i]['pair_id'] ?? '').toString();
+    final legacyEnd =
+        id.isEmpty &&
+        i > 0 &&
+        rows[i]['se'] == 'E' &&
+        rows[i - 1]['se'] == 'S' &&
+        (rows[i - 1]['pair_id'] ?? '').toString().isEmpty;
+    final key = id.isNotEmpty ? 'id:$id' : 'legacy:${legacyEnd ? i - 1 : i}';
+    (groups[key] ??= []).add(i);
+  }
+  return groups.values.toList();
+}
+
+bool isCompletePair(List<Json> rows, List<int> indices) =>
+    indices.length == 2 &&
+    indices.where((i) => rows[i]['se'] == 'S').length == 1 &&
+    indices.where((i) => rows[i]['se'] == 'E').length == 1;
+
+bool hasConductorInput(Json row) => ['r', 'y', 'b', 'neutral'].any(
+  (key) => ![
+    '',
+    '__none__',
+    '+',
+    '-',
+    '–',
+    '—',
+    'x',
+    '×',
+    'other',
+  ].contains((row['conductor_$key'] ?? '').toString().trim().toLowerCase()),
+);
 
 // Same default century window as web entry. Keep existing ISO dates untouched.
 String displayEntryDate(String value) {
@@ -254,6 +371,7 @@ class SurveyValidation {
   static Map<String, String> errors(
     SurveyRecord record, {
     bool submitting = false,
+    Iterable<String>? equipmentCodes,
   }) {
     final result = <String, String>{};
     final data = record.data;
@@ -343,7 +461,16 @@ class SurveyValidation {
         'Inspector names',
       );
       if (record.rows.isEmpty) {
-        result['rows'] = 'Add at least one S/E survey row.';
+        result['rows'] = 'Complete at least one S/E pair before submission.';
+      }
+      for (final pair in surveyPairGroups(record.rows)) {
+        if (!isCompletePair(record.rows, pair)) {
+          result['rows'] = 'Every pair needs exactly one S row and one E row.';
+          for (final index in pair) {
+            result['rows.$index.pair'] =
+                'Incomplete or duplicate S/E pair. Complete the matching row.';
+          }
+        }
       }
     }
     if (record.rows.length > 500) {
@@ -357,7 +484,22 @@ class SurveyValidation {
       }
       date('$prefix.date', row['date']);
       if (submitting) {
+        for (final field in {
+          'group': 'Group identifier',
+          'date': 'Row date',
+          'equipment_type': 'Equipment type',
+          'pole_class': 'Pole class',
+          'pole_height_ft': 'Pole height',
+        }.entries) {
+          requiredField('$prefix.${field.key}', row[field.key], field.value);
+        }
         requiredField('$prefix.gps_waypoint', row['gps_waypoint'], 'Waypoint');
+        if (!hasConductorInput(row)) {
+          for (final conductor in ['r', 'y', 'b', 'neutral']) {
+            result['$prefix.conductor_$conductor'] =
+                'Enter at least one R, Y, B or N conductor.';
+          }
+        }
       }
       for (final entry in {
         'group': 20,
@@ -380,6 +522,13 @@ class SurveyValidation {
             !RegExp(r'^\d+$').hasMatch(value)) {
           result['$prefix.$key'] = 'Enter digits only; leading zeros are kept.';
         }
+      }
+      if (row['entry_version'] == 2 &&
+          (row['equipment_type'] ?? '').toString().isNotEmpty &&
+          !(equipmentCodes ?? const ['TR', 'SP', 'Ang', 'WB']).contains(
+            row['equipment_type'],
+          )) {
+        result['$prefix.equipment_type'] = 'Select a listed equipment type.';
       }
       number('$prefix.latitude', row['latitude'], min: -90, max: 90);
       number('$prefix.longitude', row['longitude'], min: -180, max: 180);

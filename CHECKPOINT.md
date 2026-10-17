@@ -1,5 +1,15 @@
 ﻿# Mobile field-entry improvements — checkpoint
 
+## Active task: paired submission and faster selection (2026-10-17)
+- Requested: submission only at S/E stage after a valid pair, mandatory row fields in app/API, automatic E creation, stable pairing across edits/deletion, fixed production URL, feeder dialog matching transformer search.
+- Existing uncommitted sign-in diagnostics must be preserved.
+- Plan: optional pair IDs in existing JSON rows; infer legacy adjacent S/E pairs without changing observation values. Preserve incomplete drafts; validate all submitted pairs. Completing S opens its existing or newly created E. Deletion explicitly confirms removal of the pair.
+- Fixed URL login is implemented, retaining other-server notebooks without sending them to production. Feeder selection now uses a transformer-style search dialog with code/name result rows, partial matching and a no-results state.
+- Pair management, automatic E navigation, mandatory inline validation, incomplete-row highlighting and S/E-stage submission visibility are implemented. Local queueing and backend submission both reject incomplete pairs/required fields. Drafts remain saveable and confirmed pair deletion preserves other pairs.
+- Checks: Flutter analysis passed; complete Flutter suite passed (37 tests), including automatic E navigation, submission visibility/blocking, pair editing/deletion, legacy orphan repair, cached project equipment options, zero values, fixed URL and feeder code/name search. API suite passed (18 tests, 193 assertions); web testing sync regressions passed (five tests, 66 assertions). PHP syntax and whitespace checks passed.
+- Documentation updated with fixed URL, required fields, pairing semantics and deployment compatibility. No new database migration/dependencies required; pair IDs live in existing JSON rows. Existing queued payloads remain immutable and may require correction if an old incomplete submission is rejected by the new API rules.
+- Implementation and verification complete. Debug APK built successfully (16.2s) at mobile/field_survey/build/app/outputs/flutter-apk/app-debug.apk. Temporary logs removed after recording results. No physical-device or production validation performed; changes are local/uncommitted for the user's Git workflow.
+
 ## Objective and resume
 Implement the eight requested improvements, preserve offline/legacy data, and do not use Credits. Read this file and inspect git diff before resuming. No production changes, commit or push performed.
 
@@ -32,3 +42,10 @@ After production pull: php artisan migrate --force; php artisan config:cache; ph
 
 ## Cleanup
 Task-created editing scripts and result logs removed after recording results here. Existing tmp/mdb-entry-qa fixtures/node_modules predate this task and remain untouched.
+
+## Follow-up: production mobile sign-in (2026-10-17)
+- Screenshot shows the correct HTTPS base URL but generic "Unable to connect" message. Working tree was clean when this follow-up began (previous implementation had been committed externally).
+- Production HTTPS is reachable from this computer. Both curl and a Dart HTTP probe reached the API: unauthenticated bootstrap returned expected HTTP 401 JSON; empty login validation returned HTTP 422 JSON. No user credentials or authenticated session were used.
+- The existing UI treated every unexpected exception as an internet failure, including storage and application exceptions. Added safe diagnostics distinguishing network/DNS, TLS, timeout, HTTP transport, phone storage and unexpected application failures. No certificate checks were disabled; offline data remains untouched.
+- All 25 Flutter tests and final Flutter analysis passed. Diagnostic APK rebuilt successfully (54.2s) at mobile/field_survey/build/app/outputs/flutter-apk/app-debug.apk. Temporary Dart probe and task-created sign-in test/build logs removed after recording results.
+- User confirmed the production login page opens normally in Chrome on the same phone. Actual app-specific cause remains unconfirmed; browser success alone does not establish Dart TLS/storage/API success. Next step: install the diagnostic APK without clearing app data and inspect the specific error if it persists.

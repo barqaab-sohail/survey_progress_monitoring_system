@@ -6,6 +6,7 @@ import 'field_controller.dart';
 import 'local_store.dart';
 import 'models.dart';
 import 'survey_editor.dart';
+import 'sign_in_error.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -100,23 +101,12 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final url = TextEditingController(),
-      email = TextEditingController(),
-      password = TextEditingController();
+  final email = TextEditingController(), password = TextEditingController();
   final form = GlobalKey<FormState>();
   String? error;
   bool hide = true;
   @override
-  void initState() {
-    super.initState();
-    widget.controller.store.setting('last_url').then((value) {
-      if (mounted && value != null) url.text = value;
-    });
-  }
-
-  @override
   void dispose() {
-    url.dispose();
     email.dispose();
     password.dispose();
     super.dispose();
@@ -127,22 +117,9 @@ class _LoginPageState extends State<LoginPage> {
     FocusScope.of(context).unfocus();
     setState(() => error = null);
     try {
-      await widget.controller.login(
-        normalizeServerUrl(url.text),
-        email.text,
-        password.text,
-      );
-    } on ApiFailure catch (e) {
-      if (mounted) setState(() => error = e.message);
-    } on FormatException catch (e) {
-      if (mounted) setState(() => error = e.message);
-    } on Object {
-      if (mounted) {
-        setState(
-          () => error =
-              'Unable to connect. Check the application URL and internet connection.',
-        );
-      }
+      await widget.controller.login(email.text, password.text);
+    } on Object catch (e) {
+      if (mounted) setState(() => error = signInErrorMessage(e));
     } finally {
       if (mounted) password.clear();
     }
@@ -185,24 +162,6 @@ class _LoginPageState extends State<LoginPage> {
                     'Collect LT survey sheets in the field. Save offline and sync when you have a connection.',
                   ),
                   const SizedBox(height: 28),
-                  TextFormField(
-                    controller: url,
-                    keyboardType: TextInputType.url,
-                    autocorrect: false,
-                    decoration: const InputDecoration(
-                      labelText: 'Application URL',
-                      hintText: 'https://survey.example.org',
-                    ),
-                    validator: (value) {
-                      try {
-                        normalizeServerUrl(value ?? '');
-                        return null;
-                      } on FormatException catch (e) {
-                        return e.message;
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 14),
                   TextFormField(
                     controller: email,
                     keyboardType: TextInputType.emailAddress,

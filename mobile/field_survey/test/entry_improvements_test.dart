@@ -79,7 +79,7 @@ void main() {
   test(
     'new rows alternate without modifying old rows and copy exclusions hold',
     () {
-      final record = readySurvey();
+      final record = readySurvey(paired: false);
       final first = record.rows.first;
       first.addAll({
         'group': '001',
@@ -170,13 +170,22 @@ void main() {
         ),
       ),
     );
+    await tester.tap(find.byType(OutlinedButton));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '40');
     await tester.pumpAndSettle();
-    expect(find.text('407 · Nawan Shehra').hitTestable(), findsOneWidget);
-    expect(find.text('508 · Other feeder').hitTestable(), findsNothing);
+    expect(find.widgetWithText(ListTile, '407'), findsOneWidget);
+    expect(find.widgetWithText(ListTile, 'Nawan Shehra'), findsOneWidget);
+    expect(find.widgetWithText(ListTile, '508'), findsNothing);
+    await tester.enterText(find.byType(TextField), 'nAWan');
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(ListTile, '407'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'not a feeder');
+    await tester.pumpAndSettle();
+    expect(find.text('No matching assigned feeders.'), findsOneWidget);
     await tester.enterText(find.byType(TextField), '508');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('508 · Other feeder').hitTestable());
+    await tester.tap(find.widgetWithText(ListTile, '508'));
     await tester.pumpAndSettle();
     expect(selected, 2);
   });

@@ -120,6 +120,23 @@ class LocalStore {
   }
 
   Future<void> queue(SurveyRecord record) async {
+    final cached = await bootstrap(record.scope);
+    final feeders = (cached?['feeders'] as List? ?? []).cast<Json>();
+    final feeder = feeders
+        .where((f) => f['id'] == record.data['feeder_id'])
+        .firstOrNull;
+    final equipment = (feeder?['entry_lookups']?['equipment_types'] as Map?)
+        ?.keys
+        .cast<String>();
+    if (SurveyValidation.errors(
+      record,
+      submitting: true,
+      equipmentCodes: equipment,
+    ).isNotEmpty) {
+      throw StateError(
+        'Complete every S/E pair and required field before submitting. Your draft is retained.',
+      );
+    }
     final queued = record.clone();
     queued.data['status'] = 'submitted';
     queued.outbound = queued.payload(submitted: true);

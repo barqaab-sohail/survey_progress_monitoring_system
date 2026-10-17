@@ -78,7 +78,8 @@ class FieldSurveyApiTest extends TestCase
             'transformer_id' => null, 'transformer_code' => 'B2308',
             'survey_date' => today()->toDateString(), 'status' => $status,
             'header' => ['substation' => 'Substation', 'capacity_kva' => 50, 'inspectors' => 'Field inspector', 'location' => 'Street 1', 'mounting' => 'D.Pole', 'duty' => 'General Duty'],
-            'rows' => [['se' => 'S', 'group' => '01', 'date' => today()->toDateString(), 'gps_waypoint' => '0008', 'phase' => '3', 'conductor_r' => 'A', 'pole_class' => 'PCO', 'pole_height_ft' => 36, 'consumers' => ['rs' => 5, 'lc' => 1], 'intersection' => true]],
+            'rows' => [['se' => 'S', 'group' => '01', 'date' => today()->toDateString(), 'gps_waypoint' => '0008', 'phase' => '3', 'conductor_r' => 'A', 'equipment_type' => 'TR', 'pole_class' => 'PCO', 'pole_height_ft' => 36, 'consumers' => ['rs' => 5, 'lc' => 1], 'intersection' => true],
+                ['se' => 'E', 'group' => '01', 'date' => today()->toDateString(), 'gps_waypoint' => '0009', 'phase' => 'R', 'conductor_r' => 'A', 'equipment_type' => 'TR', 'pole_class' => 'PCO', 'pole_height_ft' => 0]],
             'solar' => [['consumer_reference' => '0000123', 'installed_pv_kw' => 5.5, 'remarks' => 'Rooftop']], 'remarks' => 'Field visit',
         ];
     }
@@ -162,6 +163,54 @@ class FieldSurveyApiTest extends TestCase
         $this->assertDatabaseCount('audit_logs', 1);
     }
 
+    public function test_submitted_rows_require_every_field_and_allow_neutral_and_zero_values(): void
+    {
+        foreach (['se', 'group', 'date', 'gps_waypoint', 'equipment_type', 'pole_class', 'pole_height_ft'] as $field) {
+            $data = $this->payload();
+            unset($data['rows'][1][$field]);
+            $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()
+                ->assertJsonValidationErrors('rows.1.'.$field);
+        }
+        $data = $this->payload();
+        $data['rows'][1]['conductor_r'] = '__none__';
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()
+            ->assertJsonValidationErrors('rows.1.conductor_neutral');
+        $data['rows'][1]['conductor_neutral'] = 'A';
+        $data['rows'][1]['pole_height_ft'] = 0;
+        $data['rows'][1]['group'] = '0';
+        $data['rows'][1]['gps_waypoint'] = '000';
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
+        $this->assertSame('0', FieldSurvey::firstOrFail()->rows[1]['group']);
+        $this->assertSame('000', FieldSurvey::firstOrFail()->rows[1]['gps_waypoint']);
+    }
+
+    public function test_pair_ids_prevent_cross_pairing_duplicates_and_incomplete_submissions_but_keep_drafts(): void
+    {
+        $data = $this->payload();
+        $pair = (string) Str::uuid();
+        foreach ($data['rows'] as &$row) { $row['pair_id'] = $pair; }
+        unset($row);
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
+        $this->assertSame($pair, FieldSurvey::firstOrFail()->rows[1]['pair_id']);
+
+        $bad = $this->payload();
+        $bad['rows'][0]['pair_id'] = (string) Str::uuid();
+        $bad['rows'][1]['pair_id'] = (string) Str::uuid();
+        $this->postJson('/api/v1/field/surveys/sync', $bad)->assertUnprocessable()->assertJsonValidationErrors(['rows.0.pair','rows.1.pair']);
+        $bad['rows'][1]['pair_id'] = $bad['rows'][0]['pair_id'];
+        $bad['rows'][] = $bad['rows'][1];
+        $this->postJson('/api/v1/field/surveys/sync', $bad)->assertUnprocessable()->assertJsonValidationErrors('rows.2.pair');
+        $bad = $this->payload();
+        array_pop($bad['rows']);
+        $this->postJson('/api/v1/field/surveys/sync', $bad)->assertUnprocessable()->assertJsonValidationErrors('rows.0.pair');
+        $bad['status'] = 'draft';
+        unset($bad['rows'][0]['group'], $bad['rows'][0]['equipment_type'], $bad['rows'][0]['pole_class'], $bad['rows'][0]['pole_height_ft']);
+        $this->postJson('/api/v1/field/surveys/sync', $bad)->assertCreated();
+        $this->assertDatabaseHas('field_surveys', ['client_uuid' => $bad['client_uuid'], 'status' => 'draft']);
+        $legacy = $this->payload(); // Adjacent legacy pairs without IDs continue to submit.
+        $this->postJson('/api/v1/field/surveys/sync', $legacy)->assertCreated();
+    }
+
     public function test_mobile_entry_options_and_meter_only_pv_survive_sync_and_edit(): void
     {
         $options = $this->getJson('/api/v1/field/bootstrap')->assertOk()->json('feeders.0.entry_lookups');
@@ -179,6 +228,7 @@ class FieldSurveyApiTest extends TestCase
         $this->assertTrue($survey->rows[0]['intersection']);
         $data['base_revision'] = 1;
         $data['rows'][0]['conductor_r'] = '';
+        $data['rows'][0]['conductor_neutral'] = 'A';
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk()->assertJsonPath('revision', 2);
         $this->assertSame('', $survey->fresh()->rows[0]['phase']);
         $this->assertSame('001-AB/09', $survey->fresh()->solar[0]['meter_number']);

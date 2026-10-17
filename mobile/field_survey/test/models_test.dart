@@ -12,13 +12,25 @@ SurveyRecord newSurvey() => SurveyRecord.create(
   {'id': 4, 'name': 'Test team'},
   {'id': 7, 'feeder_name': 'Test feeder', 'division_name': 'Test division'},
 );
-SurveyRecord readySurvey() {
+SurveyRecord readySurvey({bool paired = true}) {
   final record = newSurvey();
   record.data['transformer_code'] = '001234';
   record.header['capacity_kva'] = '100';
   record.rows.add(
-    SurveyRecord.newRow(record.data['survey_date'])..['gps_waypoint'] = '0005',
+    SurveyRecord.newRow(record.data['survey_date'])..addAll({
+      'group': '001',
+      'gps_waypoint': '0005',
+      'equipment_type': 'TR',
+      'pole_class': 'PCO',
+      'pole_height_ft': '0',
+      'conductor_neutral': 'A',
+    }),
   );
+  if (paired) {
+    final end = record.ensureEndRow(0);
+    record.copyPreviousValues(end);
+    record.rows[end]['gps_waypoint'] = '0006';
+  }
   return record;
 }
 
@@ -69,11 +81,7 @@ void main() {
       final record = readySurvey();
       record.rows.first['consumers'] = {'rs': '0', 'rl': '', 'ag': '12'};
       record.rows.first['intersection'] = true;
-      record.rows.add(
-        SurveyRecord.newRow(record.data['survey_date'])
-          ..['gps_waypoint'] = '0005'
-          ..['se'] = 'E',
-      );
+      record.rows[1]['gps_waypoint'] = '0005';
       final payload = record.payload(submitted: true);
       expect(payload['transformer_code'], '001234');
       expect(payload['rows'], hasLength(2));

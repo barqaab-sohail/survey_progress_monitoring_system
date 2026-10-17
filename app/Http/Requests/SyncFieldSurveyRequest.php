@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Support\ConductorPhase;
 use App\Support\IntersectionFlag;
+use App\Support\FieldSurveyPairs;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -34,19 +35,20 @@ class SyncFieldSurveyRequest extends FormRequest
             'header.mounting' => ['nullable', Rule::in(['S.Pole', 'D.Pole', 'Pad'])],
             'header.duty' => ['nullable', Rule::in(['General Duty', 'Dedicated'])],
             'rows' => ['present', 'array', $submitted ? 'min:1' : 'min:0', 'max:500'],
-            'rows.*' => ['array:entry_version,se,group,date,gps_waypoint,latitude,longitude,gps_accuracy_m,phase,conductor_r,conductor_y,conductor_b,conductor_neutral,equipment_type,pole_class,pole_height_ft,consumers,intersection,remarks'],
+            'rows.*' => ['array:pair_id,entry_version,se,group,date,gps_waypoint,latitude,longitude,gps_accuracy_m,phase,conductor_r,conductor_y,conductor_b,conductor_neutral,equipment_type,pole_class,pole_height_ft,consumers,intersection,remarks'],
+            'rows.*.pair_id' => ['nullable', 'uuid'],
             'rows.*.entry_version' => ['sometimes', 'integer', Rule::in([2])],
             'rows.*.se' => [$paper, Rule::in(['S', 'E'])],
-            'rows.*.group' => ['nullable', 'string', 'max:20'],
+            'rows.*.group' => [$paper, 'string', 'max:20'],
             'rows.*.date' => [$paper, 'date_format:Y-m-d', 'before_or_equal:today'],
             'rows.*.gps_waypoint' => [$paper, 'string', 'max:50'],
             'rows.*.latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'rows.*.longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'rows.*.gps_accuracy_m' => ['nullable', 'numeric', 'between:0,100000000'],
             'rows.*.phase' => ['nullable', 'string', 'max:30'],
-            'rows.*.equipment_type' => ['nullable', 'string', 'max:50'],
-            'rows.*.pole_class' => ['nullable', 'string', 'max:50'],
-            'rows.*.pole_height_ft' => ['nullable', 'numeric', 'between:0,1000000'],
+            'rows.*.equipment_type' => [$paper, 'string', 'max:50'],
+            'rows.*.pole_class' => [$paper, 'string', 'max:50'],
+            'rows.*.pole_height_ft' => [$paper, 'numeric', 'between:0,1000000'],
             'rows.*.consumers' => ['sometimes', 'array:rs,rl,sc,lc,si,li,pb,ag,st'],
             'rows.*.intersection' => ['nullable', 'boolean'],
             'rows.*.remarks' => ['nullable', 'string', 'max:1000'],
@@ -73,11 +75,11 @@ class SyncFieldSurveyRequest extends FormRequest
         $equipment = null;
         foreach (is_array($this->input('rows')) ? $this->input('rows') : [] as $index => $row) {
             if (is_array($row) && ($row['entry_version'] ?? null) === 2) {
-                $rules["rows.$index.group"] = ['nullable', 'string', 'max:20', 'regex:/^[0-9]+$/D'];
+                $rules["rows.$index.group"] = [$paper, 'string', 'max:20', 'regex:/^[0-9]+$/D'];
                 $rules["rows.$index.gps_waypoint"] = [$paper, 'string', 'max:50', 'regex:/^[0-9]+$/D'];
                 $equipment ??= array_keys(app(\App\Services\Mdb\EntryLookups::class)->options(
                     \App\Models\Feeder::whereKey($this->integer('feeder_id'))->value('project_id'))['equipment_types']);
-                $rules["rows.$index.equipment_type"] = ['nullable', 'string', Rule::in($equipment)];
+                $rules["rows.$index.equipment_type"] = [$paper, 'string', Rule::in($equipment)];
             }
         }
 
@@ -106,5 +108,24 @@ class SyncFieldSurveyRequest extends FormRequest
             unset($row);
             $this->merge(['rows' => $rows]);
         }
+    }
+
+    public function after(): array
+    {
+        return [function (\Illuminate\Validation\Validator $validator): void {
+            if ($this->input('status') !== 'submitted' || ! is_array($this->input('rows'))) {
+                return;
+            }
+            foreach (FieldSurveyPairs::errors($this->input('rows')) as $key => $message) {
+                $validator->errors()->add($key, $message);
+            }
+            foreach ($this->input('rows') as $index => $row) {
+                if (is_array($row) && ! FieldSurveyPairs::hasConductor($row)) {
+                    foreach (['r', 'y', 'b', 'neutral'] as $phase) {
+                        $validator->errors()->add("rows.$index.conductor_$phase", 'Enter at least one R, Y, B or N conductor.');
+                    }
+                }
+            }
+        }];
     }
 }

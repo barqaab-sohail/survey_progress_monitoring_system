@@ -32,6 +32,13 @@ class _SurveyEditorState extends State<SurveyEditor>
   List<Json> photos = [];
   bool get editable => !record.locked && !submitting;
   FieldController get controller => widget.controller;
+  Iterable<String>? get equipmentCodes =>
+      (controller.feeder(
+                record.data['feeder_id'],
+              )?['entry_lookups']?['equipment_types']
+              as Map?)
+          ?.keys
+          .cast<String>();
 
   @override
   void initState() {
@@ -39,6 +46,10 @@ class _SurveyEditorState extends State<SurveyEditor>
     record = widget.record;
     WidgetsBinding.instance.addObserver(this);
     controller.addListener(controllerChanged);
+    if (editable && record.ensurePairIds()) {
+      // Save linkage without turning a viewed synced survey into an edited draft.
+      dirty = true;
+    }
     unawaited(loadPhotos());
   }
 
@@ -147,7 +158,11 @@ class _SurveyEditorState extends State<SurveyEditor>
 
   Future<void> submit() async {
     FocusScope.of(context).unfocus();
-    final found = SurveyValidation.errors(record, submitting: true);
+    final found = SurveyValidation.errors(
+      record,
+      submitting: true,
+      equipmentCodes: equipmentCodes,
+    );
     setState(() => errors = found);
     if (found.isNotEmpty) {
       if (found.keys.any((key) => key.startsWith('rows'))) {
@@ -308,7 +323,29 @@ class _SurveyEditorState extends State<SurveyEditor>
   }
 
   Future<void> addRow() async {
-    if (record.rows.length >= 500) {
+    final rowErrors = SurveyValidation.errors(
+      record,
+      submitting: true,
+      equipmentCodes: equipmentCodes,
+    );
+    for (var i = 0; i < record.rows.length; i++) {
+      if (rowErrors.keys.any((key) => key.startsWith('rows.$i.'))) {
+        var target = i;
+        if (record.rows[i]['se'] == 'E' &&
+            rowErrors.containsKey('rows.$i.pair')) {
+          try {
+            target = record.ensurePartnerRow(i);
+          } on StateError catch (error) {
+            notice(error.message);
+            return;
+          }
+          touch();
+        }
+        await editRow(target);
+        return;
+      }
+    }
+    if (record.rows.length >= 499) {
       notice('A survey supports up to 500 rows.');
       return;
     }
@@ -319,48 +356,59 @@ class _SurveyEditorState extends State<SurveyEditor>
   }
 
   Future<void> editRow(int index) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => RowEditor(
-          record: record,
-          index: index,
-          equipmentOptions:
-              (controller.feeder(
-                        record.data['feeder_id'],
-                      )?['entry_lookups']?['equipment_types']
-                      as Map?)
-                  ?.cast<String, String>() ??
-              const {},
-          yearStart:
-              controller.feeder(
-                record.data['feeder_id'],
-              )?['entry_settings']?['two_digit_year_start'] ??
-              2000,
-          editable: editable,
-          onChanged: () => touch(),
-          onSave: flush,
-          showRequired: errors.keys.any((key) => key.startsWith('rows.$index')),
+    int? nextIndex = index;
+    while (nextIndex != null && mounted) {
+      final currentIndex = nextIndex;
+      nextIndex = await Navigator.push<int>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RowEditor(
+            record: record,
+            index: currentIndex,
+            equipmentOptions:
+                (controller.feeder(
+                          record.data['feeder_id'],
+                        )?['entry_lookups']?['equipment_types']
+                        as Map?)
+                    ?.cast<String, String>() ??
+                const {},
+            yearStart:
+                controller.feeder(
+                  record.data['feeder_id'],
+                )?['entry_settings']?['two_digit_year_start'] ??
+                2000,
+            editable: editable,
+            onChanged: () => touch(),
+            onSave: flush,
+            showRequired: true,
+          ),
         ),
-      ),
-    );
+      );
+    }
     if (mounted) setState(() {});
   }
 
   Future<void> deleteRow(int index) async {
-    final accepted = await confirmRemoval('Remove row ${index + 1}?');
+    final accepted = await confirmRemoval(
+      'Remove this S/E pair?',
+      message:
+          'Both S and E observations in this pair will be removed from the local draft. Other pairs are kept.',
+    );
     if (accepted) {
-      record.rows.removeAt(index);
+      record.removePairAt(index);
       touch();
     }
   }
 
-  Future<bool> confirmRemoval(String title) async =>
+  Future<bool> confirmRemoval(
+    String title, {
+    String message = 'This removes the entry from your local draft.',
+  }) async =>
       await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(title),
-          content: const Text('This removes the entry from your local draft.'),
+          content: Text(message),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -534,66 +582,84 @@ class _SurveyEditorState extends State<SurveyEditor>
       ),
     ],
   );
-  Widget rowsSection() => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Text(
-        'S/E observations',
-        style: Theme.of(
-          context,
-        ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-      ),
-      const SizedBox(height: 8),
-      const Text(
-        'Each printed S or E row is a separate observation. Waypoint identifiers keep their leading zeros.',
-      ),
-      const SizedBox(height: 14),
-      if (errors['rows'] != null)
+  Widget rowsSection() {
+    final rowErrors = SurveyValidation.errors(
+      record,
+      submitting: true,
+      equipmentCodes: equipmentCodes,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
         Text(
-          errors['rows']!,
-          style: TextStyle(color: Theme.of(context).colorScheme.error),
+          'S/E observations',
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
-      if (editable)
-        FilledButton.tonalIcon(
-          onPressed: addRow,
-          icon: const Icon(Icons.add_location_alt_outlined),
-          label: const Text('Add S/E row'),
+        const SizedBox(height: 8),
+        const Text(
+          'Each printed S or E row is a separate observation. Waypoint identifiers keep their leading zeros.',
         ),
-      const SizedBox(height: 16),
-      if (record.rows.isEmpty)
-        const SectionCard(
-          title: 'No observations yet',
-          children: [Text('Add a row for each observation on the paper form.')],
-        ),
-      ...record.rows.asMap().entries.map((entry) {
-        final index = entry.key, row = entry.value;
-        final hasErrors = errors.keys.any(
-          (key) => key.startsWith('rows.$index.'),
-        );
-        return Card(
-          child: ListTile(
-            onTap: () => editRow(index),
-            leading: CircleAvatar(child: Text(row['se'] ?? 'S')),
-            title: Text(
-              'Row ${index + 1} · ${row['gps_waypoint'].toString().isEmpty ? 'Waypoint needed' : row['gps_waypoint']}',
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            subtitle: Text(
-              'Group ${row['group'].toString().isEmpty ? '—' : row['group']} · ${row['date']}'
-              '${hasErrors ? '\nReview missing or invalid values' : ''}',
-            ),
-            trailing: editable
-                ? IconButton(
-                    tooltip: 'Remove row',
-                    onPressed: () => deleteRow(index),
-                    icon: const Icon(Icons.delete_outline),
-                  )
-                : const Icon(Icons.chevron_right),
+        const SizedBox(height: 14),
+        if (rowErrors['rows'] != null)
+          Text(
+            rowErrors['rows']!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
-        );
-      }),
-    ],
-  );
+        if (editable)
+          FilledButton.tonalIcon(
+            onPressed: addRow,
+            icon: const Icon(Icons.add_location_alt_outlined),
+            label: const Text('Add / complete S/E pair'),
+          ),
+        const SizedBox(height: 16),
+        if (record.rows.isEmpty)
+          const SectionCard(
+            title: 'No observations yet',
+            children: [
+              Text('Add a row for each observation on the paper form.'),
+            ],
+          ),
+        ...record.rows.asMap().entries.map((entry) {
+          final index = entry.key, row = entry.value;
+          final hasErrors = rowErrors.keys.any(
+            (key) => key.startsWith('rows.$index.'),
+          );
+          return Card(
+            shape: hasErrors
+                ? RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  )
+                : null,
+            child: ListTile(
+              onTap: () => editRow(index),
+              leading: CircleAvatar(child: Text(row['se'] ?? 'S')),
+              title: Text(
+                'Row ${index + 1} · ${row['gps_waypoint'].toString().isEmpty ? 'Waypoint needed' : row['gps_waypoint']}',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(
+                'Group ${row['group'].toString().isEmpty ? '—' : row['group']} · ${row['date']}'
+                '${hasErrors ? '\nReview missing or invalid values' : ''}',
+              ),
+              trailing: editable
+                  ? IconButton(
+                      tooltip: 'Remove pair',
+                      onPressed: () => deleteRow(index),
+                      icon: const Icon(Icons.delete_outline),
+                    )
+                  : const Icon(Icons.chevron_right),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
   Widget solarSection() => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
@@ -853,31 +919,34 @@ class _SurveyEditorState extends State<SurveyEditor>
                   ],
                 ),
                 const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: submitting || controller.syncing
-                        ? null
-                        : editable
-                        ? submit
-                        : record.state == 'conflict'
-                        ? null
-                        : syncHere,
-                    icon: Icon(editable ? Icons.upload_outlined : Icons.sync),
-                    label: Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Text(
-                        submitting
-                            ? 'Saving submission…'
-                            : editable
-                            ? 'Submit survey'
-                            : record.state == 'conflict'
-                            ? 'Administrator review needed'
-                            : 'Retry / refresh sync',
+                if (!editable ||
+                    (section == 1 &&
+                        record.hasCompletePairWithEquipment(equipmentCodes)))
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: submitting || controller.syncing
+                          ? null
+                          : editable
+                          ? submit
+                          : record.state == 'conflict'
+                          ? null
+                          : syncHere,
+                      icon: Icon(editable ? Icons.upload_outlined : Icons.sync),
+                      label: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Text(
+                          submitting
+                              ? 'Saving submission…'
+                              : editable
+                              ? 'Submit survey'
+                              : record.state == 'conflict'
+                              ? 'Administrator review needed'
+                              : 'Retry / refresh sync',
+                        ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -986,35 +1055,81 @@ class RowEditor extends StatefulWidget {
 class _RowEditorState extends State<RowEditor> {
   Json get row => widget.record.rows[widget.index];
   bool allowPop = false;
+  bool finishing = false;
   int copyGeneration = 0;
   String get prefix => 'rows.${widget.index}';
-  Map<String, String> get errors =>
-      SurveyValidation.errors(widget.record, submitting: widget.showRequired);
+  Map<String, String> get errors => SurveyValidation.errors(
+    widget.record,
+    submitting: true,
+    equipmentCodes: widget.equipmentOptions.isEmpty
+        ? null
+        : widget.equipmentOptions.keys,
+  );
   void changed() {
     row['phase'] = phaseFromConductors(row);
     widget.onChanged();
     setState(() {});
   }
 
-  Future<void> done() async {
+  Future<void> done({bool complete = true}) async {
+    if (finishing) return;
+    finishing = true;
+    int? nextIndex;
     try {
+      if (complete && widget.editable) {
+        final rowErrors = errors.keys.where(
+          (key) => key.startsWith('$prefix.') && key != '$prefix.pair',
+        );
+        if (rowErrors.isNotEmpty) {
+          await widget.onSave();
+          if (mounted) {
+            setState(() {});
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Complete the highlighted row fields. Your entered values are saved.',
+                ),
+              ),
+            );
+          }
+          finishing = false;
+          return;
+        }
+        if (row['se'] == 'S') {
+          final count = widget.record.rows.length;
+          final end = widget.record.ensureEndRow(widget.index);
+          if (count != widget.record.rows.length) widget.onChanged();
+          if (SurveyValidation.errors(
+            widget.record,
+            submitting: true,
+            equipmentCodes: widget.equipmentOptions.isEmpty
+                ? null
+                : widget.equipmentOptions.keys,
+          ).keys.any((key) => key.startsWith('rows.$end.'))) {
+            nextIndex = end;
+          }
+        }
+      }
       await widget.onSave();
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Unable to save. Retry after checking phone storage.',
+              error is StateError
+                  ? error.message
+                  : 'Unable to save. Retry after checking phone storage.',
             ),
           ),
         );
       }
+      finishing = false;
       return;
     }
     if (mounted) {
       setState(() => allowPop = true);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) Navigator.pop(context);
+        if (mounted) Navigator.pop(context, nextIndex);
       });
     }
   }
@@ -1045,13 +1160,13 @@ class _RowEditorState extends State<RowEditor> {
   Widget build(BuildContext context) => PopScope(
     canPop: allowPop,
     onPopInvokedWithResult: (didPop, _) {
-      if (!didPop) unawaited(done());
+      if (!didPop) unawaited(done(complete: false));
     },
     child: Scaffold(
       appBar: AppBar(
         title: Text('S/E row ${widget.index + 1}'),
         leading: IconButton(
-          onPressed: done,
+          onPressed: () => done(complete: false),
           icon: const Icon(Icons.arrow_back),
         ),
         actions: [
@@ -1070,8 +1185,11 @@ class _RowEditorState extends State<RowEditor> {
             children: [
               ChoiceField(
                 label: 'S/E',
-                value: row['se'],
-                enabled: widget.editable,
+                value: row['se'] ?? '',
+                enabled: widget.editable && !['S', 'E'].contains(row['se']),
+                error: errors['$prefix.se'],
+                helper:
+                    'S/E is assigned by the pair. Complete S to open E automatically.',
                 values: const ['S', 'E'],
                 onChanged: (value) {
                   row['se'] = value;
@@ -1083,6 +1201,7 @@ class _RowEditorState extends State<RowEditor> {
                 label: 'Row date',
                 yearStart: widget.yearStart,
                 value: row['date'] ?? '',
+                error: errors['$prefix.date'],
                 enabled: widget.editable,
                 onChanged: (value) {
                   row['date'] = value;
@@ -1169,6 +1288,7 @@ class _RowEditorState extends State<RowEditor> {
               ),
               ChoiceField(
                 key: ValueKey('equipment:$copyGeneration'),
+                error: errors['$prefix.equipment_type'],
                 label: 'Equipment type',
                 value: row['equipment_type'] ?? '',
                 enabled: widget.editable,
@@ -1188,6 +1308,7 @@ class _RowEditorState extends State<RowEditor> {
               ),
               ChoiceField(
                 key: ValueKey('pole:$copyGeneration'),
+                error: errors['$prefix.pole_class'],
                 label: 'Pole class',
                 value: row['pole_class'] ?? '',
                 enabled: widget.editable,
@@ -1343,17 +1464,26 @@ class ChoiceField extends StatelessWidget {
     required this.enabled,
     required this.values,
     this.labels = const {},
+    this.error,
+    this.helper,
     required this.onChanged,
   });
   final String label, value;
   final bool enabled;
   final List<String> values;
   final Map<String, String> labels;
+  final String? error, helper;
   final ValueChanged<String> onChanged;
   @override
   Widget build(BuildContext context) => DropdownButtonFormField<String>(
-    initialValue: values.contains(value) ? value : '',
-    decoration: InputDecoration(labelText: label),
+    initialValue: values.contains(value) ? value : null,
+    decoration: InputDecoration(
+      labelText: label,
+      errorText: error,
+      errorMaxLines: 3,
+      helperText: helper,
+      helperMaxLines: 3,
+    ),
     isExpanded: true,
     items: values
         .map(
@@ -1375,10 +1505,12 @@ class DateEntry extends StatefulWidget {
     required this.enabled,
     required this.onChanged,
     this.yearStart = 2000,
+    this.error,
   });
   final String label, value;
   final bool enabled;
   final int yearStart;
+  final String? error;
   final ValueChanged<String> onChanged;
   @override
   State<DateEntry> createState() => _DateEntryState();
@@ -1417,7 +1549,7 @@ class _DateEntryState extends State<DateEntry> {
     decoration: InputDecoration(
       labelText: '${widget.label} (DDMMYY)',
       hintText: '171026',
-      errorText: error,
+      errorText: error ?? widget.error,
       helperText:
           'Six digits: day, month, year. Earlier dates can be typed directly.',
     ),
@@ -1468,6 +1600,7 @@ class _ConductorEntryState extends State<ConductorEntry> {
     children: [
       ChoiceField(
         label: widget.label,
+        error: widget.error,
         value: other ? 'Other' : widget.value,
         enabled: widget.enabled,
         values: const ['', ...conductorChoices],

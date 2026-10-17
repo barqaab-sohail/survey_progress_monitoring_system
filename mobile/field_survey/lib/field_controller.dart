@@ -47,6 +47,14 @@ class FieldController extends ChangeNotifier {
       final saved = await secureStorage.read(key: 'field_session');
       if (saved != null) {
         session = FieldSession.fromJson(jsonDecode(saved) as Json);
+        // Other-server notebooks remain stored, but are never sent to production.
+        if (session!.url != applicationBaseUrl) {
+          session = null;
+          startupMessage =
+              'Sign in to the HAZECO production application. Previously saved surveys remain on this phone.';
+        }
+      }
+      if (session != null) {
         reference = await store.bootstrap(session!.scope);
         if (reference == null) {
           try {
@@ -69,11 +77,11 @@ class FieldController extends ChangeNotifier {
     });
   }
 
-  Future<void> login(String url, String email, String password) async {
+  Future<void> login(String email, String password) async {
     busy = true;
     notifyListeners();
     try {
-      final next = await api.login(url, email, password);
+      final next = await api.login(applicationBaseUrl, email, password);
       Json? downloaded;
       try {
         downloaded = await api.bootstrap(next);
@@ -86,7 +94,7 @@ class FieldController extends ChangeNotifier {
         key: 'field_session',
         value: jsonEncode(next.toJson()),
       );
-      await store.setSetting('last_url', url);
+      await store.setSetting('last_url', applicationBaseUrl);
       session = next;
       reference = downloaded;
       needsLogin = false;
