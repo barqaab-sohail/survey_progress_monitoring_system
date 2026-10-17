@@ -34,7 +34,8 @@ class SyncFieldSurveyRequest extends FormRequest
             'header.mounting' => ['nullable', Rule::in(['S.Pole', 'D.Pole', 'Pad'])],
             'header.duty' => ['nullable', Rule::in(['General Duty', 'Dedicated'])],
             'rows' => ['present', 'array', $submitted ? 'min:1' : 'min:0', 'max:500'],
-            'rows.*' => ['array:se,group,date,gps_waypoint,latitude,longitude,gps_accuracy_m,phase,conductor_r,conductor_y,conductor_b,conductor_neutral,equipment_type,pole_class,pole_height_ft,consumers,intersection,remarks'],
+            'rows.*' => ['array:entry_version,se,group,date,gps_waypoint,latitude,longitude,gps_accuracy_m,phase,conductor_r,conductor_y,conductor_b,conductor_neutral,equipment_type,pole_class,pole_height_ft,consumers,intersection,remarks'],
+            'rows.*.entry_version' => ['sometimes', 'integer', Rule::in([2])],
             'rows.*.se' => [$paper, Rule::in(['S', 'E'])],
             'rows.*.group' => ['nullable', 'string', 'max:20'],
             'rows.*.date' => [$paper, 'date_format:Y-m-d', 'before_or_equal:today'],
@@ -50,10 +51,12 @@ class SyncFieldSurveyRequest extends FormRequest
             'rows.*.intersection' => ['nullable', 'boolean'],
             'rows.*.remarks' => ['nullable', 'string', 'max:1000'],
             'solar' => ['present', 'array', 'max:100'],
-            'solar.*' => ['array:consumer_reference,installed_pv_kw,remarks'],
-            'solar.*.consumer_reference' => ['nullable', 'string', 'max:100'],
+            'solar.*' => ['array:consumer_reference,service_load_kw,installed_pv_kw,meter_number,remarks'],
+            'solar.*.consumer_reference' => ['nullable', 'string', 'max:255'],
+            'solar.*.service_load_kw' => ['nullable', 'numeric', 'between:0,1000000'],
+            'solar.*.meter_number' => ['nullable', 'string', 'max:255'],
             'solar.*.installed_pv_kw' => ['nullable', 'numeric', 'between:0,10000000'],
-            'solar.*.remarks' => ['nullable', 'string', 'max:1000'],
+            'solar.*.remarks' => ['nullable', 'string', 'max:4000'],
             'remarks' => ['nullable', 'string', 'max:2000'],
         ];
         foreach (['substation', 'division', 'sub_division', 'sub_division_code', 'transformer_make'] as $key) {
@@ -64,6 +67,24 @@ class SyncFieldSurveyRequest extends FormRequest
         }
         foreach (['rs', 'rl', 'sc', 'lc', 'si', 'li', 'pb', 'ag', 'st'] as $key) {
             $rules['rows.*.consumers.'.$key] = ['nullable', 'integer', 'between:0,1000000'];
+        }
+
+        // Older clients and saved free-text rows remain readable and editable.
+        $equipment = null;
+        foreach (is_array($this->input('rows')) ? $this->input('rows') : [] as $index => $row) {
+            if (is_array($row) && ($row['entry_version'] ?? null) === 2) {
+                $rules["rows.$index.group"] = ['nullable', 'string', 'max:20', 'regex:/^[0-9]+$/D'];
+                $rules["rows.$index.gps_waypoint"] = [$paper, 'string', 'max:50', 'regex:/^[0-9]+$/D'];
+                $equipment ??= array_keys(app(\App\Services\Mdb\EntryLookups::class)->options(
+                    \App\Models\Feeder::whereKey($this->integer('feeder_id'))->value('project_id'))['equipment_types']);
+                $rules["rows.$index.equipment_type"] = ['nullable', 'string', Rule::in($equipment)];
+            }
+        }
+
+        foreach (is_array($this->input('solar')) ? $this->input('solar') : [] as $index => $pv) {
+            if (is_array($pv) && (array_key_exists('service_load_kw', $pv) || array_key_exists('meter_number', $pv))) {
+                $rules["solar.$index.installed_pv_kw"] = ['nullable', 'numeric', 'between:0,1000000'];
+            }
         }
 
         return $rules;

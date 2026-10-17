@@ -45,7 +45,7 @@ export function paperRows(pairs, sourceId, page, cell, selectedPair) {
                     const field=byPath.get(path);
                     const height=path==='pole_height' ? byPath.get('pole_height_unit') : null;
                     return `<td data-paper-column="${path}">${field ? cell(field, ['group_number','row_date','waypoint_reference'].includes(path)) : '—'}${height ? `<div class="paper-unit">${cell(height)}</div>` : ''}</td>`;
-                }).join('')}${['reference','service_load_kw','installed_capacity_kw','remarks'].map(path=>{
+                }).join('')}${['reference','service_load_kw','installed_capacity_kw','meter_number','remarks'].map(path=>{
                     const fields=row.fields.filter(field=>field.group==='PV' && field.path.endsWith('.'+path));
                     return `<td class="paper-pv-value">${fields.length ? fields.map(field=>cell(field)).join('') : '<span title="No PV detail entered">&mdash;</span>'}</td>`;
                 }).join('')}</tr>`;

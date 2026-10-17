@@ -91,6 +91,7 @@ class SurveyRecord {
   }
 
   static Json newRow(String date) => {
+    'entry_version': 2,
     'se': 'S',
     'group': '',
     'date': date,
@@ -110,6 +111,29 @@ class SurveyRecord {
     'intersection': false,
     'remarks': '',
   };
+
+  Json nextRow() {
+    final previous = rows.lastOrNull;
+    return newRow(previous?['date'] ?? dayString(DateTime.now()))
+      ..['se'] = previous?['se'] == 'S' ? 'E' : 'S'
+      ..['group'] = previous?['group'] ?? '';
+  }
+
+  void copyPreviousValues(int index) {
+    if (index <= 0 || index >= rows.length) return;
+    for (final key in [
+      'conductor_r',
+      'conductor_y',
+      'conductor_b',
+      'conductor_neutral',
+      'equipment_type',
+      'pole_class',
+      'pole_height_ft',
+    ]) {
+      rows[index][key] = rows[index - 1][key] ?? '';
+    }
+    rows[index]['phase'] = phaseFromConductors(rows[index]);
+  }
 
   Json payload({bool submitted = false}) {
     final result = copyJson(data);
@@ -138,9 +162,29 @@ class SurveyRecord {
     }
     for (final item in (result['solar'] as List).cast<Json>()) {
       item['installed_pv_kw'] = parseNumber(item['installed_pv_kw']);
+      if (item.containsKey('service_load_kw')) {
+        item['service_load_kw'] = parseNumber(item['service_load_kw']);
+      }
     }
     return result;
   }
+}
+
+// Same default century window as web entry. Keep existing ISO dates untouched.
+String displayEntryDate(String value) {
+  if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value)) return value;
+  return '${value.substring(8, 10)}${value.substring(5, 7)}${value.substring(2, 4)}';
+}
+
+String? parseEntryDate(String value, {int yearStart = 2000}) {
+  if (!RegExp(r'^\d{6}$').hasMatch(value)) return null;
+  final day = int.parse(value.substring(0, 2));
+  final month = int.parse(value.substring(2, 4));
+  var year = (yearStart ~/ 100) * 100 + int.parse(value.substring(4, 6));
+  if (year < yearStart) year += 100;
+  final date = DateTime(year, month, day);
+  if (date.year != year || date.month != month || date.day != day) return null;
+  return dayString(date);
 }
 
 num? parseNumber(dynamic value) {
@@ -168,6 +212,7 @@ String phaseFromConductors(Json row) => ['r', 'y', 'b']
     .where(
       (key) => ![
         '',
+        '__none__',
         '+',
         '-',
         '–',
@@ -328,6 +373,14 @@ class SurveyValidation {
       }.entries) {
         text('$prefix.${entry.key}', row[entry.key], entry.value);
       }
+      for (final key in ['group', 'gps_waypoint']) {
+        final value = (row[key] ?? '').toString();
+        if (row['entry_version'] == 2 &&
+            value.isNotEmpty &&
+            !RegExp(r'^\d+$').hasMatch(value)) {
+          result['$prefix.$key'] = 'Enter digits only; leading zeros are kept.';
+        }
+      }
       number('$prefix.latitude', row['latitude'], min: -90, max: 90);
       number('$prefix.longitude', row['longitude'], min: -180, max: 180);
       number('$prefix.gps_accuracy_m', row['gps_accuracy_m'], max: 100000000);
@@ -349,10 +402,20 @@ class SurveyValidation {
       number(
         'solar.$index.installed_pv_kw',
         item['installed_pv_kw'],
-        max: 10000000,
+        max:
+            item.containsKey('service_load_kw') ||
+                item.containsKey('meter_number')
+            ? 1000000
+            : 10000000,
       );
-      text('solar.$index.consumer_reference', item['consumer_reference'], 100);
-      text('solar.$index.remarks', item['remarks'], 1000);
+      number(
+        'solar.$index.service_load_kw',
+        item['service_load_kw'],
+        max: 1000000,
+      );
+      text('solar.$index.consumer_reference', item['consumer_reference'], 255);
+      text('solar.$index.meter_number', item['meter_number'], 255);
+      text('solar.$index.remarks', item['remarks'], 4000);
     }
     return result;
   }

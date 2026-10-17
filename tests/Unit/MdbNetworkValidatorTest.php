@@ -57,6 +57,16 @@ class MdbNetworkValidatorTest extends TestCase
         ];
     }
 
+    public function test_meter_number_can_identify_pv_without_consumer_reference(): void
+    {
+        $data = $this->fixture();
+        $data['transformers'][0]['pv_records'] = [['reference' => '', 'meter_number' => '001-AB/09', 'installed_capacity_kw' => 5, 'original_entry' => []]];
+        $codes = array_column($this->validator()->validate($data)['errors'], 'code');
+        self::assertNotContains('incomplete_pv_record', $codes);
+        $data['transformers'][0]['pv_records'][0]['meter_number'] = '';
+        self::assertContains('incomplete_pv_record', array_column($this->validator()->validate($data)['errors'], 'code'));
+    }
+
     public function test_kmz_start_requires_its_own_coordinates_for_generation(): void
     {
         $data = $this->fixture();

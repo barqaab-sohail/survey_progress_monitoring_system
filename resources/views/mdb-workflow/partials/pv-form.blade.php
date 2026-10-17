@@ -5,7 +5,7 @@
 @endphp
 <input type="hidden" name="revision" value="{{ $batch->revision }}"><input type="hidden" name="form_key" value="{{ $formKey }}">
 <div class="mdb-fields">
-    <label>Consumer reference<input name="reference" value="{{ $value('reference') }}" required maxlength="200"></label>
+    <label>Consumer reference<input name="reference" value="{{ $value('reference') }}" maxlength="255"></label>
     <label>Installed capacity (kW)<input name="installed_capacity_kw" value="{{ $value('installed_capacity_kw') }}" type="number" min="0" step="any"></label>
     <label>Consumer reference as written<input name="original_entry[reference]" value="{{ $value('original_entry.reference') }}" maxlength="200"></label>
     <label>Capacity as written<input name="original_entry[installed_capacity]" value="{{ $value('original_entry.installed_capacity') }}" maxlength="200"></label>
@@ -13,6 +13,7 @@
     <label>PDF page<input name="original_entry[source_page]" value="{{ $value('original_entry.source_page') }}" type="number" min="1"></label>
     <label>PDF source<select name="original_entry[source_pdf_id]"><option value="">Choose PDF</option>@foreach($pdfs as $source)<option value="{{ $source->id }}" @selected((string) $value('original_entry.source_pdf_id') === (string) $source->id)>{{ $source->original_name }} v{{ $source->version }}</option>@endforeach</select></label>
     <label>Survey row reference<input name="original_entry[source_row]" value="{{ $value('original_entry.source_row') }}" maxlength="100"></label>
+    <label>Meter Number<input name="meter_number" value="{{ $value('meter_number') }}" maxlength="255"></label>
     <label class="mdb-span-all">Remarks<textarea name="remarks" maxlength="4000" rows="2">{{ $value('remarks') }}</textarea></label>
     <label class="mdb-span-all">Remarks as written<textarea name="original_entry[remarks]" maxlength="4000" rows="2">{{ $value('original_entry.remarks') }}</textarea></label>
     <label class="mdb-check mdb-span-all"><input name="original_entry[manually_verified]" type="checkbox" value="1" @checked($value('original_entry.manually_verified', false)) required>I checked this PV observation against its original PDF row.</label>

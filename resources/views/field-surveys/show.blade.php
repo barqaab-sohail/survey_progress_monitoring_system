@@ -23,7 +23,7 @@
 </section>
 <section class="card"><h2>Solar / net metering ({{ count($survey->solar) }})</h2>
 @forelse($survey->solar as $solar)
-<dl class="detail-list" style="margin-bottom:16px"><div><dt>Consumer reference</dt><dd>{{ $solar['consumer_reference'] ?? '-' }}</dd></div><div><dt>Installed PV (kW)</dt><dd>{{ $solar['installed_pv_kw'] ?? '-' }}</dd></div><div><dt>Remarks</dt><dd>{{ $solar['remarks'] ?? '-' }}</dd></div></dl>
+<dl class="detail-list" style="margin-bottom:16px"><div><dt>Consumer reference</dt><dd>{{ $solar['consumer_reference'] ?? '-' }}</dd></div><div><dt>PV Service Load (kW)</dt><dd>{{ $solar['service_load_kw'] ?? '-' }}</dd></div><div><dt>Installed PV (kW)</dt><dd>{{ $solar['installed_pv_kw'] ?? '-' }}</dd></div><div><dt>Meter Number</dt><dd>{{ $solar['meter_number'] ?? '-' }}</dd></div><div><dt>Remarks</dt><dd>{{ $solar['remarks'] ?? '-' }}</dd></div></dl>
 @empty<p>No solar entries recorded.</p>@endforelse
 </section>
 <section class="card"><h2>Photos and sketches ({{ $survey->attachments->count() }})</h2><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">

@@ -23,8 +23,10 @@ test('paper rows follow S/E order and include only the selected source and page'
 test('PV details stay tied to their saved pair and row on the displayed page',()=>{
     const saved=row(1,1);
     saved.fields.push({path:'pv_details.0.reference',group:'PV',value:'Consumer 01'});
+    saved.fields.push({path:'pv_details.0.meter_number',group:'PV',value:'001-AB/09'});
     const html=paperRows([{number:7,rows:{S:saved}}],1,1,field=>field.value,0).html;
     assert.match(html,/data-sheet-pair="7"/);
     assert.match(html,/Consumer 01/);
+    assert.match(html,/001-AB\/09/);
     assert.match(html,/paper-pv-value/);
 });

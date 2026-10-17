@@ -152,7 +152,7 @@ class EntryService
         foreach ($row->pv_details ?? [] as $pv) {
             $row->pvRecords()->create(['transformer_id' => $row->transformer_id, 'section_id' => $row->section_id,
                 'reference' => $pv['reference'] ?? '', 'installed_capacity_kw' => $pv['installed_capacity_kw'] ?? null,
-                'service_load_kw' => $pv['service_load_kw'] ?? null, 'remarks' => $pv['remarks'] ?? null,
+                'service_load_kw' => $pv['service_load_kw'] ?? null, 'meter_number' => $pv['meter_number'] ?? null, 'remarks' => $pv['remarks'] ?? null,
                 'original_entry' => ['entry_row_id' => $row->id, 'source_pdf_id' => $row->source_pdf_id, 'source_page' => $row->source_page,
                     'source_row' => $row->source_row, 'manually_verified' => $row->manually_verified]]);
         }
@@ -284,8 +284,8 @@ class EntryService
                         $add('missing_entry_pv_details', $label.'enter details for the recorded PV consumers.', $row);
                     }
                     foreach ($row->pv_details ?? [] as $pv) {
-                        if (trim((string) ($pv['reference'] ?? '')) === '' || (! $simple && (($pv['service_load_kw'] ?? null) === null || ($pv['installed_capacity_kw'] ?? null) === null))) {
-                            $add('incomplete_entry_pv_details', $label.($simple ? 'PV reference needs verification.' : 'PV reference, service load and capacity need verification.'), $row);
+                        if ((trim((string) ($pv['reference'] ?? '')) === '' && trim((string) ($pv['meter_number'] ?? '')) === '') || (! $simple && (($pv['service_load_kw'] ?? null) === null || ($pv['installed_capacity_kw'] ?? null) === null))) {
+                            $add('incomplete_entry_pv_details', $label.($simple ? 'PV consumer reference or meter number needs verification.' : 'PV consumer reference or meter number, service load and capacity need verification.'), $row);
                         }
                     }
                 }

@@ -61,7 +61,7 @@ class ReviewService
                 }
                 $fields[] = $field('intersection','Intersection',$row->intersection,'boolean',[],'Consumers');
                 foreach ($row->pv_details ?? [] as $index => $pv) {
-                    foreach (['reference'=>'Consumer reference','service_load_kw'=>'Service load (kW)','installed_capacity_kw'=>'Solar capacity (kW)','remarks'=>'Remarks'] as $key=>$label) {
+                    foreach (['reference'=>'Consumer reference','service_load_kw'=>'Service load (kW)','installed_capacity_kw'=>'Solar capacity (kW)','meter_number'=>'Meter Number','remarks'=>'Remarks'] as $key=>$label) {
                         $fields[] = $field('pv_details.'.$index.'.'.$key,'PV '.($index+1).' '.$label,$pv[$key] ?? null,str_ends_with($key,'_kw') ? 'number' : 'text',[],'PV');
                     }
                 }

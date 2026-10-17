@@ -46,6 +46,7 @@ test('verifier checks values, collapses the checked header, opens row PDF pages 
     dom.window.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
     dom.window.HTMLDialogElement.prototype.close=function(){this.open=false;};
     Object.assign(globalThis,{window:dom.window,document:d});
+    boot.pairs[0].rows.S.data.pv_details=[{reference:'',service_load_kw:2.25,installed_capacity_kw:3.5,meter_number:'001-AB/09',remarks:'Meter only'}];
     let server=structuredClone(boot), lastCorrection, rejectCorrection=false, checkedPosts=0;
     const settle=async()=>{for(let i=0;i<15;i++)await new Promise(resolve=>setImmediate(resolve));};
     globalThis.fetch=async(url,options)=>{
@@ -108,6 +109,7 @@ test('verifier checks values, collapses the checked header, opens row PDF pages 
     $('edit-form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));await settle();
     assert.equal($('editor').open,false);assert.equal(lastCorrection.pole_height,37);
     assert.equal(lastCorrection.correction_reason,'Correct height from PDF');
+    assert.equal(lastCorrection.pv_details[0].meter_number,'001-AB/09');
     assert.deepEqual(lastCorrection.inheritance,{});assert.equal(lastCorrection.composite_identifier,undefined);
     assert.equal(lastCorrection.conductors.Y,'__none__');
     assert.ok(!server.checked.some(key=>key.startsWith('row.'+server.pairs[0].rows.S.id+'.')));

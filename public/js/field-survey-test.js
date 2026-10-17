@@ -145,7 +145,7 @@
             if (!data.rows.length) html += '<div class="card empty">No observations yet. Add a row for each paper-form observation.</div>';
         } else if (section === 2) {
             html = '<p>Optional. Record each consumer reference and installed PV capacity separately.</p>' + (locked() ? '' : '<button type="button" class="btn btn-primary" data-action="add-solar">Add solar installation</button>');
-            html += data.solar.map((item,i) => card(`Installation ${i+1}`,field(`solar.${i}.consumer_reference`,'Consumer reference number',{max:100}) + field(`solar.${i}.installed_pv_kw`,'Installed PV capacity (kW)',{type:'number',min:0,limit:10000000}) + field(`solar.${i}.remarks`,'Remarks',{type:'textarea',max:1000}) + (locked() ? '' : `<button type="button" class="btn btn-light" data-action="remove-solar" data-index="${i}">Remove installation</button>`))).join('');
+            html += data.solar.map((item,i) => card(`Installation ${i+1}`,field(`solar.${i}.consumer_reference`,'Consumer reference number',{max:100}) + field(`solar.${i}.service_load_kw`,'PV Service Load (kW)',{type:'number',min:0,limit:1000000}) + field(`solar.${i}.installed_pv_kw`,'Installed PV capacity (kW)',{type:'number',min:0,limit:10000000}) + field(`solar.${i}.meter_number`,'Meter Number',{max:255}) + field(`solar.${i}.remarks`,'Remarks',{type:'textarea',max:1000}) + (locked() ? '' : `<button type="button" class="btn btn-light" data-action="remove-solar" data-index="${i}">Remove installation</button>`))).join('');
             if (!data.solar.length) html += '<div class="card empty">No solar installations recorded.</div>';
         } else {
             html = '<p>Photos and sketches are optional. Files are retained in browser storage and uploaded after the test survey syncs. JPEG, PNG or PDF; maximum 10 MB per file.</p>';
@@ -174,7 +174,7 @@
                 else row.consumers[key] = number(row.consumers[key]);
             }
         }
-        for (const item of data.solar) item.installed_pv_kw = number(item.installed_pv_kw);
+        for (const item of data.solar) { item.installed_pv_kw = number(item.installed_pv_kw); if (Object.hasOwn(item,'service_load_kw')) item.service_load_kw = number(item.service_load_kw); }
         return data;
     }
     function validate(data) {
@@ -282,7 +282,7 @@
             current.data.rows.push(row);
         } else if (name === 'add-solar') {
             if (current.data.solar.length >= 100) { notice('Maximum 100 solar installations per survey.'); return; }
-            current.data.solar.push({consumer_reference:'',installed_pv_kw:'',remarks:''});
+            current.data.solar.push({consumer_reference:'',service_load_kw:'',installed_pv_kw:'',meter_number:'',remarks:''});
         } else if (name.startsWith('remove-')) {
             if (!confirm('Remove this item from the browser draft?')) return;
             if (name === 'remove-row') current.data.rows.splice(index,1);

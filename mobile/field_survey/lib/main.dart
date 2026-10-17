@@ -1,3 +1,4 @@
+import 'feeder_picker.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'api_client.dart';
@@ -392,26 +393,11 @@ class _SurveyHomeState extends State<SurveyHome> {
                   }),
                 ),
                 const SizedBox(height: 16),
-                DropdownButtonFormField<int>(
+                FeederPicker(
                   key: ValueKey(selectedTeam['id']),
-                  initialValue: selectedFeeder['id'],
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Assigned feeder',
-                  ),
-                  items: controller
-                      .feedersFor(selectedTeam['id'])
-                      .map(
-                        (f) => DropdownMenuItem<int>(
-                          value: f['id'],
-                          child: Text(
-                            '${f['feeder_code']} · ${f['feeder_name']}',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) => update(
+                  selectedId: selectedFeeder['id'],
+                  feeders: controller.feedersFor(selectedTeam['id']),
+                  onSelected: (value) => update(
                     () => selectedFeeder = controller.feeders.firstWhere(
                       (f) => f['id'] == value,
                     ),

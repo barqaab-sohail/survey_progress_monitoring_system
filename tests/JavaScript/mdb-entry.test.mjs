@@ -189,6 +189,8 @@ test('rendered operator DOM retains drafts across pages/reload, saves once, copi
     d.getElementById('entry-paste-waypoint').value='01081026001';d.getElementById('entry-paste-apply').click();
     d.querySelector('[name="intersection"]').checked=true;d.querySelector('[name="intersection"]').dispatchEvent(new first.window.Event('change',{bubbles:true}));
     d.getElementById('entry-pv-add').click();d.querySelector('[data-pv-key="reference"]').value='0000123';d.querySelector('[data-pv-key="reference"]').dispatchEvent(new first.window.Event('input',{bubbles:true}));
+    const meter=d.querySelector('[data-pv-key="meter_number"]');meter.value='001-AB/09';meter.dispatchEvent(new first.window.Event('input',{bubbles:true}));
+    assert.equal(meter.closest('label').nextElementSibling.querySelector('input').dataset.pvKey,'remarks');
     d.getElementById('entry-page-next').click();await settle();
     assert.equal(d.getElementById('entry-page').value,'2');assert.equal(d.querySelector('[name="waypoint_reference"]').value,'001');assert.equal(d.querySelector('[name="source_page"]').value,'2');
     assert.equal(d.getElementById('entry-composite').value,'01081026001');
@@ -221,6 +223,7 @@ test('rendered operator DOM retains drafts across pages/reload, saves once, copi
     assert.equal(d.activeElement,d.querySelector('[name="waypoint_reference"]'));assert.equal(d.activeElement.disabled,false);
     assert.match(d.querySelector('#entry-saved-rows .entry-completed').textContent,/Entered/);
     assert.equal(server.posts.find(p=>p.url.includes('/rows')).body.revision,revisionBefore+1);
+    assert.equal(server.posts.find(p=>p.url.includes('/rows')).body.pv_details[0].meter_number,'001-AB/09');
     assert.equal(d.querySelector('[name="consumers[rs]"]').value,'');assert.equal(d.querySelector('[name="intersection"]').checked,false);assert.equal(d.querySelectorAll('.entry-pv-row').length,0);assert.equal(d.querySelector('[name="conductors[R]"]').value,'');
     assert.match(d.getElementById('entry-group-date-status').textContent,/inherited/);
     const olderDate=d.querySelector('[name="row_date"]');olderDate.value='131222';olderDate.dispatchEvent(new second.window.Event('input',{bubbles:true}));

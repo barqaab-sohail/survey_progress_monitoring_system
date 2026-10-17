@@ -12,20 +12,21 @@ Reference: `B2308.pdf`, 27 scanned sheets titled **Data Input Form for LT Survey
 | T/F Capacity; T/F Make | `header.capacity_kva`, `header.transformer_make` | Numeric capacity; make text |
 | S.Pole; D.Pole; Pad | `header.mounting` | Printed choices, with blank allowed in a draft |
 | General Duty; Dedicated | `header.duty` | Printed choices, with blank allowed in a draft |
-| Survey Date | `survey_date` | Full calendar date |
+| Survey Date | `survey_date` | DDMMYY input, ISO calendar date in storage |
 | Inspectors; Location | `header.inspectors`, `header.location` | Text; multiple inspector names can be entered |
 | Division; Sub-Division; Sub Division Code | `header.division`, `header.sub_division`, `header.sub_division_code` | Editable text, initially from selected feeder |
 | S/E | `rows[].se` | Preserve printed S/E codes |
 | Group | `rows[].group` | Text identifier, preserving leading zeros |
-| Date: d d m m y y | `rows[].date` | Full calendar date, separate from header survey date |
+| Date: d d m m y y | `rows[].date` | DDMMYY input, ISO calendar date in storage; separate from header survey date |
 | GPS WP | `rows[].gps_waypoint` | Waypoint identifier as text; preserve leading zeros |
 | Phase | `rows[].phase` | Automatically combines populated R, Y and B conductor columns in R/Y/B order; Neutral is excluded |
 | Conductor: R, Y, B, Neutral | `rows[].conductor_r`, `conductor_y`, `conductor_b`, `conductor_neutral` | Separate editable codes or conductor descriptions |
-| Equipment Type: Type, Pole Class, Pole Height | `rows[].equipment_type`, `pole_class`, `pole_height_ft` | Type text; pole class code; numeric height |
+| Equipment Type: Type, Pole Class, Pole Height | `rows[].equipment_type`, `pole_class`, `pole_height_ft` | Type selectable from shared web EntryLookups; pole class code; numeric height |
 | Consumer Type: RS, RL, SC, LC, SI, LI, PB, AG, ST | `rows[].consumers` | Optional separate counts for each printed code |
 | Int | `rows[].intersection` | Intersection checkbox (true/false), separate from consumer counts |
 | PV Solar/Net-Metering Data: Consumer Reference No. | `solar[].consumer_reference` | Text identifier, preserving leading zeros |
-| Installed PV Capacity (kW); Remarks | `solar[].installed_pv_kw`, `solar[].remarks` | Numeric kW; text remarks |
+| PV Service Load; PV Solar Capacity (kW) | `solar[].service_load_kw`, `solar[].installed_pv_kw` | Nullable numeric kW, matching PDF entry |
+| Meter Number; Remarks | `solar[].meter_number`, `solar[].remarks` | Text; Meter Number appears before Remarks, preserves zeros/letters/separators and may replace an unavailable consumer reference |
 
 Latitude, longitude and accuracy remain optional API fields for legacy compatibility and web testing, but Android phone GPS capture and coordinate entry have been removed. Row remarks, overall remarks, and photo/sketch attachments are digital additions. They are not separate printed columns. A GPS fix does not replace the paper's waypoint identifier. The paper has a solar/net-metering section but does not separately identify a meter status or export-meter number.
 

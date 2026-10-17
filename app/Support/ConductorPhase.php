@@ -9,7 +9,7 @@ class ConductorPhase
         $phase = '';
         foreach (['r', 'y', 'b'] as $key) {
             $value = $row['conductor_'.$key] ?? null;
-            if (is_string($value) && ! in_array(strtolower(trim($value)), ['', '+', '-', '–', '—', 'x', '×'], true)) {
+            if (is_string($value) && ! in_array(strtolower(trim($value)), ['', '__none__', '+', '-', '–', '—', 'x', '×'], true)) {
                 $phase .= strtoupper($key);
             }
         }

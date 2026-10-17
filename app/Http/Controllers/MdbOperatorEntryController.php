@@ -44,9 +44,9 @@ class MdbOperatorEntryController extends Controller
             'source_page' => 'nullable|integer|min:1|max:10000', 'source_row' => 'nullable|string|max:40', 'conductors' => 'required|array:R,Y,B,N',
             'equipment_type' => 'nullable|string|max:255', 'pole_class' => 'nullable|string|max:255', 'pole_height' => 'nullable|numeric|min:0|max:200', 'pole_height_unit' => 'nullable|in:m,ft',
             'consumers' => 'required|array:rs,rl,sc,lc,si,li,pb,ag,st,pv', 'intersection' => 'required|boolean',
-            'pv_details' => 'nullable|array|max:100', 'pv_details.*' => 'array:reference,service_load_kw,installed_capacity_kw,remarks',
+            'pv_details' => 'nullable|array|max:100', 'pv_details.*' => 'array:reference,service_load_kw,installed_capacity_kw,meter_number,remarks',
             'pv_details.*.reference' => 'nullable|string|max:255', 'pv_details.*.service_load_kw' => 'nullable|numeric|min:0|max:1000000',
-            'pv_details.*.installed_capacity_kw' => 'nullable|numeric|min:0|max:1000000', 'pv_details.*.remarks' => 'nullable|string|max:4000',
+            'pv_details.*.installed_capacity_kw' => 'nullable|numeric|min:0|max:1000000', 'pv_details.*.meter_number' => 'nullable|string|max:255', 'pv_details.*.remarks' => 'nullable|string|max:4000',
             'inheritance' => 'nullable|array:conductors,equipment,group_date', 'inheritance.*' => 'nullable|integer', 'manually_verified' => 'nullable|boolean',
             'identity_version' => 'nullable|in:2', 'composite_identifier' => 'nullable|string|regex:/^\d{11}$/D', 'pdf_progress_row_id' => 'nullable|integer'];
         foreach (['R', 'Y', 'B', 'N'] as $phase) {

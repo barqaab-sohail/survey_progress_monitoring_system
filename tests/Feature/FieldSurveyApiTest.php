@@ -162,6 +162,34 @@ class FieldSurveyApiTest extends TestCase
         $this->assertDatabaseCount('audit_logs', 1);
     }
 
+    public function test_mobile_entry_options_and_meter_only_pv_survive_sync_and_edit(): void
+    {
+        $options = $this->getJson('/api/v1/field/bootstrap')->assertOk()->json('feeders.0.entry_lookups');
+        $this->assertSame(app(\App\Services\Mdb\EntryLookups::class)->options($this->project->id)['equipment_types'], $options['equipment_types']);
+        $data = $this->payload();
+        $data['rows'][0] = array_replace($data['rows'][0], ['entry_version' => 2, 'group' => '001', 'gps_waypoint' => '017', 'equipment_type' => 'TR', 'phase' => 'WRONG']);
+        $data['solar'] = [['consumer_reference' => '', 'service_load_kw' => 2.25, 'installed_pv_kw' => 3.5, 'meter_number' => '001-AB/09', 'remarks' => 'Meter only']];
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
+        $survey = FieldSurvey::firstOrFail();
+        $this->assertSame('001-AB/09', $survey->solar[0]['meter_number']);
+        $this->assertSame(2.25, $survey->solar[0]['service_load_kw']);
+        $this->assertSame('001', $survey->rows[0]['group']);
+        $this->assertSame('017', $survey->rows[0]['gps_waypoint']);
+        $this->assertSame('R', $survey->rows[0]['phase']);
+        $this->assertTrue($survey->rows[0]['intersection']);
+        $data['base_revision'] = 1;
+        $data['rows'][0]['conductor_r'] = '';
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk()->assertJsonPath('revision', 2);
+        $this->assertSame('', $survey->fresh()->rows[0]['phase']);
+        $this->assertSame('001-AB/09', $survey->fresh()->solar[0]['meter_number']);
+        $data['base_revision'] = 2;
+        $data['rows'][0]['group'] = '00a';
+        $data['rows'][0]['gps_waypoint'] = '01-7';
+        $data['rows'][0]['equipment_type'] = 'unlisted';
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()
+            ->assertJsonValidationErrors(['rows.0.group', 'rows.0.gps_waypoint', 'rows.0.equipment_type']);
+    }
+
     public function test_same_uuid_retry_is_idempotent_and_edits_require_current_revision(): void
     {
         $data = $this->payload();

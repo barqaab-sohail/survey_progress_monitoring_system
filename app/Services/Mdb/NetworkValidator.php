@@ -354,8 +354,9 @@ class NetworkValidator
             $topology[] = ['transformer_id' => $tid, 'source_waypoint_id' => $root ? ($points[$root]['id'] ?? null) : null, 'nodes' => $nodes, 'sections' => $edges];
             foreach ($transformer['pv_records'] ?? [] as $pv) {
                 $pc = $tc + array_intersect_key($pv['original_entry'] ?? [], array_flip(['source_pdf_id', 'source_page', 'source_row']));
-                if (empty($pv['reference']) || ! is_numeric($pv['installed_capacity_kw'] ?? null) || $pv['installed_capacity_kw'] < 0) {
-                    $issue('incomplete_pv_record', 'PV reference and verified installed capacity in kW are required.', $pc, $simple && ! empty($pv['reference']) && ($pv['installed_capacity_kw'] ?? null) === null);
+                $hasIdentity = trim((string) ($pv['reference'] ?? '')) !== '' || trim((string) ($pv['meter_number'] ?? '')) !== '';
+                if (! $hasIdentity || ! is_numeric($pv['installed_capacity_kw'] ?? null) || $pv['installed_capacity_kw'] < 0) {
+                    $issue('incomplete_pv_record', 'PV consumer reference or meter number and verified installed capacity in kW are required.', $pc, $simple && $hasIdentity && ($pv['installed_capacity_kw'] ?? null) === null);
                 }
                 if (! in_array($pv['original_entry']['manually_verified'] ?? false, [true, 1, '1'], true)) {
                     $issue('unverified_pv_record', 'Manually verify PV observations against their original PDF row.', $pc);

@@ -79,11 +79,11 @@ void main() {
       await tester.enterText(residential, '0');
       await tester.pump();
       await tester.scrollUntilVisible(
-        find.text('Intersection'),
+        find.text('Int'),
         -450,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.text('Intersection'), findsOneWidget);
+      expect(find.text('Int'), findsOneWidget);
       await tester.drag(find.byType(ListView), const Offset(0, 200));
       await tester.pumpAndSettle();
       await tester.tap(find.byType(CheckboxListTile));

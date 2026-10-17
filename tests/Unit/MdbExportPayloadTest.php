@@ -300,11 +300,12 @@ class MdbExportPayloadTest extends TestCase
         $mapping = &$snapshot['configuration']['settings']['mapping'];
         $mapping['version'] = ExportPayloadBuilder::EXTENDED_VERSION;
         $mapping['networks']['T-fixture']['generators'] = [['pv_record_id' => 8]];
-        $snapshot['transformers'][0]['pv_records'] = [['id' => 8, 'section_id' => 1, 'installed_capacity_kw' => null]];
+        $snapshot['transformers'][0]['pv_records'] = [['id' => 8, 'section_id' => 1, 'installed_capacity_kw' => null, 'meter_number' => '001-AB/09']];
         $revision->snapshot = $snapshot;
         $payload = $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
         $this->assertSame([['SectionId' => $payload['tables']['InstSection'][2]['SectionId']]], $payload['tables']['InstDGens']);
         $this->assertSame([], $payload['tables']['InstMymDGens']);
+        $this->assertSame('001-AB/09', $payload['pv_records'][0]['meter_number']);
         $snapshot['transformers'][0]['pv_records'][0]['section_id'] = 999;
         $revision->snapshot = $snapshot;
         $this->expectException(ValidationException::class);

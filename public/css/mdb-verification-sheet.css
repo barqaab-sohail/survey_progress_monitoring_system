@@ -29,8 +29,8 @@
 .verification-workspace .paper-page-caption{font-size:12px;font-weight:700;margin:8px 0 4px}
 .paper-legend{font-size:11px;color:#475569;margin:4px 0 8px;line-height:1.5}
 .paper-sheet-scroll{width:100%;overflow:auto;border:1px solid #344054;scrollbar-gutter:stable}
-.paper-sheet-body{min-width:1436px;background:white}
-.verification-workspace table.paper-values{width:100%;min-width:1436px;table-layout:fixed;border-collapse:collapse;border-spacing:0;margin:0}
+.paper-sheet-body{min-width:1536px;background:white}
+.verification-workspace table.paper-values{width:100%;min-width:1536px;table-layout:fixed;border-collapse:collapse;border-spacing:0;margin:0}
 .paper-values caption{text-align:center;font-size:11px;font-weight:700;border-bottom:1px solid #344054;padding:4px;background:#f4f7fa}
 .verification-workspace table.paper-values th,.verification-workspace table.paper-values td{border:1px solid #8191a0;padding:1px;text-align:center;vertical-align:middle;font-size:10px;font-weight:600;line-height:1.2;overflow-wrap:anywhere}
 .verification-workspace table.paper-values thead th{background:#f1f5f9;color:#172b40;height:23px}

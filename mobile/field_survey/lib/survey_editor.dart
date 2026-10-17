@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'field_controller.dart';
 import 'models.dart';
@@ -311,7 +312,7 @@ class _SurveyEditorState extends State<SurveyEditor>
       notice('A survey supports up to 500 rows.');
       return;
     }
-    final row = SurveyRecord.newRow(record.data['survey_date']);
+    final row = record.nextRow();
     record.rows.add(row);
     touch();
     await editRow(record.rows.length - 1);
@@ -324,6 +325,18 @@ class _SurveyEditorState extends State<SurveyEditor>
         builder: (_) => RowEditor(
           record: record,
           index: index,
+          equipmentOptions:
+              (controller.feeder(
+                        record.data['feeder_id'],
+                      )?['entry_lookups']?['equipment_types']
+                      as Map?)
+                  ?.cast<String, String>() ??
+              const {},
+          yearStart:
+              controller.feeder(
+                record.data['feeder_id'],
+              )?['entry_settings']?['two_digit_year_start'] ??
+              2000,
           editable: editable,
           onChanged: () => touch(),
           onSave: flush,
@@ -472,6 +485,11 @@ class _SurveyEditorState extends State<SurveyEditor>
         children: [
           DateEntry(
             label: 'Survey date',
+            yearStart:
+                controller.feeder(
+                  record.data['feeder_id'],
+                )?['entry_settings']?['two_digit_year_start'] ??
+                2000,
             value: record.data['survey_date'],
             enabled: editable,
             onChanged: (value) {
@@ -587,7 +605,7 @@ class _SurveyEditorState extends State<SurveyEditor>
       ),
       const SizedBox(height: 8),
       const Text(
-        'Optional. Record each consumer reference and installed PV capacity separately.',
+        'Optional. Record the consumer reference or meter number, service load and solar capacity.',
       ),
       const SizedBox(height: 14),
       if (editable)
@@ -599,7 +617,9 @@ class _SurveyEditorState extends State<SurveyEditor>
             }
             record.solar.add({
               'consumer_reference': '',
+              'service_load_kw': '',
               'installed_pv_kw': '',
+              'meter_number': '',
               'remarks': '',
             });
             touch();
@@ -620,10 +640,23 @@ class _SurveyEditorState extends State<SurveyEditor>
             ),
             text(
               entry.value,
+              'service_load_kw',
+              'PV Service Load (kW)',
+              number: true,
+              path: 'solar.${entry.key}.service_load_kw',
+            ),
+            text(
+              entry.value,
               'installed_pv_kw',
-              'Installed PV capacity (kW)',
+              'PV Solar Capacity (kW)',
               number: true,
               path: 'solar.${entry.key}.installed_pv_kw',
+            ),
+            text(
+              entry.value,
+              'meter_number',
+              'Meter Number',
+              path: 'solar.${entry.key}.meter_number',
             ),
             text(
               entry.value,
@@ -936,10 +969,14 @@ class RowEditor extends StatefulWidget {
     required this.onChanged,
     required this.onSave,
     this.showRequired = false,
+    this.equipmentOptions = const {},
+    this.yearStart = 2000,
   });
   final SurveyRecord record;
   final int index;
   final bool editable, showRequired;
+  final Map<String, String> equipmentOptions;
+  final int yearStart;
   final VoidCallback onChanged;
   final Future<void> Function() onSave;
   @override
@@ -949,6 +986,7 @@ class RowEditor extends StatefulWidget {
 class _RowEditorState extends State<RowEditor> {
   Json get row => widget.record.rows[widget.index];
   bool allowPop = false;
+  int copyGeneration = 0;
   String get prefix => 'rows.${widget.index}';
   Map<String, String> get errors =>
       SurveyValidation.errors(widget.record, submitting: widget.showRequired);
@@ -985,17 +1023,20 @@ class _RowEditorState extends State<RowEditor> {
     String key,
     String label, {
     bool number = false,
+    bool digits = false,
     String? helper,
   }) => EntryField(
-    key: ValueKey(key),
+    key: ValueKey('$key:$copyGeneration'),
     label: label,
     value: row[key],
     enabled: widget.editable,
     number: number,
+    digits: digits,
     helper: helper,
     error: errors['$prefix.$key'],
     onChanged: (value) {
       row[key] = value;
+      if (digits) row['entry_version'] = 2;
       changed();
     },
   );
@@ -1037,10 +1078,11 @@ class _RowEditorState extends State<RowEditor> {
                   changed();
                 },
               ),
-              field('group', 'Group identifier'),
+              field('group', 'Group identifier', digits: true),
               DateEntry(
                 label: 'Row date',
-                value: row['date'],
+                yearStart: widget.yearStart,
+                value: row['date'] ?? '',
                 enabled: widget.editable,
                 onChanged: (value) {
                   row['date'] = value;
@@ -1050,8 +1092,50 @@ class _RowEditorState extends State<RowEditor> {
               field(
                 'gps_waypoint',
                 'GPS waypoint identifier',
+                digits: true,
                 helper:
                     'Enter the waypoint identifier used to link the GPX file.',
+              ),
+            ],
+          ),
+          SectionCard(
+            title: 'Conductors',
+            subtitle:
+                'A = Ant, W = Wasp, GN = Gnat. Each phase is recorded separately.',
+            children: [
+              OutlinedButton.icon(
+                onPressed: widget.editable && widget.index > 0
+                    ? () {
+                        widget.record.copyPreviousValues(widget.index);
+                        copyGeneration++;
+                        changed();
+                      }
+                    : null,
+                icon: const Icon(Icons.copy),
+                label: const Text('Copy Previous Values'),
+              ),
+              Text(
+                widget.index == 0
+                    ? 'No previous row to copy.'
+                    : 'Copies conductors, equipment, pole class and height only.',
+              ),
+              ...{
+                'conductor_r': 'R conductor',
+                'conductor_y': 'Y conductor',
+                'conductor_b': 'B conductor',
+                'conductor_neutral': 'Neutral conductor',
+              }.entries.map(
+                (entry) => ConductorEntry(
+                  key: ValueKey('${entry.key}:$copyGeneration'),
+                  label: entry.value,
+                  value: row[entry.key] ?? '',
+                  enabled: widget.editable,
+                  error: errors['$prefix.${entry.key}'],
+                  onChanged: (value) {
+                    row[entry.key] = value;
+                    changed();
+                  },
+                ),
               ),
               TextFormField(
                 key: ValueKey('phase:${phaseFromConductors(row)}'),
@@ -1066,34 +1150,10 @@ class _RowEditorState extends State<RowEditor> {
             ],
           ),
           SectionCard(
-            title: 'Conductors',
-            subtitle:
-                'A = Ant, W = Wasp, GN = Gnat. Each phase is recorded separately.',
-            children: [
-              ...{
-                'conductor_r': 'R conductor',
-                'conductor_y': 'Y conductor',
-                'conductor_b': 'B conductor',
-                'conductor_neutral': 'Neutral conductor',
-              }.entries.map(
-                (entry) => ConductorEntry(
-                  label: entry.value,
-                  value: row[entry.key],
-                  enabled: widget.editable,
-                  error: errors['$prefix.${entry.key}'],
-                  onChanged: (value) {
-                    row[entry.key] = value;
-                    changed();
-                  },
-                ),
-              ),
-            ],
-          ),
-          SectionCard(
             title: 'Equipment / pole',
             children: [
               CheckboxListTile(
-                title: const Text('Intersection'),
+                title: const Text('Int'),
                 subtitle: const Text(
                   'Check when this observation is at an intersection.',
                 ),
@@ -1107,10 +1167,29 @@ class _RowEditorState extends State<RowEditor> {
                       }
                     : null,
               ),
-              field('equipment_type', 'Equipment type'),
               ChoiceField(
+                key: ValueKey('equipment:$copyGeneration'),
+                label: 'Equipment type',
+                value: row['equipment_type'] ?? '',
+                enabled: widget.editable,
+                values: {
+                  '',
+                  ...(widget.equipmentOptions.isEmpty
+                      ? ['TR', 'SP', 'Ang', 'WB']
+                      : widget.equipmentOptions.keys),
+                  if ((row['equipment_type'] ?? '').isNotEmpty)
+                    row['equipment_type'] as String,
+                }.toList(),
+                labels: widget.equipmentOptions,
+                onChanged: (value) {
+                  row['equipment_type'] = value;
+                  changed();
+                },
+              ),
+              ChoiceField(
+                key: ValueKey('pole:$copyGeneration'),
                 label: 'Pole class',
-                value: row['pole_class'],
+                value: row['pole_class'] ?? '',
                 enabled: widget.editable,
                 values: const ['', 'S', 'PCO', 'PCS', 'RS', 'TS', 'WB'],
                 onChanged: (value) {
@@ -1221,13 +1300,14 @@ class EntryField extends StatelessWidget {
     required this.onChanged,
     this.number = false,
     this.integer = false,
+    this.digits = false,
     this.lines = 1,
     this.error,
     this.helper,
   });
   final String label;
   final dynamic value;
-  final bool enabled, number, integer;
+  final bool enabled, number, integer, digits;
   final int lines;
   final String? error, helper;
   final ValueChanged<String> onChanged;
@@ -1236,7 +1316,8 @@ class EntryField extends StatelessWidget {
     initialValue: value?.toString() ?? '',
     enabled: enabled,
     maxLines: lines,
-    keyboardType: integer
+    inputFormatters: digits ? [FilteringTextInputFormatter.digitsOnly] : null,
+    keyboardType: integer || digits
         ? TextInputType.number
         : number
         ? const TextInputType.numberWithOptions(decimal: true, signed: true)
@@ -1261,11 +1342,13 @@ class ChoiceField extends StatelessWidget {
     required this.value,
     required this.enabled,
     required this.values,
+    this.labels = const {},
     required this.onChanged,
   });
   final String label, value;
   final bool enabled;
   final List<String> values;
+  final Map<String, String> labels;
   final ValueChanged<String> onChanged;
   @override
   Widget build(BuildContext context) => DropdownButtonFormField<String>(
@@ -1276,7 +1359,7 @@ class ChoiceField extends StatelessWidget {
         .map(
           (item) => DropdownMenuItem(
             value: item,
-            child: Text(item.isEmpty ? 'Not recorded' : item),
+            child: Text(item.isEmpty ? 'Not recorded' : labels[item] ?? item),
           ),
         )
         .toList(),
@@ -1284,41 +1367,72 @@ class ChoiceField extends StatelessWidget {
   );
 }
 
-class DateEntry extends StatelessWidget {
+class DateEntry extends StatefulWidget {
   const DateEntry({
     super.key,
     required this.label,
     required this.value,
     required this.enabled,
     required this.onChanged,
+    this.yearStart = 2000,
   });
   final String label, value;
   final bool enabled;
+  final int yearStart;
   final ValueChanged<String> onChanged;
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: enabled
-        ? () async {
-            final picked = await showDatePicker(
-              context: context,
-              initialDate:
-                  (DateTime.tryParse(value)?.isAfter(DateTime.now()) ?? true)
-                  ? DateTime.now()
-                  : DateTime.parse(value),
-              firstDate: DateTime(1900),
-              lastDate: DateTime.now(),
-            );
-            if (picked != null) onChanged(dayString(picked));
-          }
-        : null,
-    child: InputDecorator(
-      decoration: InputDecoration(
-        labelText: label,
-        enabled: enabled,
-        suffixIcon: const Icon(Icons.calendar_month_outlined),
-      ),
-      child: Text(value),
+  State<DateEntry> createState() => _DateEntryState();
+}
+
+class _DateEntryState extends State<DateEntry> {
+  late final TextEditingController controller;
+  String? error;
+  @override
+  void initState() {
+    super.initState();
+    controller = TextEditingController(text: displayEntryDate(widget.value));
+  }
+
+  @override
+  void didUpdateWidget(covariant DateEntry oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value &&
+        controller.text != displayEntryDate(widget.value)) {
+      controller.text = displayEntryDate(widget.value);
+    }
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => TextFormField(
+    controller: controller,
+    enabled: widget.enabled,
+    keyboardType: TextInputType.number,
+    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+    decoration: InputDecoration(
+      labelText: '${widget.label} (DDMMYY)',
+      hintText: '171026',
+      errorText: error,
+      helperText:
+          'Six digits: day, month, year. Earlier dates can be typed directly.',
     ),
+    onChanged: (value) {
+      final iso = parseEntryDate(value, yearStart: widget.yearStart);
+      setState(
+        () => error = iso == null
+            ? 'Enter a valid six-digit date (DDMMYY).'
+            : iso.compareTo(dayString(DateTime.now())) > 0
+            ? 'Date cannot be in the future.'
+            : null,
+      );
+      // Persist incomplete input too, so validation cannot silently send an old date.
+      widget.onChanged(iso ?? value);
+    },
   );
 }
 

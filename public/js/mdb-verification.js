@@ -105,7 +105,7 @@ export function initializeVerification(boot, root = document) {
         return `<input ${attributes} type="${field.type==='number' ? 'number' : field.type==='date' ? 'date' : 'text'}" value="${esc(value)}" ${limits} ${field.type==='survey-date' ? 'inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="131222"' : ''}>`;
     }
     function pvFields(records) {
-        return records.map((pv,index)=>`<div class="verification-pv-editor"><h3>PV record ${index+1}</h3>${[['reference','Consumer reference'],['service_load_kw','Service load (kW)'],['installed_capacity_kw','Solar capacity (kW)'],['remarks','Remarks']].map(([key,label])=>`<label>${label}${inputFor({path:`pv_details.${index}.${key}`,label,value:pv[key],type:key.endsWith('_kw') ? 'number' : 'text'})}</label>`).join('')}<button type="button" class="btn btn-sm btn-light" data-remove-pv="${index}">Remove PV record</button></div>`).join('');
+        return records.map((pv,index)=>`<div class="verification-pv-editor"><h3>PV record ${index+1}</h3>${[['reference','Consumer reference'],['service_load_kw','Service load (kW)'],['installed_capacity_kw','Solar capacity (kW)'],['meter_number','Meter Number'],['remarks','Remarks']].map(([key,label])=>`<label>${label}${inputFor({path:`pv_details.${index}.${key}`,label,value:pv[key],type:key.endsWith('_kw') ? 'number' : 'text'})}</label>`).join('')}<button type="button" class="btn btn-sm btn-light" data-remove-pv="${index}">Remove PV record</button></div>`).join('');
     }
     function edit(row = null, focusPath = null) {
         if(!boot.can_correct || busy)return;
@@ -178,7 +178,7 @@ export function initializeVerification(boot, root = document) {
         if(editButton)edit(pair().rows[editButton.dataset.editRow]);
         if(pageButton)showPage(pair().rows[pageButton.dataset.reviewPage]);
         if(event.target.closest('#verification-add-pv')){
-            const current=readInputs({});editing.pv=current.pv_details || [];editing.pv.push({reference:'',service_load_kw:null,installed_capacity_kw:null,remarks:''});
+            const current=readInputs({});editing.pv=current.pv_details || [];editing.pv.push({reference:'',service_load_kw:null,installed_capacity_kw:null,meter_number:'',remarks:''});
             $('pv-fields').innerHTML=pvFields(editing.pv);
         }
         const remove=event.target.closest('[data-remove-pv]');

@@ -92,6 +92,8 @@ class SimpleMdbEntryValidationTest extends TestCase
         $data = $this->fixture();
         $data['transformers'][0]['entry_rows'][1]['pv_details'][0]['reference'] = '';
         $this->assertContains('incomplete_entry_pv_details', $this->codes($data));
+        $data['transformers'][0]['entry_rows'][1]['pv_details'][0]['meter_number'] = '001-AB/09';
+        $this->assertNotContains('incomplete_entry_pv_details', $this->codes($data));
         $data['transformers'][0]['entry_rows'][1]['pv_details'] = [];
         $this->assertContains('missing_entry_pv_details', $this->codes($data));
     }

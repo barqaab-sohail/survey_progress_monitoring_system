@@ -327,11 +327,11 @@ function initialize(boot) {
         if(count>0)input.max=count;else input.removeAttribute('max');
     }
     function pvPayload() {
-        return Array.from($('entry-pv-records')?.children || []).map(element=>Object.fromEntries(['reference','service_load_kw','installed_capacity_kw','remarks'].map(key=>{const value=element.querySelector(`[data-pv-key="${key}"]`).value;return [key,key.endsWith('_kw') ? number(value) : (value || null)];})));
+        return Array.from($('entry-pv-records')?.children || []).map(element=>Object.fromEntries(['reference','service_load_kw','installed_capacity_kw','meter_number','remarks'].map(key=>{const value=element.querySelector(`[data-pv-key="${key}"]`).value;return [key,key.endsWith('_kw') ? number(value) : (value || null)];})));
     }
     function addPv(record = {}) {
         const element = document.createElement('div'); element.className='entry-pv-row';
-        element.innerHTML = [['reference','Consumer reference number'],['service_load_kw','PV service load (kW)'],['installed_capacity_kw','PV solar capacity (kW)'],['remarks','Remarks']].map(([key,label])=>`<label>${label}<input data-pv-key="${key}" aria-label="${label}" value="${esc(record[key])}" ${key.endsWith('_kw') ? 'type="number" min="0" max="1000000" step="any"' : `maxlength="${key==='remarks' ? 4000 : 255}"`}></label>`).join('')+'<button type="button" class="btn btn-sm btn-light" data-pv-remove>Remove</button>';
+        element.innerHTML = [['reference','Consumer reference number'],['service_load_kw','PV service load (kW)'],['installed_capacity_kw','PV solar capacity (kW)'],['meter_number','Meter Number'],['remarks','Remarks']].map(([key,label])=>`<label>${label}<input data-pv-key="${key}" aria-label="${label}" value="${esc(record[key])}" ${key.endsWith('_kw') ? 'type="number" min="0" max="1000000" step="any"' : `maxlength="${key==='remarks' ? 4000 : 255}"`}></label>`).join('')+'<button type="button" class="btn btn-sm btn-light" data-pv-remove>Remove</button>';
         $('entry-pv-records').append(element); $('entry-pv-count').textContent=`(${pvPayload().length})`;
     }
     function rowPayload() {

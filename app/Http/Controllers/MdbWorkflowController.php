@@ -415,8 +415,9 @@ class MdbWorkflowController extends Controller
         if ($pv?->entry_row_id) {
             throw ValidationException::withMessages(['pv' => 'Edit this PV observation in its S/E row on the operator entry screen.']);
         }
-        $data = $request->validate(['section_id' => 'nullable|integer', 'reference' => 'required|string|max:255', 'installed_capacity_kw' => 'nullable|numeric|min:0|max:1000000',
+        $data = $request->validate(['section_id' => 'nullable|integer', 'reference' => 'nullable|required_without:meter_number|string|max:255', 'meter_number' => 'nullable|required_without:reference|string|max:255', 'installed_capacity_kw' => 'nullable|numeric|min:0|max:1000000',
             'remarks' => 'nullable|string|max:10000', 'original_entry' => 'nullable|array']);
+        $data['reference'] ??= '';
         if (! empty($data['section_id'])) {
             $transformer->sections()->findOrFail($data['section_id']);
         }

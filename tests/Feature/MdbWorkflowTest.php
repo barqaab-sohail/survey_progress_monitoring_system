@@ -437,9 +437,10 @@ class MdbWorkflowTest extends TestCase
         $section = $transformer->sections()->create(['start_reference' => '0001', 'end_reference' => 'SSS']);
         $consumer = $section->consumers()->create(['category' => 'rs', 'count' => 1, 'original_value' => 'I']);
         $pv = $transformer->pvRecords()->create(['section_id' => $section->id, 'reference' => 'PV', 'installed_capacity_kw' => 1, 'original_entry' => ['installed_capacity' => 'handwritten I']]);
-        $this->put(route('mdb-workflow.pv.update', [$this->batch, $transformer, $pv]), ['revision' => 1, 'reference' => 'PV', 'installed_capacity_kw' => 2,
+        $this->put(route('mdb-workflow.pv.update', [$this->batch, $transformer, $pv]), ['revision' => 1, 'reference' => '', 'meter_number' => '001-AB/09', 'installed_capacity_kw' => 2,
             'original_entry' => ['installed_capacity' => 'handwritten I', 'manually_verified' => '1']])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertEquals(2, $pv->fresh()->installed_capacity_kw);
+        $this->assertSame('001-AB/09', $pv->fresh()->meter_number);
         $this->assertSame('handwritten I', $pv->fresh()->original_entry['installed_capacity']);
         $this->put(route('mdb-workflow.transformers.update', [$this->batch, $transformer]), ['revision' => 2, 'code' => 'CORRECTION', 'header' => ['make' => 'Reviewed']])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame(1, $transformer->fresh()->header['pages'][0]['page']);

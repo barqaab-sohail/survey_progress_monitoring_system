@@ -27,11 +27,14 @@ class FieldSurveyApiController extends Controller
         }])->orderBy('feeder_code')->get();
         $transformers = Transformer::whereIn('feeder_id', $feeders->pluck('id'))->orderBy('transformer_code')
             ->get(['id', 'feeder_id', 'transformer_code', 'capacity_kva', 'equipment_make', 'equipment_location']);
+        $lookups = $feeders->pluck('project_id')->unique()->mapWithKeys(fn ($id) => [$id => app(\App\Services\Mdb\EntryLookups::class)->options($id)]);
+        $settings = $feeders->pluck('project_id')->unique()->mapWithKeys(fn ($id) => [$id => app(\App\Services\Mdb\SurveyWaypoint::class)->settings($id)]);
 
         return response()->json([
             'user' => $user->only(['id', 'name']), 'teams' => $teams,
             'feeders' => $feeders->map(fn ($feeder) => [
                 'id' => $feeder->id, 'feeder_code' => $feeder->feeder_code, 'feeder_name' => $feeder->feeder_name,
+                'entry_lookups' => $lookups[$feeder->project_id], 'entry_settings' => $settings[$feeder->project_id],
                 'grid_station_name' => $feeder->gridStation?->name, 'division_name' => $feeder->division?->name,
                 'sub_division_name' => $feeder->subDivision?->name, 'sub_division_code' => $feeder->subDivision?->code,
                 'team_ids' => $feeder->assignments->filter(fn ($assignment) => $teams->firstWhere('id', $assignment->survey_team_id)?->project_id === $feeder->project_id)->pluck('survey_team_id')->unique()->values(),

@@ -1093,6 +1093,30 @@ class MdbOperatorEntryTest extends TestCase
         }
     }
 
+    public function test_meter_only_pv_is_saved_projected_reviewed_and_included_in_snapshot(): void
+    {
+        $row = $this->save(['consumers' => ['pv' => 1], 'pv_details' => [
+            ['reference' => null, 'service_load_kw' => 2.25, 'installed_capacity_kw' => 3.5,
+                'meter_number' => '001-AB/09', 'remarks' => 'Meter only'],
+        ]]);
+        $this->assertSame('001-AB/09', $row->fresh()->pv_details[0]['meter_number']);
+        $this->assertSame('001-AB/09', $row->pvRecords()->firstOrFail()->meter_number);
+        $snapshot = app(SnapshotService::class)->snapshot($this->batch->fresh());
+        $this->assertSame('001-AB/09', $snapshot['transformers'][0]['pv_records'][0]['meter_number']);
+        $issues = app(\App\Services\Mdb\EntryService::class)->issues($this->batch->fresh());
+        $this->assertNotContains('incomplete_entry_pv_details', array_column($issues, 'code'));
+    }
+
+    public function test_legacy_pv_snapshot_shape_remains_compatible_when_meter_number_is_null(): void
+    {
+        $this->save(['pv_details' => [['reference' => '00001', 'service_load_kw' => 2, 'installed_capacity_kw' => 3]]]);
+        $service = app(SnapshotService::class);
+        $snapshot = $service->snapshot($this->batch->fresh());
+        $this->assertArrayNotHasKey('meter_number', $snapshot['transformers'][0]['pv_records'][0]);
+        $revision = $service->capture($this->batch->fresh(), $this->batch->created_by);
+        $this->assertSame($revision->sha256, $service->capture($this->batch->fresh(), $this->batch->created_by)->sha256);
+    }
+
     public function test_continuation_and_header_corrections_keep_one_transformer_and_new_transformer_is_separate(): void
     {
         $row = $this->save();

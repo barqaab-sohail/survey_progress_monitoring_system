@@ -74,7 +74,9 @@
   "solar": [
     {
       "consumer_reference": "TEST-REF-001",
+      "service_load_kw": 2.25,
       "installed_pv_kw": 5.5,
+      "meter_number": "001-AB/09",
       "remarks": "Synthetic test only"
     }
   ],

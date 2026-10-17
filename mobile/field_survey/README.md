@@ -41,6 +41,21 @@ Phone GPS capture and manual latitude/longitude entry have been removed. The app
 
 ## Build and verify
 
+The field-entry update adds offline feeder search, S/E defaults, direct six-digit DDMMYY dates, numeric group/waypoint identifiers, shared equipment choices and Copy Previous Values. A new survey and its first row default to the phone's local date; subsequent rows inherit group/date and alternate S/E. Editing does not rewrite existing dates or adjacent rows. Copy Previous Values transfers conductors, equipment, pole class and height; GPS, identifiers, consumers, intersection and remarks stay unchanged.
+
+PV observations include service load, solar capacity and a text Meter Number before Remarks. A meter number can identify a PV observation without a consumer reference. Mobile stores these additions in its existing SQLite JSON records and immutable outgoing queue; no phone database reset is needed.
+
+Deploy the backend **before installing the updated APK**. From the production Laravel directory after pulling the changes:
+
+```sh
+php artisan migrate --force
+php artisan config:cache
+php artisan view:clear
+php artisan queue:restart
+```
+
+The migration adds a nullable `meter_number` column to MDB PV records. Existing records need no backfill. Old snapshots omit this field when null, retaining their existing hashes. Download assignments again to refresh the cached project equipment options and two-digit-year window (default 2000–2099). Keep the same signing key/application ID when updating the app, and preserve its data.
+
 The checked scaffold uses Flutter 3.44 / Dart 3.12, Android SDK 36, Android Studio JDK, and NDK `28.2.13676358` (Flutter's selected NDK, also used by the JNI dependency). Install it through Android Studio SDK Manager when it is missing; incomplete downloads need to be repaired before building.
 
 The checked Gradle configuration disables Kotlin incremental compilation because this Windows workspace and the Pub cache reside on different drives. This avoids the cross-drive cache error encountered during packaging; it affects build speed, not the app's offline behavior. The setting is documented in [Kotlin's compilation guidance](https://kotlinlang.org/docs/gradle-compilation-and-caches.html).
