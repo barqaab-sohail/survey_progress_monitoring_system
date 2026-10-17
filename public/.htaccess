@@ -1,3 +1,6 @@
+# Forward bearer authentication to PHP CGI/FastCGI on production hosting.
+CGIPassAuth On
+
 # PDF.js and its worker are ES modules. Some production Apache MIME maps
 # serve .mjs as application/octet-stream, which browsers refuse to execute.
 <IfModule mod_mime.c>
