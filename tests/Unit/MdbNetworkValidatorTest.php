@@ -258,4 +258,50 @@ class MdbNetworkValidatorTest extends TestCase
             date_default_timezone_set($previous);
         }
     }
+
+    public function test_simple_mode_allows_missing_engineering_but_keeps_verified_network(): void
+    {
+        $data = $this->fixture();
+        $data['configuration'] = ['settings' => ['simple_mdb_generation' => true]];
+        $data['template'] = [];
+        $data['transformers'][0]['capacity_kva'] = null;
+        unset($data['transformers'][0]['header']['make'], $data['transformers'][0]['header']['mounting']);
+        foreach ($data['transformers'][0]['sections'] as &$section) {
+            $section['phases'] = $section['conductors'] = [];
+            foreach (['equipment_type', 'equipment_ref', 'pole_class', 'pole_height', 'pole_height_unit'] as $key) {
+                $section[$key] = null;
+            }
+            $section['consumers'][0]['count'] = 3;
+        }
+        unset($section);
+        $result = $this->validator()->validate($data);
+        self::assertTrue($result['valid'], json_encode($result['errors']));
+        self::assertNotEmpty($result['warnings']);
+        self::assertCount(2, $result['topology'][0]['sections']);
+        self::assertNull($result['topology'][0]['nodes'][0]['projected']);
+        $data['configuration']['settings']['simple_mdb_generation'] = false;
+        self::assertFalse($this->validator()->validate($data)['valid']);
+    }
+
+    public function test_simple_mode_rejects_disconnection_cycles_missing_ids_and_invalid_values(): void
+    {
+        foreach (['disconnected_network', 'cycle_detected', 'missing_transformer_code', 'invalid_waypoint_selection', 'unverified_consumer_count', 'invalid_phases'] as $problem) {
+            $data = $this->fixture();
+            $data['configuration']['settings']['simple_mdb_generation'] = true;
+            match ($problem) {
+                'disconnected_network' => $data['transformers'][0]['source_waypoint_id'] = 4,
+                'cycle_detected' => $data['transformers'][0]['sections'][] = array_replace($data['transformers'][0]['sections'][0], ['id' => 3, 'start_reference' => '10', 'end_reference' => 'SSS']),
+                'missing_transformer_code' => $data['transformers'][0]['code'] = '',
+                'invalid_waypoint_selection' => $data['transformers'][0]['sections'][0]['start_waypoint_id'] = 999,
+                'unverified_consumer_count' => $data['transformers'][0]['sections'][0]['consumers'][0]['count'] = -1,
+                'invalid_phases' => $data['transformers'][0]['sections'][0]['phases'] = ['invalid'],
+            };
+            if ($problem === 'disconnected_network') {
+                $data['waypoints'][] = array_replace($data['waypoints'][0], ['id' => 4, 'name' => '004']);
+            }
+            $result = $this->validator()->validate($data);
+            self::assertFalse($result['valid'], $problem);
+            self::assertContains($problem, array_column($result['errors'], 'code'));
+        }
+    }
 }

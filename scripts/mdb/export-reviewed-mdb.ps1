@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory=$true)][string]$InputPath,
     [Parameter(Mandatory=$true)][string]$TemplatePath,
-    [Parameter(Mandatory=$true)][string]$OutputPath
+    [Parameter(Mandatory=$true)][string]$OutputPath,
+    [switch]$LegacyNetwork
 )
 # This CLI is invoked only with server-owned paths. Remote clients call worker_server.py.
 $ErrorActionPreference = 'Stop'
@@ -9,18 +10,7 @@ $db = $null
 $workspace = $null
 $inTransaction = $false
 $allowed = @('SAI_Control','Node','InstFeeders','InstSection','InstPrimaryTransformers','Loads')
-function SchemaSignature($database) {
-    $schema = [ordered]@{tables=@(); relations=@()}
-    foreach ($table in $database.TableDefs) {
-        if ($table.Name -like 'MSys*') { continue }
-        if ($table.Connect -ne '') { throw 'Linked tables are forbidden in approved templates.' }
-        $fields=@(); foreach($field in $table.Fields) { $fields += [ordered]@{name=$field.Name;type=$field.Type;size=$field.Size;required=$field.Required;default=$field.DefaultValue;attributes=$field.Attributes} }
-        $indexes=@(); foreach($index in $table.Indexes) { $indexes += [ordered]@{name=$index.Name;primary=$index.Primary;unique=$index.Unique;fields=@($index.Fields | ForEach-Object {$_.Name})} }
-        $schema.tables += [ordered]@{name=$table.Name;fields=$fields;indexes=$indexes}
-    }
-    foreach($relation in $database.Relations) { $schema.relations += [ordered]@{name=$relation.Name;table=$relation.Table;foreign_table=$relation.ForeignTable;attributes=$relation.Attributes;fields=@($relation.Fields | ForEach-Object {[ordered]@{name=$_.Name;foreign_name=$_.ForeignName}})} }
-    return ($schema | ConvertTo-Json -Depth 15 -Compress)
-}
+. (Join-Path $PSScriptRoot 'schema-contract.ps1')
 function ValuesEqual($expected, $actual) {
     if ($null -eq $expected) { return ($null -eq $actual -or $actual -is [DBNull]) }
     if ($null -eq $actual -or $actual -is [DBNull]) { return $false }
@@ -28,8 +18,28 @@ function ValuesEqual($expected, $actual) {
     if ($expected -is [bool]) { return ([bool]$actual -eq $expected) }
     return ([Math]::Abs([double]$actual - [double]$expected) -le 0.0000001)
 }
+function ExpectedFieldValue($row, $field) {
+    $property = $row.PSObject.Properties[$field.Name]
+    $value = if ($null -eq $property) { $null } else { $property.Value }
+    # The approved schema requires a few engineering TEXT fields (for example
+    # TransformerType), but explicitly allows zero-length values. Keep those
+    # missing values blank without changing the schema or using its defaults.
+    if ($null -eq $value -and $field.Required -and $field.Type -eq 10 -and $field.AllowZeroLength) { return '' }
+    return $value
+}
 try {
     $payload = Get-Content -LiteralPath $InputPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($LegacyNetwork) {
+        # Keep the original survey/audit outside MDB; both entry paths share all
+        # schema, explicit-NULL, mapped-value and essential-reference checks.
+        $identity = (Get-FileHash -LiteralPath $InputPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        $payload = [pscustomobject]@{
+            payload_version=1; mapping_version='synergee-reviewed-v1'; idempotency_key=$identity
+            revision=[pscustomobject]@{sha256=$identity}
+            template=[pscustomobject]@{sha256=(Get-FileHash -LiteralPath $TemplatePath -Algorithm SHA256).Hash.ToLowerInvariant(); permitted_static_tables=@()}
+            tables=$payload.tables
+        }
+    }
     if ($payload.payload_version -ne 1 -or $payload.mapping_version -notin @('synergee-reviewed-v1','synergee-reviewed-v2')) { throw 'Unsupported export payload or mapping version.' }
     if ($payload.mapping_version -eq 'synergee-reviewed-v2') { $allowed += @('InstMeterPoints','InstDGens','InstMymDGens') }
     if ($payload.idempotency_key -notmatch '^[a-f0-9]{64}$') { throw 'Invalid idempotency key.' }
@@ -44,7 +54,7 @@ try {
     $workspace = $engine.Workspaces.Item(0)
     $db = $workspace.OpenDatabase($outputFull, $true, $false)
     if (-not $db.Transactions) { throw 'Template does not support transactional MDB writes.' }
-    $schemaBefore = SchemaSignature $db
+    $schemaBefore = Assert-ApprovedMdbSchema $db
     $actualTables = @($db.TableDefs | ForEach-Object {$_.Name})
     foreach ($name in $allowed) {
         if ($actualTables -notcontains $name -or $payload.tables.PSObject.Properties.Name -notcontains $name) { throw ('Required SynerGEE table missing: '+$name) }
@@ -69,6 +79,20 @@ try {
         $fieldNames = @($definition.Fields | ForEach-Object {$_.Name})
         $rs=$db.OpenRecordset($name,2)
         foreach ($row in @($payload.tables.$name)) {
+            # PHP encodes an empty row as []; it still represents a record with
+            # all engineering columns omitted, rather than array metadata.
+            if ($row -is [array] -and $row.Count -eq 0) { $row = [pscustomobject]@{} }
+            $essential = switch ($name) {
+                'Node' { @('NodeId') }
+                'InstFeeders' { @('FeederId','SubstationId') }
+                'InstSection' { @('SectionId','FeederId','FromNodeId','ToNodeId') }
+                'SAI_Control' { @() }
+                default { @('SectionId') }
+            }
+            foreach ($column in $essential) {
+                $property = $row.PSObject.Properties[$column]
+                if ($null -eq $property -or [string]::IsNullOrWhiteSpace([string]$property.Value)) { throw ('Essential MDB identifier missing: '+$name+'.'+$column) }
+            }
             foreach($property in $row.PSObject.Properties) {
                 if ($fieldNames -notcontains $property.Name) { throw ('Mapped field does not exist: '+$name+'.'+$property.Name) }
                 if ($property.Value -is [System.Management.Automation.PSCustomObject] -or $property.Value -is [array]) { throw 'Mapped values must be scalars.' }
@@ -76,8 +100,7 @@ try {
             $rs.AddNew()
             foreach ($field in $definition.Fields) {
                 if (($field.Attributes -band 16) -eq 16) { continue }
-                $property = $row.PSObject.Properties[$field.Name]
-                $value = if ($null -eq $property) { $null } else { $property.Value }
+                $value = ExpectedFieldValue $row $field
                 if ($field.Required -and $null -eq $value) { throw ('Explicit required value missing: '+$name+'.'+$field.Name) }
                 if ($null -ne $value -and $field.Type -eq 10 -and ([string]$value).Length -gt $field.Size) { throw ('Mapped text exceeds MDB size: '+$name+'.'+$field.Name) }
                 # Null omitted columns explicitly. MDB schema defaults must never invent electrical values.
@@ -108,7 +131,8 @@ try {
     $db.Close(); $db=$null
     # Reopen through DAO and compare every field, row, count, reference and schema to the approved payload.
     $db=$workspace.OpenDatabase($outputFull,$false,$true)
-    if ((SchemaSignature $db) -cne $schemaBefore) { throw 'Output schema/relationships changed during export.' }
+    $schemaAfter = Assert-ApprovedMdbSchema $db
+    if ($schemaAfter -cne $schemaBefore) { throw 'Output schema/relationships changed during export.' }
     $counts=[ordered]@{}
     foreach ($name in $allowed) {
         $expected=@($payload.tables.$name)
@@ -125,6 +149,7 @@ try {
         }
         $used=@{}
         foreach($row in $expected) {
+            if ($row -is [array] -and $row.Count -eq 0) { $row = [pscustomobject]@{} }
             $match=-1
             $identity = if($identityColumn -eq '') {'control'} else {[string]$row.PSObject.Properties[$identityColumn].Value}
             if (-not $groups.ContainsKey($identity)) { throw ('Readback identity mismatch: '+$name) }
@@ -133,8 +158,7 @@ try {
                 $equal=$true
                 foreach($field in $db.TableDefs.Item($name).Fields) {
                     if (($field.Attributes -band 16) -eq 16) { continue }
-                    $property=$row.PSObject.Properties[$field.Name]
-                    $value=if($null -eq $property){$null}else{$property.Value}
+                    $value=ExpectedFieldValue $row $field
                     if (-not (ValuesEqual $value $rows[$i][$field.Name])) { $equal=$false;break }
                 }
                 if ($equal) {$match=$i;break}
@@ -160,7 +184,7 @@ try {
     }
     foreach($query in $referenceQueries) { $rs=$db.OpenRecordset($query,4);if([int]$rs.Fields.Item(0).Value -ne 0){throw 'MDB reference validation failed.'};$rs.Close() }
     $db.Close();$db=$null
-    $result=[ordered]@{output_sha256=(Get-FileHash -LiteralPath $outputFull -Algorithm SHA256).Hash.ToLower();payload_sha256=(Get-FileHash -LiteralPath $InputPath -Algorithm SHA256).Hash.ToLower();readback=[ordered]@{readable=$true;schema_verified=$true;references_verified=$true;mapped_values_verified=$true;counts=$counts;template_sha256=$templateHash;revision_sha256=$payload.revision.sha256};log='Access DAO reopened MDB; schema, relationships, exact mapped values, counts and model references verified. SynerGEE engineering validation remains pending.'}
+    $result=[ordered]@{output_sha256=(Get-FileHash -LiteralPath $outputFull -Algorithm SHA256).Hash.ToLower();payload_sha256=(Get-FileHash -LiteralPath $InputPath -Algorithm SHA256).Hash.ToLower();readback=[ordered]@{readable=$true;schema_verified=$true;schema_sha256=$schemaAfter;schema_table_count=50;schema_relationship_count=41;references_verified=$true;mapped_values_verified=$true;counts=$counts;template_sha256=$templateHash;revision_sha256=$payload.revision.sha256};log='Access DAO reopened MDB; exact approved 15-sample schema, all 41 relationships, mapped values, counts and model references verified. SynerGEE engineering validation remains pending.'}
     $result | ConvertTo-Json -Depth 10 -Compress
     exit 0
 } catch {

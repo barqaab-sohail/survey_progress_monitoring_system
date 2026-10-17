@@ -40,7 +40,12 @@ class ExportService
             $revision = $this->assertApproved($locked);
             $manifest = $locked->staged_workflow ? app(GenerationInputService::class)->manifest($locked) : [];
             $template = Template::findOrFail($revision->snapshot['template']['id'] ?? null);
-            $mappingVersion = $revision->snapshot['configuration']['settings']['mapping']['version'] ?? ExportPayloadBuilder::VERSION;
+            $simple = GenerationMode::simple($revision->snapshot['configuration'] ?? []);
+            if ($simple) {
+                $validation = app(NetworkValidator::class)->validate($revision->snapshot);
+                $this->require($validation['valid'], implode(' ', array_column($validation['errors'], 'message')));
+            }
+            $mappingVersion = $revision->snapshot['configuration']['settings']['mapping']['version'] ?? ($simple ? ExportPayloadBuilder::EXTENDED_VERSION : ExportPayloadBuilder::VERSION);
             $identity = [$revision->sha256, $transformerId ?? 'feeder', $template->sha256, $mappingVersion];
             if ($manifest) {
                 $identity[] = $this->snapshots->hash($manifest);
@@ -140,7 +145,8 @@ class ExportService
             $this->require(hash_equals($job->payload_sha256, hash('sha256', $json)), 'Retained approved export payload SHA-256 differs.');
             $payload = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
             $template = $job->template;
-            $this->require($template->approved_by && $template->approved_at && $template->active && hash_equals($template->sha256, $payload['template']['sha256']), 'Approved template has changed or been revoked.');
+            $simple = GenerationMode::simple(['settings' => $payload['settings'] ?? []]);
+            $this->require(($simple || ($template->approved_by && $template->approved_at)) && $template->active && hash_equals($template->sha256, $payload['template']['sha256']), 'MDB template has changed or been revoked.');
             $output = $stage.'/approved.mdb';
             $result = $this->exporter->export($payload, $template, $output);
             $readback = $this->readback->verify($output, $payload, $result);

@@ -209,4 +209,105 @@ class MdbExportPayloadTest extends TestCase
         $this->expectException(ValidationException::class);
         $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
     }
+
+    public function test_simple_mode_keeps_unknown_engineering_blank_without_inventing_demand(): void
+    {
+        [$revision, $template] = $this->fixture();
+        $snapshot = $revision->snapshot;
+        $snapshot['configuration'] = ['settings' => ['simple_mdb_generation' => true]];
+        $snapshot['transformers'][0]['header']['substation_identifier'] = 'survey-grid';
+        foreach ($snapshot['transformers'][0]['sections'] as &$section) {
+            $section['phases'] = [];
+            $section['conductors'] = [];
+            $section['equipment_ref'] = null;
+            foreach ($section['consumers'] as &$consumer) {
+                $consumer['demand'] = null;
+            }
+            unset($consumer);
+        }
+        unset($section);
+        $revision->snapshot = $snapshot;
+        $template->approved_by = $template->approved_at = null;
+        $payload = $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
+        $this->assertTrue($payload['settings']['simple_mdb_generation']);
+        $this->assertNull($payload['settings']['epsg']);
+        $this->assertSame([[]], $payload['tables']['SAI_Control']);
+        $this->assertArrayNotHasKey('TransformerType', $payload['tables']['InstPrimaryTransformers'][0]);
+        foreach ($payload['tables']['Node'] as $node) {
+            $this->assertNull($node['X']);
+            $this->assertNull($node['Y']);
+        }
+        $this->assertNull($payload['tables']['InstSection'][1]['SectionLength_MUL']);
+        $this->assertNull($payload['tables']['InstSection'][1]['SectionPhases']);
+        $this->assertNull($payload['tables']['Loads'][0]['Phase1Kva']);
+        $this->assertNull($payload['tables']['Loads'][0]['Phase1Customers']);
+        $this->assertNotEmpty($payload['engineering_omissions']);
+        $snapshot['configuration']['settings']['simple_mdb_generation'] = false;
+        $revision->snapshot = $snapshot;
+        $this->expectException(ValidationException::class);
+        $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
+    }
+
+    public function test_complete_configuration_maps_identical_tables_in_both_modes(): void
+    {
+        [$revision, $template] = $this->fixture();
+        $full = $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
+        $snapshot = $revision->snapshot;
+        $snapshot['configuration']['settings']['simple_mdb_generation'] = true;
+        $revision->snapshot = $snapshot;
+        $simple = $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
+        $this->assertSame($full['tables'], $simple['tables']);
+    }
+
+    public function test_simple_mode_still_rejects_invalid_identifiers_and_connectivity(): void
+    {
+        foreach (['missing_code', 'duplicate_id', 'self', 'duplicate_pair', 'cycle', 'disconnected', 'empty_network', 'missing_root', 'missing_substation'] as $problem) {
+            [$revision, $template] = $this->fixture();
+            $snapshot = $revision->snapshot;
+            $snapshot['configuration']['settings']['simple_mdb_generation'] = true;
+            $transformer = &$snapshot['transformers'][0];
+            match ($problem) {
+                'missing_code' => $transformer['code'] = '',
+                'duplicate_id' => $transformer['sections'][1]['id'] = 1,
+                'self' => $transformer['sections'][0]['end_waypoint_id'] = 1,
+                'duplicate_pair' => $transformer['sections'][1]['end_waypoint_id'] = 2,
+                'cycle' => $transformer['sections'][] = array_replace($transformer['sections'][0], ['id' => 3, 'start_waypoint_id' => 2, 'end_waypoint_id' => 3]),
+                'disconnected' => $transformer['source_waypoint_id'] = 4,
+                'empty_network' => $transformer['sections'] = [],
+                'missing_root' => $transformer['source_waypoint_id'] = null,
+                'missing_substation' => $snapshot['configuration']['settings']['mapping']['table_values']['InstFeeders']['SubstationId'] = null,
+            };
+            if ($problem === 'disconnected') {
+                $snapshot['waypoints'][] = ['id' => 4, 'name' => '004', 'latitude' => 30, 'longitude' => 71];
+                $snapshot['configuration']['settings']['mapping']['networks']['T-fixture']['source_sections'][1]['to'] = 'wp:4';
+            }
+            unset($transformer);
+            $revision->snapshot = $snapshot;
+            try {
+                $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
+                $this->fail('Simple mode accepted '.$problem);
+            } catch (ValidationException $exception) {
+                $this->assertNotEmpty($exception->errors(), $problem);
+            }
+        }
+    }
+
+    public function test_simple_v2_devices_allow_blank_settings_but_retain_section_integrity(): void
+    {
+        [$revision, $template] = $this->fixture();
+        $snapshot = $revision->snapshot;
+        $snapshot['configuration']['settings']['simple_mdb_generation'] = true;
+        $mapping = &$snapshot['configuration']['settings']['mapping'];
+        $mapping['version'] = ExportPayloadBuilder::EXTENDED_VERSION;
+        $mapping['networks']['T-fixture']['generators'] = [['pv_record_id' => 8]];
+        $snapshot['transformers'][0]['pv_records'] = [['id' => 8, 'section_id' => 1, 'installed_capacity_kw' => null]];
+        $revision->snapshot = $snapshot;
+        $payload = $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
+        $this->assertSame([['SectionId' => $payload['tables']['InstSection'][2]['SectionId']]], $payload['tables']['InstDGens']);
+        $this->assertSame([], $payload['tables']['InstMymDGens']);
+        $snapshot['transformers'][0]['pv_records'][0]['section_id'] = 999;
+        $revision->snapshot = $snapshot;
+        $this->expectException(ValidationException::class);
+        $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
+    }
 }

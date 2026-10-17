@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth', 'active', 'role:super_admin'])->prefix('admin/engineering')->name('engineering.')->controller(EngineeringConfigurationController::class)->group(function () {
     Route::get('/', 'index')->name('index');
     Route::get('/{project}', 'edit')->name('edit');
+    Route::put('/{project}/simple-mdb-generation', 'updateMode')->name('mode.update');
     Route::put('/{project}', 'update')->name('update');
 });
 

@@ -3,6 +3,7 @@
 @section('content')
 @php
     $settings = $configuration?->settings ?? [];
+    $simpleMode = \App\Services\Mdb\GenerationMode::simple($configuration);
     $engineering = $settings['engineering'] ?? [];
     $loads = $configuration?->load_assumptions ?? [];
     $referenceImport = $settings['reference_import'] ?? null;
@@ -15,6 +16,15 @@
 @endphp
 <div class="page-head"><div><span class="eyebrow">Admin engineering settings</span><h1>{{ $project->name }} · Engineering Configuration</h1><p>Shared by every feeder and transformer in this project. Configure once, then update only when the approved standard changes.</p></div><a class="btn btn-light" href="{{ route('engineering.index') }}">All projects</a></div>
 <section class="card"><p><strong>{{ $configuration?->approved_by ? 'Approved revision '.$configuration->revision : ($configuration ? 'Draft revision '.$configuration->revision.' — Admin review required' : 'Engineering setup required') }}</strong>@if($configuration?->approved_at) · {{ $configuration->approved_at->timezone('Asia/Karachi')->format('d M Y H:i').' PKT' }}@endif</p><p>Saving replaces the central standard and invalidates affected survey approvals and exports. Original survey observations and historical revisions are retained. Only Admin can view or change these settings.</p></section>
+<section class="card"><h2>Simple MDB Generation</h2>
+<p><strong>Current setting: {{ $simpleMode ? 'ON' : 'OFF' }}</strong></p>
+<p>ON allows missing engineering parameters to remain blank and skips mandatory engineering configuration validations. Essential identifiers and network connectivity are still validated. OFF uses the existing full engineering validation workflow. Both modes use the same approved MDB database structure.</p>
+<form method="POST" action="{{ route('engineering.mode.update', $project) }}">@csrf @method('PUT')
+<input type="hidden" name="revision" value="{{ old('revision', $configuration?->revision ?? 0) }}">
+<label>Simple MDB Generation<select name="simple_mdb_generation" required><option value="0" @selected(in_array(old('simple_mdb_generation', $simpleMode ? '1' : '0'), [false, 0, '0'], true))>OFF — Full engineering validation</option><option value="1" @selected(in_array(old('simple_mdb_generation', $simpleMode ? '1' : '0'), [true, 1, '1'], true))>ON — Engineering parameters optional</option></select></label>
+<p>Only Admin can change this setting. Saving invalidates affected survey approvals and exports; existing engineering values and their approval are retained.</p>
+<button class="btn btn-primary" type="submit">Save generation mode</button>
+</form></section>
 <form method="POST" action="{{ route('engineering.update', $project) }}">@csrf @method('PUT')
 <input type="hidden" name="revision" value="{{ old('revision', $configuration?->revision ?? 0) }}">
 @if($referenceImport)
@@ -61,7 +71,7 @@
 <details><summary>Approved equipment library references</summary>@foreach($templates as $template)<h3>{{ $template->code }} v{{ $template->version }}</h3>@foreach(['conductors','transformers','configurations'] as $library)<p><strong>{{ ucfirst($library) }}:</strong> {{ implode(', ', $template->metadata['equipment_references'][$library] ?? []) }}</p>@endforeach @endforeach</details>
 <p><a href="{{ route('mdb-workflow.config', $project) }}">Manage approved MDB templates and equipment references</a></p>
 </section>
-<section class="card"><h2>Approve configuration</h2><p>Save draft retains incomplete settings and removes engineering approval. MDB generation remains blocked until the complete configuration is approved.</p><label>Reason / engineering review reference<textarea name="reason" rows="3" required minlength="5" maxlength="4000">{{ old('reason') }}</textarea></label><label class="engineering-confirm"><input name="approved" type="checkbox" value="1" required @checked(old('approved'))> I approve these engineering values and the documented demand method for all MDB files in this project.</label><button class="btn btn-light" type="submit" name="save_action" value="draft" formnovalidate>Save draft</button> <button class="btn btn-primary" type="submit">Save approved configuration</button></section>
+<section class="card"><h2>Approve configuration</h2><p>Save draft retains incomplete settings and removes engineering approval. With Simple MDB Generation OFF, MDB generation requires a complete approved engineering configuration.</p><label>Reason / engineering review reference<textarea name="reason" rows="3" required minlength="5" maxlength="4000">{{ old('reason') }}</textarea></label><label class="engineering-confirm"><input name="approved" type="checkbox" value="1" required @checked(old('approved'))> I approve these engineering values and the documented demand method for all MDB files in this project.</label><button class="btn btn-light" type="submit" name="save_action" value="draft" formnovalidate>Save draft</button> <button class="btn btn-primary" type="submit">Save approved configuration</button></section>
 </form>
 @endsection
 @push('styles')<style>.engineering-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:16px}.engineering-grid label,.card>label{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}.engineering-confirm{display:flex!important;flex-direction:row!important;align-items:center;margin:16px 0}.engineering-confirm input{width:auto}.card textarea{width:100%;box-sizing:border-box;font-family:monospace}.table input{min-width:80px;width:100%;box-sizing:border-box}</style>@endpush

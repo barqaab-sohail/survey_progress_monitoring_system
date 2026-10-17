@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\Mdb\AccessPowerShell;
+
 return [
     'disk' => env('MDB_WORKFLOW_DISK', 'local'),
     'queue' => env('MDB_WORKFLOW_QUEUE', 'mdb'),
@@ -10,7 +12,7 @@ return [
     'entry' => ['pole_height_unit' => env('MDB_ENTRY_POLE_HEIGHT_UNIT')],
     'export' => [
         'driver' => env('MDB_EXPORT_DRIVER', 'disabled'),
-        'powershell' => env('MDB_EXPORT_POWERSHELL', (getenv('WINDIR') ?: 'C:\\Windows').'\\SysWOW64\\WindowsPowerShell\\v1.0\\powershell.exe'),
+        'powershell' => env('MDB_EXPORT_POWERSHELL') ?: AccessPowerShell::defaultPath(),
         'timeout' => (int) env('MDB_EXPORT_TIMEOUT', 180),
         'http_url' => env('MDB_EXPORT_WORKER_URL'),
         'secret' => env('MDB_EXPORT_WORKER_SECRET'),

@@ -30,6 +30,7 @@ class ReadbackVerifier
                 throw new RuntimeException('MDB readback verification is incomplete: '.$flag.'.');
             }
         }
+        ApprovedSchema::assertReadback($readback);
         foreach ($payload['tables'] as $table => $rows) {
             if (($readback['counts'][$table] ?? -1) !== count($rows)) {
                 throw new RuntimeException('MDB readback count differs for '.$table.'.');

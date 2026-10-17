@@ -6,6 +6,7 @@
     const solar = document.getElementById('mdb-solar');
     const feeder = document.getElementById('mdb-feeder');
     const transformer = document.getElementById('mdb-transformer');
+    const requiredEngineering = [...form.querySelectorAll('[data-setting][required]')];
     let dirty = false;
     let submitting = false;
     let pdfUrl = null;
@@ -45,6 +46,11 @@
     function updateTransformers() {
         transformer.replaceChildren(new Option('Enter manually', ''));
         (references[feeder.value]?.transformers ?? []).forEach((item, index) => transformer.add(new Option(`${item.transformer_code} | ${item.capacity_kva} kVA`, index)));
+        const simple = references[feeder.value]?.simple_mdb_generation === true;
+        requiredEngineering.forEach(input => { input.required = !simple; });
+        document.getElementById('simple-mdb-status').textContent = simple
+            ? 'Simple MDB Generation is ON for this project. Missing engineering settings may remain blank; identifiers and connectivity are still required.'
+            : 'Simple MDB Generation is OFF for this project. Full engineering configuration validation applies.';
     }
     set(feeder, initial.feeder_id); updateTransformers();
     set(document.getElementById('mdb-code'), initial.transformer_code);

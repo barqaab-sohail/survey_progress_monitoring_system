@@ -2,6 +2,7 @@
 
 namespace App\Services\Mdb;
 
+use App\Models\Mdb\Configuration;
 use App\Models\Mdb\EntryRow;
 use App\Models\Mdb\NetworkSection;
 use App\Models\Mdb\NetworkTransformer;
@@ -163,10 +164,12 @@ class EntryService
             $input->loadMissing(['transformers.entryRows', 'waypoints', 'sources']);
             $data = ['transformers' => $input->transformers->map(fn ($t) => ['id' => $t->id, 'header' => $t->header, 'capacity_kva' => $t->capacity_kva,
                 'source_waypoint_id' => $t->source_waypoint_id, 'section_count' => $t->sections()->count(), 'entry_rows' => $t->entryRows->map->surveyData()->all()])->all(),
-                'waypoints' => $input->waypoints->toArray(), 'sources' => $input->sources->toArray(), 'entry_settings' => app(SurveyWaypoint::class)->settings($input->project_id)];
+                'waypoints' => $input->waypoints->toArray(), 'sources' => $input->sources->toArray(), 'entry_settings' => app(SurveyWaypoint::class)->settings($input->project_id),
+                'configuration' => Configuration::where('project_id', $input->project_id)->first()?->toArray()];
         } else {
             $data = $input;
         }
+        $simple = GenerationMode::simple($data['configuration'] ?? null);
         $issues = [];
         $add = function (string $code, string $message, object $row) use (&$issues): void {
             $issues[] = ['code' => $code, 'message' => $message, 'entry_row_id' => $row->id, 'transformer_id' => $row->transformer_id,
@@ -181,11 +184,14 @@ class EntryService
                         'entry_row_id' => null, 'section_id' => null, 'source_pdf_id' => null, 'source_page' => null, 'source_row' => null];
                 };
                 foreach (['substation_name', 'feeder_name', 'feeder_identifier', 'division', 'subdivision', 'subdivision_code', 'make', 'inspector', 'location', 'survey_date', 'mounting', 'service_category'] as $key) {
+                    if ($simple && in_array($key, ['make', 'mounting', 'service_category'], true)) {
+                        continue;
+                    }
                     if (trim((string) ($transformerData['header'][$key] ?? '')) === '') {
                         $headerIssue('incomplete_operator_header', 'Transformer header: enter '.str_replace('_', ' ', $key).'.');
                     }
                 }
-                if (($transformerData['capacity_kva'] ?? 0) <= 0) {
+                if ((! $simple || filled($transformerData['capacity_kva'] ?? null)) && ($transformerData['capacity_kva'] ?? 0) <= 0) {
                     $headerIssue('missing_operator_capacity', 'Transformer header: enter positive capacity in kVA.');
                 }
                 if (empty($transformerData['source_waypoint_id'])) {
@@ -202,7 +208,17 @@ class EntryService
                 }
                 $start = $rows->firstWhere('designation', 'S');
                 $end = $rows->firstWhere('designation', 'E');
-                if ($start && $end && $start->conductors !== $end->conductors) {
+                $conductorsDiffer = $start && $end && $start->conductors !== $end->conductors;
+                if ($conductorsDiffer && $simple) {
+                    // null is unrecorded; an empty string explicitly records an absent conductor.
+                    $conductorsDiffer = collect(['R', 'Y', 'B', 'N'])->contains(function ($phase) use ($start, $end) {
+                        $from = $start->conductors[$phase] ?? null;
+                        $to = $end->conductors[$phase] ?? null;
+
+                        return $from !== null && $to !== null && $from !== $to;
+                    });
+                }
+                if ($conductorsDiffer) {
                     $add('pair_conductors_differ', 'Pair '.$number.': S and E conductor selections differ. Confirm the section conductors or explicitly copy the S values.', $end);
                 }
                 foreach ($rows as $row) {
@@ -236,25 +252,25 @@ class EntryService
                         }
                     }
                     $phase = EntryLookups::phase($row->conductors);
-                    if (! $phase['complete'] || ($row->conductors['N'] ?? null) === null) {
+                    if (! $simple && (! $phase['complete'] || ($row->conductors['N'] ?? null) === null)) {
                         $add('incomplete_entry_conductors', $label.'each conductor needs a code or explicit None / Not Present.', $row);
-                    } elseif ($phase['display'] === '') {
+                    } elseif (! $simple && $phase['display'] === '') {
                         $add('entry_no_active_phase', $label.'at least one R/Y/B conductor is required.', $row);
                     }
                     $missingEquipment = [];
-                    if (! $row->equipment_type) {
+                    if (! $simple && ! $row->equipment_type) {
                         $missingEquipment[] = 'equipment type';
                     }
-                    if (! $row->pole_class) {
+                    if (! $simple && ! $row->pole_class) {
                         $missingEquipment[] = 'pole class';
                     }
-                    if (! is_numeric($row->pole_height) || $row->pole_height <= 0) {
+                    if ((! $simple || filled($row->pole_height)) && (! is_numeric($row->pole_height) || $row->pole_height <= 0)) {
                         $missingEquipment[] = 'positive pole/tower height';
                     }
                     if ($missingEquipment) {
                         $add('incomplete_entry_equipment', $label.'enter '.implode(', ', $missingEquipment).'.', $row);
                     }
-                    if (! in_array($row->pole_height_unit, ['m', 'ft'], true)) {
+                    if (! $simple && ! in_array($row->pole_height_unit, ['m', 'ft'], true)) {
                         $add('missing_entry_height_unit', $label.'select the pole/tower height unit (Feet or Metres) beside the height before verification.', $row);
                     }
                     if (! $row->group_number || ! $row->row_date) {
@@ -268,8 +284,8 @@ class EntryService
                         $add('missing_entry_pv_details', $label.'enter details for the recorded PV consumers.', $row);
                     }
                     foreach ($row->pv_details ?? [] as $pv) {
-                        if (trim((string) ($pv['reference'] ?? '')) === '' || ($pv['service_load_kw'] ?? null) === null || ($pv['installed_capacity_kw'] ?? null) === null) {
-                            $add('incomplete_entry_pv_details', $label.'PV reference, service load and capacity need verification.', $row);
+                        if (trim((string) ($pv['reference'] ?? '')) === '' || (! $simple && (($pv['service_load_kw'] ?? null) === null || ($pv['installed_capacity_kw'] ?? null) === null))) {
+                            $add('incomplete_entry_pv_details', $label.($simple ? 'PV reference needs verification.' : 'PV reference, service load and capacity need verification.'), $row);
                         }
                     }
                 }

@@ -54,9 +54,15 @@ class SnapshotService
     {
         $batch->load(['sources', 'waypoints', 'transformers.sections.consumers', 'transformers.sections.pvRecords', 'transformers.pvRecords', 'transformers.entryRows']);
         $configuration = Configuration::where('project_id', $batch->project_id)->first();
-        $templateQuery = Template::where('active', true)->whereNotNull('approved_at')->whereNotNull('approved_by');
         $templateId = $configuration?->settings['template_id'] ?? null;
+        $templateQuery = Template::where('active', true);
+        if (! GenerationMode::simple($configuration) || ! $templateId) {
+            $templateQuery->whereNotNull('approved_at')->whereNotNull('approved_by');
+        }
         $template = $templateId ? $templateQuery->whereKey($templateId)->first() : $templateQuery->orderByDesc('id')->first();
+        if (GenerationMode::simple($configuration) && ! $templateId && ! $template) {
+            $template = app(SchemaTemplate::class)->current();
+        }
         $data = [
             'schema_version' => 1,
             'batch' => $batch->only(['id', 'project_id', 'feeder_id', 'survey_team_id', 'survey_date', 'revision']),

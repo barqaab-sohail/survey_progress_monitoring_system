@@ -2,6 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Feeder;
+use App\Models\Mdb\Configuration;
+use App\Services\Mdb\GenerationMode;
 use App\Support\IntersectionFlag;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -42,6 +45,9 @@ class SaveTransformerMdbRequest extends FormRequest
 
     public function rules(): array
     {
+        $projectId = Feeder::whereKey($this->input('feeder_id'))->value('project_id');
+        $simple = $projectId && GenerationMode::simple(Configuration::where('project_id', $projectId)->first());
+        $engineeringRequired = $simple ? 'nullable' : 'required';
         // Share the paper layout validation with Android, without its team/revision sync protocol.
         $paper = SyncFieldSurveyRequest::create('/', 'POST', ['status' => 'draft']);
         $rules = $paper->rules();
@@ -60,18 +66,18 @@ class SaveTransformerMdbRequest extends FormRequest
         }
         $rules['export_settings.transformer_latitude'] = ['nullable', 'numeric', 'between:0,84'];
         $rules['export_settings.transformer_longitude'] = ['nullable', 'numeric', 'between:-180,180'];
-        $rules['export_settings.utm_zone'] = ['required', 'integer', 'between:1,60'];
-        $rules['export_settings.frequency'] = ['required', Rule::in([50, 60])];
-        $rules['export_settings.nominal_kv'] = ['required', 'numeric', 'gt:0', 'max:500'];
+        $rules['export_settings.utm_zone'] = [$engineeringRequired, 'integer', 'between:1,60'];
+        $rules['export_settings.frequency'] = [$engineeringRequired, Rule::in([50, 60])];
+        $rules['export_settings.nominal_kv'] = [$engineeringRequired, 'numeric', 'gt:0', 'max:500'];
         foreach (['phase_spacing_cm', 'neutral_spacing_cm', 'conductor_height_m'] as $key) {
-            $rules['export_settings.'.$key] = ['required', 'numeric', 'gt:0', 'max:10000'];
+            $rules['export_settings.'.$key] = [$engineeringRequired, 'numeric', 'gt:0', 'max:10000'];
         }
-        $rules['export_settings.consumer_kva'] = ['present', 'array:rs,rl,sc,lc,si,li,pb,ag,st'];
+        $rules['export_settings.consumer_kva'] = [$simple ? 'nullable' : 'present', 'array:rs,rl,sc,lc,si,li,pb,ag,st'];
         foreach (['rs', 'rl', 'sc', 'lc', 'si', 'li', 'pb', 'ag', 'st'] as $category) {
             $rules['export_settings.consumer_kva.'.$category] = ['nullable', 'numeric', 'between:0,1000000'];
         }
         foreach (['blank_consumers_zero', 'engineering_reviewed'] as $key) {
-            $rules['export_settings.'.$key] = ['required', 'boolean'];
+            $rules['export_settings.'.$key] = [$engineeringRequired, 'boolean'];
         }
 
         return $rules;

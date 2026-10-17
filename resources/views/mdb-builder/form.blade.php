@@ -10,7 +10,7 @@
     ];
     $references = $feeders->mapWithKeys(fn ($feeder) => [$feeder->id => [
         'substation' => $feeder->gridStation?->name, 'division' => $feeder->division?->name, 'sub_division' => $feeder->subDivision?->name,
-        'sub_division_code' => $feeder->subDivision?->code, 'transformers' => $feeder->transformers->map(fn ($transformer) => $transformer->only(['transformer_code','gps_waypoint_number','capacity_kva','equipment_make','equipment_location','latitude','longitude'])),
+        'sub_division_code' => $feeder->subDivision?->code, 'simple_mdb_generation' => $simpleModes[$feeder->id] ?? false, 'transformers' => $feeder->transformers->map(fn ($transformer) => $transformer->only(['transformer_code','gps_waypoint_number','capacity_kva','equipment_make','equipment_location','latitude','longitude'])),
     ]]);
 @endphp
 <div class="page-head"><div><h1>{{ $project->exists ? $project->transformer_code : 'Enter paper transformer survey' }}</h1><p>One workspace per transformer. Transcribe the PDF and enter each line as consecutive S/E rows.</p></div><a class="btn btn-light" href="{{ route('mdb-builder.index') }}">All workspaces</a></div>
@@ -39,16 +39,17 @@
 <div style="overflow-x:auto"><table class="table mdb-paper-table"><thead><tr><th>Row</th><th>S/E</th><th>Group</th><th>Date</th><th>GPS WP</th><th>Phase</th><th>R</th><th>Y</th><th>B</th><th>Neutral</th><th>Type</th><th>Pole class</th><th>Height (ft)</th>@foreach(['RS','RL','SC','LC','SI','LI','PB','AG','ST'] as $key)<th>{{ $key }}</th>@endforeach<th>Intersection</th><th>Latitude</th><th>Longitude</th><th>GPX link</th><th>Remarks</th><th></th></tr></thead><tbody id="mdb-rows"></tbody></table></div>
 <small>A = ANT, W = WASP, GN = GNAT. Other conductor IDs remain as entered. A blank consumer cell stays unrecorded until you explicitly choose the zero-count convention below.</small>
 </section>
-<section class="card"><div class="section-title"><h2>4. Solar / net metering</h2><button class="btn btn-light" type="button" id="add-solar">Add solar entry</button></div><p>These entries are preserved in the MDB survey tables. Assign generator locations and electrical models in SynerGEE.</p><div id="mdb-solar"></div></section>
+<section class="card"><div class="section-title"><h2>4. Solar / net metering</h2><button class="btn btn-light" type="button" id="add-solar">Add solar entry</button></div><p>These entries remain in the application and export audit. Assign generator locations and electrical models in SynerGEE.</p><div id="mdb-solar"></div></section>
 <section class="card"><h2>5. Transformer connection and engineering settings</h2>
 <p>MDB generation applies the project's <a href="{{ route('engineering.index') }}">centrally approved Engineering Configuration</a>. Local electrical settings below remain available for historical drafts; they do not override that configuration during generation.</p>
+<p id="simple-mdb-status" role="status"></p>
 <p>Identify all paper waypoints that refer to the transformer connection, for example <strong>878,879</strong>. They connect to the transformer rather than creating separate distribution nodes. Confirm its actual coordinates.</p>
 <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
 <label>Transformer waypoint aliases<input data-setting="transformer_waypoints" maxlength="200" placeholder="878,879"></label>
 <label>Use a GPX transformer position<select id="root-gpx"><option value="">Choose a loaded waypoint</option></select></label>
 <label>Transformer latitude<input data-setting="transformer_latitude" type="number" min="0" max="84" step="any"></label><label>Transformer longitude<input data-setting="transformer_longitude" type="number" min="-180" max="180" step="any"></label>
 <label>UTM zone (north)<input data-setting="utm_zone" type="number" min="1" max="60" required><small id="utm-hint">Choose the zone for the survey location. Noor Pur GPX coordinates use 42N; the supplied MDB's 43N header is inconsistent with its coordinates.</small></label>
-<label>Frequency (Hz)<select data-setting="frequency"><option value="50">50</option><option value="60">60</option></select></label>
+<label>Frequency (Hz)<select data-setting="frequency"><option value="">Not configured</option><option value="50">50</option><option value="60">60</option></select></label>
 <label>Supply voltage (kV)<input data-setting="nominal_kv" type="number" min="0.001" max="500" step="any" required></label>
 <label>Transformer library type<input data-setting="transformer_type" maxlength="200" placeholder="Capacity KVA, e.g. 100 KVA"><small>Must exist in the target SynerGEE library.</small></label>
 <label>Line configuration library ID<input data-setting="configuration_id" maxlength="200"></label>
@@ -60,7 +61,7 @@
 <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(100px,1fr))">@foreach(['rs','rl','sc','lc','si','li','pb','ag','st'] as $category)<label>{{ strtoupper($category) }}<input data-rate="{{ $category }}" type="number" min="0" step="any"></label>@endforeach</div>
 <label class="mdb-check"><input type="checkbox" data-setting="blank_consumers_zero">Treat all blank E row consumer cells as zero for MDB generation</label>
 <label class="mdb-check"><input type="checkbox" data-setting="engineering_reviewed">I have reviewed the transformer connection, library IDs, load allocation, and engineering settings</label>
-<small>Spacing and network defaults start from the sample MDB. Check them for this transformer. The full paper observations remain in SurveyHeader, SurveyRows, and SurveySolar.</small>
+<small>Spacing and network defaults start from the sample MDB. Check them for this transformer. The full paper observations remain in the application and export audit.</small>
 </section>
 <section class="card"><label>Overall remarks<textarea id="mdb-remarks" maxlength="2000" rows="3"></textarea></label><div class="actions" style="margin-top:16px"><button class="btn btn-primary" id="save-mdb">Save survey and files</button>@if($project->exists)<a class="btn btn-light" id="preview-mdb" href="{{ route('mdb-builder.preview', $project) }}">Review saved network / Create MDB</a>@endif<span id="mdb-save-state" role="status">Changes are saved when you choose Save.</span></div></section>
 </form>

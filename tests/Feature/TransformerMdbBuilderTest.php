@@ -18,7 +18,9 @@ use App\Models\TransformerMdbProject;
 use App\Models\User;
 use App\Services\DriveStorage\FileStorage;
 use App\Services\GpxWaypointService;
+use App\Services\Mdb\SchemaTemplate;
 use App\Services\TransformerMdbNetworkService;
+use App\Services\TransformerMdbWriter;
 use App\Services\UtmProjection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -123,7 +125,8 @@ class TransformerMdbBuilderTest extends TestCase
         $this->assertEqualsWithDelta(5, $network['tables']['Loads'][0]['Phase1Kva'], 0.001);
         $this->assertEqualsWithDelta(4 / 3, $network['tables']['Loads'][0]['Phase1Customers'], 0.001);
         $this->assertGreaterThan(3, $network['pairs'][0]['length']);
-        $this->assertSame('0002', json_decode($network['tables']['SurveyRows'][1]['SourceJson'], true)['gps_waypoint']);
+        $this->assertSame('0002', json_decode($network['survey_audit']['rows'][1]['SourceJson'], true)['gps_waypoint']);
+        $this->assertArrayNotHasKey('SurveyRows', $network['tables']);
         $this->assertDatabaseCount('survey_daily_entries', 0);
         $this->assertDatabaseCount('mdb_daily_entries', 0);
     }
@@ -217,6 +220,204 @@ class TransformerMdbBuilderTest extends TestCase
         $this->assertEqualsWithDelta(3374315.132612462, $zone43['Y'], 0.01);
     }
 
+    private function simpleConfiguration(array $settings = [], array $loads = []): Configuration
+    {
+        return Configuration::create(['project_id' => $this->feeder->project_id, 'epsg' => null, 'revision' => 1,
+            'settings' => array_replace_recursive(['simple_mdb_generation' => true, 'engineering' => [], 'mapping' => ['table_values' => []]], $settings),
+            'load_assumptions' => $loads, 'approved_by' => null, 'approved_at' => null]);
+    }
+
+    public function test_simple_mode_uses_central_draft_and_leaves_unknown_engineering_values_blank(): void
+    {
+        $project = $this->saveProject();
+        $configuration = $this->simpleConfiguration();
+        $network = app(TransformerMdbNetworkService::class)->build($project, $configuration);
+        $this->assertTrue($network['simple_mdb_generation']);
+        $this->assertNull($network['tables']['SAI_Control'][0]['Frequency']);
+        $this->assertNull($network['tables']['SAI_Control'][0]['ProjectionFile']);
+        $this->assertNull($network['tables']['InstFeeders'][0]['NominalKvll']);
+        $this->assertNull($network['tables']['InstPrimaryTransformers'][0]['TransformerType']);
+        $this->assertNull($network['tables']['InstSection'][0]['PhaseConductorId']);
+        $this->assertSame('', $network['tables']['InstSection'][0]['SectionPhases']);
+        $this->assertSame('', $network['tables']['InstSection'][1]['SectionPhases']);
+        $this->assertNull($network['tables']['InstSection'][2]['PhaseToPhaseSpacing_MUL']);
+        $this->assertNull($network['tables']['InstSection'][2]['SectionLength_MUL']);
+        $this->assertNull($network['tables']['Node'][3]['X']);
+        $this->assertNull($network['tables']['Node'][2]['IsPadMountGear']);
+        $this->assertNull($network['tables']['Node'][3]['IsPadMountGear']);
+        $this->assertNull($network['tables']['Loads'][0]['Phase1Kva']);
+        $this->assertNull($network['tables']['Loads'][0]['Phase1Customers']);
+        $this->assertSame(100, $network['survey_audit']['header']['header']['capacity_kva']);
+        $this->assertFalse($network['survey_audit']['header']['export_settings']['engineering_reviewed']);
+        $this->assertSame(3, json_decode($network['survey_audit']['rows'][1]['SourceJson'], true)['consumers']['rs']);
+        $this->assertNull($configuration->fresh()->approved_by);
+        $this->get(route('mdb-builder.preview', $project))->assertOk()->assertSee('Simple MDB Generation is ON')->assertSee('CRS not configured');
+    }
+
+    public function test_simple_mode_can_save_missing_engineering_inputs_but_retains_numeric_validation(): void
+    {
+        $this->simpleConfiguration();
+        $payload = $this->payload();
+        $payload['export_settings'] = collect($payload['export_settings'])->only(['transformer_waypoints', 'transformer_latitude', 'transformer_longitude'])->all();
+        $payload['header']['capacity_kva'] = null;
+        $this->post(route('mdb-builder.store'), ['payload' => json_encode($payload), 'gpx' => UploadedFile::fake()->createWithContent('survey.gpx', $this->gpx())])->assertSessionHasNoErrors();
+        $project = TransformerMdbProject::firstOrFail();
+        $this->get(route('mdb-builder.preview', $project))->assertOk()->assertSee('Network ready to export');
+        $payload['revision'] = $project->revision;
+        $payload['export_settings']['nominal_kv'] = 'invalid';
+        $this->put(route('mdb-builder.update', $project), ['payload' => json_encode($payload)])->assertSessionHasErrors('export_settings.nominal_kv');
+    }
+
+    public function test_simple_mode_uses_explicit_category_rates_without_fabricating_approval(): void
+    {
+        $project = $this->saveProject();
+        $configuration = $this->simpleConfiguration(['frequency_hz' => 60, 'nominal_voltage_kv' => 11, 'engineering' => ['blank_consumers_zero' => true]],
+            ['mode' => 'category_rates', 'rates' => ['rs' => ['kva' => 3, 'power_factor' => 1], 'rl' => ['kva' => 6, 'power_factor' => 1]]]);
+        $network = app(TransformerMdbNetworkService::class)->build($project, $configuration);
+        $this->assertSame(60, $network['tables']['SAI_Control'][0]['Frequency']);
+        $this->assertSame(11.0, $network['tables']['InstFeeders'][0]['NominalKvll']);
+        $this->assertSame(2, $network['tables']['Loads'][0]['Phase1Customers']);
+        $this->assertSame(9.0, $network['tables']['Loads'][0]['Phase1Kva']);
+        $this->assertSame(0.0, $network['tables']['Loads'][0]['Phase1Kvar']);
+        $this->assertNull($configuration->fresh()->approved_by);
+    }
+
+    public function test_simple_mode_keeps_network_connectivity_and_waypoint_validation(): void
+    {
+        $project = $this->saveProject();
+        $configuration = $this->simpleConfiguration();
+        $rows = $project->rows;
+        $rows[0]['gps_waypoint'] = 'OTHER';
+        $rows[0]['latitude'] = 30.464656;
+        $rows[0]['longitude'] = 71.917033;
+        $project->update(['rows' => $rows]);
+        $this->get(route('mdb-builder.preview', $project))->assertOk()->assertSee('disconnected');
+        $rows = $this->payload()['rows'];
+        $rows[1]['gps_waypoint'] = 'MISSING';
+        $project->update(['rows' => $rows]);
+        $this->get(route('mdb-builder.preview', $project))->assertOk()->assertSee('was not found');
+        $this->assertTrue($configuration->fresh()->settings['simple_mdb_generation']);
+    }
+
+    public function test_simple_mode_keeps_unrecorded_phase_blank_without_allocating_consumer_demand(): void
+    {
+        $project = $this->saveProject();
+        $configuration = $this->simpleConfiguration(['engineering' => ['blank_consumers_zero' => true]],
+            ['mode' => 'category_rates', 'rates' => array_fill_keys(TransformerMdbNetworkService::CONSUMERS, ['kva' => 3, 'power_factor' => 1])]);
+        $rows = $project->rows;
+        $rows[0]['phase'] = null;
+        $project->update(['rows' => $rows]);
+        $network = app(TransformerMdbNetworkService::class)->build($project, $configuration);
+        $this->assertSame('', $network['tables']['InstSection'][2]['SectionPhases']);
+        $this->assertNull($network['tables']['Loads'][0]['Phase1Kva']);
+        $this->assertNull($network['tables']['Loads'][0]['Phase1Customers']);
+        $this->assertSame(4, $network['node_count']);
+        $this->assertSame(3, $network['section_count']);
+        $rows[0]['phase'] = 'invalid';
+        $project->update(['rows' => $rows]);
+        $this->expectException(ValidationException::class);
+        app(TransformerMdbNetworkService::class)->build($project, $configuration);
+    }
+
+    public function test_full_mode_still_requires_engineering_approval_and_cannot_be_overridden_by_request(): void
+    {
+        $project = $this->saveProject();
+        $this->simpleConfiguration(['simple_mdb_generation' => false]);
+        $this->post(route('mdb-builder.export', $project), ['revision' => $project->revision, 'simple_mdb_generation' => true])->assertSessionHasErrors('engineering');
+        $payload = $this->payload();
+        $payload['revision'] = $project->revision;
+        $payload['export_settings']['nominal_kv'] = null;
+        $this->put(route('mdb-builder.update', $project), ['payload' => json_encode($payload), 'simple_mdb_generation' => true])->assertSessionHasErrors('export_settings.nominal_kv');
+    }
+
+    public function test_mode_change_during_export_prevents_releasing_stale_file(): void
+    {
+        $project = $this->saveProject();
+        $configuration = $this->simpleConfiguration();
+        $path = Storage::disk('local')->path('stale-simple.mdb');
+        $this->mock(TransformerMdbWriter::class, function ($mock) use ($configuration, $path) {
+            $mock->shouldReceive('write')->once()->andReturnUsing(function () use ($configuration, $path) {
+                File::put($path, 'temporary MDB');
+                $configuration->update(['settings' => ['simple_mdb_generation' => false], 'revision' => 2]);
+
+                return $path;
+            });
+        });
+        $this->post(route('mdb-builder.export', $project), ['revision' => $project->revision])->assertSessionHasErrors('engineering');
+        $this->assertFileDoesNotExist($path);
+    }
+
+    public function test_simple_mode_exports_with_the_explicit_unapproved_registered_schema_template(): void
+    {
+        $project = $this->saveProject();
+        $template = app(SchemaTemplate::class)->ensure($this->user);
+        $configuration = $this->simpleConfiguration(['template_id' => $template->id]);
+        $network = app(TransformerMdbNetworkService::class)->build($project, $configuration);
+        $this->assertSame($template->id, $network['engineering_template_id']);
+        $this->assertSame($template->sha256, $network['engineering_template_sha256']);
+        $this->assertNull($template->approved_by);
+        $path = Storage::disk('local')->path('registered-schema-lifecycle.mdb');
+        // The native tests cover MDB bytes; this isolates the post-write release checks.
+        $this->mock(TransformerMdbWriter::class, function ($mock) use ($template, $path) {
+            $mock->shouldReceive('write')->once()->andReturnUsing(function ($network) use ($template, $path) {
+                $this->assertSame($template->id, $network['engineering_template_id']);
+                File::put($path, 'registered schema lifecycle artifact');
+
+                return $path;
+            });
+        });
+        try {
+            $this->post(route('mdb-builder.export', $project), ['revision' => $project->revision])->assertOk()->assertDownload('Feeder-T-0001.mdb');
+            $this->assertNull($template->fresh()->approved_by);
+        } finally {
+            File::delete($path);
+        }
+    }
+
+    public function test_modes_produce_identical_table_values_with_complete_engineering_configuration(): void
+    {
+        $project = $this->saveProject();
+        $template = Template::create(['code' => 'mode-comparison', 'version' => '1', 'disk' => 'local', 'path' => 'unused.mdb',
+            'sha256' => hash_file('sha256', resource_path('mdb/synergee-empty.mdb')), 'synergee_version' => 'test',
+            'approved_by' => $this->user->id, 'approved_at' => now('UTC'), 'active' => true,
+            'metadata' => ['equipment_references' => ['conductors' => ['DOG', 'ANT', 'WASP', 'GNAT'], 'transformers' => ['100 KVA']]]]);
+        $mapping = json_decode(file_get_contents(resource_path('mdb/defaults.json')), true);
+        $mapping['SAI_Control']['Frequency'] = 50;
+        $mapping['SAI_Control']['ProjectionFile'] = 'WGS 1984 UTM Zone 43N';
+        $mapping['SAI_Control']['ProjectionWKT'] = '';
+        $configuration = Configuration::create(['project_id' => $this->feeder->project_id, 'epsg' => 32643, 'revision' => 1,
+            'settings' => ['simple_mdb_generation' => false, 'frequency_hz' => 50, 'nominal_voltage_kv' => 11, 'template_id' => $template->id,
+                'mapping' => ['table_values' => $mapping], 'engineering' => ['configuration_id' => '12.5/7.2 kV cross arm C2-2',
+                    'supply_conductor_id' => 'DOG', 'secondary_conductor_id' => 'ANT', 'transformer_types' => ['100' => '100 KVA'],
+                    'phase_spacing_cm' => 121.9, 'neutral_spacing_cm' => 91.4, 'conductor_height_m' => 9.1, 'blank_consumers_zero' => true]],
+            'load_assumptions' => ['mode' => 'category_rates', 'method' => 'Synthetic fixture', 'evidence' => 'fixture',
+                'rates' => array_fill_keys(TransformerMdbNetworkService::CONSUMERS, ['kva' => 3, 'power_factor' => 1])],
+            'approved_by' => $this->user->id, 'approved_at' => now('UTC')]);
+        $full = app(TransformerMdbNetworkService::class)->build($project, $configuration);
+        $configuration->settings = array_replace($configuration->settings, ['simple_mdb_generation' => true]);
+        $simple = app(TransformerMdbNetworkService::class)->build($project, $configuration);
+        $this->assertSame($full['tables'], $simple['tables']);
+    }
+
+    public function test_native_simple_mode_exports_reference_schema_with_null_engineering_values(): void
+    {
+        if (PHP_OS_FAMILY !== 'Windows' || ! is_file(config('mdb.powershell'))) {
+            $this->markTestSkipped('Native MDB integration requires the Windows Access Database Engine.');
+        }
+        $project = $this->saveProject();
+        $this->simpleConfiguration();
+        $response = $this->post(route('mdb-builder.export', $project), ['revision' => $project->revision])->assertOk()->assertDownload('Feeder-T-0001.mdb');
+        $path = $response->baseResponse->getFile()->getPathname();
+        try {
+            $process = new Process([config('mdb.powershell'), '-NoProfile', '-NonInteractive', '-Command',
+                '$c=New-Object System.Data.OleDb.OleDbConnection("Provider=Microsoft.ACE.OLEDB.12.0;Data Source='.$path.';Mode=Read;");$c.Open();$cmd=$c.CreateCommand();$cmd.CommandText="SELECT COUNT(*) FROM Node WHERE X IS NULL AND Y IS NULL";Write-Output $cmd.ExecuteScalar();$cmd.CommandText="SELECT COUNT(*) FROM Loads WHERE Phase1Kva IS NULL AND Phase1Customers IS NULL";Write-Output $cmd.ExecuteScalar();$t=$c.GetSchema("Tables");Write-Output @($t.Rows | Where-Object { $_.TABLE_TYPE -eq "TABLE" -and -not $_.TABLE_NAME.StartsWith("MSys") }).Count;$c.Close();']);
+            $process->mustRun();
+            $this->assertSame(['4', '1', '50'], preg_split('/\s+/', trim($process->getOutput())));
+        } finally {
+            File::deleteDirectory(dirname($path));
+        }
+    }
+
     public function test_native_mdb_writer_creates_readable_database_with_matching_rows(): void
     {
         if (PHP_OS_FAMILY !== 'Windows' || ! is_file(config('mdb.powershell'))) {
@@ -244,9 +445,9 @@ class TransformerMdbBuilderTest extends TestCase
         try {
             $this->assertFileExists($path);
             $process = new Process([config('mdb.powershell'), '-NoProfile', '-NonInteractive', '-Command',
-                '$c=New-Object System.Data.OleDb.OleDbConnection("Provider=Microsoft.ACE.OLEDB.12.0;Data Source='.$path.';Mode=Read;");$c.Open();$cmd=$c.CreateCommand();$cmd.CommandText="SELECT COUNT(*) FROM Node";Write-Output $cmd.ExecuteScalar();$cmd.CommandText="SELECT TOP 1 UniqueDeviceId FROM InstPrimaryTransformers";Write-Output $cmd.ExecuteScalar();$cmd.CommandText="SELECT COUNT(*) FROM SurveyRows";Write-Output $cmd.ExecuteScalar();$c.Close();']);
+                '$c=New-Object System.Data.OleDb.OleDbConnection("Provider=Microsoft.ACE.OLEDB.12.0;Data Source='.$path.';Mode=Read;");$c.Open();$cmd=$c.CreateCommand();$cmd.CommandText="SELECT COUNT(*) FROM Node";Write-Output $cmd.ExecuteScalar();$cmd.CommandText="SELECT TOP 1 UniqueDeviceId FROM InstPrimaryTransformers";Write-Output $cmd.ExecuteScalar();$t=$c.GetSchema("Tables");Write-Output @($t.Rows | Where-Object { $_.TABLE_TYPE -eq "TABLE" -and -not $_.TABLE_NAME.StartsWith("MSys") }).Count;$c.Close();']);
             $process->mustRun();
-            $this->assertSame(['4', 'T-0001', '2'], preg_split('/\s+/', trim($process->getOutput())));
+            $this->assertSame(['4', 'T-0001', '50'], preg_split('/\s+/', trim($process->getOutput())));
         } finally {
             File::deleteDirectory(dirname($path));
         }

@@ -17,7 +17,10 @@ class NetworkValidator
         $errors = [];
         $warnings = [];
         $errors = app(EntryService::class)->issues($data);
-        $issue = static function (string $code, string $message, array $context = [], bool $warning = false) use (&$errors, &$warnings): void {
+        $simple = GenerationMode::simple($data['configuration'] ?? []);
+        $optionalEngineering = ['unapproved_settings', 'missing_projection', 'missing_electrical_setting', 'missing_library_setting', 'missing_load_assumptions', 'unapproved_mapping', 'missing_template', 'missing_equipment_library', 'missing_source_mapping', 'unknown_transformer_equipment', 'missing_conductor', 'unknown_conductor', 'missing_equipment', 'unknown_equipment', 'missing_consumer_category', 'unapproved_demand', 'missing_phase_demand', 'customer_allocation_mismatch', 'projection_failed'];
+        $issue = static function (string $code, string $message, array $context = [], bool $warning = false) use (&$errors, &$warnings, $simple, $optionalEngineering): void {
+            $warning = $warning || ($simple && in_array($code, $optionalEngineering, true));
             $value = array_merge(['code' => $code, 'message' => $message], array_intersect_key($context, array_flip(['section_id', 'transformer_id', 'source_pdf_id', 'source_page', 'source_row', 'waypoint_id', 'source_file_id'])));
             if ($warning) {
                 $warnings[] = $value;
@@ -173,14 +176,14 @@ class NetworkValidator
                 $issue('missing_transformer_code', 'Transformer code is required.', $tc);
             }
             if (! is_numeric($transformer['capacity_kva'] ?? null) || (float) $transformer['capacity_kva'] <= 0) {
-                $issue('missing_transformer_capacity', 'Transformer capacity must be verified in kVA.', $tc);
+                $issue('missing_transformer_capacity', 'Transformer capacity must be verified in kVA.', $tc, $simple && ($transformer['capacity_kva'] ?? null) === null);
             }
             if (! in_array($transformer['header']['manually_verified'] ?? false, [true, 1, '1'], true)) {
                 $issue('unverified_transformer_header', 'Manually verify the transformer header and its explicit continuation pages.', $tc);
             }
             foreach (['feeder_identifier', 'feeder_name', 'substation_identifier', 'substation_name', 'make', 'location', 'mounting', 'survey_date', 'team_group', 'inspector'] as $field) {
                 if (! is_string($transformer['header'][$field] ?? null) || trim($transformer['header'][$field]) === '') {
-                    $issue('incomplete_transformer_header', 'Verify the transformer header '.$field.' against its source PDF, or explicitly document an unresolved observation for engineering review.', $tc);
+                    $issue('incomplete_transformer_header', 'Verify the transformer header '.$field.' against its source PDF, or explicitly document an unresolved observation for engineering review.', $tc, $simple && in_array($field, ['make', 'mounting'], true));
                 }
             }
             $headerDate = $transformer['header']['survey_date'] ?? null;
@@ -271,7 +274,7 @@ class NetworkValidator
                 }
                 $start = $this->resolveEndpoint('start', $section, $points, $byName, $bySourceName, $issue, $sc);
                 $end = $this->resolveEndpoint('end', $section, $points, $byName, $bySourceName, $issue, $sc);
-                $this->validateElectrical($section, $libraries, $issue, $sc);
+                $this->validateElectrical($section, $libraries, $issue, $sc, $simple);
                 if (! $start || ! $end) {
                     continue;
                 }
@@ -315,7 +318,7 @@ class NetworkValidator
                 }
                 $measured = $section['measured_length_m'] ?? null;
                 if ($measured !== null && (! is_numeric($measured) || $measured <= 0 || empty($section['measured_length_reason']) || empty($section['length_approved_by']))) {
-                    $issue('unapproved_measured_length', 'Measured length overrides require positive metres, provenance/reason and verifier approval.', $sc);
+                    $issue('unapproved_measured_length', 'Measured length overrides require positive metres, provenance/reason and verifier approval.', $sc, $simple && is_numeric($measured) && $measured > 0);
                 }
                 $length = $measured !== null ? (float) $measured : $estimate;
                 if ($length !== null && ($length < 0.5 || $length > (float) ($settings['review_length_above_m'] ?? 2000))) {
@@ -352,7 +355,7 @@ class NetworkValidator
             foreach ($transformer['pv_records'] ?? [] as $pv) {
                 $pc = $tc + array_intersect_key($pv['original_entry'] ?? [], array_flip(['source_pdf_id', 'source_page', 'source_row']));
                 if (empty($pv['reference']) || ! is_numeric($pv['installed_capacity_kw'] ?? null) || $pv['installed_capacity_kw'] < 0) {
-                    $issue('incomplete_pv_record', 'PV reference and verified installed capacity in kW are required.', $pc);
+                    $issue('incomplete_pv_record', 'PV reference and verified installed capacity in kW are required.', $pc, $simple && ! empty($pv['reference']) && ($pv['installed_capacity_kw'] ?? null) === null);
                 }
                 if (! in_array($pv['original_entry']['manually_verified'] ?? false, [true, 1, '1'], true)) {
                     $issue('unverified_pv_record', 'Manually verify PV observations against their original PDF row.', $pc);
@@ -368,7 +371,7 @@ class NetworkValidator
                 if (($pv['installed_capacity_kw'] ?? 0) > 0 && ($mapping['version'] ?? '') !== ExportPayloadBuilder::EXTENDED_VERSION) {
                     $exclusion = $mapping['pv_exclusion'] ?? [];
                     if (empty($exclusion['reason']) || empty($exclusion['reviewed_at']) || empty($exclusion['reviewed_by']) || $exclusion['reviewed_by'] != ($config['approved_by'] ?? null)) {
-                        $issue('pv_model_unmapped', 'Positive PV capacity needs a supported reviewed SynerGEE generation mapping or an explicit engineering-approved exclusion with reason.', $pc);
+                        $issue('pv_model_unmapped', 'Positive PV capacity needs a supported reviewed SynerGEE generation mapping or an explicit engineering-approved exclusion with reason.', $pc, $simple);
                     }
                 }
             }
@@ -423,11 +426,11 @@ class NetworkValidator
         return $matches[0];
     }
 
-    private function validateElectrical(array $section, array $libraries, callable $issue, array $context): void
+    private function validateElectrical(array $section, array $libraries, callable $issue, array $context, bool $simple): void
     {
         $phases = $section['phases'] ?? [];
         if (! is_array($phases) || $phases === [] || count($phases) !== count(array_unique($phases)) || array_diff($phases, ['R', 'Y', 'B', 'N']) || ! array_intersect($phases, ['R', 'Y', 'B'])) {
-            $issue('invalid_phases', 'Select distinct R, Y, B phases and neutral where present.', $context);
+            $issue('invalid_phases', 'Select distinct R, Y, B phases and neutral where present.', $context, $simple && empty($phases));
             $phases = [];
         }
         $conductors = $section['conductors'] ?? [];
@@ -436,7 +439,7 @@ class NetworkValidator
             if (in_array($phase, $phases, true) && (! is_string($code) || trim($code) === '')) {
                 $issue('missing_conductor', 'Active '.$phase.' requires a separately verified conductor code.', $context);
             }
-            if ($code && ! in_array($phase, $phases, true)) {
+            if ($code && ! in_array($phase, $phases, true) && (! $simple || $phases !== [])) {
                 $issue('phase_conductor_mismatch', $phase.' conductor is provided without that phase.', $context);
             }
             if ($code && ! in_array($code, $libraries['conductors'] ?? [], true)) {
@@ -449,7 +452,10 @@ class NetworkValidator
             $issue('unknown_equipment', 'Equipment reference is absent from the approved template library.', $context);
         }
         if (empty($section['pole_class']) || ! is_numeric($section['pole_height'] ?? null) || $section['pole_height'] <= 0 || ! in_array($section['pole_height_unit'] ?? '', ['m', 'ft'], true)) {
-            $issue('missing_pole_units', 'Verify pole class and positive pole height with explicit m or ft units.', $context);
+            $height = $section['pole_height'] ?? null;
+            $unit = $section['pole_height_unit'] ?? null;
+            $validPartial = ($height === null || (is_numeric($height) && is_finite((float) $height) && $height > 0)) && ($unit === null || $unit === '' || in_array($unit, ['m', 'ft'], true));
+            $issue('missing_pole_units', 'Verify pole class and positive pole height with explicit m or ft units.', $context, $simple && $validPartial);
         }
         $categories = array_column($section['consumers'] ?? [], 'category');
         foreach (['rs', 'rl', 'sc', 'lc', 'si', 'li', 'pb', 'ag', 'st'] as $category) {
@@ -462,6 +468,9 @@ class NetworkValidator
                 $issue('invalid_consumer_category', 'Consumer category is not one of the nine printed categories. Int is an intersection flag.', $context);
             }
             $count = $consumer['count'] ?? null;
+            if ($simple && $count === null) {
+                continue;
+            }
             if ($count === null || filter_var($count, FILTER_VALIDATE_INT) === false || $count < 0) {
                 $issue('unverified_consumer_count', 'Consumer category '.$consumer['category'].' needs a verified nonnegative count; blank does not mean zero.', $context);
 
@@ -474,7 +483,9 @@ class NetworkValidator
             if (empty($demand['method']) || empty($demand['evidence']) || empty($demand['approved_by']) || empty($demand['phase_values'])) {
                 $issue('unapproved_demand', 'Consumer counts require measured or approved documented demand and explicit phase allocation.', $context);
 
-                continue;
+                if (! $simple) {
+                    continue;
+                }
             }
             foreach (array_intersect($phases, ['R', 'Y', 'B']) as $activePhase) {
                 if (! isset($demand['phase_values'][$activePhase])) {
@@ -482,16 +493,19 @@ class NetworkValidator
                 }
             }
             $total = 0;
-            foreach ($demand['phase_values'] as $phase => $values) {
-                if (! in_array($phase, ['R', 'Y', 'B'], true) || (! in_array($phase, $phases, true) && array_sum(array_map('floatval', $values)) != 0)) {
+            foreach ($demand['phase_values'] ?? [] as $phase => $values) {
+                if (! in_array($phase, ['R', 'Y', 'B'], true) || ((! $simple || $phases !== []) && ! in_array($phase, $phases, true) && array_sum(array_map('floatval', $values)) != 0)) {
                     $issue('invalid_load_phase', 'Demand phase allocation must use active phases; a disconnected phase can only have explicit verified zeros.', $context);
                 }
                 foreach (['customers', 'kw', 'kvar', 'kva'] as $key) {
+                    if ($simple && ($values[$key] ?? null) === null) {
+                        continue;
+                    }
                     if (! is_numeric($values[$key] ?? null) || ! is_finite((float) $values[$key]) || ($key !== 'kvar' && $values[$key] < 0)) {
                         $issue('incomplete_demand', 'Approved per-phase '.$key.' is required; no load values are inferred.', $context);
                     }
                 }
-                if (filter_var($values['customers'] ?? null, FILTER_VALIDATE_INT) === false) {
+                if ((! $simple || isset($values['customers'])) && filter_var($values['customers'] ?? null, FILTER_VALIDATE_INT) === false) {
                     $issue('invalid_phase_customers', 'Per-phase customer counts must be integers.', $context);
                 }
                 $total += (float) ($values['customers'] ?? 0);

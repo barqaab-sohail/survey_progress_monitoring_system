@@ -13,6 +13,7 @@ use App\Services\AuditService;
 use App\Services\DriveStorage\FileStorage;
 use App\Services\GpxWaypointService;
 use App\Services\Mdb\EngineeringConfiguration;
+use App\Services\Mdb\GenerationMode;
 use App\Services\TransformerMdbNetworkService;
 use App\Services\TransformerMdbWriter;
 use Illuminate\Http\Request;
@@ -57,8 +58,10 @@ class TransformerMdbBuilderController extends Controller
     private function form(TransformerMdbProject $project)
     {
         $feeders = Feeder::active()->whereHas('project', fn ($query) => $query->where('status', 'active'))->with(['gridStation', 'division', 'subDivision', 'transformers' => fn ($query) => $query->select(['id', 'feeder_id', 'transformer_code', 'gps_waypoint_number', 'capacity_kva', 'equipment_make', 'equipment_location', 'latitude', 'longitude'])])->orderBy('feeder_code')->get();
+        $configurations = Configuration::whereIn('project_id', $feeders->pluck('project_id')->unique())->get()->keyBy('project_id');
+        $simpleModes = $feeders->mapWithKeys(fn ($feeder) => [$feeder->id => GenerationMode::simple($configurations->get($feeder->project_id))]);
 
-        return view('mdb-builder.form', compact('project', 'feeders'));
+        return view('mdb-builder.form', compact('project', 'feeders', 'simpleModes'));
     }
 
     public function store(SaveTransformerMdbRequest $request, GpxWaypointService $gpx, AuditService $audit)
@@ -163,7 +166,7 @@ class TransformerMdbBuilderController extends Controller
         $problems = [];
         try {
             $configuration = Configuration::where('project_id', $project->feeder->project_id)->first();
-            $network = $builder->build($project, ! empty($configuration?->settings['engineering']) ? $configuration : null);
+            $network = $builder->build($project, GenerationMode::simple($configuration) || ! empty($configuration?->settings['engineering']) ? $configuration : null);
         } catch (ValidationException $exception) {
             $problems = $exception->errors();
         }
@@ -176,7 +179,11 @@ class TransformerMdbBuilderController extends Controller
         $this->editor($request);
         $request->validate(['revision' => ['required', 'integer']]);
         abort_unless($request->integer('revision') === $project->revision, 409, 'Workspace changed. Review the latest revision before export.');
-        $configuration = app(EngineeringConfiguration::class)->approved($project->feeder->project_id);
+        $configuration = Configuration::where('project_id', $project->feeder->project_id)->first();
+        if (! GenerationMode::simple($configuration)) {
+            $configuration = app(EngineeringConfiguration::class)->approved($project->feeder->project_id);
+        }
+        $configurationState = $this->configurationState($configuration);
         $network = $builder->build($project, $configuration);
         try {
             $path = $writer->write($network);
@@ -184,14 +191,16 @@ class TransformerMdbBuilderController extends Controller
             return back()->withErrors(['export' => $exception->getMessage()]);
         }
         $currentConfiguration = $configuration->fresh();
-        $template = Template::find($network['engineering_template_id']);
-        if (! $currentConfiguration || $currentConfiguration->revision !== $configuration->revision || ! $currentConfiguration->approved_by
-            || ! $template?->active || ! $template->approved_by || ! $template->approved_at || ! hash_equals($network['engineering_template_sha256'], $template->sha256)) {
+        $template = isset($network['engineering_template_id']) ? Template::find($network['engineering_template_id']) : null;
+        $simpleSchema = ($network['simple_mdb_generation'] ?? false) === true && ($template?->metadata['system_reference_schema'] ?? false) === true;
+        $templateChanged = isset($network['engineering_template_id']) && (! $template?->active || (! $simpleSchema && (! $template->approved_by || ! $template->approved_at)) || ! hash_equals($network['engineering_template_sha256'], $template->sha256));
+        if (! $currentConfiguration || ! hash_equals($configurationState, $this->configurationState($currentConfiguration)) || $templateChanged
+            || $project->fresh()?->revision !== $project->revision) {
             File::delete($path);
             throw ValidationException::withMessages(['engineering' => 'Engineering configuration changed during generation. Review and generate again.']);
         }
         try {
-            $audit->record($request->user(), 'mdb_workspace.exported', $project, new: ['revision' => $project->revision, 'engineering_configuration_id' => $configuration->id, 'engineering_configuration_revision' => $configuration->revision, 'nodes' => $network['node_count'], 'sections' => $network['section_count']]);
+            $audit->record($request->user(), 'mdb_workspace.exported', $project, new: ['revision' => $project->revision, 'engineering_configuration_id' => $configuration->id, 'engineering_configuration_revision' => $configuration->revision, 'simple_mdb_generation' => GenerationMode::simple($configuration), 'nodes' => $network['node_count'], 'sections' => $network['section_count']]);
         } catch (Throwable $exception) {
             File::deleteDirectory(dirname($path));
             throw $exception;
@@ -215,6 +224,11 @@ class TransformerMdbBuilderController extends Controller
     private function editor(Request $request): void
     {
         abort_unless($request->user()->hasRole('super_admin'), 403);
+    }
+
+    private function configurationState(Configuration $configuration): string
+    {
+        return hash('sha256', json_encode($configuration->only(['id', 'project_id', 'epsg', 'settings', 'load_assumptions', 'revision', 'approved_by', 'approved_at']), JSON_THROW_ON_ERROR));
     }
 
     private function settings(): array
