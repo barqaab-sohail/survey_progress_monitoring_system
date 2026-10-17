@@ -41,11 +41,11 @@ Phone GPS capture and manual latitude/longitude entry have been removed. The app
 
 ## Build and verify
 
-The field-entry update adds offline feeder search through a transformer-style dialog, automatic S/E pairing, direct six-digit DDMMYY dates, numeric waypoint identifiers, shared equipment choices and Copy Previous Values. New rows use the assigned team's last two number digits as their read-only Group Identifier (for example Survey Team 01 → 01). Missing or conflicting team numbers block new collection and need an administrator's correction. Existing groups and dates stay unchanged. Subsequent rows inherit the date and alternate S/E. Pair IDs preserve the relationship; deleting a row asks for confirmation before removing its entire pair. Legacy adjacent S/E rows receive IDs without rewriting their observation values. Copy Previous Values transfers conductors, equipment, pole class and height; GPS, identifiers, consumers, intersection and remarks stay unchanged.
+The field-entry update adds offline feeder search through a transformer-style dialog, automatic S/E pairing, direct six-digit DDMMYY dates, numeric waypoint identifiers, shared equipment choices and Copy Previous Values. New rows default to the assigned team's last two number digits (for example Survey Team 01 → 01). The Group Identifier is editable and must contain exactly two digits; leading zeros and user edits persist through saving, reopening and sync. Missing or conflicting team numbers block automatic defaults and need an administrator's correction. Subsequent rows inherit the date and alternate S/E. Pair IDs preserve the relationship; deleting a row asks for confirmation before removing its entire pair. Legacy adjacent S/E rows receive IDs without rewriting their observation values. Copy Previous Values transfers conductors, equipment, pole class and height; GPS, identifiers, consumers, intersection and remarks stay unchanged. Existing non-two-digit groups remain saved and must be corrected explicitly before submitting an edited survey.
 
 PV observations include service load, solar capacity and a text Meter Number before Remarks. A meter number can identify a PV observation without a consumer reference. Mobile stores these additions in its existing SQLite JSON records and immutable outgoing queue; no phone database reset is needed.
 
-Open an S/E row to add/view its PV observations and photos. Every new row has a stable UUID, distinct from the pair UUID, so media remains attached when row order changes. Previously unlinked media stays in the survey's Solar/Photos tabs; pending local photos can be explicitly linked to a chosen row before uploading. Existing uploaded unlinked photos remain viewable. Photos wait until the latest survey revision is acknowledged. Pairs with linked media cannot be deleted until removable media is removed; rows with uploaded photos must be retained.
+Open an S/E row to add/view its PV observations and photos. The main editor has Details and S/E rows tabs; duplicate Solar/Photos tabs are removed. Every new row has a stable UUID, distinct from the pair UUID, so media remains attached when row order changes. Previously unlinked media stays accessible in the S/E page's "Previously saved unlinked records" expansion; pending local photos can be explicitly linked to a chosen row before uploading. Existing uploaded unlinked photos remain viewable. Photos wait until the latest survey revision is acknowledged. Pairs with linked media cannot be deleted until removable media is removed; rows with uploaded photos must be retained.
 
 Saved transformers disappear from imported selection on the server and on this phone, including saved drafts awaiting sync. Open the saved survey from the survey list to edit it. New duplicate surveys are rejected using feeder plus imported ID or normalized code. Historical duplicates are retained and stay editable. Separate offline phones cannot know about each other's drafts until synchronization; the backend resolves duplicate claims by rejecting the later new survey and preserving its local data for review.
 
@@ -73,6 +73,15 @@ flutter build apk --debug
 ```
 
 The APK is written to `build/app/outputs/flutter-apk/app-debug.apk`. Connect a test phone or start an emulator, then use `flutter run` for interactive testing.
+
+When the installed app's original signing key is unavailable, build an **unsigned** release artifact without creating a replacement key:
+
+```powershell
+$env:ORG_GRADLE_PROJECT_hazecoUnsignedApk = 'true'
+flutter build apk --release --build-name=1.0.1 --build-number=2
+```
+
+This artifact must be signed with the original matching key before installation. Verify the installed version code before preparing an update. Do not run `flutter run` against a phone with unsynchronized surveys while signing is unresolved: Flutter may uninstall an existing app after a failed installation.
 
 Automated tests cover local SQLite restart persistence, immutable retries, revision/conflict handling, account/server isolation, attachment upload/deletion races, validation, HTTP payloads, printed consumer fields, leading zeros, waypoint input focus, and absence of phone GPS controls. Test real camera/gallery, denied camera permissions, low storage, poor networks, and force-stop/reopen on the survey team's phones before general rollout. A debug APK is a testable first release; it is not a Play Store publication.
 

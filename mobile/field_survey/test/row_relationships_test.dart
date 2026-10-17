@@ -55,11 +55,12 @@ void main() {
         throwsFormatException,
       );
       final record = readySurvey(paired: false);
-      expect(record.rows.first['group'], '001');
+      record.rows.first['group'] = '07';
+      expect(record.rows.first['group'], '07');
       record.ensureEndRow(0);
       expect(record.rows[1]['group'], '01');
       expect(record.nextRow()['group'], '01');
-      expect(record.clone().rows.first['group'], '001');
+      expect(record.clone().rows.first['group'], '07');
       expect(record.payload(submitted: false), isNot(contains('team_group')));
     },
   );
@@ -70,6 +71,8 @@ void main() {
       final record = readySurvey();
       final start = record.rows.first['row_id'];
       final end = record.rows[1]['row_id'];
+      record.rows.first['group'] = '07';
+      record.rows[1]['group'] = '09';
       record.solar.add({
         'pv_id': 'pv-stable',
         'row_id': start,
@@ -106,11 +109,36 @@ void main() {
       expect(restored.rows[2]['row_id'], start);
       expect(restored.outbound!['solar'][0]['row_id'], start);
       expect(restored.outbound!['solar'][0]['meter_number'], '001-A/9');
+      expect(restored.rows.map((row) => row['group']), [
+        '01',
+        '01',
+        '07',
+        '09',
+      ]);
+      expect((restored.outbound!['rows'] as List).map((row) => row['group']), [
+        '01',
+        '01',
+        '07',
+        '09',
+      ]);
       expect(
         (await store.attachments(record.scope, record.id)).single['row_id'],
         end,
       );
       expect(jsonEncode(restored.outbound), jsonEncode(record.outbound));
+      await store.acknowledge(restored, 1);
+      final confirmed = (await store.survey(record.scope, record.id))!;
+      expect(confirmed.rows.map((row) => row['group']), [
+        '01',
+        '01',
+        '07',
+        '09',
+      ]);
+      expect(confirmed.solar.single['row_id'], start);
+      expect(
+        (await store.attachments(record.scope, record.id)).single['row_id'],
+        end,
+      );
     },
   );
 
@@ -174,7 +202,7 @@ void main() {
       );
       expect(
         (await store.survey(record.scope, record.id))!.rows.first['group'],
-        '001',
+        '01',
       );
       final other = readySurvey()..data['transformer_code'] = 'OTHER';
       expect(

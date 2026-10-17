@@ -25,7 +25,7 @@ void main() {
     () async {
       final record = readySurvey();
       record.rows.first.addAll({
-        'group': '001',
+        'group': '07',
         'gps_waypoint': '017',
         'intersection': true,
       });
@@ -49,7 +49,7 @@ void main() {
       expect(restored.data['solar'][0]['meter_number'], '001-AB/09');
       expect(restored.outbound!['solar'][0]['meter_number'], '001-AB/09');
       expect(restored.outbound!['solar'][0]['service_load_kw'], 2.25);
-      expect(restored.rows.first['group'], '001');
+      expect(restored.rows.first['group'], '07');
       expect(restored.rows.first['gps_waypoint'], '017');
       expect(restored.rows.first['intersection'], true);
       await store.reject(restored, 'offline');

@@ -1,0 +1,82 @@
+{
+  "client_uuid": "11111111-1111-4111-8111-111111111111",
+  "base_revision": 0,
+  "survey_team_id": 4,
+  "feeder_id": 7,
+  "transformer_id": null,
+  "transformer_code": "T-11010717197",
+  "survey_date": "2026-10-17",
+  "status": "submitted",
+  "header": {
+    "substation": "Test substation",
+    "division": "Test division",
+    "sub_division": "Test subdivision",
+    "sub_division_code": "001",
+    "transformer_make": "PEL",
+    "inspectors": "Test Inspector",
+    "location": "Street 1",
+    "capacity_kva": 100,
+    "mounting": "D.Pole",
+    "duty": "General Duty"
+  },
+  "rows": [
+    {
+      "row_id": "22222222-2222-4222-8222-222222222222",
+      "pair_id": "44444444-4444-4444-8444-444444444444",
+      "entry_version": 2,
+      "se": "S",
+      "group": "07",
+      "date": "2026-10-17",
+      "gps_waypoint": "00104",
+      "latitude": null,
+      "longitude": null,
+      "gps_accuracy_m": null,
+      "phase": "RYB",
+      "conductor_r": "A",
+      "conductor_y": "W",
+      "conductor_b": "GN",
+      "conductor_neutral": "A",
+      "equipment_type": "TR",
+      "pole_class": "PCO",
+      "pole_height_ft": 36,
+      "consumers": {"rs": 3, "rl": 0},
+      "intersection": false,
+      "remarks": "Start observation"
+    },
+    {
+      "row_id": "33333333-3333-4333-8333-333333333333",
+      "pair_id": "44444444-4444-4444-8444-444444444444",
+      "entry_version": 2,
+      "se": "E",
+      "group": "09",
+      "date": "2026-10-17",
+      "gps_waypoint": "00103",
+      "latitude": null,
+      "longitude": null,
+      "gps_accuracy_m": null,
+      "phase": "RYB",
+      "conductor_r": "A",
+      "conductor_y": "W",
+      "conductor_b": "GN",
+      "conductor_neutral": "A",
+      "equipment_type": "TR",
+      "pole_class": "PCO",
+      "pole_height_ft": 0,
+      "consumers": {"rs": 0, "rl": 2},
+      "intersection": true,
+      "remarks": "End observation"
+    }
+  ],
+  "solar": [
+    {
+      "pv_id": "55555555-5555-4555-8555-555555555555",
+      "row_id": "22222222-2222-4222-8222-222222222222",
+      "consumer_reference": "0000123",
+      "service_load_kw": 2.25,
+      "installed_pv_kw": 3.5,
+      "meter_number": "001-AB/09",
+      "remarks": "Row-linked PV"
+    }
+  ],
+  "remarks": "Mobile submission contract regression"
+}

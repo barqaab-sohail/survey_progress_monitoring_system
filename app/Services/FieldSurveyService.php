@@ -157,9 +157,6 @@ class FieldSurveyService
     {
         $oldRows = $survey?->rows ?? [];
         $claimedLegacy = [];
-        if (! $survey && $group === null) {
-            throw ValidationException::withMessages(['survey_team_id' => 'The assigned survey team needs a valid, unambiguous team number. Ask the administrator to correct its code/name.']);
-        }
         foreach ($data['rows'] as $index => &$row) {
             $old = null;
             if (! empty($row['row_id'])) {
@@ -180,17 +177,10 @@ class FieldSurveyService
                 if (($row['group'] ?? null) === null && ! empty($old['group'])) {
                     $row['group'] = $old['group'];
                 }
-                if (($row['group'] ?? null) !== ($old['group'] ?? null)) {
-                    throw ValidationException::withMessages(["rows.$index.group" => 'The original Group Identifier of a saved row must be preserved.']);
-                }
             } else {
-                if ($group === null) {
-                    throw ValidationException::withMessages(['survey_team_id' => 'The assigned survey team needs a valid team number before new rows can be created.']);
+                if (! isset($row['group']) || $row['group'] === '') {
+                    $row['group'] = $group;
                 }
-                if (isset($row['group']) && $row['group'] !== '' && $row['group'] !== $group) {
-                    throw ValidationException::withMessages(["rows.$index.group" => 'Group Identifier must be '.$group.' from your assigned survey team.']);
-                }
-                $row['group'] = $group;
             }
         }
         unset($row);

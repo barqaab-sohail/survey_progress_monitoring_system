@@ -123,7 +123,7 @@ void main() {
     () {
       final record = readySurvey();
       record.rows[1].addAll({
-        'group': '0',
+        'group': '00',
         'gps_waypoint': '0',
         'pole_height_ft': '0',
       });
@@ -254,10 +254,25 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<SegmentedButton<int>>(find.byType(SegmentedButton<int>))
+          .segments,
+      hasLength(2),
+    );
+    expect(find.text('Solar'), findsNothing);
+    expect(find.text('Photos'), findsNothing);
     await tester.tap(find.text('S/E rows'));
     await tester.pumpAndSettle();
+    expect(find.text('Previously saved unlinked records'), findsOneWidget);
     await tester.tap(find.textContaining('Row 1 ·'));
     await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Group identifier'),
+      '07',
+    );
+    await tester.pump();
+    expect(record.rows.first['group'], '07');
     final add = find.text('Add solar installation');
     await tester.scrollUntilVisible(
       add,
@@ -292,6 +307,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('Row 2 ·'));
     await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Group identifier'),
+      '09',
+    );
+    await tester.pump();
     await tester.scrollUntilVisible(
       add,
       500,
@@ -306,6 +326,22 @@ void main() {
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
     expect(uiStore.saved[record.id]!.solar[1]['meter_number'], '001-A/9');
+    expect(uiStore.saved[record.id]!.rows.map((row) => row['group']), [
+      '07',
+      '09',
+    ]);
+    await tester.tap(find.textContaining('Row 1 ·'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.widgetWithText(TextFormField, 'Group identifier'),
+          )
+          .initialValue,
+      '07',
+    );
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
     await tester.pumpWidget(const SizedBox());
   });
 

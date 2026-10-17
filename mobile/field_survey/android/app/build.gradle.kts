@@ -4,6 +4,10 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Build an unsigned artifact while the installed app's original key is unavailable.
+// Opt in with ORG_GRADLE_PROJECT_hazecoUnsignedApk=true; never create a substitute key.
+val unsignedApk = providers.gradleProperty("hazecoUnsignedApk").orNull == "true"
+
 android {
     namespace = "com.barqaab.hazeco.hazeco_field_survey"
     compileSdk = flutter.compileSdkVersion
@@ -28,7 +32,7 @@ android {
         release {
             // Development build only. Configure an organization-owned signing
             // key before publishing or distributing a production release.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (unsignedApk) null else signingConfigs.getByName("debug")
         }
     }
 }

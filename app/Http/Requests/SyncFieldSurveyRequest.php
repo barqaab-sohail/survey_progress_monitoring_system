@@ -44,7 +44,7 @@ class SyncFieldSurveyRequest extends FormRequest
             'rows.*.pair_id' => ['nullable', 'uuid'],
             'rows.*.entry_version' => ['sometimes', 'integer', Rule::in([2])],
             'rows.*.se' => [$paper, Rule::in(['S', 'E'])],
-            'rows.*.group' => [$paper, 'string', 'max:20'],
+            'rows.*.group' => [$paper, 'string', 'regex:/^[0-9]{2}$/D'],
             'rows.*.date' => [$paper, 'date_format:Y-m-d', 'before_or_equal:today'],
             'rows.*.gps_waypoint' => [$paper, 'string', 'max:50'],
             'rows.*.latitude' => ['nullable', 'numeric', 'between:-90,90'],
@@ -82,7 +82,6 @@ class SyncFieldSurveyRequest extends FormRequest
         $equipment = null;
         foreach (is_array($this->input('rows')) ? $this->input('rows') : [] as $index => $row) {
             if (is_array($row) && ($row['entry_version'] ?? null) === 2) {
-                $rules["rows.$index.group"] = [$paper, 'string', 'max:20', 'regex:/^[0-9]+$/D'];
                 $rules["rows.$index.gps_waypoint"] = [$paper, 'string', 'max:50', 'regex:/^[0-9]+$/D'];
                 $equipment ??= array_keys(app(EntryLookups::class)->options(
                     Feeder::whereKey($this->integer('feeder_id'))->value('project_id'))['equipment_types']);
@@ -115,6 +114,11 @@ class SyncFieldSurveyRequest extends FormRequest
             unset($row);
             $this->merge(['rows' => $rows]);
         }
+    }
+
+    public function messages(): array
+    {
+        return ['rows.*.group.regex' => 'The Group Identifier must contain exactly two digits (for example, 01).'];
     }
 
     public function after(): array

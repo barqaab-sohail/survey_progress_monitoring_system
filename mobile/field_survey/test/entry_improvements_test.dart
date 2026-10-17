@@ -129,7 +129,7 @@ void main() {
     expect(parseEntryDate('1710x6'), isNull);
     expect(parseEntryDate('311299', yearStart: 1950), '1999-12-31');
     final record = readySurvey();
-    record.rows.first.addAll({'group': '001', 'gps_waypoint': '017'});
+    record.rows.first.addAll({'group': '07', 'gps_waypoint': '017'});
     record.solar.add({
       'consumer_reference': '',
       'meter_number': '001-AB/09',
@@ -139,14 +139,14 @@ void main() {
     });
     expect(SurveyValidation.errors(record, submitting: true), isEmpty);
     final payload = record.payload(submitted: true);
-    expect(payload['rows'][0]['group'], '001');
+    expect(payload['rows'][0]['group'], '07');
     expect(payload['rows'][0]['gps_waypoint'], '017');
     expect(payload['solar'][0]['meter_number'], '001-AB/09');
     expect(payload['solar'][0]['service_load_kw'], 2.25);
     record.rows.first['group'] = '00x';
     expect(SurveyValidation.errors(record), contains('rows.0.group'));
     record.rows.first.remove('entry_version'); // Pre-upgrade saved row.
-    expect(SurveyValidation.errors(record), isNot(contains('rows.0.group')));
+    expect(SurveyValidation.errors(record), contains('rows.0.group'));
   });
 
   testWidgets('feeder search matches partial/full code and shows name', (

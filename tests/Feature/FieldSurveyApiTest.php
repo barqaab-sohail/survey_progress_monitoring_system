@@ -347,27 +347,26 @@ class FieldSurveyApiTest extends TestCase
         return UploadedFile::fake()->createWithContent('sketch.pdf', "%PDF-1.7\n".$text."\n%%EOF");
     }
 
-    public function test_assigned_team_group_is_authoritative_and_saved_groups_survive_team_renumbering(): void
+    public function test_team_group_is_a_default_and_edited_groups_survive_updates_and_team_renumbering(): void
     {
         $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonPath('teams.0.group_identifier', '01');
         $data = $this->payload();
         $data['rows'][0]['group'] = '12';
-        $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()->assertJsonValidationErrors('rows.0.group');
-        $data['rows'][0]['group'] = '01';
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
         $this->team->update(['name' => 'Survey Team 12']);
         $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonPath('teams.0.group_identifier', '12');
         $data['base_revision'] = 1;
         $data['remarks'] = 'Saved groups retained';
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk();
-        $this->assertSame('01', FieldSurvey::firstOrFail()->rows[0]['group']);
+        $this->assertSame('12', FieldSurvey::firstOrFail()->rows[0]['group']);
         $data['base_revision'] = 2;
-        $data['rows'][0]['group'] = '12';
-        $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()->assertJsonValidationErrors('rows.0.group');
+        $data['rows'][0]['group'] = '07';
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk();
+        $this->assertSame('07', FieldSurvey::firstOrFail()->rows[0]['group']);
         $this->team->update(['name' => 'Survey Team', 'code' => 'ST']);
         $new = $this->payload();
         $new['transformer_code'] = 'NEW';
-        $this->postJson('/api/v1/field/surveys/sync', $new)->assertUnprocessable()->assertJsonValidationErrors('survey_team_id');
+        $this->postJson('/api/v1/field/surveys/sync', $new)->assertCreated();
         $this->team->update(['name' => 'Survey Team 01', 'code' => 'ST12']);
         $this->assertNull(SurveyTeamGroup::identifier($this->team->fresh()));
         $this->team->update(['name' => 'Survey Team 101', 'code' => 'ST01']);
@@ -403,6 +402,65 @@ class FieldSurveyApiTest extends TestCase
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()->assertJsonValidationErrors('rows');
     }
 
+    public function test_complete_mobile_contract_submits_and_preserves_all_fields_row_media_and_edited_groups(): void
+    {
+        $data = json_decode(file_get_contents(base_path('tests/Fixtures/FieldSurvey/mobile-submission.json')), true, 512, JSON_THROW_ON_ERROR);
+        $data['survey_team_id'] = $this->team->id;
+        $data['feeder_id'] = $this->feeder->id;
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated()->assertJsonPath('status', 'submitted');
+        $survey = FieldSurvey::firstOrFail();
+        $this->assertSame($data['header'], $survey->header);
+        $this->assertSame($data['rows'], $survey->rows);
+        $this->assertSame($data['solar'], $survey->solar);
+        $this->assertSame($data['remarks'], $survey->remarks);
+        $this->assertSame($data['transformer_code'], $survey->transformer_code);
+        $this->assertNotNull($survey->submitted_at);
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk()->assertJsonPath('revision', 1);
+        $this->assertDatabaseCount('field_surveys', 1);
+
+        $start = $data['rows'][0]['row_id'];
+        $end = $data['rows'][1]['row_id'];
+        $bytes = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a7j8AAAAASUVORK5CYII=');
+        $this->post('/api/v1/field/surveys/'.$data['client_uuid'].'/attachments', [
+            'client_uuid' => (string) Str::uuid(), 'row_id' => $end, 'kind' => 'photo',
+            'file' => UploadedFile::fake()->createWithContent('row-photo.png', $bytes),
+        ], ['Accept' => 'application/json'])->assertCreated()->assertJsonPath('row_id', $end);
+        $attachment = FieldSurveyAttachment::firstOrFail();
+        $this->assertSame(hash('sha256', $bytes), $attachment->sha256);
+        Storage::disk('local')->assertExists($attachment->path);
+
+        $this->team->update(['name' => 'Survey Team 88']);
+        $data['base_revision'] = 1;
+        $data['rows'][0]['group'] = '08';
+        $data['rows'] = array_reverse($data['rows']);
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk()->assertJsonPath('revision', 2);
+        $survey->refresh();
+        $this->assertSame('09', $survey->rows[0]['group']);
+        $this->assertSame('08', $survey->rows[1]['group']);
+        $this->assertSame($start, $survey->solar[0]['row_id']);
+        $this->assertSame($end, $attachment->fresh()->row_id);
+        $this->assertSame($data['rows'], $survey->rows);
+        $this->assertSame($data['solar'], $survey->solar);
+        $this->assertSame($bytes, Storage::disk('local')->get($attachment->path));
+    }
+
+    public function test_group_identifier_requires_exactly_two_digits_for_new_and_existing_rows(): void
+    {
+        foreach (['0', '001', '0a', '00.1', 1, null] as $group) {
+            $data = $this->payload();
+            $data['rows'][0]['group'] = $group;
+            $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()->assertJsonValidationErrors('rows.0.group');
+        }
+        $this->assertDatabaseCount('field_surveys', 0);
+        $data = $this->payload();
+        $data['rows'][0]['group'] = '00';
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
+        $data['base_revision'] = 1;
+        $data['rows'][0]['group'] = '007';
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()->assertJsonValidationErrors('rows.0.group');
+        $this->assertSame('00', FieldSurvey::firstOrFail()->rows[0]['group']);
+    }
+
     public function test_legacy_unlinked_media_and_original_groups_are_preserved_when_row_ids_are_added(): void
     {
         $data = $this->payload('draft');
@@ -410,7 +468,7 @@ class FieldSurveyApiTest extends TestCase
         $legacy = $data;
         foreach ($legacy['rows'] as &$row) {
             unset($row['row_id']);
-            $row['group'] = '001';
+            $row['group'] = '01';
         }
         unset($row);
         unset($legacy['solar'][0]['row_id']);
@@ -425,7 +483,7 @@ class FieldSurveyApiTest extends TestCase
         unset($row);
         $legacy['rows'] = array_reverse($legacy['rows']);
         $this->postJson('/api/v1/field/surveys/sync', $legacy)->assertOk();
-        $this->assertSame('001', $survey->fresh()->rows[0]['group']);
+        $this->assertSame('01', $survey->fresh()->rows[0]['group']);
         $this->assertArrayNotHasKey('row_id', $survey->fresh()->solar[0]);
         $this->assertNull($attachment->fresh()->row_id);
     }

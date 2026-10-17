@@ -184,7 +184,7 @@ class _SurveyEditorState extends State<SurveyEditor>
       if (found.keys.any((key) => key.startsWith('rows'))) {
         setState(() => section = 1);
       } else if (found.keys.any((key) => key.startsWith('solar'))) {
-        setState(() => section = 2);
+        setState(() => section = 1);
       } else {
         setState(() => section = 0);
       }
@@ -689,9 +689,15 @@ class _SurveyEditorState extends State<SurveyEditor>
           ),
         ...record.rows.asMap().entries.map((entry) {
           final index = entry.key, row = entry.value;
-          final hasErrors = rowErrors.keys.any(
-            (key) => key.startsWith('rows.$index.'),
-          );
+          final hasErrors =
+              rowErrors.keys.any((key) => key.startsWith('rows.$index.')) ||
+              record.solar.asMap().entries.any(
+                (pv) =>
+                    pv.value['row_id'] == row['row_id'] &&
+                    rowErrors.keys.any(
+                      (key) => key.startsWith('solar.${pv.key}.'),
+                    ),
+              );
           return Card(
             shape: hasErrors
                 ? RoundedRectangleBorder(
@@ -722,6 +728,18 @@ class _SurveyEditorState extends State<SurveyEditor>
             ),
           );
         }),
+        if (record.solar.any((pv) => pv['row_id'] == null) ||
+            photos.any((photo) => photo['row_id'] == null))
+          ExpansionTile(
+            title: const Text('Previously saved unlinked records'),
+            subtitle: const Text('Retained without assigning them to a row.'),
+            children: [
+              if (record.solar.any((pv) => pv['row_id'] == null))
+                solarSection(),
+              if (photos.any((photo) => photo['row_id'] == null))
+                photosSection(),
+            ],
+          ),
       ],
     );
   }
@@ -1141,16 +1159,6 @@ class _SurveyEditorState extends State<SurveyEditor>
                     label: Text('S/E rows'),
                     icon: Icon(Icons.route_outlined),
                   ),
-                  ButtonSegment(
-                    value: 2,
-                    label: Text('Solar'),
-                    icon: Icon(Icons.solar_power_outlined),
-                  ),
-                  ButtonSegment(
-                    value: 3,
-                    label: Text('Photos'),
-                    icon: Icon(Icons.photo_outlined),
-                  ),
                 ],
                 selected: {section},
                 onSelectionChanged: (values) =>
@@ -1161,8 +1169,7 @@ class _SurveyEditorState extends State<SurveyEditor>
             switch (section) {
               0 => headerSection(),
               1 => rowsSection(),
-              2 => solarSection(),
-              _ => photosSection(),
+              _ => rowsSection(),
             },
           ],
         ),
@@ -1293,7 +1300,7 @@ class _RowEditorState extends State<RowEditor> {
     enabled: widget.editable,
     number: number,
     digits: digits,
-    readOnly: key == 'group',
+    maxLength: key == 'group' ? 2 : null,
     helper: helper,
     error: errors['$prefix.$key'],
     onChanged: (value) {
@@ -1348,7 +1355,7 @@ class _RowEditorState extends State<RowEditor> {
                 'Group identifier',
                 digits: true,
                 helper:
-                    'From your assigned survey team. Saved rows retain their original value.',
+                    'Defaults to your survey team. Enter exactly two digits; your edits are saved.',
               ),
               DateEntry(
                 label: 'Row date',
@@ -1581,11 +1588,13 @@ class EntryField extends StatelessWidget {
     this.lines = 1,
     this.error,
     this.helper,
+    this.maxLength,
   });
   final String label;
   final dynamic value;
   final bool enabled, number, integer, digits, readOnly;
   final int lines;
+  final int? maxLength;
   final String? error, helper;
   final ValueChanged<String> onChanged;
   @override
@@ -1594,7 +1603,10 @@ class EntryField extends StatelessWidget {
     enabled: enabled,
     readOnly: readOnly,
     maxLines: lines,
-    inputFormatters: digits ? [FilteringTextInputFormatter.digitsOnly] : null,
+    inputFormatters: [
+      if (digits) FilteringTextInputFormatter.digitsOnly,
+      if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+    ],
     keyboardType: integer || digits
         ? TextInputType.number
         : number

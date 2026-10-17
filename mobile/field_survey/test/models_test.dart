@@ -18,7 +18,7 @@ SurveyRecord readySurvey({bool paired = true}) {
   record.header['capacity_kva'] = '100';
   record.rows.add(
     SurveyRecord.newRow(record.data['survey_date'])..addAll({
-      'group': '001',
+      'group': '01',
       'gps_waypoint': '0005',
       'equipment_type': 'TR',
       'pole_class': 'PCO',

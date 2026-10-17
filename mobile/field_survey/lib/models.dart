@@ -5,6 +5,42 @@ import 'package:uuid/uuid.dart';
 typedef Json = Map<String, dynamic>;
 const applicationBaseUrl = 'https://hazeco.barqaab.pk';
 
+// Keep the wire contract independent of local editing/display metadata. Stable
+// row/PV IDs are part of the contract and must never be stripped for sync.
+const surveyRowFields = {
+  'row_id',
+  'legacy_row_index',
+  'pair_id',
+  'entry_version',
+  'se',
+  'group',
+  'date',
+  'gps_waypoint',
+  'latitude',
+  'longitude',
+  'gps_accuracy_m',
+  'phase',
+  'conductor_r',
+  'conductor_y',
+  'conductor_b',
+  'conductor_neutral',
+  'equipment_type',
+  'pole_class',
+  'pole_height_ft',
+  'consumers',
+  'intersection',
+  'remarks',
+};
+const surveyPvFields = {
+  'pv_id',
+  'row_id',
+  'consumer_reference',
+  'service_load_kw',
+  'installed_pv_kw',
+  'meter_number',
+  'remarks',
+};
+
 String dayString(DateTime date) => date.toIso8601String().substring(0, 10);
 Json copyJson(Json value) => jsonDecode(jsonEncode(value)) as Json;
 
@@ -276,7 +312,7 @@ class SurveyRecord {
     final result = copyJson(data);
     result.remove(
       'team_group',
-    ); // Cached default is local; backend uses the authorized team.
+    ); // The default is local; each row's edited group travels with the row.
     result['status'] = submitted ? 'submitted' : 'draft';
     final header = result['header'] as Json;
     header['capacity_kva'] = parseNumber(header['capacity_kva']);
@@ -306,6 +342,22 @@ class SurveyRecord {
         item['service_load_kw'] = parseNumber(item['service_load_kw']);
       }
     }
+    result['rows'] = (result['rows'] as List)
+        .cast<Json>()
+        .map(
+          (row) => Map<String, dynamic>.fromEntries(
+            row.entries.where((entry) => surveyRowFields.contains(entry.key)),
+          ),
+        )
+        .toList();
+    result['solar'] = (result['solar'] as List)
+        .cast<Json>()
+        .map(
+          (pv) => Map<String, dynamic>.fromEntries(
+            pv.entries.where((entry) => surveyPvFields.contains(entry.key)),
+          ),
+        )
+        .toList();
     return result;
   }
 }
@@ -580,6 +632,10 @@ class SurveyValidation {
             !RegExp(r'^\d+$').hasMatch(value)) {
           result['$prefix.$key'] = 'Enter digits only; leading zeros are kept.';
         }
+      }
+      final group = (row['group'] ?? '').toString();
+      if (group.isNotEmpty && !RegExp(r'^[0-9]{2}$').hasMatch(group)) {
+        result['$prefix.group'] = 'Enter exactly two digits, for example 01.';
       }
       if (row['entry_version'] == 2 &&
           (row['equipment_type'] ?? '').toString().isNotEmpty &&
