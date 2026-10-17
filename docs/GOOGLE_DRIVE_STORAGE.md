@@ -80,6 +80,28 @@ Finally set `GOOGLE_DRIVE_STORAGE_ENABLED=true`, run `php artisan config:cache` 
 
 ## Failure recovery and monitoring
 
+### Connected account but production PDF does not display
+
+Connection confirms OAuth consent; it does not confirm that queue workers are running. A source marked `queued` and files awaiting transfer require the worker above and the scheduler. Pending originals should still preview through the authenticated source route before processing or transfer completes.
+
+Click **Open PDF** first. If the original opens there but the embedded viewer fails, check browser Network requests for `vendor/pdfjs/build/pdf.min.mjs` and `pdf.worker.min.mjs`. Both must return HTTP 200 and a JavaScript Content-Type, rather than HTML or `application/octet-stream`. Deploy the entire `public/vendor/pdfjs` directory. The supplied `public/.htaccess` sets `.mjs` to `text/javascript` on Apache when `mod_mime` and overrides are enabled. For Nginx or Apache configurations that ignore `.htaccess`, configure the equivalent MIME mapping in the host configuration. Also check that generated asset/source URLs use the production HTTPS host and correct application subdirectory.
+
+When PDF.js cannot load a document, entry and verification pages automatically embed the same authenticated source in the browser's PDF viewer. Use that viewer's own toolbar for navigation; interactive row overlays and line drawing require PDF.js to recover. The fallback is removed on source changes and does not modify saved records or drafts. Deploy `public/js/mdb-pdf-errors.js` together with both updated viewer scripts.
+
+If **Open PDF** also fails, inspect that source request's status: 401/403 indicates session/access, 404 a missing original/reference, and 503 unavailable storage or failed integrity verification. Inspect the retained original and storage account before changing any data. Reconnecting OAuth does not repair missing files or start workers.
+
+After deploying the viewer fix, clear compiled views and restart managed queue workers:
+
+```sh
+php artisan view:clear
+php artisan config:cache
+php artisan queue:restart
+php artisan drive-storage:retry
+php artisan queue:failed
+```
+
+`queue:restart` only signals existing workers; ensure the process manager actually runs `php artisan queue:work drive-storage --queue=drive-storage,mdb-sources --sleep=3 --tries=5 --timeout=420`. For shared hosting, use the cron alternative above. Hard-refresh the PDF entry page after deployment.
+
 The administrator Drive page reports the pending/failed transfer count. Inspect `drive_stored_files.status`, `attempts`, `last_error`, `next_attempt_at`, `uploaded_at` and `local_deleted_at`, as well as worker health, free staging disk and the Laravel failed jobs store. Alert if the backlog grows or an `uploaded` row has no `local_deleted_at`. Error messages intentionally omit Google responses, access tokens and resumable session URLs.
 
 ```sh

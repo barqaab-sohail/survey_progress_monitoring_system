@@ -1,3 +1,5 @@
+import {pdfLoadErrorMessage, clearPdfFallback, showPdfFallback} from './mdb-pdf-errors.js';
+
 // Verification only reads PDF sources; it never changes survey records.
 export function initializeReviewPdf(boot, root = document) {
     const $ = name => root.getElementById('review-pdf-' + name);
@@ -48,6 +50,8 @@ export function initializeReviewPdf(boot, root = document) {
         controls(); scroll.scrollTop = 0; render();
     }
     async function load(startPage = 1) {
+        let phase = 'library';
+        clearPdfFallback(scroll);
         const token = ++generation, previous = loading;
         task?.cancel(); loading = null; pdf = null; pageNumber = Math.max(1, Math.trunc(Number(startPage)) || 1); zoom = 1; rotation = 0;
         controls(); showMessage('Loading PDF...');
@@ -56,14 +60,18 @@ export function initializeReviewPdf(boot, root = document) {
             if (token !== generation) return;
             library ||= await import(boot.pdfjs_url);
             library.GlobalWorkerOptions.workerSrc = boot.pdfjs_worker;
+            phase = 'document';
             if (token !== generation) return;
             loading = library.getDocument({url:source.value, withCredentials:true, disableRange:true, disableStream:true, isEvalSupported:false,
                 cMapUrl:boot.pdfjs_assets + 'cmaps/', cMapPacked:true, standardFontDataUrl:boot.pdfjs_assets + 'standard_fonts/', wasmUrl:boot.pdfjs_assets + 'wasm/'});
             const loaded = await loading.promise;
             if (token !== generation) return;
             pdf = loaded; pageNumber = Math.max(1, Math.min(pdf.numPages, pageNumber)); controls(); await render();
-        } catch {
-            if (token === generation) showMessage('Could not open PDF. Use Open PDF or check your sign-in.');
+        } catch (error) {
+            if (token === generation) {
+                showMessage('Browser PDF preview: use its toolbar to navigate. ' + pdfLoadErrorMessage(error, phase));
+                showPdfFallback(scroll, source.value, pageNumber);
+            }
         }
     }
     source.addEventListener('change', () => load());

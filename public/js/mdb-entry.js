@@ -1,4 +1,5 @@
 import {installCompactSelects} from './mdb-entry-select.js?v=3';
+import {pdfLoadErrorMessage, clearPdfFallback, showPdfFallback} from './mdb-pdf-errors.js';
 
 export function transformerCodeKey(code) {
     return String(code ?? '').toLowerCase().replace(/[\u2010-\u2014\u2212]/g,'-').replace(/\s+/gu,'');
@@ -697,6 +698,8 @@ function initialize(boot) {
         return renderChain;
     }
     async function loadPdf() {
+        let phase='library';
+        clearPdfFallback($('entry-pdf-scroll'));
         const source=number($('entry-pdf-source').value), token=++pdfGeneration;
         const previousLoading=pdfLoading;
         renderTask?.cancel();pdfLoading=null;pdf=null;
@@ -710,10 +713,14 @@ function initialize(boot) {
             if(!source){$('entry-page-total').textContent='of 0';updateAssociation();return;}
             $('entry-pdf-open').href=sourceUrl(source);
             pdfLib ||= await import(boot.pdfjs_url);pdfLib.GlobalWorkerOptions.workerSrc=boot.pdfjs_worker;
+            phase='document';
             if(token!==pdfGeneration)return;
             pdfLoading=pdfLib.getDocument({url:sourceUrl(source),withCredentials:true,disableRange:true,disableStream:true,isEvalSupported:false,cMapUrl:boot.pdfjs_assets+'cmaps/',cMapPacked:true,standardFontDataUrl:boot.pdfjs_assets+'standard_fonts/',wasmUrl:boot.pdfjs_assets+'wasm/'});
             const loaded=await pdfLoading.promise;if(token!==pdfGeneration)return;pdf=loaded;pageNumber=Math.max(1,Math.min(pdf.numPages,pageNumber));setPage(pageNumber);await renderPdf();
-        }catch(e){if(token===pdfGeneration){$('entry-pdf-message').textContent='Could not open PDF. Use Open PDF or check your sign-in. Your entry is retained.';}}
+        }catch(e){if(token===pdfGeneration){
+            showPdfFallback($('entry-pdf-scroll'),sourceUrl(source),pageNumber);
+            $('entry-pdf-message').textContent='Browser PDF preview: use its toolbar to navigate. Row overlays and line drawing require the interactive viewer. '+pdfLoadErrorMessage(e,phase)+' Your entry is retained.';
+        }}
     }
     function setPage(numberValue) {
         pageNumber=Math.max(1,Math.min(pdf?.numPages || data.sources.find(s=>s.id===number($('entry-pdf-source').value))?.metadata?.page_count || 1,numberValue));

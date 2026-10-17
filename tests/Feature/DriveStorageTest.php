@@ -160,6 +160,32 @@ class DriveStorageTest extends TestCase
         Storage::disk('local')->assertExists($file->local_path);
     }
 
+    public function test_pending_and_archived_pdf_responses_send_the_original_bytes(): void
+    {
+        $file = $this->stage();
+        foreach (['pending', 'uploaded'] as $status) {
+            if ($status === 'uploaded') {
+                app(FileStorage::class)->transfer($file->id);
+                $file->refresh();
+            }
+            $response = app(FileStorage::class)->response($file, 'local', $file->local_path, 'original.pdf', 'application/pdf');
+            $snapshot = $response->getFile()->getPathname();
+            $response->prepare(\Illuminate\Http\Request::create('/source.pdf'));
+            $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
+            $this->assertStringStartsWith('inline;', $response->headers->get('Content-Disposition'));
+            $this->assertSame((string) strlen($this->body), $response->headers->get('Content-Length'));
+            ob_start();
+            try {
+                $response->sendContent();
+                $body = ob_get_contents();
+            } finally {
+                ob_end_clean();
+            }
+            $this->assertSame($this->body, $body);
+            $this->assertFileDoesNotExist($snapshot);
+        }
+    }
+
     public function test_expired_storage_token_is_refreshed_encrypted_and_hidden(): void
     {
         $connection = DriveStorageConnection::findOrFail(1);

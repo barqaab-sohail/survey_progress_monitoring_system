@@ -1,3 +1,10 @@
+# PDF.js and its worker are ES modules. Some production Apache MIME maps
+# serve .mjs as application/octet-stream, which browsers refuse to execute.
+<IfModule mod_mime.c>
+    AddType text/javascript .mjs
+    AddType application/wasm .wasm
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

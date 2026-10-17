@@ -57,9 +57,11 @@ test('verification PDF controls navigate, zoom, rotate, resize and handle failed
     const missing=d.createElement('option');missing.value='http://localhost/missing.pdf';$('source').append(missing);
     $('source').value=missing.value;$('source').dispatchEvent(new dom.window.Event('change'));await settle();
     assert.equal($('canvas').hidden,true);assert.match($('message').textContent,/Could not open PDF/);
+    assert.equal($('scroll').querySelector('[data-pdf-fallback]').src,missing.value+'#page=1');
     assert.equal($('next').disabled,true);assert.equal($('rotate').disabled,true);assert.equal($('open').href,missing.value+'#page=1');
     $('source').value=next.value;$('source').dispatchEvent(new dom.window.Event('change'));await settle();
     assert.equal($('canvas').hidden,false);assert.equal($('message').hidden,true);
+    assert.equal($('scroll').querySelector('[data-pdf-fallback]'),null);
     assert.equal(d.querySelector('.entry-review-table').outerHTML,savedRows);
     dom.window.close();delete globalThis.window;delete globalThis.document;delete globalThis.ResizeObserver;
 });
