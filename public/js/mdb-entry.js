@@ -161,15 +161,15 @@ function initialize(boot) {
     const transformerSelection = () => activeId ? String(activeId) : registeredId ? `registered:${registeredId}` : manualTransformer ? '__manual__' : '';
     const editable = () => boot.can_edit && (!data.staged_workflow || ['entry','returned'].includes(data.survey_status));
     const field = (form, name) => form?.elements.namedItem(name);
-    const capacityOptions = new Set(['5','10','15','25','37.5','50','63','75','100','125','160','200','250','315','400','500','630','750','800','1000','1250','1500','1600','2000','2500','3150','5000','6300','10000','12500','16000','20000','25000']);
-    function setCapacity(value) {
-        const select=$('entry-capacity-choice'), custom=$('entry-capacity-custom');if(!select)return;
-        const text=value===null || value===undefined ? '' : String(value);
-        const standard=[...capacityOptions].find(option=>Number(option)===Number(text));
-        select.value=standard || (text ? '__custom__' : '');
-        custom.hidden=select.value!=='__custom__';custom.required=select.value==='__custom__';custom.value=select.value==='__custom__' ? text : '';
+    function capacityText(value) {
+        if (value===null || value===undefined || value==='') return '';
+        const numeric=Number(value);
+        return Number.isFinite(numeric) ? String(numeric) : String(value);
     }
-    function capacityValue() { const select=$('entry-capacity-choice');return select?.value==='__custom__' ? number($('entry-capacity-custom').value) : number(select?.value); }
+    function setCapacity(value) {
+        const input=$('entry-capacity');if(input)input.value=capacityText(value);
+    }
+    function capacityValue() { return number($('entry-capacity')?.value ?? ''); }
     function heightInFeet(value, unit='ft') { const numeric=number(value);return numeric===null ? null : Number((numeric*(unit==='m' ? 3.280839895 : 1)).toFixed(4)); }
     function setPoleHeight(value, unit='ft') {
         const select=$('entry-height-choice'), custom=$('entry-height-custom');if(!select)return;
@@ -325,9 +325,10 @@ function initialize(boot) {
             return;
         }
         headerForm.reset();
-        set(headerForm,'code',payload.code);setCapacity(payload.capacity_kva);
+        const selected=active() || registered();
+        set(headerForm,'code',payload.code);setCapacity(payload.capacity_kva ?? selected?.capacity_kva);
         if(!active())registeredId=number(payload.registered_transformer_id);
-        const selected=active() || registered(), code=field(headerForm,'code');
+        const code=field(headerForm,'code');
         manualTransformer=!active() && !!payload.manual_transformer;
         code.readOnly=!manualTransformer;
         code.placeholder=manualTransformer ? 'Enter transformer code' : 'Filled from Active transformer';
@@ -807,8 +808,7 @@ function initialize(boot) {
     document.addEventListener('keydown',event=>{if(event.key==='Escape' && drawingLines){event.preventDefault();cancelLineDrawing();}});
     if(!data.sources.some(s=>s.kind==='pdf'))document.querySelector('.entry-source-files').open=true;
     $('entry-header-pdf')?.addEventListener('change',updateHeaderPdfLimit);
-    $('entry-capacity-choice')?.addEventListener('change',()=>{const choice=$('entry-capacity-choice');$('entry-capacity-custom').hidden=choice.value!=='__custom__';$('entry-capacity-custom').required=choice.value==='__custom__';if(choice.value!=='__custom__')$('entry-capacity-custom').value='';});
-    $('entry-capacity-custom')?.addEventListener('input',()=>headerDirty=true);
+    $('entry-capacity')?.addEventListener('blur',event=>{event.currentTarget.value=capacityText(event.currentTarget.value.trim());});
     $('entry-height-choice')?.addEventListener('change',()=>{const choice=$('entry-height-choice'),custom=$('entry-height-custom');custom.hidden=choice.value!=='__custom__';custom.required=choice.value==='__custom__';if(choice.value!=='__custom__')custom.value='';field(rowForm,'pole_height').value=choice.value==='__custom__' ? custom.value : choice.value;field(rowForm,'pole_height_unit').value='ft';});
     $('entry-height-custom')?.addEventListener('input',()=>{field(rowForm,'pole_height').value=$('entry-height-custom').value;field(rowForm,'pole_height_unit').value='ft';});
     headerForm?.addEventListener('submit',saveHeader);headerForm?.addEventListener('input',event=>markDirty(event,'header'));headerForm?.addEventListener('change',event=>markDirty(event,'header'));

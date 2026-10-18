@@ -1115,7 +1115,7 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertStringContainsString('36 ft', $html);
         $this->assertStringContainsString('Other / Custom Value', $html);
         $this->assertSame(1, substr_count($html, 'class="entry-compact-fieldset entry-electrical-equipment"'));
-        $this->assertSame(9, substr_count($html, 'data-compact-select'));
+        $this->assertSame(8, substr_count($html, 'data-compact-select'));
         $this->assertStringNotContainsString('entry-copy-endpoint', $html);
         $columns = ['name="designation"', 'name="group_number"', 'name="row_date"', 'name="waypoint_reference"', 'id="entry-phase"',
             'name="conductors[R]"', 'name="conductors[Y]"', 'name="conductors[B]"', 'name="conductors[N]"', 'name="equipment_type"', 'name="pole_class"', 'name="pole_height"',

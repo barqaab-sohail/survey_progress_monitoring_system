@@ -38,8 +38,8 @@ class EntryService
                 'subdivision_code' => $feeder?->subDivision?->code, 'survey_date' => $batch->survey_date->format('Y-m-d'),
                 'team_group' => $batch->surveyTeam?->code],
             'sources' => $batch->sources->map(fn ($source) => $source->only(['id', 'kind', 'original_name', 'status', 'version', 'metadata']))->values()->all(),
-            'registered_transformers' => $feeder?->transformers()->orderBy('transformer_code')->get(['id', 'transformer_code'])
-                ->map(fn ($transformer) => ['id' => $transformer->id, 'code' => $transformer->transformer_code])->all() ?? [],
+            'registered_transformers' => $feeder?->transformers()->orderBy('transformer_code')->get(['id', 'transformer_code', 'capacity_kva'])
+                ->map(fn ($transformer) => ['id' => $transformer->id, 'code' => $transformer->transformer_code, 'capacity_kva' => $transformer->capacity_kva])->all() ?? [],
             'entry_settings' => app(SurveyWaypoint::class)->settings($batch->project_id),
             'waypoints' => $batch->waypoints->map(fn ($point) => $point->only(['id', 'name', 'source_file_id']) + ['recorded_at' => $point->recorded_at?->utc()->toIso8601String()])->values()->all(),
             'transformers' => $batch->transformers->map(fn ($transformer) => app(SurveyWaypoint::class)->transformerLocation([
