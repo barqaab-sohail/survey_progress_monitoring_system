@@ -158,5 +158,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/survey', 'assignSurvey')->name('survey.assign');
         Route::post('/survey/{assignment}/reassign', 'reassignSurvey')->name('survey.reassign');
+        Route::post('/survey/{assignment}/return', 'returnSurvey')->name('survey.return');
+    });
+    Route::middleware('role:super_admin,data_entry_verification_team_leader,mdb_creation_team_leader')->prefix('team-work')->name('team-work.')->controller(\App\Http\Controllers\TeamWorkAssignmentController::class)->group(function () {
+        Route::get('/workflow', 'workflowIndex')->name('workflow');
+        Route::post('/workflow', 'assignWorkflow')->name('workflow.assign');
     });
 });

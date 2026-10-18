@@ -19,6 +19,7 @@ return new class extends Migration
             $table->date('deadline')->nullable();
             $table->string('priority', 20)->default('normal');
             $table->text('instructions')->nullable();
+            $table->text('return_comments')->nullable();
             $table->string('status', 32)->default('assigned')->index();
             $table->timestamp('started_at')->nullable();
             $table->timestamp('completed_at')->nullable();

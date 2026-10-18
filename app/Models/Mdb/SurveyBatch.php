@@ -64,6 +64,10 @@ class SurveyBatch extends Model
         return $this->belongsTo(User::class, 'survey_verifier_id');
     }
 
+    public function entryAssignee() { return $this->belongsTo(User::class, 'entry_assigned_to'); }
+    public function verificationAssignee() { return $this->belongsTo(User::class, 'verification_assigned_to'); }
+    public function mdbAssignee() { return $this->belongsTo(User::class, 'mdb_assigned_to'); }
+
     public function sources()
     {
         return $this->hasMany(SourceFile::class, 'batch_id');

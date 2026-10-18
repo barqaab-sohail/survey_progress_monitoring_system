@@ -179,6 +179,12 @@ class FieldSurveyApiTest extends TestCase
         $this->postJson('/api/v1/field/surveys/sync', $payload)->assertCreated();
         $this->assertSame('submitted', $task->fresh()->status);
         $this->assertDatabaseHas('audit_logs', ['action' => 'survey.task_status_changed', 'auditable_id' => $task->id]);
+        $this->actingAs($this->leader)->post(route('team-work.survey.return', $task), ['comments' => 'Please attach the pole label photograph.'])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('returned', $task->fresh()->status);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'survey.task_returned', 'auditable_id' => $task->id]);
+        $this->withHeader('Authorization', 'Bearer '.$login->json('token'))->getJson('/api/v1/field/bootstrap')->assertOk()
+            ->assertJsonPath('feeders.0.tasks.0.return_comments', 'Please attach the pole label photograph.');
     }
 
     public function test_full_sheet_sync_preserves_paper_fields_and_leading_zeros_without_creating_progress(): void

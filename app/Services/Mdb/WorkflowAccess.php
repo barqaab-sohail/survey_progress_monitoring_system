@@ -14,6 +14,7 @@ class WorkflowAccess
         'surveyor' => [],
         'data_entry_verification_team_leader' => ['view'],
         'mdb_creation_team_leader' => ['view', 'prepare', 'export', 'generate'],
+        'management_viewer' => ['view'],
         'survey_data_entry_operator' => ['view', 'upload', 'edit', 'submit'],
         'survey_data_verifier' => ['view', 'surveyVerify'],
         'mdb_generator' => ['view', 'prepare', 'export', 'generate'],
@@ -59,6 +60,12 @@ class WorkflowAccess
         if (! $batch->staged_workflow || $user->hasRole('super_admin')) {
             return true;
         }
+        if ($batch->entry_assigned_to && $user->hasRole('survey_data_entry_operator') && in_array($ability, ['view', 'upload', 'edit', 'submit'], true)
+            && (int) $batch->entry_assigned_to !== (int) $user->id) return false;
+        if ($batch->verification_assigned_to && $user->hasRole('survey_data_verifier') && in_array($ability, ['view', 'surveyVerify'], true)
+            && (int) $batch->verification_assigned_to !== (int) $user->id) return false;
+        if ($batch->mdb_assigned_to && $user->hasRole('mdb_generator') && in_array($ability, ['view', 'prepare', 'export', 'generate'], true)
+            && (int) $batch->mdb_assigned_to !== (int) $user->id) return false;
         $role = match ($ability) {
             'edit', 'upload', 'submit' => 'survey_data_entry_operator',
             'surveyVerify' => 'survey_data_verifier',
@@ -73,8 +80,45 @@ class WorkflowAccess
     public function visible(User $user): Builder
     {
         $query = SurveyBatch::query();
-        if ($user->hasAnyRole(['super_admin', 'project_manager'])) {
+        if ($user->hasAnyRole(['super_admin', 'project_manager', 'management_viewer'])) {
             return $query;
+        }
+
+        if ($user->hasRole('survey_data_entry_operator')) {
+            return $query->where(function (Builder $scope) use ($user): void {
+                    $scope->where('entry_assigned_to', $user->id)
+                    ->orWhere(function (Builder $legacy) use ($user): void {
+                        $legacy->whereNull('entry_assigned_to')->where(function (Builder $teams) use ($user): void {
+                            $teams->whereHas('surveyTeam.members', fn (Builder $members) => $members->where('users.id', $user->id))
+                                ->orWhereIn('project_id', $user->mdbTeams()->where('status', 'active')->select('mdb_teams.project_id'))
+                                ->orWhereIn('project_id', $user->processingTeams()->where('status', 'active')->select('processing_teams.project_id'));
+                        });
+                    });
+            });
+        }
+        if ($user->hasRole('survey_data_verifier')) {
+            return $query->where(function (Builder $scope) use ($user): void {
+                    $scope->where('verification_assigned_to', $user->id)
+                    ->orWhere(function (Builder $legacy) use ($user): void {
+                        $legacy->whereNull('verification_assigned_to')->where(function (Builder $teams) use ($user): void {
+                            $teams->whereHas('surveyTeam.members', fn (Builder $members) => $members->where('users.id', $user->id))
+                                ->orWhereIn('project_id', $user->mdbTeams()->where('status', 'active')->select('mdb_teams.project_id'))
+                                ->orWhereIn('project_id', $user->processingTeams()->where('status', 'active')->select('processing_teams.project_id'));
+                        });
+                    });
+            });
+        }
+        if ($user->hasRole('mdb_generator')) {
+            return $query->where(function (Builder $scope) use ($user): void {
+                    $scope->where('mdb_assigned_to', $user->id)
+                    ->orWhere(function (Builder $legacy) use ($user): void {
+                        $legacy->whereNull('mdb_assigned_to')->where(function (Builder $teams) use ($user): void {
+                            $teams->whereHas('surveyTeam.members', fn (Builder $members) => $members->where('users.id', $user->id))
+                                ->orWhereIn('project_id', $user->mdbTeams()->where('status', 'active')->select('mdb_teams.project_id'))
+                                ->orWhereIn('project_id', $user->processingTeams()->where('status', 'active')->select('processing_teams.project_id'));
+                        });
+                    });
+            });
         }
 
         return $query->where(function (Builder $scope) use ($user): void {

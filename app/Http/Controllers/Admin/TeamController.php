@@ -41,7 +41,7 @@ class TeamController extends Controller
         return back()->with('success', 'Team created.');
     }
 
-    public function member(Request $request): RedirectResponse
+    public function member(Request $request, AuditService $audit): RedirectResponse
     {
         $teamTable = $request->input('type') === 'mdb' ? 'mdb_teams' : 'survey_teams';
         $data = $request->validate([
@@ -59,7 +59,10 @@ class TeamController extends Controller
             ? $member->hasAnyRole(['surveyor', 'survey_team_leader', 'super_admin'])
             : $member->hasAnyRole(['mdb_generator', 'mdb_creation_team_leader', 'mdb_team_user', 'super_admin']),
             422, 'The selected role is not allowed in this team type.');
+        $old = $team->members()->whereKey($member->id)->first()?->pivot?->toArray() ?? [];
         $team->members()->syncWithoutDetaching([$data['user_id'] => $data['type'] === 'survey' ? ['is_leader' => $request->boolean('is_leader')] : []]);
+        $audit->record($request->user(), 'team.member_assigned', $team, $old, ['user_id' => $member->id, 'role' => $member->role->value,
+            'is_leader' => $data['type'] === 'survey' ? $request->boolean('is_leader') : false]);
 
         return back()->with('success', 'Team member assigned.');
     }

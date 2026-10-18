@@ -400,6 +400,27 @@ class MdbOperatorEntryTest extends TestCase
         return $actors;
     }
 
+    public function test_workflow_task_assignment_enforces_stage_roles_ownership_and_verification_separation(): void
+    {
+        [$operator, $verifier, $creator] = $this->workflowActors();
+        $lead = User::factory()->create(['role' => UserRole::DataEntryVerificationTeamLeader]);
+        $this->batch->surveyTeam->members()->attach($lead->id, ['is_leader' => true]);
+        $url = route('team-work.workflow.assign');
+        $this->actingAs($lead)->get(route('team-work.workflow'))->assertOk()->assertSee('Workflow Task Assignments');
+        $data = ['batch_id' => $this->batch->id, 'stage' => 'entry', 'user_id' => $operator->id];
+        $this->post($url, $data)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame($operator->id, $this->batch->fresh()->entry_assigned_to);
+        $this->postJson($url, ['batch_id' => $this->batch->id, 'stage' => 'verification', 'user_id' => $operator->id])->assertUnprocessable();
+        $this->batch->update(['survey_status' => 'awaiting_verification', 'entry_actor_ids' => [$verifier->id]]);
+        $this->postJson($url, ['batch_id' => $this->batch->id, 'stage' => 'verification', 'user_id' => $verifier->id])->assertUnprocessable();
+        $this->postJson($url, ['batch_id' => $this->batch->id, 'stage' => 'verification', 'user_id' => $creator->id])->assertStatus(422);
+        $this->batch->update(['entry_actor_ids' => []]);
+        $this->actingAs(User::factory()->create(['role' => UserRole::SuperAdmin]))
+            ->post($url, ['batch_id' => $this->batch->id, 'stage' => 'verification', 'user_id' => $verifier->id])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame($verifier->id, $this->batch->fresh()->verification_assigned_to);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'mdb.workflow_task_assigned']);
+    }
+
     private function completeSurvey(User $operator): void
     {
         $this->actingAs($operator);

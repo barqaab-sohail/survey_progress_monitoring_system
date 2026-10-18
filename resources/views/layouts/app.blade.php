@@ -18,7 +18,7 @@
     <header class="topbar">
         <a class="brand" href="{{ route('dashboard') }}">
             <span class="brand-mark brand-logo-mark"><img src="{{ $branding->faviconUrl() }}" alt=""></span>
-            <span class="brand-copy"><strong>{{ $branding->projectName() }}</strong><small>{{ auth()->user()->hasRole('survey_team_leader') ? 'Survey Operations' : 'Survey &middot; MDB &middot; Verification' }}</small></span>
+            <span class="brand-copy"><strong>{{ $branding->projectName() }}</strong><small>{{ auth()->user()->hasRole('survey_team_leader') ? 'Survey Operations' : 'Survey · MDB · Verification' }}</small></span>
         </a>
         @if(request()->routeIs('mdb-workflow.*'))
             <button class="btn btn-sm logout-btn sidebar-collapse-toggle" id="sidebar-collapse-toggle" type="button" aria-controls="primary-navigation" aria-expanded="true" title="Hide left navigation and use the full page width">Hide menu</button>
@@ -50,6 +50,9 @@
                 <a class="nav-link {{ request()->routeIs('survey.index') ? 'active' : '' }}" href="{{ route('survey.index') }}">My Survey Entries</a>
                 <a class="nav-link {{ request()->routeIs('survey.returned') ? 'active' : '' }}" href="{{ route('survey.returned') }}">Returned Entries</a>
                 @if(auth()->user()->hasAnyRole(['survey_team_leader','super_admin']))<a class="nav-link {{ request()->routeIs('team-work.*') ? 'active' : '' }}" href="{{ route('team-work.index') }}">Survey Task Assignments</a>@endif
+            @endif
+            @if(auth()->user()->hasAnyRole(['data_entry_verification_team_leader','mdb_creation_team_leader','super_admin']))
+                <a class="nav-link {{ request()->routeIs('team-work.workflow*') ? 'active' : '' }}" href="{{ route('team-work.workflow') }}">Workflow Task Assignments</a>
             @endif
             @if(auth()->user()->hasAnyRole(['mdb_team_user','super_admin']))
                 <div class="nav-label">MDB workflow</div>

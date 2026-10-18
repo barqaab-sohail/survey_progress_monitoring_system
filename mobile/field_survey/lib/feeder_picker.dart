@@ -99,7 +99,12 @@ class FeederPicker extends StatelessWidget {
     final parts = <String>[feeder['feeder_name']];
     if (task['priority'] != null) parts.add('Priority: ${task['priority']}');
     if (task['deadline'] != null) parts.add('Due: ${task['deadline']}');
-    if ((task['instructions'] ?? '').toString().isNotEmpty) parts.add(task['instructions'].toString());
-    return parts.join(' · ');
+    if ((task['instructions'] ?? '').toString().isNotEmpty) {
+      parts.add(task['instructions'].toString());
+    }
+    if ((task['return_comments'] ?? '').toString().isNotEmpty) {
+      parts.add('Correction: ${task['return_comments']}');
+    }
+    return parts.join(' \u00b7 ');
   }
 }

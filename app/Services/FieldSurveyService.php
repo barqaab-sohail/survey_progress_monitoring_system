@@ -99,7 +99,8 @@ class FieldSurveyService
                 if ($task) {
                     $taskOld = $task->toArray();
                     $task->update(['status' => $data['status'] === 'submitted' ? 'submitted' : 'in_progress',
-                        'started_at' => $task->started_at ?? now(), 'completed_at' => $data['status'] === 'submitted' ? now() : null]);
+                        'started_at' => $task->started_at ?? now(), 'completed_at' => $data['status'] === 'submitted' ? now() : null,
+                        'return_comments' => $data['status'] === 'submitted' ? null : $task->return_comments]);
                     if ($task->wasChanged('status')) $this->audit->record($actor, 'survey.task_status_changed', $task, $taskOld, $task->fresh()->toArray());
                 }
                 $this->audit->record($actor, $isNew ? 'field_survey.created' : 'field_survey.updated', $survey, $old, $survey->toArray());

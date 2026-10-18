@@ -13,7 +13,10 @@ return new class extends Migration
             $table->foreignId('verification_assigned_to')->nullable()->after('survey_verifier_id')->constrained('users')->nullOnDelete();
             $table->foreignId('mdb_assigned_to')->nullable()->after('verification_assigned_to')->constrained('users')->nullOnDelete();
             $table->index(['survey_status', 'entry_assigned_to']);
-            $table->index(['survey_status', 'verification_assigned_to']);
+            $table->index(
+                ['survey_status', 'verification_assigned_to'],
+                'mdb_batches_status_verifier_idx'
+            );
             $table->index(['survey_status', 'mdb_assigned_to']);
         });
     }

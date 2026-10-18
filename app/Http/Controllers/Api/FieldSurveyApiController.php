@@ -59,7 +59,7 @@ class FieldSurveyApiController extends Controller
                 'team_ids' => $feeder->assignments->filter(fn ($assignment) => $teams->firstWhere('id', $assignment->survey_team_id)?->project_id === $feeder->project_id)->pluck('survey_team_id')->unique()->values(),
                 'tasks' => ($personalTasks[$feeder->id] ?? collect())->map(fn ($task) => ['assignment_id' => $task->assignment_uuid,
                     'team_id' => $task->survey_team_id, 'assigned_at' => $task->assigned_at?->toDateString(), 'deadline' => $task->deadline?->toDateString(),
-                    'priority' => $task->priority, 'instructions' => $task->instructions, 'status' => $task->status])->values(),
+                    'priority' => $task->priority, 'instructions' => $task->instructions, 'return_comments' => $task->return_comments, 'status' => $task->status])->values(),
             ]), 'transformers' => $transformers,
         ]);
     }

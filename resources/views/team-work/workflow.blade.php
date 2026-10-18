@@ -1,0 +1,10 @@
+@extends('layouts.app')
+@section('title', 'PDF Entry, Verification & MDB Assignments')
+@section('content')
+<div class="page-head"><div><h1>PDF Entry, Verification &amp; MDB Assignments</h1><p>Assign a batch to its next responsible operator. Verified approval is required before MDB assignment.</p></div></div>
+<div class="card table-wrap"><table class="table"><thead><tr><th>Batch / Feeder</th><th>Workflow stage</th><th>Current assignees</th><th>Assign next task</th></tr></thead><tbody>
+@forelse($batches as $batch)<tr><td><strong>Batch #{{ $batch->id }}</strong><small>{{ $batch->project?->name }} · {{ $batch->feeder?->feeder_code }} | {{ $batch->feeder?->feeder_name }}</small></td><td>{{ $batch->workflow_label }}</td><td>Entry: {{ $batch->entryAssignee?->name ?? 'Unassigned' }}<br>Verification: {{ $batch->verificationAssignee?->name ?? 'Unassigned' }}<br>MDB: {{ $batch->mdbAssignee?->name ?? 'Unassigned' }}</td><td>
+<form method="POST" action="{{ route('team-work.workflow.assign') }}">@csrf<input type="hidden" name="batch_id" value="{{ $batch->id }}"><select name="stage" required><option value="">Stage</option>@if(auth()->user()->hasAnyRole(['data_entry_verification_team_leader','super_admin']))<option value="entry" @disabled(!in_array($batch->survey_status,['entry','returned'],true))>Data entry</option><option value="verification" @disabled(!in_array($batch->survey_status,['submitted','awaiting_verification'],true))>Verification</option>@endif @if(auth()->user()->hasAnyRole(['mdb_creation_team_leader','super_admin']))<option value="mdb" @disabled($batch->survey_status !== 'approved')>MDB creation</option>@endif</select><select name="user_id" required><option value="">Assignee</option>@foreach($users as $candidate)<option value="{{ $candidate->id }}">{{ $candidate->name }} | {{ $candidate->role->label() }}</option>@endforeach</select><input name="reason" maxlength="1000" placeholder="Assignment note"><button class="btn btn-sm btn-primary">Assign</button></form>
+</td></tr>@empty<tr><td colspan="4">No batches available to this team.</td></tr>@endforelse
+</tbody></table>{{ $batches->links() }}</div>
+@endsection
