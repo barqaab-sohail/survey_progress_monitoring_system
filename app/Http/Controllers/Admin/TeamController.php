@@ -56,7 +56,7 @@ class TeamController extends Controller
         };
         $member = User::findOrFail($data['user_id']);
         abort_unless($data['type'] === 'survey'
-            ? $member->hasAnyRole(['surveyor', 'survey_team_leader', 'super_admin'])
+            ? $member->hasAnyRole(['surveyor', 'survey_team_leader', 'data_entry_verification_team_leader', 'survey_data_entry_operator', 'survey_data_verifier', 'super_admin'])
             : $member->hasAnyRole(['mdb_generator', 'mdb_creation_team_leader', 'mdb_team_user', 'super_admin']),
             422, 'The selected role is not allowed in this team type.');
         $old = $team->members()->whereKey($member->id)->first()?->pivot?->toArray() ?? [];

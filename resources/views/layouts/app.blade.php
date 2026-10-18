@@ -18,7 +18,7 @@
     <header class="topbar">
         <a class="brand" href="{{ route('dashboard') }}">
             <span class="brand-mark brand-logo-mark"><img src="{{ $branding->faviconUrl() }}" alt=""></span>
-            <span class="brand-copy"><strong>{{ $branding->projectName() }}</strong><small>{{ auth()->user()->hasRole('survey_team_leader') ? 'Survey Operations' : 'Survey · MDB · Verification' }}</small></span>
+            <span class="brand-copy"><strong>{{ $branding->projectName() }}</strong><small>{{ auth()->user()->hasRole('survey_team_leader') ? 'Survey Team Leader' : 'Survey · MDB · Verification' }}</small></span>
         </a>
         @if(request()->routeIs('mdb-workflow.*'))
             <button class="btn btn-sm logout-btn sidebar-collapse-toggle" id="sidebar-collapse-toggle" type="button" aria-controls="primary-navigation" aria-expanded="true" title="Hide left navigation and use the full page width">Hide menu</button>
@@ -38,14 +38,14 @@
             @endif
             <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">Overview Dashboard</a>
             @can('mdb-workflow.view')
-                <a class="nav-link {{ request()->routeIs('mdb-workflow.*') ? 'active' : '' }}" href="{{ route('mdb-workflow.index') }}">MDB Creation &amp; Verification</a>
+                <a class="nav-link {{ request()->routeIs('mdb-workflow.*') ? 'active' : '' }}" href="{{ route('mdb-workflow.index') }}">MDB Creation &amp; Validation</a>
             @endcan
             @if(auth()->user()->hasAnyRole(['survey_team_leader','super_admin','project_manager','management_viewer']))
                 <a class="nav-link {{ request()->routeIs('survey-progress.*') ? 'active' : '' }}" href="{{ route('survey-progress.index') }}">Automatic Survey Progress</a>
                 <a class="nav-link {{ request()->routeIs('field-surveys.*') ? 'active' : '' }}" href="{{ route('field-surveys.index') }}">Mobile Field Surveys</a>
             @endif
             @if(auth()->user()->hasAnyRole(['survey_team_leader','surveyor','super_admin']))
-                <div class="nav-label">Survey</div>
+                <div class="nav-label">{{ auth()->user()->hasRole('survey_team_leader') ? 'Survey Team Leader' : 'Survey' }}</div>
                 @unless(config('survey_progress.automatic'))<a class="nav-link {{ request()->routeIs('survey.create') ? 'active' : '' }}" href="{{ route('survey.create') }}">Add Daily Survey</a>@endunless
                 <a class="nav-link {{ request()->routeIs('survey.index') ? 'active' : '' }}" href="{{ route('survey.index') }}">My Survey Entries</a>
                 <a class="nav-link {{ request()->routeIs('survey.returned') ? 'active' : '' }}" href="{{ route('survey.returned') }}">Returned Entries</a>

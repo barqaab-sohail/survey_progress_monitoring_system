@@ -44,12 +44,15 @@ class DatabaseSeeder extends Seeder
         $admin = $this->user($internal, 'Super Admin', 'admin@hazeco.test', UserRole::SuperAdmin, $password, '1');
         $this->user($internal, 'Project Manager', 'manager@hazeco.test', UserRole::ProjectManager, $password, '2');
         $surveyLead = $this->user($internal, 'Survey Team Leader', 'survey@hazeco.test', UserRole::SurveyTeamLeader, $password, '3');
+        $surveyor = $this->user($internal, 'Surveyor', 'surveyor@hazeco.test', UserRole::Surveyor, $password, '12');
+        $dataEntryLead = $this->user($internal, 'Data Entry & Verification Team Leader', 'dataentrylead@hazeco.test', UserRole::DataEntryVerificationTeamLeader, $password, '13');
         $mdbUser = $this->user($internal, 'MDB User', 'mdb@hazeco.test', UserRole::MdbTeamUser, $password, '4');
         $externalProcessor = $this->user($thirdParty, 'Third-Party Processor', 'thirdparty@hazeco.test', UserRole::MdbProcessingUser, $password, '6');
         $this->user($internal, 'Management Viewer', 'viewer@hazeco.test', UserRole::ManagementViewer, $password, '7');
         $entryOperator = $this->user($internal, 'PDF Data Entry Operator', 'dataentry@hazeco.test', UserRole::SurveyDataEntryOperator, $password, '8');
         $dataVerifier = $this->user($internal, 'Data Verifier', 'dataverifier@hazeco.test', UserRole::SurveyDataVerifier, $password, '9');
         $mdbCreator = $this->user($internal, 'MDB Creator', 'mdbcreator@hazeco.test', UserRole::MdbGenerator, $password, '10');
+        $mdbLead = $this->user($internal, 'MDB Creation Team Leader', 'mdblead@hazeco.test', UserRole::MdbCreationTeamLeader, $password, '14');
         $mdbVerifier = $this->user($internal, 'MDB Verifier', 'mdbverifier@hazeco.test', UserRole::MdbVerifier, $password, '11');
 
         $project = Project::updateOrCreate(['code' => 'HAZECO-TDL'], [
@@ -60,9 +63,15 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $surveyTeam = SurveyTeam::updateOrCreate(['project_id' => $project->id, 'code' => 'ST-01'], ['name' => 'Survey Team 01', 'status' => RecordStatus::Active]);
-        $surveyTeam->members()->syncWithoutDetaching([$surveyLead->id => ['is_leader' => true], $entryOperator->id => ['is_leader' => false], $dataVerifier->id => ['is_leader' => false]]);
+        $surveyTeam->members()->syncWithoutDetaching([
+            $surveyLead->id => ['is_leader' => true],
+            $surveyor->id => ['is_leader' => false],
+            $dataEntryLead->id => ['is_leader' => true],
+            $entryOperator->id => ['is_leader' => false],
+            $dataVerifier->id => ['is_leader' => false],
+        ]);
         $mdbTeam = MdbTeam::updateOrCreate(['project_id' => $project->id, 'code' => 'MDB-01'], ['name' => 'MDB Team 01', 'status' => RecordStatus::Active]);
-        $mdbTeam->members()->syncWithoutDetaching([$mdbUser->id, $mdbCreator->id, $mdbVerifier->id]);
+        $mdbTeam->members()->syncWithoutDetaching([$mdbUser->id, $mdbCreator->id, $mdbLead->id, $mdbVerifier->id]);
 
         $admin->syncRoles([UserRole::SuperAdmin->value]);
         $this->call(ShieldPermissionSeeder::class);
@@ -78,7 +87,7 @@ class DatabaseSeeder extends Seeder
             'email' => $email,
             'phone' => '0300-000000'.$suffix,
             'role' => $role,
-            'status' => RecordStatus::Active,
+            'status' => $role === UserRole::SuperAdmin ? RecordStatus::Active : RecordStatus::Inactive,
         ]);
         if (! $user->exists) {
             $user->password = $password;

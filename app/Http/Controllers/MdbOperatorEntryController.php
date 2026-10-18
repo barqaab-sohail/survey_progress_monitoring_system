@@ -42,7 +42,7 @@ class MdbOperatorEntryController extends Controller
             'pair_number' => 'required|integer|min:1|max:100000', 'designation' => 'required|in:S,E', 'group_number' => 'nullable|string|max:40', 'row_date' => 'nullable|date_format:Y-m-d',
             'waypoint_reference' => 'nullable|string|max:255', 'gpx_source_id' => 'nullable|integer', 'source_pdf_id' => 'nullable|integer',
             'source_page' => 'nullable|integer|min:1|max:10000', 'source_row' => 'nullable|string|max:40', 'conductors' => 'required|array:R,Y,B,N',
-            'equipment_type' => 'nullable|string|max:255', 'pole_class' => 'nullable|string|max:255', 'pole_height' => 'required|numeric|gt:0|max:10000', 'pole_height_unit' => 'nullable|in:m,ft',
+            'equipment_type' => 'required|string|max:255', 'pole_class' => 'required|string|max:255', 'pole_height' => 'required|numeric|gt:0|max:10000', 'pole_height_unit' => 'nullable|in:m,ft',
             'consumers' => 'required|array:rs,rl,sc,lc,si,li,pb,ag,st,pv', 'intersection' => 'required|boolean',
             'pv_details' => 'nullable|array|max:100', 'pv_details.*' => 'array:reference,service_load_kw,installed_capacity_kw,meter_number,remarks',
             'pv_details.*.reference' => 'nullable|string|max:255', 'pv_details.*.service_load_kw' => 'nullable|numeric|min:0|max:1000000',
@@ -71,7 +71,7 @@ class MdbOperatorEntryController extends Controller
             'pv_details.*.service_load_kw.numeric' => 'PV service load must be a number in kW.',
             'pv_details.*.installed_capacity_kw.numeric' => 'PV solar capacity must be a number in kW.',
         ], ['row_date' => 'Row date', 'group_number' => 'Group', 'waypoint_reference' => 'GPS number',
-            'pole_height' => 'Pole/tower height', 'pair_number' => 'Section pair',
+            'equipment_type' => 'Type', 'pole_class' => 'Pole class', 'pole_height' => 'Pole height', 'pair_number' => 'Section pair',
             ...collect(EntryLookups::CONSUMERS)->mapWithKeys(fn ($description, $key) => ['consumers.'.$key => strtoupper($key).' consumer count'])->all()]);
         $identity = app(SurveyWaypoint::class);
         $settings = $identity->settings($batch->project_id);
@@ -89,6 +89,8 @@ class MdbOperatorEntryController extends Controller
                 $validated[$key] = $value;
             }
         }
+        validator($validated, ['group_number' => 'required', 'waypoint_reference' => 'required'], [],
+            ['group_number' => 'Group', 'waypoint_reference' => 'GPS number'])->validate();
         $strict = ! empty($validated['identity_version']);
         if ($strict) {
             foreach (['group_number' => '/^\d{2}$/D', 'waypoint_reference' => '/^\d{3}$/D'] as $key => $pattern) {

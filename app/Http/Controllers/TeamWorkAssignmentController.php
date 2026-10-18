@@ -24,12 +24,21 @@ class TeamWorkAssignmentController extends Controller
         $teams = $this->teams($request->user())->with(['project', 'members'])->get();
         $userIds = $teams->flatMap(fn ($team) => $team->members->pluck('id'))->unique();
         $feeders = Feeder::active()->whereIn('project_id', $teams->pluck('project_id'))->orderBy('feeder_code')->get();
-        $users = User::whereIn('id', $userIds)->where('status', 'active')->orderBy('name')->get();
-        $assignments = SurveyorAssignment::with(['team.project', 'feeder', 'surveyor', 'assigner'])
-            ->whereIn('survey_team_id', $teams->modelKeys())->latest()->paginate(40);
+        $users = User::whereIn('id', $userIds)->where('status', 'active')->orderBy('name')->get()->keyBy('id');
         $workload = SurveyorAssignment::selectRaw('surveyor_id, count(*) as assigned_count')
             ->whereIn('status', ['assigned', 'in_progress', 'draft', 'returned'])->whereIn('surveyor_id', $userIds)->groupBy('surveyor_id')->pluck('assigned_count', 'surveyor_id');
-        return view('team-work.assignments', compact('teams', 'assignments', 'workload', 'feeders', 'users'));
+        $teamOptions = $teams->mapWithKeys(function (SurveyTeam $team) use ($users, $feeders, $workload) {
+            $members = $team->members->filter(fn (User $member) => $users->has($member->id)
+                && $member->hasAnyRole([UserRole::Surveyor->value, UserRole::SurveyTeamLeader->value]))
+                ->map(fn (User $member) => ['id' => $member->id, 'name' => $member->name, 'role' => $member->role->label(), 'open_tasks' => $workload[$member->id] ?? 0])->values();
+            $teamFeeders = $feeders->where('project_id', $team->project_id)
+                ->map(fn (Feeder $feeder) => ['id' => $feeder->id, 'code' => $feeder->feeder_code, 'name' => $feeder->feeder_name])->values();
+            return [$team->id => ['members' => $members, 'feeders' => $teamFeeders]];
+        });
+        $assignments = SurveyorAssignment::with(['team.project', 'feeder', 'surveyor', 'assigner'])
+            ->whereIn('survey_team_id', $teams->modelKeys())->latest()->paginate(40);
+        $progressCounts = SurveyorAssignment::selectRaw('status, count(*) as total')->whereIn('survey_team_id', $teams->modelKeys())->groupBy('status')->pluck('total', 'status');
+        return view('team-work.assignments', compact('teams', 'assignments', 'workload', 'teamOptions', 'progressCounts'));
     }
 
     public function assignSurvey(Request $request, AuditService $audit)
@@ -43,9 +52,13 @@ class TeamWorkAssignmentController extends Controller
             'authorize_overlap' => ['sometimes', 'accepted'],
         ]);
         $team = $this->teams($request->user())->whereKey($data['survey_team_id'])->firstOrFail();
-        abort_unless($team->members()->whereKey($data['surveyor_id'])->exists(), 422, 'The surveyor must belong to your survey team.');
+        if (! $team->members()->whereKey($data['surveyor_id'])->exists()) {
+            throw ValidationException::withMessages(['surveyor_id' => 'Choose an active surveyor who belongs to the selected survey team.']);
+        }
         $surveyor = User::findOrFail($data['surveyor_id']);
-        abort_unless($surveyor->isActive() && $surveyor->hasAnyRole([UserRole::Surveyor->value, UserRole::SurveyTeamLeader->value, UserRole::SuperAdmin->value]), 422, 'Select an active surveyor or a team leader authorized to conduct surveys.');
+        if (! $surveyor->isActive() || ! $surveyor->hasAnyRole([UserRole::Surveyor->value, UserRole::SurveyTeamLeader->value, UserRole::SuperAdmin->value])) {
+            throw ValidationException::withMessages(['surveyor_id' => 'Choose an active surveyor or a team leader authorized to conduct surveys.']);
+        }
 
         $created = DB::transaction(function () use ($request, $data, $team, $audit) {
             $lockedTeam = SurveyTeam::whereKey($team->id)->lockForUpdate()->firstOrFail();
@@ -84,9 +97,13 @@ class TeamWorkAssignmentController extends Controller
     {
         $data = $request->validate(['surveyor_id' => ['required', 'integer', 'exists:users,id'], 'reason' => ['required', 'string', 'min:3', 'max:1000']]);
         $team = $this->teams($request->user())->whereKey($assignment->survey_team_id)->firstOrFail();
-        abort_unless($team->members()->whereKey($data['surveyor_id'])->exists(), 422, 'The new surveyor must belong to your survey team.');
+        if (! $team->members()->whereKey($data['surveyor_id'])->exists()) {
+            throw ValidationException::withMessages(['surveyor_id' => 'Choose a new surveyor who belongs to this survey team.']);
+        }
         $nextUser = User::findOrFail($data['surveyor_id']);
-        abort_unless($nextUser->isActive() && $nextUser->hasAnyRole([UserRole::Surveyor->value, UserRole::SurveyTeamLeader->value]), 422);
+        if (! $nextUser->isActive() || ! $nextUser->hasAnyRole([UserRole::Surveyor->value, UserRole::SurveyTeamLeader->value])) {
+            throw ValidationException::withMessages(['surveyor_id' => 'Choose an active surveyor in this team.']);
+        }
         DB::transaction(function () use ($request, $assignment, $data, $audit) {
             $current = SurveyorAssignment::whereKey($assignment->id)->lockForUpdate()->firstOrFail();
             if ($current->status !== 'assigned') throw ValidationException::withMessages(['assignment' => 'Only pending assignments can be reassigned. Started or completed work must retain its owner.']);

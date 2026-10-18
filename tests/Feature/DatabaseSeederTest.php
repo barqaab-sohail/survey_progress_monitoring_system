@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
+use App\Enums\RecordStatus;
 use App\Models\MdbTeam;
 use App\Models\SurveyTeam;
 use App\Models\User;
@@ -29,9 +30,12 @@ class DatabaseSeederTest extends TestCase
         foreach ($accounts as $email => [$role, $queue, $allowed, $denied]) {
             $user = User::where('email', $email)->firstOrFail();
             $this->assertSame($role, $user->role);
+            $this->assertSame(RecordStatus::Inactive, $user->status, "$email should require Super Admin activation after seeding.");
             $this->assertTrue($user->hasRole($role->value));
             $this->assertTrue(Hash::check('Password123!', $user->password));
             $this->assertTrue($user->surveyTeams()->exists() || $user->mdbTeams()->exists());
+            // Activate explicitly to verify each role's permissions independently of seeded status.
+            $user->update(['status' => 'active']);
             foreach ($allowed as $ability) {
                 $this->assertTrue($access->allows($user, $ability), "$email: $ability");
             }
@@ -40,7 +44,12 @@ class DatabaseSeederTest extends TestCase
             }
             $this->actingAs($user)->get(route('mdb-workflow.index', ['queue' => $queue]))->assertOk();
         }
+        $this->assertDatabaseHas('users', ['email' => 'admin@hazeco.test', 'role' => UserRole::SuperAdmin->value, 'status' => 'active']);
         $this->assertDatabaseHas('users', ['email' => 'survey@hazeco.test', 'role' => UserRole::SurveyTeamLeader->value]);
+        $this->assertDatabaseHas('users', ['email' => 'survey@hazeco.test', 'status' => 'inactive']);
+        $this->assertDatabaseHas('users', ['email' => 'surveyor@hazeco.test', 'role' => UserRole::Surveyor->value, 'status' => 'inactive']);
+        $this->assertDatabaseHas('users', ['email' => 'dataentrylead@hazeco.test', 'role' => UserRole::DataEntryVerificationTeamLeader->value, 'status' => 'inactive']);
+        $this->assertDatabaseHas('users', ['email' => 'mdblead@hazeco.test', 'role' => UserRole::MdbCreationTeamLeader->value, 'status' => 'inactive']);
         $this->assertDatabaseHas('users', ['email' => 'mdb@hazeco.test', 'role' => UserRole::MdbTeamUser->value]);
     }
 
@@ -57,16 +66,17 @@ class DatabaseSeederTest extends TestCase
         $team->members()->attach($extraMember->id);
         $this->seed(DatabaseSeeder::class);
 
-        $this->assertDatabaseCount('users', 11);
+        $this->assertDatabaseCount('users', 14);
         $this->assertDatabaseCount('organizations', 2);
         $this->assertDatabaseCount('projects', 1);
         $this->assertDatabaseCount('survey_teams', 1);
         $this->assertDatabaseCount('mdb_teams', 1);
-        $this->assertDatabaseCount('survey_team_members', 4);
-        $this->assertDatabaseCount('mdb_team_members', 3);
+        $this->assertDatabaseCount('survey_team_members', 6);
+        $this->assertDatabaseCount('mdb_team_members', 4);
         $operator->refresh();
         $this->assertSame(UserRole::SurveyDataEntryOperator, $operator->role);
         $this->assertSame('PDF Data Entry Operator', $operator->name);
+        $this->assertSame(RecordStatus::Inactive, $operator->status);
         $this->assertSame($password, $operator->password);
         $this->assertTrue($operator->hasRole('survey_data_entry_operator'));
         $this->assertFalse($operator->hasRole('management_viewer'));
@@ -74,6 +84,6 @@ class DatabaseSeederTest extends TestCase
         $this->assertTrue($verifier->hasRole(UserRole::SurveyDataVerifier->value));
         $this->assertFalse($verifier->hasRole(UserRole::MdbGenerator->value));
         $this->assertTrue($team->members()->whereKey($extraMember->id)->exists());
-        $this->assertSame(3, MdbTeam::where('code', 'MDB-01')->firstOrFail()->members()->count());
+        $this->assertSame(4, MdbTeam::where('code', 'MDB-01')->firstOrFail()->members()->count());
     }
 }

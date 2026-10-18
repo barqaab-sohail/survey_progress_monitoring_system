@@ -1,18 +1,29 @@
 (() => {
     'use strict';
     const project = document.querySelector('[data-mdb-project]');
+    const surveyTeam = document.querySelector('select[name="survey_team_id"]');
+    const feeder = document.querySelector('[data-mdb-feeder-dependent]');
+    const batchCreate = document.querySelector('[data-batch-create]');
     const updateReferences = () => {
         if (!project) return;
         document.querySelectorAll('[data-mdb-project-dependent]').forEach(select => {
             Array.from(select.options).forEach(option => {
-                const allowed = !option.value || !project.value || option.dataset.projectId === project.value;
+                let allowed = !option.value || !project.value || option.dataset.projectId === project.value;
+                if (select.matches('[data-mdb-feeder-dependent]') && option.value) {
+                    const teamIds = (option.dataset.teamIds || '').split(',').filter(Boolean);
+                    const teamMatches = surveyTeam?.value && teamIds.includes(surveyTeam.value);
+                    const adminOverride = batchCreate?.dataset.canChooseUnassigned === '1';
+                    allowed = allowed && !!surveyTeam?.value && (teamMatches || adminOverride);
+                }
                 option.hidden = !allowed;
                 option.disabled = !allowed;
                 if (!allowed && option.selected) select.value = '';
             });
         });
+        if (feeder) feeder.disabled = !project.value || !surveyTeam?.value;
     };
     project?.addEventListener('change', updateReferences);
+    surveyTeam?.addEventListener('change', updateReferences);
     updateReferences();
     document.querySelectorAll('form[data-mdb-confirm]').forEach(form => {
         form.addEventListener('submit', event => {

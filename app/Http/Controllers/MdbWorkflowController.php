@@ -165,9 +165,13 @@ class MdbWorkflowController extends Controller
         $feeder = Feeder::active()->findOrFail($data['feeder_id']);
         abort_unless($team->status === 'active' && $team->project_id === (int) $data['project_id'] && $feeder->project_id === (int) $data['project_id'], 422, 'Team, feeder and project must match.');
         if (! $request->user()->hasRole('super_admin')) {
-            abort_unless($team->members()->whereKey($request->user()->id)->exists(), 403);
-            abort_unless($feeder->assignments()->where('survey_team_id', $team->id)->where('status', 'active')->whereDate('start_date', '<=', today())
-                ->where(fn ($q) => $q->whereNull('end_date')->orWhereDate('end_date', '>=', today()))->exists(), 403);
+            if (! $team->members()->whereKey($request->user()->id)->exists()) {
+                throw ValidationException::withMessages(['survey_team_id' => 'You are not a member of the selected survey team. Ask the Super Admin to add you to the team.']);
+            }
+            if (! $feeder->assignments()->where('survey_team_id', $team->id)->where('status', 'active')->whereDate('start_date', '<=', today())
+                ->where(fn ($q) => $q->whereNull('end_date')->orWhereDate('end_date', '>=', today()))->exists()) {
+                throw ValidationException::withMessages(['feeder_id' => 'This feeder is not currently assigned to the selected survey team. Ask the team leader or Super Admin to assign it first.']);
+            }
         }
         $storedPaths = [];
         try {
@@ -922,14 +926,24 @@ class MdbWorkflowController extends Controller
     private function references(Request $request): array
     {
         $user = $request->user();
-        $teams = SurveyTeam::where('status', 'active');
+        $teamsQuery = SurveyTeam::where('status', 'active');
         if (! $user->hasAnyRole(['super_admin', 'project_manager'])) {
-            $teams->whereHas('members', fn ($q) => $q->where('users.id', $user->id));
+            $teamsQuery->whereHas('members', fn ($q) => $q->where('users.id', $user->id));
         }
         $visibleProjects = $user->hasAnyRole(['super_admin', 'project_manager']) ? null : $this->access->visible($user)->select('project_id')->distinct();
-        $projectIds = $teams->pluck('project_id')->merge($visibleProjects ? $visibleProjects->pluck('project_id') : []);
+        $teams = $teamsQuery->orderBy('name')->get();
+        $teamIds = $teams->modelKeys();
+        $projectIds = $teams->pluck('project_id')->merge($visibleProjects ? $visibleProjects->pluck('project_id') : [])->unique();
+        $activeTeamAllocation = fn ($query) => $query->whereIn('survey_team_id', $teamIds)->where('status', 'active')
+            ->whereDate('start_date', '<=', today())->where(fn ($q) => $q->whereNull('end_date')->orWhereDate('end_date', '>=', today()));
+        $feedersQuery = Feeder::active()->when($visibleProjects, fn ($q) => $q->whereIn('project_id', $projectIds))
+            ->with(['assignments' => $activeTeamAllocation]);
+        if (! $user->hasAnyRole(['super_admin', 'project_manager'])) {
+            $feedersQuery->whereHas('assignments', $activeTeamAllocation);
+        }
+        $feeders = $feedersQuery->orderBy('feeder_name')->get();
 
         return ['projects' => Project::where('status', 'active')->when($visibleProjects, fn ($q) => $q->whereIn('id', $projectIds))->orderBy('name')->get(),
-            'feeders' => Feeder::active()->when($visibleProjects, fn ($q) => $q->whereIn('project_id', $projectIds))->orderBy('feeder_name')->get(), 'teams' => $teams->orderBy('name')->get()];
+            'feeders' => $feeders, 'teams' => $teams];
     }
 }

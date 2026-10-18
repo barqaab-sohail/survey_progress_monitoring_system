@@ -187,6 +187,22 @@ class FieldSurveyApiTest extends TestCase
             ->assertJsonPath('feeders.0.tasks.0.return_comments', 'Please attach the pole label photograph.');
     }
 
+    public function test_survey_assignment_rejects_a_surveyor_who_is_not_in_the_selected_team(): void
+    {
+        $surveyor = User::factory()->create(['organization_id' => $this->organization->id, 'role' => UserRole::Surveyor, 'status' => 'active']);
+        $this->actingAs($this->leader)->get(route('team-work.index'))->assertOk()->assertSee('Search feeder code or name')->assertSee('surveyTeamOptions');
+        $response = $this->actingAs($this->leader)->from(route('team-work.index'))->post(route('team-work.survey.assign'), [
+            'survey_team_id' => $this->team->id,
+            'surveyor_id' => $surveyor->id,
+            'feeder_ids' => [$this->feeder->id],
+            'assigned_at' => today()->toDateString(),
+            'priority' => 'normal',
+        ]);
+
+        $response->assertRedirect(route('team-work.index'))->assertSessionHasErrors('surveyor_id');
+        $this->assertDatabaseCount('surveyor_assignments', 0);
+    }
+
     public function test_full_sheet_sync_preserves_paper_fields_and_leading_zeros_without_creating_progress(): void
     {
         $data = $this->payload();

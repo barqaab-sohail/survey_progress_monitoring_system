@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Circle;
 use App\Models\Division;
 use App\Models\Feeder;
+use App\Models\FeederAssignment;
 use App\Models\GridStation;
 use App\Models\Mdb\Configuration;
 use App\Models\Mdb\EntryRow;
@@ -114,9 +115,61 @@ class MdbOperatorEntryTest extends TestCase
         return $this->transformer->entryRows()->where('client_uuid', $payload['client_uuid'])->firstOrFail();
     }
 
+    public function test_se_rows_require_group_gps_type_class_and_height(): void
+    {
+        foreach (['group_number', 'waypoint_reference', 'equipment_type', 'pole_class', 'pole_height'] as $field) {
+            foreach ([null, '', '   '] as $blank) {
+                $this->postJson(route('mdb-workflow.entry.rows.store', [$this->batch, $this->transformer]),
+                    $this->payload([$field => $blank]))->assertUnprocessable()->assertJsonValidationErrors($field);
+            }
+        }
+        $this->assertSame(0, $this->transformer->entryRows()->count());
+    }
+
     private function entrySettings(): void
     {
         Configuration::create(['project_id' => $this->batch->project_id, 'settings' => ['entry' => ['two_digit_year_start' => 2000, 'pole_height_unit' => 'ft']]]);
+    }
+
+    public function test_data_entry_operator_can_create_batch_for_feeder_actively_assigned_to_their_team(): void
+    {
+        $operator = User::factory()->create(['role' => UserRole::SurveyDataEntryOperator, 'status' => 'active']);
+        $team = $this->batch->surveyTeam;
+        $feeder = $this->batch->feeder;
+        $team->members()->attach($operator->id);
+        FeederAssignment::create(['feeder_id' => $feeder->id, 'survey_team_id' => $team->id, 'assigned_by' => $this->admin->id,
+            'start_date' => today()->subDay(), 'status' => 'active']);
+
+        $this->actingAs($operator)->get(route('mdb-workflow.create'))
+            ->assertOk()->assertSee('data-team-ids="'.$team->id.'"', false);
+
+        $unassignedFeeder = $feeder->replicate();
+        $unassignedFeeder->feeder_code = 'NOT-ALLOCATED';
+        $unassignedFeeder->save();
+        $this->from(route('mdb-workflow.create'))->post(route('mdb-workflow.store'), [
+            'project_id' => $this->batch->project_id,
+            'feeder_id' => $unassignedFeeder->id,
+            'survey_team_id' => $team->id,
+            'survey_date' => today()->toDateString(),
+            'survey_pdf' => UploadedFile::fake()->createWithContent('invalid.pdf', "%PDF-1.4\nfixture"),
+            'gps_gpx' => UploadedFile::fake()->createWithContent('invalid.gpx', '<gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1"><wpt lat="30.001" lon="71.001"><name>001</name></wpt></gpx>'),
+        ])->assertRedirect(route('mdb-workflow.create'))->assertSessionHasErrors('feeder_id');
+        $this->assertDatabaseMissing('mdb_workflow_batches', ['created_by' => $operator->id]);
+
+        $response = $this->post(route('mdb-workflow.store'), [
+            'project_id' => $this->batch->project_id,
+            'feeder_id' => $feeder->id,
+            'survey_team_id' => $team->id,
+            'survey_date' => today()->toDateString(),
+            'survey_pdf' => UploadedFile::fake()->createWithContent('new-survey.pdf', "%PDF-1.4\nfixture"),
+            'gps_gpx' => UploadedFile::fake()->createWithContent('new-survey.gpx', '<gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1"><wpt lat="30.001" lon="71.001"><name>001</name></wpt></gpx>'),
+        ]);
+
+        $response->assertRedirect();
+        $created = SurveyBatch::where('created_by', $operator->id)->latest('id')->firstOrFail();
+        $this->assertSame('entry', $created->survey_status);
+        $this->assertDatabaseCount('mdb_workflow_sources', 4);
+        $this->get(route('mdb-workflow.show', $created))->assertOk();
     }
 
     private function headerPayload(array $changes = []): array
