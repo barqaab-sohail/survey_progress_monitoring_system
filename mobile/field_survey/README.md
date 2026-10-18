@@ -77,7 +77,7 @@ The APK is written to `build/app/outputs/flutter-apk/app-debug.apk`. Connect a t
 When the installed app's original signing key is unavailable, build an **unsigned** release artifact without creating a replacement key:
 
 ```powershell
-$env:ORG_GRADLE_PROJECT_hazecoUnsignedApk = 'true'
+$env:HAZECO_UNSIGNED_APK = 'true'
 flutter build apk --release --build-name=1.0.1 --build-number=2
 ```
 

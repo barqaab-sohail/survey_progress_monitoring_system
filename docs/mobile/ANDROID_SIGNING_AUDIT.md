@@ -2,7 +2,7 @@
 
 ## Result
 
-The original HAZECO signing key was not found in the accessible build files. No replacement key or APK was generated, no app was installed or uninstalled, and signing configuration and application version were not changed.
+The original HAZECO signing key was not found in the accessible build files. At the initial audit, no replacement key or APK had been generated and signing configuration and application version had not been changed. A subsequent unsigned packaging run is recorded below. No app was installed or uninstalled.
 
 `mobile/field_survey/android/app/build.gradle.kts` specifies application ID `com.barqaab.hazeco.hazeco_field_survey`. Debug builds use Android's default debug signing configuration; the release build type also explicitly selects that debug configuration. There is no project-specific keystore path or custom signing configuration. The current `pubspec.yaml` declares version `1.0.0+1`.
 
@@ -28,3 +28,11 @@ Once the key's certificate matches the installed APK, retain the application ID 
 ## Code and test status
 
 All three mobile fixes are implemented. The 32 Laravel API/web tests passed with 464 assertions; all 46 Flutter tests passed. The 15 affected UI/submission tests passed again after the final input-limit and row error-display changes. Flutter analysis, PHP formatting and whitespace checks passed. Those checks include complete mobile payload submission, real PNG photo storage, editable two-digit groups, local reopening and synchronization, and stable PV/photo links to S/E rows.
+
+## Subsequent APK packaging
+
+An unsigned release was built on 17 October 2026 as version 1.0.1 / code 2 using a command-line version override; `pubspec.yaml` remains unchanged. The application ID remains `com.barqaab.hazeco.hazeco_field_survey`. The APK is `output/android/HAZECO-Field-Survey-v1.0.1-code2-unsigned.apk`, with its build receipt and SHA-256 alongside it. It supports arm64-v8a, armeabi-v7a and x86_64, Android API 24 or newer, targeting API 36. Manifest inspection and 16 KB ZIP alignment passed. Android's signature verifier reported no signature, as intended. The APK cannot be installed until signed.
+
+The first packaging attempt exposed Windows environment-name normalization: the mixed-case Gradle environment property did not activate unsigned mode, and Android automatically generated a new local debug key. Signature verification caught this before distribution. That generated key and the incorrectly labelled artifact were removed. The build now accepts the explicit uppercase `HAZECO_UNSIGNED_APK=true` environment variable, and the successful rebuild was verified unsigned with the default debug keystore absent. No substitute signing key is retained or used for an update, and the phone was never connected, installed, uninstalled or cleared.
+
+The original private key is still required, together with verification of the installed app's certificate and version code, before signing an in-place update. Code 2 exceeds the historical documented code 1; the actual installed code remains unverified. Deploy the matching Laravel backend before distributing a signed update, because an APK does not update server-side request validation.

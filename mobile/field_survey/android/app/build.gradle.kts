@@ -5,8 +5,15 @@ plugins {
 }
 
 // Build an unsigned artifact while the installed app's original key is unavailable.
-// Opt in with ORG_GRADLE_PROJECT_hazecoUnsignedApk=true; never create a substitute key.
-val unsignedApk = providers.gradleProperty("hazecoUnsignedApk").orNull == "true"
+// Use an uppercase environment name: Flutter normalizes Windows environment keys.
+// Opt in with HAZECO_UNSIGNED_APK=true; never create a substitute key.
+val unsignedApk = providers.gradleProperty("hazecoUnsignedApk")
+    .orElse(providers.environmentVariable("HAZECO_UNSIGNED_APK"))
+    .orNull == "true"
+
+if (unsignedApk) {
+    logger.lifecycle("HAZECO unsigned release: signing disabled.")
+}
 
 android {
     namespace = "com.barqaab.hazeco.hazeco_field_survey"
