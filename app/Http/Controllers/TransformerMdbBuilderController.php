@@ -81,6 +81,7 @@ class TransformerMdbBuilderController extends Controller
         $waypoints = $request->hasFile('gpx') ? $gpx->read($request->file('gpx')->getRealPath()) : null;
         $newPaths = [];
         $oldPaths = [];
+        $duplicateMatches = [];
         try {
             foreach (['pdf', 'gpx'] as $key) {
                 if ($request->hasFile($key)) {
@@ -91,7 +92,7 @@ class TransformerMdbBuilderController extends Controller
                     $newPaths[$key.'_path'] = $path;
                 }
             }
-            $saved = DB::transaction(function () use ($request, $project, $data, $waypoints, $newPaths, &$oldPaths, $audit) {
+            $saved = DB::transaction(function () use ($request, $project, $data, $waypoints, $newPaths, &$oldPaths, &$duplicateMatches, $audit) {
                 $existing = $project->exists;
                 if ($existing) {
                     $project = TransformerMdbProject::lockForUpdate()->findOrFail($project->id);
@@ -132,7 +133,11 @@ class TransformerMdbBuilderController extends Controller
                                 'project_id' => $feeder->project_id, 'feeder_id' => $feeder->id, 'feeder_code' => $feeder->feeder_code,
                                 'transformer_workspace_id' => $project->id, 'transformer_code' => $project->transformer_code,
                                 'survey_date' => $project->survey_date?->toDateString(),
+                                'uploaded_by' => $request->user()->id,
                             ]);
+                        if ($archive->duplicate_content) {
+                            $duplicateMatches[] = $archive->duplicate_details;
+                        }
                         $project->update([$kind.'_drive_stored_file_id' => $archive->id]);
                     }
                 } else {
@@ -157,7 +162,12 @@ class TransformerMdbBuilderController extends Controller
             }
         }
 
-        return redirect()->route('mdb-builder.edit', $saved)->with('success', 'Transformer survey saved. Review the GPX links and network before creating MDB.');
+        $response = redirect()->route('mdb-builder.edit', $saved)->with('success', 'Transformer survey saved. Review the GPX links and network before creating MDB.');
+        if ($duplicateMatches) {
+            $details = collect($duplicateMatches)->map(fn ($match) => $match['name'].'; feeder '.$match['feeder'].'; uploaded '.$match['uploaded_at'].'; uploader '.$match['uploader'])->implode(' | ');
+            $response->with('warning', 'This file has already been uploaded and will not be uploaded again. Existing file details: '.$details);
+        }
+        return $response;
     }
 
     public function preview(Request $request, TransformerMdbProject $project, TransformerMdbNetworkService $builder)

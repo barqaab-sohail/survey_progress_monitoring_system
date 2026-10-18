@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -101,7 +102,10 @@ void main() {
         api: FieldApi(
           client: MockClient((_) async {
             requests++;
-            return http.Response('{"revision":1}', 200);
+            return http.Response(
+              jsonEncode({'client_uuid': record.id, 'revision': 1}),
+              200,
+            );
           }),
         ),
       );
@@ -130,7 +134,10 @@ void main() {
             calls++;
             bodies.add(request.body);
             if (calls == 1) throw Exception('connection dropped');
-            return http.Response('{"revision":1}', 200);
+            return http.Response(
+              jsonEncode({'client_uuid': record.id, 'revision': 1}),
+              200,
+            );
           }),
         ),
       );
@@ -142,7 +149,62 @@ void main() {
       final restored = (await store.survey(record.scope, record.id))!;
       expect(restored.state, 'synced');
       expect(restored.revision, 1);
+      expect(controller.syncMessage, contains('Sync completed successfully'));
       controller.dispose();
     },
   );
+
+  test(
+    'offline sync reports the socket reason and preserves the queued copy',
+    () async {
+      final record = readySurvey();
+      await store.save(record);
+      await store.queue(record);
+      final controller = FieldController(
+        store,
+        api: FieldApi(
+          client: MockClient(
+            (_) async => throw const SocketException('Network is unreachable'),
+          ),
+        ),
+      )..session = testSession;
+      await controller.sync();
+      final saved = (await store.survey(record.scope, record.id))!;
+      expect(controller.syncMessage, contains('No internet connection'));
+      expect(controller.syncMessage, contains('Network is unreachable'));
+      expect(saved.state, 'error');
+      expect(saved.outbound, isNotNull);
+      controller.dispose();
+    },
+  );
+
+  test('overlapping Sync Now taps send a queued survey only once', () async {
+    final record = readySurvey();
+    await store.save(record);
+    await store.queue(record);
+    final entered = Completer<void>();
+    final response = Completer<http.Response>();
+    var requests = 0;
+    final controller = FieldController(
+      store,
+      api: FieldApi(
+        client: MockClient((_) {
+          requests++;
+          if (!entered.isCompleted) entered.complete();
+          return response.future;
+        }),
+      ),
+    )..session = testSession;
+    final first = controller.sync();
+    await entered.future;
+    final second = controller.sync();
+    expect(controller.syncMessage, 'Sync in progress…');
+    response.complete(
+      http.Response(jsonEncode({'client_uuid': record.id, 'revision': 1}), 200),
+    );
+    await Future.wait([first, second]);
+    expect(requests, 1);
+    expect((await store.survey(record.scope, record.id))!.state, 'synced');
+    controller.dispose();
+  });
 }

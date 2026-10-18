@@ -221,8 +221,30 @@ class _SurveyEditorState extends State<SurveyEditor>
         saveLabel = 'Submitted · waiting to sync';
       });
       await controller.reload();
-      notice('Survey queued. Sync when connected.');
-      unawaited(syncHere());
+      if (!mounted) return;
+      unawaited(controller.sync(manual: false));
+      final createNew = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Survey saved'),
+          content: const Text(
+            'Your submitted survey is saved on this phone. Any pending photos remain attached to it and will sync with the survey.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Go to Home'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Create New Survey'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(createNew == true);
     } catch (_) {
       if (mounted) setState(() => submitting = false);
       notice(
@@ -506,6 +528,7 @@ class _SurveyEditorState extends State<SurveyEditor>
     String label, {
     String? path,
     bool number = false,
+    bool numericKeyboard = false,
     int lines = 1,
     String? helper,
     VoidCallback? refresh,
@@ -517,6 +540,7 @@ class _SurveyEditorState extends State<SurveyEditor>
     value: target[key],
     enabled: editable,
     number: number,
+    numericKeyboard: numericKeyboard,
     lines: lines,
     error: errors[path ?? key],
     helper: helper,
@@ -797,6 +821,7 @@ class _SurveyEditorState extends State<SurveyEditor>
                   entry.value,
                   'consumer_reference',
                   'Consumer reference number',
+                  numericKeyboard: true,
                   path: 'solar.${entry.key}.consumer_reference',
                   refresh: refresh,
                 ),
@@ -820,6 +845,7 @@ class _SurveyEditorState extends State<SurveyEditor>
                   entry.value,
                   'meter_number',
                   'Meter Number',
+                  numericKeyboard: true,
                   path: 'solar.${entry.key}.meter_number',
                   refresh: refresh,
                 ),
@@ -1582,6 +1608,7 @@ class EntryField extends StatelessWidget {
     required this.enabled,
     required this.onChanged,
     this.number = false,
+    this.numericKeyboard = false,
     this.integer = false,
     this.digits = false,
     this.readOnly = false,
@@ -1592,7 +1619,7 @@ class EntryField extends StatelessWidget {
   });
   final String label;
   final dynamic value;
-  final bool enabled, number, integer, digits, readOnly;
+  final bool enabled, number, numericKeyboard, integer, digits, readOnly;
   final int lines;
   final int? maxLength;
   final String? error, helper;
@@ -1607,7 +1634,7 @@ class EntryField extends StatelessWidget {
       if (digits) FilteringTextInputFormatter.digitsOnly,
       if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
     ],
-    keyboardType: integer || digits
+    keyboardType: numericKeyboard || integer || digits
         ? TextInputType.number
         : number
         ? const TextInputType.numberWithOptions(decimal: true, signed: true)

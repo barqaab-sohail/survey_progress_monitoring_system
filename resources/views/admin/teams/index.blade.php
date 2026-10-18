@@ -105,7 +105,7 @@
                 <option value="{{ $team->id }}" data-project-id="{{ $team->project_id }}" @selected(old('survey_team_id') == $team->id)>{{ $team->code }} | {{ $team->name }} | {{ $team->project->name }} | {{ $team->members->pluck('name')->join(', ') ?: 'No members' }}</option>
                 @endforeach
             </select>
-            <small>Assigned feeders are available to every member of this team. For one surveyor, choose a team containing only that surveyor.</small>
+            <small>Team allocations provide the shared feeder pool. Use Team Work to assign individual surveyors, deadlines, priority, and instructions.</small>
         </div>
         <div class="field">
             <label for="assignment-scope">Feeder selection</label>

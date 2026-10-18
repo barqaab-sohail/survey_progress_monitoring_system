@@ -61,6 +61,7 @@ class SourceService
                 'feeder_id' => $batch->feeder_id, 'feeder_code' => $batch->feeder?->feeder_code,
                 'feeder_name' => $batch->feeder?->feeder_name,
                 'batch_id' => $batch->id, 'source_file_id' => $source->id, 'survey_date' => $batch->survey_date?->toDateString(),
+                'uploaded_by' => $actor->id,
             ]);
             $source->update(['drive_stored_file_id' => $archive->id]);
         }

@@ -6,6 +6,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use App\Services\DriveStorage\DuplicateFiles;
 
 class GoogleDriveController extends Controller
 {
@@ -16,7 +17,23 @@ class GoogleDriveController extends Controller
             'connected' => (bool) $request->user()->google_drive_token,
             'storageConnection' => $request->user()->hasRole('super_admin') ? \App\Models\DriveStorageConnection::find(1) : null,
             'storagePending' => $request->user()->hasRole('super_admin') ? \App\Models\DriveStoredFile::where('status', '!=', 'uploaded')->count() : 0,
+            'duplicateGroups' => $request->user()->hasRole('super_admin') ? app(DuplicateFiles::class)->groups() : [],
         ]);
+    }
+
+    public function cleanupDuplicates(Request $request, string $sha256, DuplicateFiles $duplicates)
+    {
+        abort_unless($request->user()->hasRole('super_admin'), 403);
+        $request->validate(['confirm' => ['required', 'accepted']]);
+        abort_unless(preg_match('/^[a-f0-9]{64}$/D', $sha256), 404);
+        try {
+            $plan = $duplicates->cleanup($sha256, $request->user());
+            $duplicates->finishCleanup($plan);
+        } catch (\Throwable $exception) {
+            report($exception);
+            return to_route('google-drive.index')->withErrors(['duplicates' => 'Cleanup could not be completed safely: '.$exception->getMessage()]);
+        }
+        return to_route('google-drive.index')->with('success', 'Confirmed duplicate copies were removed. Valid records now use the retained original.');
     }
 
     public function connect(Request $request)

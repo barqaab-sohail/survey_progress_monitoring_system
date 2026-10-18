@@ -25,6 +25,11 @@ class SourceFile extends Model
         return $this->belongsTo(SurveyBatch::class, 'batch_id');
     }
 
+    public function uploadedBy()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'uploaded_by');
+    }
+
     public function parentSource()
     {
         return $this->belongsTo(self::class, 'parent_source_id');

@@ -348,11 +348,65 @@ class MdbWorkflowTest extends TestCase
         $transformer->pvRecords()->create(['section_id' => $section->id, 'reference' => 'PV-01', 'installed_capacity_kw' => 1, 'remarks' => 'Verified source fixture']);
         $export = $this->approvedExport();
         $export->validations()->create(['recorded_by' => $this->admin->id, 'status' => 'downloaded']);
-        $this->get(route('mdb-workflow.index'))->assertOk()->assertSee('MDB creation')->assertSee('MDB project');
+        $this->get(route('mdb-workflow.index'))->assertOk()->assertSee('MDB creation')->assertSee('MDB project')
+            ->assertSee('Transformer No.:')->assertSee('T-4221215879');
         $this->get(route('mdb-workflow.show', $this->batch))->assertOk()->assertSee('T-4221215879')->assertSee('Save &amp; Add Next', false)->assertSee('Continue Current Transformer')->assertSee('878')->assertSee('879');
         $this->get(route('mdb-workflow.advanced', $this->batch))->assertOk()->assertSee('MDB export worker not configured')->assertSee('PV-01')->assertSee('878')->assertSee('879');
         $this->get(route('mdb-workflow.create'))->assertOk();
         $this->get(route('mdb-workflow.config', $this->batch->project))->assertOk();
+    }
+
+    public function test_super_admin_can_delete_pdf_entry_and_audit_it_without_touching_an_unrelated_batch(): void
+    {
+        $source = $this->source();
+        (new ProcessSourceFile($source->id))->handle(app(GpxParser::class), app(SnapshotService::class));
+        $transformer = $this->batch->transformers()->create(['code' => 'DELETE-TX-01', 'capacity_kva' => 100,
+            'source_waypoint_id' => $source->waypoints()->firstOrFail()->id]);
+        $pdfPath = 'fixture/delete-entry.pdf';
+        Storage::disk('local')->put($pdfPath, '%PDF-1.4 entry to delete');
+        $this->batch->sources()->create(['kind' => 'pdf', 'disk' => 'local', 'path' => $pdfPath, 'original_name' => 'entry-to-delete.pdf',
+            'sha256' => hash('sha256', '%PDF-1.4 entry to delete'), 'bytes' => 24, 'mime' => 'application/pdf', 'uploaded_by' => $this->admin->id, 'status' => 'ready']);
+        $unrelated = SurveyBatch::create(['project_id' => $this->batch->project_id, 'feeder_id' => $this->batch->feeder_id,
+            'survey_team_id' => $this->batch->survey_team_id, 'survey_date' => '2026-10-10', 'created_by' => $this->admin->id]);
+
+        $this->get(route('mdb-workflow.index'))->assertOk()->assertSee('Delete')->assertSee('entry-to-delete.pdf');
+        $this->delete(route('mdb-workflow.destroy', $this->batch), ['confirmed' => '1'])->assertRedirect(route('mdb-workflow.index'))
+            ->assertSessionHas('success', 'PDF data entry Batch #'.$this->batch->id.' was permanently deleted.');
+
+        $this->assertDatabaseMissing('mdb_workflow_batches', ['id' => $this->batch->id]);
+        $this->assertDatabaseMissing('mdb_workflow_sources', ['id' => $source->id]);
+        $this->assertDatabaseMissing('mdb_workflow_transformers', ['id' => $transformer->id]);
+        $this->assertDatabaseHas('mdb_workflow_batches', ['id' => $unrelated->id]);
+        Storage::disk('local')->assertMissing($pdfPath);
+        $log = AuditLog::where('action', 'mdb.pdf_entry_deleted')->sole();
+        $this->assertSame($this->admin->id, $log->user_id);
+        $this->assertSame($this->batch->id, $log->auditable_id);
+        $this->assertContains('entry-to-delete.pdf', $log->old_values['pdf_files']);
+        $this->assertTrue($log->created_at !== null);
+    }
+
+    public function test_only_super_admin_can_see_or_call_pdf_entry_delete(): void
+    {
+        $this->get(route('mdb-workflow.index'))->assertOk()->assertSee('Delete');
+
+        $manager = User::factory()->create(['role' => UserRole::ProjectManager]);
+        $this->actingAs($manager)->get(route('mdb-workflow.index'))->assertOk()->assertDontSee('mdb-workflow.destroy');
+
+        foreach (UserRole::cases() as $role) {
+            if ($role === UserRole::SuperAdmin) {
+                continue;
+            }
+            $user = User::factory()->create(['role' => $role]);
+            $this->actingAs($user)->delete(route('mdb-workflow.destroy', $this->batch), ['confirmed' => '1'])->assertForbidden();
+            $this->assertDatabaseHas('mdb_workflow_batches', ['id' => $this->batch->id]);
+        }
+    }
+
+    public function test_pdf_entry_delete_requires_confirmation_and_leaves_entry_unchanged(): void
+    {
+        $this->delete(route('mdb-workflow.destroy', $this->batch))->assertSessionHasErrors('confirmed');
+        $this->assertDatabaseHas('mdb_workflow_batches', ['id' => $this->batch->id]);
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'mdb.pdf_entry_deleted']);
     }
 
     public function test_configuration_updates_invalidate_frozen_batch_and_advance_revision(): void

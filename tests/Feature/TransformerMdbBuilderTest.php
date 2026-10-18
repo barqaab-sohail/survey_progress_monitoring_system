@@ -64,8 +64,8 @@ class TransformerMdbBuilderTest extends TestCase
         return ['revision' => 0, 'feeder_id' => $this->feeder->id, 'transformer_code' => 'T-0001', 'survey_date' => $date,
             'header' => ['substation' => 'Grid', 'capacity_kva' => 100, 'inspectors' => 'Inspector'], 'solar' => [], 'remarks' => 'Paper survey',
             'rows' => [
-                ['se' => 'S', 'date' => $date, 'gps_waypoint' => '0001', 'phase' => 'R-Y-B', 'conductor_r' => 'A', 'conductor_y' => 'W', 'conductor_b' => 'GN', 'conductor_neutral' => 'A', 'consumers' => []],
-                ['se' => 'E', 'date' => $date, 'gps_waypoint' => '0002', 'consumers' => ['rs' => 3, 'rl' => 1]],
+                ['se' => 'S', 'date' => $date, 'gps_waypoint' => '0001', 'phase' => 'R-Y-B', 'conductor_r' => 'A', 'conductor_y' => 'W', 'conductor_b' => 'GN', 'conductor_neutral' => 'A', 'pole_height_ft' => 31, 'consumers' => []],
+                ['se' => 'E', 'date' => $date, 'gps_waypoint' => '0002', 'pole_height_ft' => 36, 'consumers' => ['rs' => 3, 'rl' => 1]],
             ],
             'export_settings' => ['utm_zone' => 43, 'frequency' => 50, 'nominal_kv' => 11, 'transformer_waypoints' => '0001',
                 'transformer_latitude' => 30.464656, 'transformer_longitude' => 71.917033, 'transformer_type' => '100 KVA',
@@ -259,13 +259,32 @@ class TransformerMdbBuilderTest extends TestCase
         $this->simpleConfiguration();
         $payload = $this->payload();
         $payload['export_settings'] = collect($payload['export_settings'])->only(['transformer_waypoints', 'transformer_latitude', 'transformer_longitude'])->all();
-        $payload['header']['capacity_kva'] = null;
         $this->post(route('mdb-builder.store'), ['payload' => json_encode($payload), 'gpx' => UploadedFile::fake()->createWithContent('survey.gpx', $this->gpx())])->assertSessionHasNoErrors();
         $project = TransformerMdbProject::firstOrFail();
         $this->get(route('mdb-builder.preview', $project))->assertOk()->assertSee('Network ready to export');
         $payload['revision'] = $project->revision;
         $payload['export_settings']['nominal_kv'] = 'invalid';
         $this->put(route('mdb-builder.update', $project), ['payload' => json_encode($payload)])->assertSessionHasErrors('export_settings.nominal_kv');
+    }
+
+    public function test_custom_height_and_capacity_values_are_saved_and_displayed_in_feet_and_kva(): void
+    {
+        $project = $this->saveProject();
+        $payload = $this->payload();
+        $payload['revision'] = $project->revision;
+        $payload['header']['capacity_kva'] = 112.5;
+        $payload['rows'][0]['pole_height_ft'] = 33.75;
+        $this->put(route('mdb-builder.update', $project), ['payload' => json_encode($payload)])->assertSessionHasNoErrors();
+
+        $saved = $project->fresh();
+        $this->assertEquals(112.5, (float) $saved->header['capacity_kva']);
+        $this->assertEquals(33.75, (float) $saved->rows[0]['pole_height_ft']);
+        $this->get(route('mdb-builder.preview', $saved))->assertOk()->assertSee('112.5 kVA')->assertSee('33.75 ft');
+
+        $payload['revision'] = $saved->revision;
+        $payload['rows'][0]['pole_height_ft'] = 0;
+        $this->put(route('mdb-builder.update', $saved), ['payload' => json_encode($payload)])->assertSessionHasErrors('rows.0.pole_height_ft');
+        $this->assertEquals(33.75, (float) $project->fresh()->rows[0]['pole_height_ft']);
     }
 
     public function test_simple_mode_uses_explicit_category_rates_without_fabricating_approval(): void

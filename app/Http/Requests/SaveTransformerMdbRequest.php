@@ -57,6 +57,8 @@ class SaveTransformerMdbRequest extends FormRequest
         $rules['transformer_code'] = ['required', 'string', 'max:100'];
         $rules['feeder_id'] = ['required', 'integer', Rule::exists('feeders', 'id')->where('status', 'active')];
         $rules['revision'] = ['required', 'integer', 'min:0'];
+        $rules['header.capacity_kva'] = ['required', 'numeric', 'gt:0', 'max:1000000'];
+        $rules['rows.*.pole_height_ft'] = ['required', 'numeric', 'gt:0', 'max:10000'];
         $rules['source_field_survey_id'] = ['nullable', 'integer', 'exists:field_surveys,id'];
         $rules['pdf'] = ['nullable', 'file', 'mimes:pdf', 'max:51200'];
         $rules['gpx'] = ['nullable', 'file', 'extensions:gpx', 'max:10240'];

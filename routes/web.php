@@ -67,6 +67,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
     Route::get('/progress-queue', ProgressQueueController::class)->middleware('role:super_admin,project_manager,management_viewer,survey_team_leader,mdb_team_user,mdb_processing_user')->name('progress.queue');
     Route::get('/google-drive', [GoogleDriveController::class, 'index'])->name('google-drive.index');
+    Route::post('/google-drive/duplicates/{sha256}/cleanup', [GoogleDriveController::class, 'cleanupDuplicates'])->middleware('role:super_admin')->where('sha256', '[a-f0-9]{64}')->name('google-drive.duplicates.cleanup');
     Route::post('/auth/google', [GoogleDriveController::class, 'connect'])->middleware('throttle:10,1')->name('google-drive.connect');
     Route::get('/auth/google/callback', [GoogleDriveController::class, 'callback'])->name('google-drive.callback');
     Route::delete('/google-drive', [GoogleDriveController::class, 'disconnect'])->name('google-drive.disconnect');
@@ -152,5 +153,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/teams/member', [TeamController::class, 'member'])->name('teams.member');
         Route::post('/teams/assign-feeder', [TeamController::class, 'assignFeeder'])->name('teams.assign-feeder');
         Route::get('/audit-log', AuditLogController::class)->name('audit.index');
+    });
+    Route::middleware('role:survey_team_leader,super_admin')->prefix('team-work')->name('team-work.')->controller(\App\Http\Controllers\TeamWorkAssignmentController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/survey', 'assignSurvey')->name('survey.assign');
+        Route::post('/survey/{assignment}/reassign', 'reassignSurvey')->name('survey.reassign');
     });
 });

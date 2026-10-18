@@ -20,19 +20,76 @@ class FileStorage
         if (! is_file($full)) {
             throw new RuntimeException('Private file staging failed.');
         }
-        $file = DriveStoredFile::create(['uuid' => (string) Str::uuid(), 'local_disk' => $disk, 'local_path' => $path,
-            'original_name' => mb_substr(basename(str_replace('\\', '/', $name)), 0, 255), 'mime' => $mime,
-            'bytes' => filesize($full), 'sha256' => hash_file('sha256', $full), 'md5' => md5_file($full), 'context' => $context]);
-        // The row is a durable outbox. A queue outage must never discard the accepted file.
-        DB::afterCommit(function () use ($file) {
-            try {
-                UploadDriveFile::dispatch($file->id);
-            } catch (\Throwable) {
-                Log::warning('Drive transfer queued for scheduler recovery.', ['stored_file_id' => $file->id]);
+        $sha256 = hash_file('sha256', $full);
+        $bytes = filesize($full);
+        $file = DB::transaction(function () use ($disk, $path, $name, $mime, $context, $sha256, $bytes, $full) {
+            DB::table('drive_file_hash_claims')->insertOrIgnore([
+                'sha256' => $sha256, 'drive_stored_file_id' => null, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+            $claim = DB::table('drive_file_hash_claims')->where('sha256', $sha256)->lockForUpdate()->first();
+            $existing = $claim->drive_stored_file_id ? DriveStoredFile::find($claim->drive_stored_file_id) : null;
+            if (! $existing) {
+                $existing = DriveStoredFile::where('sha256', $sha256)->where('status', 'uploaded')->orderBy('id')->first()
+                    ?? DriveStoredFile::where('sha256', $sha256)->whereIn('status', ['pending', 'failed'])->orderBy('id')->first();
             }
+            if ($existing) {
+                if (! $claim->drive_stored_file_id) {
+                    DB::table('drive_file_hash_claims')->where('sha256', $sha256)->update([
+                        'drive_stored_file_id' => $existing->id, 'updated_at' => now(),
+                    ]);
+                }
+                $existing->setAttribute('duplicate_content', true);
+                $existing->syncOriginalAttribute('duplicate_content');
+                $existing->setAttribute('duplicate_details', $this->duplicateDetails($existing));
+                $existing->syncOriginalAttribute('duplicate_details');
+                return $existing;
+            }
+            $safeName = mb_substr(basename(str_replace('\\', '/', $name)), 0, 255);
+            $nameQuery = DriveStoredFile::where('original_name', $safeName)->where('sha256', '!=', $sha256);
+            if ($nameQuery->exists()) {
+                $extension = pathinfo($safeName, PATHINFO_EXTENSION);
+                $stem = pathinfo($safeName, PATHINFO_FILENAME).' ('.substr($sha256, 0, 8).')';
+                $safeName = mb_substr($stem.($extension !== '' ? '.'.$extension : ''), 0, 255);
+                $suffix = 2;
+                while (DriveStoredFile::where('original_name', $safeName)->exists()) {
+                    $safeName = mb_substr(pathinfo($safeName, PATHINFO_FILENAME).' '.$suffix.($extension !== '' ? '.'.$extension : ''), 0, 255);
+                    $suffix++;
+                }
+            }
+            $created = DriveStoredFile::create(['uuid' => (string) Str::uuid(), 'local_disk' => $disk, 'local_path' => $path,
+                'original_name' => $safeName, 'mime' => $mime, 'bytes' => $bytes, 'sha256' => $sha256,
+                'md5' => md5_file($full), 'context' => $context]);
+            DB::table('drive_file_hash_claims')->where('sha256', $sha256)->update([
+                'drive_stored_file_id' => $created->id, 'updated_at' => now(),
+            ]);
+            return $created;
         });
-
+        if (! $file->wasRecentlyCreated && ($file->local_disk !== $disk || $file->local_path !== $path)) {
+            // Do not keep a second private staging copy after a content match is established.
+            Storage::disk($disk)->delete($path);
+        }
+        if ($file->status !== 'uploaded') {
+            // Re-dispatching a canonical pending/failed row is safe: transfer() serializes by file ID and verifies Drive.
+            DB::afterCommit(function () use ($file) {
+                try { UploadDriveFile::dispatch($file->id); }
+                catch (\Throwable) { Log::warning('Drive transfer queued for scheduler recovery.', ['stored_file_id' => $file->id]); }
+            });
+        }
+        if ($file->wasRecentlyCreated) {
+            $file->setAttribute('duplicate_content', false);
+            $file->syncOriginalAttribute('duplicate_content');
+        }
         return $file;
+    }
+
+    private function duplicateDetails(DriveStoredFile $file): array
+    {
+        $context = $file->context ?? [];
+        $feeder = ! empty($context['feeder_id']) ? \App\Models\Feeder::find($context['feeder_id']) : null;
+        $uploader = ! empty($context['uploaded_by']) ? \App\Models\User::find($context['uploaded_by']) : null;
+        if (! $uploader && ! empty($context['source_file_id'])) $uploader = \App\Models\Mdb\SourceFile::find($context['source_file_id'])?->uploadedBy;
+        return ['name' => $file->original_name, 'feeder' => $feeder ? trim($feeder->feeder_code.' '.$feeder->feeder_name) : ($context['feeder_code'] ?? 'Unknown feeder'),
+            'uploaded_at' => $file->uploaded_at?->format('d M Y H:i') ?? 'Pending Drive confirmation', 'uploader' => $uploader?->name ?? 'Unknown (legacy record)'];
     }
 
     public function transfer(int $id): void

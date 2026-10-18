@@ -74,7 +74,7 @@ export function rowValidationErrors(payload, yearStart = null) {
         try { completeWaypoint('01',payload.row_date,'001',yearStart); }
         catch(e) { add('row_date',e.message); }
     }
-    if(payload.pole_height !== null && (!Number.isFinite(payload.pole_height) || payload.pole_height < 0 || payload.pole_height > 200))add('pole_height','Enter pole/tower height from 0 to 200 in the displayed unit, or leave it blank.');
+    if(payload.pole_height !== null && (!Number.isFinite(payload.pole_height) || payload.pole_height <= 0 || payload.pole_height > 10000))add('pole_height','Enter a positive pole/tower height in feet, up to 10,000 ft.');
     for(const [key, value] of Object.entries(payload.consumers || {})) {
         if(value !== null && (!Number.isInteger(value) || value < 0 || value > 1000000))add('consumers.'+key,`${key.toUpperCase()}: enter a whole number from 0 to 1,000,000, or leave it blank.`);
     }
@@ -161,6 +161,26 @@ function initialize(boot) {
     const transformerSelection = () => activeId ? String(activeId) : registeredId ? `registered:${registeredId}` : manualTransformer ? '__manual__' : '';
     const editable = () => boot.can_edit && (!data.staged_workflow || ['entry','returned'].includes(data.survey_status));
     const field = (form, name) => form?.elements.namedItem(name);
+    const capacityOptions = new Set(['5','10','15','25','37.5','50','63','75','100','125','160','200','250','315','400','500','630','750','800','1000','1250','1500','1600','2000','2500','3150','5000','6300','10000','12500','16000','20000','25000']);
+    function setCapacity(value) {
+        const select=$('entry-capacity-choice'), custom=$('entry-capacity-custom');if(!select)return;
+        const text=value===null || value===undefined ? '' : String(value);
+        const standard=[...capacityOptions].find(option=>Number(option)===Number(text));
+        select.value=standard || (text ? '__custom__' : '');
+        custom.hidden=select.value!=='__custom__';custom.required=select.value==='__custom__';custom.value=select.value==='__custom__' ? text : '';
+    }
+    function capacityValue() { const select=$('entry-capacity-choice');return select?.value==='__custom__' ? number($('entry-capacity-custom').value) : number(select?.value); }
+    function heightInFeet(value, unit='ft') { const numeric=number(value);return numeric===null ? null : Number((numeric*(unit==='m' ? 3.280839895 : 1)).toFixed(4)); }
+    function setPoleHeight(value, unit='ft') {
+        const select=$('entry-height-choice'), custom=$('entry-height-custom');if(!select)return;
+        const numeric=heightInFeet(value,unit);
+        const text=numeric===null ? '' : String(numeric);
+        select.value=['31','36'].includes(text) ? text : text ? '__custom__' : '';
+        custom.hidden=select.value!=='__custom__';custom.required=select.value==='__custom__';custom.value=select.value==='__custom__' ? text : '';
+        field(rowForm,'pole_height').value=numeric ?? '';
+        field(rowForm,'pole_height_unit').value='ft';
+    }
+    function poleHeightValue() { const select=$('entry-height-choice'), custom=$('entry-height-custom');return select?.value==='__custom__' ? number(custom.value) : number(select?.value); }
     const set = (form, name, value) => {
         const element = field(form, name);
         if (!element) return;
@@ -288,7 +308,7 @@ function initialize(boot) {
         document.querySelectorAll('[data-entry-revision]').forEach(input=>input.value=data.revision);
         $('entry-sources-list').innerHTML = '<ul>'+data.sources.map(s=>`<li>${esc(s.original_name)} — ${esc(s.status)}${s.kind==='gpx' ? ` · ${data.waypoints.filter(p=>p.source_file_id===s.id).length} waypoints` : ''}${s.metadata?.error ? ` · ${esc(s.metadata.error)}` : ''}</li>`).join('')+'</ul>';
         const settings={...data.entry_settings,two_digit_year_start:data.entry_settings?.two_digit_year_start ?? 2000};
-        if($('entry-project-settings')) $('entry-project-settings').innerHTML=`Project default height unit: <strong>${esc(settings.pole_height_unit || 'unconfirmed')}</strong> &middot; Year window: <strong>${settings.two_digit_year_start}&ndash;${Number(settings.two_digit_year_start)+99}</strong>${boot.can_configure ? ` &middot; <a href="${esc(boot.settings_url)}" data-entry-leave>Project entry settings</a>` : ''}`;
+        if($('entry-project-settings')) $('entry-project-settings').innerHTML=`Pole / tower height entry unit: <strong>ft (fixed)</strong> &middot; Year window: <strong>${settings.two_digit_year_start}&ndash;${Number(settings.two_digit_year_start)+99}</strong>${boot.can_configure ? ` &middot; <a href="${esc(boot.settings_url)}" data-entry-leave>Project entry settings</a>` : ''}`;
         if($('entry-paste-rule')) $('entry-paste-rule').textContent=`YY uses ${settings.two_digit_year_start} to ${Number(settings.two_digit_year_start)+99}.`;
         syncSelects();
         renderPdfRows();
@@ -296,7 +316,8 @@ function initialize(boot) {
     function headerPayload() {
         const header = {};
         Array.from(headerForm?.elements || []).forEach(el=>{ const match=el.name?.match(/^header\[(.+)\]$/); if(match) header[match[1]]=el.value || null; });
-        return {source_pdf_id:number(val(headerForm,'header[pdf_source_id]')),source_page:number(val(headerForm,'header[pdf_start_page]')),code:active()?.code ?? registered()?.code ?? val(headerForm,'code').trim(),manual_transformer:manualTransformer,registered_transformer_id:active()?.header?.registered_transformer_id ?? registered()?.id ?? null,capacity_kva:number(val(headerForm,'capacity_kva')),header};
+        header.capacity_kva=capacityValue();
+        return {source_pdf_id:number(val(headerForm,'header[pdf_source_id]')),source_page:number(val(headerForm,'header[pdf_start_page]')),code:active()?.code ?? registered()?.code ?? val(headerForm,'code').trim(),manual_transformer:manualTransformer,registered_transformer_id:active()?.header?.registered_transformer_id ?? registered()?.id ?? null,capacity_kva:capacityValue(),header};
     }
     function fillHeader(payload) {
         if (!headerForm) {
@@ -304,7 +325,7 @@ function initialize(boot) {
             return;
         }
         headerForm.reset();
-        for (const name of ['code','capacity_kva']) set(headerForm,name,payload[name]);
+        set(headerForm,'code',payload.code);setCapacity(payload.capacity_kva);
         if(!active())registeredId=number(payload.registered_transformer_id);
         const selected=active() || registered(), code=field(headerForm,'code');
         manualTransformer=!active() && !!payload.manual_transformer;
@@ -337,10 +358,11 @@ function initialize(boot) {
     function rowPayload() {
         if (!rowForm) return null;
         const payload = {};
-        for (const key of ['pair_number','designation','group_number','row_date','waypoint_reference','gpx_source_id','source_pdf_id','source_page','source_row','equipment_type','pole_class','pole_height','pole_height_unit']) {
+        for (const key of ['pair_number','designation','group_number','row_date','waypoint_reference','gpx_source_id','source_pdf_id','source_page','source_row','equipment_type','pole_class']) {
             const value=val(rowForm,key);
-            payload[key]=['pair_number','gpx_source_id','source_pdf_id','source_page','pole_height'].includes(key) ? number(value) : (value || null);
+            payload[key]=['pair_number','gpx_source_id','source_pdf_id','source_page'].includes(key) ? number(value) : (value || null);
         }
+        payload.pole_height=poleHeightValue();payload.pole_height_unit='ft';
         payload.conductors=Object.fromEntries(['R','Y','B','N'].map(key=>[key,val(rowForm,`conductors[${key}]`) || null]));
         payload.consumers=Object.fromEntries(Object.keys(data.lookups.consumers).map(key=>[key,number(val(rowForm,`consumers[${key}]`))]));
         payload.intersection=field(rowForm,'intersection').checked; payload.pv_details=pvPayload(); payload.inheritance=inheritance; payload.manually_verified=false;
@@ -370,8 +392,10 @@ function initialize(boot) {
         for (const [key,value] of Object.entries(payload)) {
             if (key==='conductors') for (const phase of ['R','Y','B','N']) set(rowForm,`conductors[${phase}]`,value[phase]==='' ? '__none__' : value[phase]);
             else if (key==='consumers') for (const category of Object.keys(data.lookups.consumers)) set(rowForm,`consumers[${category}]`,value[category]);
+            else if (key==='pole_height' || key==='pole_height_unit') continue;
             else set(rowForm,key,value);
         }
+        setPoleHeight(payload.pole_height,payload.pole_height_unit || 'ft');
         $('entry-pv-records').replaceChildren(); (payload.pv_details || []).forEach(addPv);
         $('entry-pv-count').textContent=`(${payload.pv_details?.length || 0})`;
         $('entry-row-title').textContent=id ? `Edit pair ${payload.pair_number} ${payload.designation} row` : 'Enter S/E row';
@@ -417,11 +441,8 @@ function initialize(boot) {
             if(recordedDate && payload.row_date && recordedDate!==payload.row_date)$('entry-waypoint-status').textContent='Matched to GPX by GPS number. Recording date differs from the PDF date; the PDF date stays unchanged.';
         }
         $('entry-group-date-status').textContent=inheritance.group_date ? `Group/date inherited from saved row #${inheritance.group_date}; correct either field if different.` : '';
-        $('entry-height-unit-note').hidden=payload.pole_height===null || !!payload.pole_height_unit;
-        field(rowForm,'pole_height_unit').title=payload.pole_height_unit ? 'Height is recorded in '+(payload.pole_height_unit==='ft' ? 'feet' : 'metres') : 'Select Feet or Metres as printed on the survey PDF before verification.';
-        const unit=data.entry_settings?.pole_height_unit;
-        $('entry-unit-convert').hidden=!!rowId || !!inheritance.equipment || !['ft','m'].includes(payload.pole_height_unit) || !['ft','m'].includes(unit) || payload.pole_height_unit===unit;
-        $('entry-unit-convert').textContent=`Project unit changed: convert draft ${payload.pole_height ?? 'height'} ${payload.pole_height_unit || ''} to ${unit || ''}`;
+        $('entry-height-unit-note').hidden=false;
+        $('entry-unit-convert').hidden=true;
         $('entry-consumer-total').textContent=`Entered consumer total: ${consumerTotal(payload.consumers)}${Object.values(payload.consumers).some(v=>v===null) ? ' (blank fields retained)' : ''}`;
         $('entry-row-page').textContent=`Row source: page ${payload.source_page ?? 'not entered'}`;
         $('entry-pair-caption').textContent=`· Pair ${payload.pair_number || 'not selected'}`;
@@ -440,6 +461,10 @@ function initialize(boot) {
         $('entry-row-panel')?.classList.toggle('entry-row-panel-disabled',!t);
         $('entry-review-link').href=`${boot.base_url}/review${t ? '?transformer_id='+t.id : ''}`;
         $('entry-saved-rows').innerHTML=rows.length ? '<div class="table-wrap"><table class="table entry-saved-table"><thead><tr><th>Pair / S/E</th><th>Page / entry</th><th>Waypoint</th><th>Phase / conductors</th><th>Equipment</th><th>Entered counts</th><th>Int</th><th></th></tr></thead><tbody>'+rows.map(row=>`<tr class="${row.designation==='S' ? 'entry-pair-start' : ''}"><td>${row.pair_number} / <strong>${row.designation}</strong>${rows.filter(r=>r.pair_number===row.pair_number).length===1 ? '<small class="entry-pair-incomplete">Incomplete pair</small>' : ''}</td><td>${row.source_page ?? '—'} / ${esc(row.source_row || '—')}</td><td>${esc(row.composite_identifier || 'Legacy identity')}<small>GPS ${esc(row.waypoint_reference || 'Not entered')} ? ${esc(row.group_number)} ? ${esc(displayDate(row.row_date))} ? source #${esc(row.gpx_source_id || 'unresolved')}</small></td><td>${derivePhase(row.conductors).display || '—'}<small>${['R','Y','B','N'].map(k=>`${k}: ${esc(row.conductors[k]===null ? 'Not entered' : row.conductors[k]==='' ? 'None' : row.conductors[k])}`).join(' · ')}</small></td><td>${esc(row.equipment_type || '—')} / ${esc(row.pole_class || '—')}<small>${row.pole_height ?? '—'} ${esc(row.pole_height_unit || '(unit unconfirmed)')}</small></td><td>${Object.entries(row.consumers).filter(([,v])=>v!==null).map(([k,v])=>`${k.toUpperCase()}: ${v}`).join(' · ') || 'Blank'}<small>Total: ${consumerTotal(row.consumers)}</small></td><td>${row.intersection ? '✓' : '—'}</td><td>${editable() ? `<button type="button" class="btn btn-sm btn-light" data-entry-edit="${row.id}">Edit</button> <button type="button" class="btn btn-sm btn-light" data-entry-delete="${row.id}">Delete</button>` : ''}</td></tr>`).join('')+'</tbody></table></div>' : '<p class="entry-empty">Save the transformer header, then enter its first S row.</p>';
+        rows.forEach((row,index)=>{
+            const height=$('entry-saved-rows').querySelector(`tbody tr:nth-child(${index+1}) td:nth-child(5) small`);
+            if(height)height.textContent=`${heightInFeet(row.pole_height,row.pole_height_unit) ?? '—'} ft`;
+        });
         $('entry-saved-rows').querySelectorAll('tbody tr').forEach((element,index)=>{
             const marker=pdfRows().find(marker=>marker.entry_row_id===rows[index].id), entered=!marker || marker.entered;
             const badge=document.createElement('small');badge.className=entered ? 'entry-completed' : 'entry-pair-incomplete';badge.textContent=entered ? '✓ Entered' : 'PDF marker pending';
@@ -561,13 +586,14 @@ function initialize(boot) {
         if(scope==='conductors' || scope==='both')for(const key of ['R','Y','B','N']){const value=previous.conductors[key];if(value!==null && value!==undefined)patch.push([`conductors[${key}]`,value==='' ? '__none__' : value,`${key==='N' ? 'Neutral' : key} conductor`]);}
         if(scope==='equipment' || scope==='both'){
             for(const [key,label] of [['equipment_type','Equipment type'],['pole_class','Pole class']])if(previous[key])patch.push([key,previous[key],label]);
-            if(previous.pole_height!==null && previous.pole_height!==undefined && ['ft','m'].includes(previous.pole_height_unit))patch.push(['pole_height',previous.pole_height,'Pole/tower height'],['pole_height_unit',previous.pole_height_unit,'Height unit']);
+            if(previous.pole_height!==null && previous.pole_height!==undefined)patch.push(['pole_height',heightInFeet(previous.pole_height,previous.pole_height_unit),'Pole/tower height']);
         }
         const changed=patch.filter(([key,value])=>val(rowForm,key)!==String(value));
         if(!changed.length){status('No additional reusable values to copy. Your fields are unchanged.',rowDirty ? 'dirty' : 'saved');return;}
         const overwritten=changed.filter(([key])=>val(rowForm,key)!=='' && (key!=='pole_height_unit' || val(rowForm,'pole_height')!=='')).map(([, ,label])=>label);
         if(overwritten.length && !window.confirm(`Replace your entered values for ${overwritten.join(', ')} with values from pair ${previous.pair_number} ${previous.designation}? All other fields will be kept.`))return;
         for(const [key,value] of patch)set(rowForm,key,value);
+        if(patch.some(([key])=>key==='pole_height'))setPoleHeight(val(rowForm,'pole_height'),'ft');
         const copied=rowPayload();
         if(scope==='conductors' || scope==='both'){if(['R','Y','B','N'].every(key=>(copied.conductors[key]==='__none__' ? '' : copied.conductors[key])===(previous.conductors[key] ?? null)))inheritance.conductors=previous.id;else delete inheritance.conductors;}
         if(scope==='equipment' || scope==='both'){if(['equipment_type','pole_class','pole_height','pole_height_unit'].every(key=>(copied[key] ?? null)===(previous[key] ?? null)))inheritance.equipment=previous.id;else delete inheritance.equipment;}
@@ -781,6 +807,10 @@ function initialize(boot) {
     document.addEventListener('keydown',event=>{if(event.key==='Escape' && drawingLines){event.preventDefault();cancelLineDrawing();}});
     if(!data.sources.some(s=>s.kind==='pdf'))document.querySelector('.entry-source-files').open=true;
     $('entry-header-pdf')?.addEventListener('change',updateHeaderPdfLimit);
+    $('entry-capacity-choice')?.addEventListener('change',()=>{const choice=$('entry-capacity-choice');$('entry-capacity-custom').hidden=choice.value!=='__custom__';$('entry-capacity-custom').required=choice.value==='__custom__';if(choice.value!=='__custom__')$('entry-capacity-custom').value='';});
+    $('entry-capacity-custom')?.addEventListener('input',()=>headerDirty=true);
+    $('entry-height-choice')?.addEventListener('change',()=>{const choice=$('entry-height-choice'),custom=$('entry-height-custom');custom.hidden=choice.value!=='__custom__';custom.required=choice.value==='__custom__';if(choice.value!=='__custom__')custom.value='';field(rowForm,'pole_height').value=choice.value==='__custom__' ? custom.value : choice.value;field(rowForm,'pole_height_unit').value='ft';});
+    $('entry-height-custom')?.addEventListener('input',()=>{field(rowForm,'pole_height').value=$('entry-height-custom').value;field(rowForm,'pole_height_unit').value='ft';});
     headerForm?.addEventListener('submit',saveHeader);headerForm?.addEventListener('input',event=>markDirty(event,'header'));headerForm?.addEventListener('change',event=>markDirty(event,'header'));
     $('entry-submit-form')?.addEventListener('submit',event=>{
         if(busy || !editable() || headerDirty || rowDirty){event.preventDefault();error('Save the header and all row changes before submitting for verification. Your entered fields are retained.');}

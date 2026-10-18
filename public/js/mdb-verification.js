@@ -95,6 +95,11 @@ export function initializeVerification(boot, root = document) {
     function inputFor(field) {
         const value = field.type === 'survey-date' ? displayDate(field.value) : field.value ?? '';
         const attributes = `data-edit-path="${esc(field.path)}" aria-label="${esc(field.label)}"`;
+        if(field.type==='capacity' || field.type==='height') {
+            const options=field.type==='height' ? ['31','36'] : ['5','10','15','25','37.5','50','63','75','100','125','160','200','250','315','400','500','630','750','800','1000','1250','1500','1600','2000','2500','3150','5000','6300','10000','12500','16000','20000','25000'];
+            const text=String(value ?? ''), standard=options.find(option=>Number(option)===Number(text));
+            return `<input type="search" data-measurement-search placeholder="Search options" aria-label="Search ${esc(field.label)}"><select ${attributes} data-measurement-type="${field.type}" required><option value="">Choose ${field.type==='height' ? 'height (ft)' : 'capacity (kVA)'}</option>${options.map(option=>`<option value="${option}" ${option===standard ? 'selected' : ''}>${option} ${field.type==='height' ? 'ft' : 'kVA'}</option>`).join('')}<option value="__custom__" ${text && !standard ? 'selected' : ''}>Other / Custom Value</option></select><input type="number" min="0.001" max="${field.type==='height' ? 10000 : 1000000}" step="any" data-measurement-custom value="${text && !standard ? esc(text) : ''}" placeholder="Enter ${field.type==='height' ? 'height in ft' : 'capacity in kVA'}" aria-label="Custom ${esc(field.label)}" ${text && !standard ? 'required' : 'hidden'}>`;
+        }
         if(field.type==='select') {
             const options = {...field.options};
             if(value!=='' && !Object.hasOwn(options,value))options[value]=String(value);
@@ -117,6 +122,18 @@ export function initializeVerification(boot, root = document) {
             const heading = group!==field.group ? `<h3 class="verification-editor-group">${esc(field.group)}</h3>` : '';group=field.group;
             return heading+`<label>${esc(field.label)}${inputFor(field)}</label>`;
         }).join('')+(row ? `<div id="verification-pv-fields" style="display:contents">${pvFields(editing.pv)}</div><button type="button" class="btn btn-light" id="verification-add-pv">Add PV record</button>` : '');
+        $('editor-fields').querySelectorAll('[data-measurement-type]').forEach(select=>{
+            const custom=select.closest('label').querySelector('[data-measurement-custom]');
+            const sync=()=>{custom.hidden=select.value!=='__custom__';custom.required=select.value==='__custom__';if(select.value!=='__custom__')custom.value='';};
+            select.addEventListener('change',sync);sync();
+        });
+        const editorFields=$('editor-fields');
+        if(!editorFields.dataset.searchBound)editorFields.addEventListener('input',event=>{
+            const search=event.target.closest('[data-measurement-search]');if(!search)return;
+            const select=search.parentElement.querySelector('select[data-measurement-type]');if(!select)return;
+            for(const option of select.options)option.hidden=!!search.value && !option.selected && !option.text.toLowerCase().includes(search.value.toLowerCase());
+        });
+        editorFields.dataset.searchBound='true';
         $('editor').showModal();
         const input = [...$('editor-fields').querySelectorAll('[data-edit-path]')].find(input => input.dataset.editPath === focusPath);
         if (input) {
@@ -132,7 +149,8 @@ export function initializeVerification(boot, root = document) {
     }
     function readInputs(target, scope=$('editor-fields')) {
         scope.querySelectorAll('[data-edit-path]').forEach(input=>{
-            let value=input.type==='checkbox' ? input.checked : input.type==='number' ? (input.value==='' ? null : Number(input.value)) : (input.value || null);
+            const custom=input.dataset.measurementType && input.value==='__custom__' ? input.closest('label').querySelector('[data-measurement-custom]') : null;
+            let value=custom ? (custom.value==='' ? null : Number(custom.value)) : input.type==='checkbox' ? input.checked : input.type==='number' || input.dataset.measurementType ? (input.value==='' || input.value==='__custom__' ? null : Number(input.value)) : (input.value || null);
             if(input.dataset.editPath==='row_date')value=isoDate(input.value,state.entry_settings.two_digit_year_start) || null;
             setPath(target,input.dataset.editPath,value);
         });
@@ -146,7 +164,7 @@ export function initializeVerification(boot, root = document) {
         if(editing.row)initial.pv_details=[];
         const body=readInputs(initial);
         body.revision=state.revision;body.correction_reason=$('correction-reason').value;
-        if(editing.row){body.inheritance={};body.manually_verified=false;body.save_uuid=crypto.randomUUID();delete body.composite_identifier;}
+        if(editing.row){body.inheritance={};body.manually_verified=false;body.pole_height_unit='ft';body.save_uuid=crypto.randomUUID();delete body.composite_identifier;}
         busy=true;$('save-correction').disabled=true;$('cancel-correction').disabled=true;
         try {
             await api(editing.row ? boot.row_url+editing.row.id : boot.header_url,'PUT',body);

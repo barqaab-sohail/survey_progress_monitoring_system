@@ -854,12 +854,14 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertNull(PdfRow::find($markers[1]['id'])->entry_row_id);
     }
 
-    public function test_unknown_height_unit_can_be_confirmed_on_existing_s_and_e_rows_without_project_configuration(): void
+    public function test_new_rows_default_to_feet_without_project_configuration(): void
     {
         $start = $this->save(['identity_version' => 2, 'pole_height' => 36, 'pole_height_unit' => null]);
         $end = $this->save(['identity_version' => 2, 'designation' => 'E', 'waypoint_reference' => '010', 'pole_height_unit' => null]);
         $issues = collect(app(EntryService::class)->issues($this->batch->fresh()));
-        $this->assertCount(2, $issues->where('code', 'missing_entry_height_unit'));
+        $this->assertCount(0, $issues->where('code', 'missing_entry_height_unit'));
+        $this->assertSame('ft', $start->pole_height_unit);
+        $this->assertSame('ft', $end->pole_height_unit);
         $this->assertCount(0, $issues->where('code', 'incomplete_entry_equipment'));
         foreach ([$start, $end] as $row) {
             $this->putJson(route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $row]), $this->payload([
@@ -871,6 +873,35 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertSame(36.0, $start->fresh()->pole_height);
         $this->assertNotContains('missing_entry_height_unit', array_column(app(EntryService::class)->issues($this->batch->fresh()), 'code'));
         $this->assertNull(app(\App\Services\Mdb\SurveyWaypoint::class)->settings($this->batch->project_id)['pole_height_unit']);
+    }
+
+    public function test_custom_capacity_and_height_values_are_positive_and_survive_editing(): void
+    {
+        $header = $this->headerPayload(['capacity_kva' => 112.5]);
+        $this->putJson(route('mdb-workflow.entry.headers.update', [$this->batch, $this->transformer]), $header)->assertOk();
+        $this->assertEquals(112.5, (float) $this->transformer->fresh()->capacity_kva);
+        $advanced = $this->get(route('mdb-workflow.advanced', $this->batch))->assertOk()->getContent();
+        $this->assertStringContainsString('data-saved-capacity="112.5"', $advanced);
+        $this->assertStringContainsString('112.5 kVA', $advanced);
+
+        $row = $this->save(['pole_height' => 42.75]);
+        $this->assertEquals(42.75, (float) $row->fresh()->pole_height);
+        $this->assertSame('ft', $row->fresh()->pole_height_unit);
+        $advanced = $this->get(route('mdb-workflow.advanced', $this->batch))->assertOk()->getContent();
+        $this->assertStringContainsString('data-saved-height="42.75"', $advanced);
+
+        $this->putJson(route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $row]), $this->payload([
+            'revision' => $this->batch->fresh()->revision, 'client_uuid' => $row->client_uuid, 'save_uuid' => (string) Str::uuid(), 'pole_height' => 47.25,
+        ]))->assertOk();
+        $this->assertEquals(47.25, (float) $row->fresh()->pole_height);
+
+        $invalid = $this->payload(['pole_height' => 0]);
+        $this->postJson(route('mdb-workflow.entry.rows.store', [$this->batch, $this->transformer]), $invalid)->assertUnprocessable()->assertJsonValidationErrors('pole_height');
+        $this->assertSame(1, $this->transformer->entryRows()->count());
+
+        $invalidHeader = $this->headerPayload(['capacity_kva' => 0]);
+        $this->putJson(route('mdb-workflow.entry.headers.update', [$this->batch, $this->transformer]), $invalidHeader)->assertUnprocessable()->assertJsonValidationErrors('capacity_kva');
+        $this->assertEquals(112.5, (float) $this->transformer->fresh()->capacity_kva);
     }
 
     public function test_complete_identity_and_automatic_metadata_are_saved_once_with_project_unit(): void
@@ -994,7 +1025,7 @@ class MdbOperatorEntryTest extends TestCase
         $html = $this->get(route('mdb-workflow.show', $this->batch))->assertOk()->getContent();
         $this->assertStringNotContainsString('Search conductor', $html);
         $this->assertStringNotContainsString('PDF row number / reference', $html);
-        $this->assertStringContainsString('id="entry-height-unit"', $html);
+        $this->assertStringContainsString('id="entry-height-unit-note"', $html);
         $this->assertStringContainsString('Paste Complete Waypoint', $html);
         $this->assertStringContainsString('Date (DDMMYY)', $html);
         $this->assertStringContainsString('S - Start', $html);
@@ -1005,9 +1036,12 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertStringContainsString('Hide menu', $html);
         $this->assertStringContainsString('entry-electrical-equipment-fields', $html);
         $this->assertStringContainsString('Phase / conductors / equipment', $html);
-        $this->assertStringContainsString('name="pole_height" type="number"', $html);
+        $this->assertStringContainsString('id="entry-height-choice"', $html);
+        $this->assertStringContainsString('31 ft', $html);
+        $this->assertStringContainsString('36 ft', $html);
+        $this->assertStringContainsString('Other / Custom Value', $html);
         $this->assertSame(1, substr_count($html, 'class="entry-compact-fieldset entry-electrical-equipment"'));
-        $this->assertSame(7, substr_count($html, 'data-compact-select'));
+        $this->assertSame(9, substr_count($html, 'data-compact-select'));
         $this->assertStringNotContainsString('entry-copy-endpoint', $html);
         $columns = ['name="designation"', 'name="group_number"', 'name="row_date"', 'name="waypoint_reference"', 'id="entry-phase"',
             'name="conductors[R]"', 'name="conductors[Y]"', 'name="conductors[B]"', 'name="conductors[N]"', 'name="equipment_type"', 'name="pole_class"', 'name="pole_height"',
@@ -1016,7 +1050,7 @@ class MdbOperatorEntryTest extends TestCase
         $ordered = $positions;
         sort($ordered);
         $this->assertSame($ordered, $positions);
-        $this->get(route('mdb-workflow.config', $this->batch->project_id))->assertOk()->assertSee('Survey two-digit-year window starts at')->assertSee('Verified survey pole-height unit');
+        $this->get(route('mdb-workflow.config', $this->batch->project_id))->assertOk()->assertSee('Survey two-digit-year window starts at')->assertSee('Legacy survey source height unit');
     }
 
     public function test_row_validation_returns_specific_field_messages_without_saving_or_marking_progress(): void

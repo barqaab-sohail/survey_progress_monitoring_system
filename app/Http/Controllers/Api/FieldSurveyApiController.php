@@ -7,6 +7,7 @@ use App\Http\Requests\SyncFieldSurveyRequest;
 use App\Models\FieldSurvey;
 use App\Models\FieldSurveyAttachment;
 use App\Models\Transformer;
+use App\Models\SurveyorAssignment;
 use App\Services\DriveStorage\FileStorage;
 use App\Services\FieldSurveyAccess;
 use App\Services\FieldSurveyService;
@@ -45,6 +46,8 @@ class FieldSurveyApiController extends Controller
             || isset($claimedCodes[$t->feeder_id.':'.FieldTransformerIdentity::key($t->transformer_code)]))->values();
         $lookups = $feeders->pluck('project_id')->unique()->mapWithKeys(fn ($id) => [$id => app(EntryLookups::class)->options($id)]);
         $settings = $feeders->pluck('project_id')->unique()->mapWithKeys(fn ($id) => [$id => app(SurveyWaypoint::class)->settings($id)]);
+        $personalTasks = SurveyorAssignment::where('surveyor_id', $user->id)->whereIn('feeder_id', $feeders->modelKeys())
+            ->whereIn('status', ['assigned', 'in_progress', 'draft', 'returned', 'submitted'])->get()->groupBy('feeder_id');
 
         return response()->json([
             'user' => $user->only(['id', 'name']), 'teams' => $teams->map(fn ($team) => array_merge($team->toArray(), ['group_identifier' => SurveyTeamGroup::identifier($team)])),
@@ -54,6 +57,9 @@ class FieldSurveyApiController extends Controller
                 'grid_station_name' => $feeder->gridStation?->name, 'division_name' => $feeder->division?->name,
                 'sub_division_name' => $feeder->subDivision?->name, 'sub_division_code' => $feeder->subDivision?->code,
                 'team_ids' => $feeder->assignments->filter(fn ($assignment) => $teams->firstWhere('id', $assignment->survey_team_id)?->project_id === $feeder->project_id)->pluck('survey_team_id')->unique()->values(),
+                'tasks' => ($personalTasks[$feeder->id] ?? collect())->map(fn ($task) => ['assignment_id' => $task->assignment_uuid,
+                    'team_id' => $task->survey_team_id, 'assigned_at' => $task->assigned_at?->toDateString(), 'deadline' => $task->deadline?->toDateString(),
+                    'priority' => $task->priority, 'instructions' => $task->instructions, 'status' => $task->status])->values(),
             ]), 'transformers' => $transformers,
         ]);
     }

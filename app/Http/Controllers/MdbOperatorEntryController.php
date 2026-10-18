@@ -42,7 +42,7 @@ class MdbOperatorEntryController extends Controller
             'pair_number' => 'required|integer|min:1|max:100000', 'designation' => 'required|in:S,E', 'group_number' => 'nullable|string|max:40', 'row_date' => 'nullable|date_format:Y-m-d',
             'waypoint_reference' => 'nullable|string|max:255', 'gpx_source_id' => 'nullable|integer', 'source_pdf_id' => 'nullable|integer',
             'source_page' => 'nullable|integer|min:1|max:10000', 'source_row' => 'nullable|string|max:40', 'conductors' => 'required|array:R,Y,B,N',
-            'equipment_type' => 'nullable|string|max:255', 'pole_class' => 'nullable|string|max:255', 'pole_height' => 'nullable|numeric|min:0|max:200', 'pole_height_unit' => 'nullable|in:m,ft',
+            'equipment_type' => 'nullable|string|max:255', 'pole_class' => 'nullable|string|max:255', 'pole_height' => 'required|numeric|gt:0|max:10000', 'pole_height_unit' => 'nullable|in:m,ft',
             'consumers' => 'required|array:rs,rl,sc,lc,si,li,pb,ag,st,pv', 'intersection' => 'required|boolean',
             'pv_details' => 'nullable|array|max:100', 'pv_details.*' => 'array:reference,service_load_kw,installed_capacity_kw,meter_number,remarks',
             'pv_details.*.reference' => 'nullable|string|max:255', 'pv_details.*.service_load_kw' => 'nullable|numeric|min:0|max:1000000',
@@ -55,6 +55,9 @@ class MdbOperatorEntryController extends Controller
         }
         foreach (array_keys(EntryLookups::CONSUMERS) as $category) {
             $rules['consumers.'.$category] = 'nullable|integer|min:0|max:1000000';
+        }
+        if ((string) $request->input('identity_version') === '2') {
+            $rules['pole_height_unit'] = 'nullable|in:ft';
         }
         $validated = $request->validate($rules, [
             'row_date.date_format' => 'Enter a valid calendar date in DD/MM/YYYY.',
@@ -102,13 +105,13 @@ class MdbOperatorEntryController extends Controller
             throw ValidationException::withMessages(['composite_identifier' => 'Complete waypoint differs from the row components.']);
         }
         $validated['composite_identifier'] = $complete;
+        $copiedEquipment = ! empty($validated['inheritance']['equipment']) ? $transformer->entryRows()->findOrFail($validated['inheritance']['equipment']) : null;
+        $unit = $validated['pole_height_unit'] ?? $row?->pole_height_unit ?? $copiedEquipment?->pole_height_unit ?? 'ft';
+        if ($unit === 'm') {
+            $validated['pole_height'] = round((float) $validated['pole_height'] * 3.280839895, 4);
+        }
+        $validated['pole_height_unit'] = 'ft';
         if ($strict) {
-            $copiedEquipment = ! empty($validated['inheritance']['equipment']) ? $transformer->entryRows()->findOrFail($validated['inheritance']['equipment']) : null;
-            $unit = $row?->pole_height_unit ?? $copiedEquipment?->pole_height_unit ?? $settings['pole_height_unit'];
-            if (! $request->attributes->get('mdb_verifier_correction') && $unit !== null && ! empty($validated['pole_height_unit']) && $validated['pole_height_unit'] !== $unit) {
-                throw ValidationException::withMessages(['pole_height_unit' => 'This row or project already uses '.$unit.'. Keep that unit and verify the height value before saving.']);
-            }
-            $validated['pole_height_unit'] = $request->attributes->get('mdb_verifier_correction') ? ($validated['pole_height_unit'] ?? $unit) : ($unit ?? ($validated['pole_height_unit'] ?? null));
             unset($validated['source_row']);
         }
         if (empty($validated['source_pdf_id'])) {
@@ -294,7 +297,7 @@ class MdbOperatorEntryController extends Controller
             $request->merge(['code' => trim($request->input('code'))]);
         }
         $rules = ['manual_transformer' => 'sometimes|boolean', 'revision' => 'required|integer', 'code' => ['required', 'string', 'max:255', Rule::unique('mdb_workflow_transformers', 'code')->where('batch_id', $batch->id)->ignore($transformer?->id)],
-            'capacity_kva' => 'nullable|numeric|min:0.001|max:1000000', 'source_waypoint_id' => 'nullable|integer', 'header' => 'required|array',
+            'capacity_kva' => 'required|numeric|gt:0|max:1000000', 'source_waypoint_id' => 'nullable|integer', 'header' => 'required|array',
             'header.survey_date' => 'nullable|date_format:Y-m-d', 'header.mounting' => ['nullable', Rule::in(array_filter(['Single Pole', 'Double Pole', 'Pad', $transformer?->header['mounting'] ?? null]))],
             'header.service_category' => 'nullable|in:General Duty,Dedicated', 'header.source_survey_identifier' => 'nullable|string|regex:/^\d{11}$/D', 'source_pdf_id' => 'required|integer', 'source_page' => 'required|integer|min:1'];
         $fields = ['substation_name', 'substation_identifier', 'feeder_identifier', 'feeder_name', 'division', 'subdivision', 'subdivision_code',

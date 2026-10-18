@@ -191,7 +191,7 @@ class EntryService
                         $headerIssue('incomplete_operator_header', 'Transformer header: enter '.str_replace('_', ' ', $key).'.');
                     }
                 }
-                if ((! $simple || filled($transformerData['capacity_kva'] ?? null)) && ($transformerData['capacity_kva'] ?? 0) <= 0) {
+                if (($transformerData['capacity_kva'] ?? 0) <= 0) {
                     $headerIssue('missing_operator_capacity', 'Transformer header: enter positive capacity in kVA.');
                 }
                 if (empty($transformerData['source_waypoint_id'])) {
@@ -264,14 +264,14 @@ class EntryService
                     if (! $simple && ! $row->pole_class) {
                         $missingEquipment[] = 'pole class';
                     }
-                    if ((! $simple || filled($row->pole_height)) && (! is_numeric($row->pole_height) || $row->pole_height <= 0)) {
+                    if (! is_numeric($row->pole_height) || $row->pole_height <= 0) {
                         $missingEquipment[] = 'positive pole/tower height';
                     }
                     if ($missingEquipment) {
                         $add('incomplete_entry_equipment', $label.'enter '.implode(', ', $missingEquipment).'.', $row);
                     }
-                    if (! $simple && ! in_array($row->pole_height_unit, ['m', 'ft'], true)) {
-                        $add('missing_entry_height_unit', $label.'select the pole/tower height unit (Feet or Metres) beside the height before verification.', $row);
+                    if (! in_array($row->pole_height_unit, ['m', 'ft'], true)) {
+                        $add('missing_entry_height_unit', $label.'pole/tower height must be saved in feet (ft).', $row);
                     }
                     if (! $row->group_number || ! $row->row_date) {
                         $add('incomplete_entry_date_group', $label.'group/team and date need entry.', $row);

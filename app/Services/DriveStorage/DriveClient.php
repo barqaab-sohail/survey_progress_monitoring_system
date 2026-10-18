@@ -219,6 +219,35 @@ class DriveClient
         });
     }
 
+    public function deleteVerified(DriveStoredFile $file): void
+    {
+        if (! $file->drive_file_id || $file->account_id !== DriveStorageConnection::find(1)?->account_id) {
+            throw new RuntimeException('Reconnect the original storage account before removing a duplicate.');
+        }
+        $info = $this->info($file->drive_file_id);
+        if ($info === null) {
+            return; // Idempotent recovery if Drive deletion succeeded before the database update.
+        }
+        $this->verify($file, $info);
+        $response = $this->client()->delete(self::API.'/'.$file->drive_file_id, ['supportsAllDrives' => 'true']);
+        if (! $response->successful() && $response->status() !== 404) {
+            throw new RuntimeException('Google Drive did not confirm deletion of duplicate '.$file->original_name.'.');
+        }
+        if ($this->info($file->drive_file_id) !== null) {
+            throw new RuntimeException('Google Drive still reports the duplicate file. Please retry cleanup.');
+        }
+    }
+
+    public function verifyRemote(DriveStoredFile $file): void
+    {
+        if (! $file->drive_file_id || $file->account_id !== DriveStorageConnection::find(1)?->account_id) {
+            throw new RuntimeException('Reconnect the original storage account before verifying duplicates.');
+        }
+        $info = $this->info($file->drive_file_id);
+        if ($info === null) throw new RuntimeException('A reported file is no longer available in Drive. Refresh the report.');
+        $this->verify($file, $info);
+    }
+
     private function verify(DriveStoredFile $file, array $info): void
     {
         if (($info['trashed'] ?? false) || (string) ($info['id'] ?? '') !== $file->drive_file_id

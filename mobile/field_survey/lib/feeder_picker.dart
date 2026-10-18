@@ -63,7 +63,7 @@ class FeederPicker extends StatelessWidget {
                                     .map(
                                       (f) => ListTile(
                                         title: Text(f['feeder_code']),
-                                        subtitle: Text(f['feeder_name']),
+                                        subtitle: Text(_taskSummary(f)),
                                         selected: f['id'] == selectedId,
                                         onTap: () => Navigator.pop(
                                           context,
@@ -90,5 +90,16 @@ class FeederPicker extends StatelessWidget {
         if (context.mounted && chosen != null) onSelected(chosen);
       },
     );
+  }
+
+  String _taskSummary(Json feeder) {
+    final tasks = (feeder['tasks'] as List? ?? const []).cast<Json>();
+    if (tasks.isEmpty) return feeder['feeder_name'];
+    final task = tasks.first;
+    final parts = <String>[feeder['feeder_name']];
+    if (task['priority'] != null) parts.add('Priority: ${task['priority']}');
+    if (task['deadline'] != null) parts.add('Due: ${task['deadline']}');
+    if ((task['instructions'] ?? '').toString().isNotEmpty) parts.add(task['instructions'].toString());
+    return parts.join(' · ');
   }
 }

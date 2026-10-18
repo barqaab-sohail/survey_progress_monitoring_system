@@ -182,35 +182,42 @@ class FieldController extends ChangeNotifier {
   Future<void> sync({bool manual = true}) async {
     final current = session;
     if (syncing || busy || current == null || needsLogin && !manual) return;
-    final candidates = await store.surveys(current.scope);
-    final forms = candidates
-        .where((r) => r.outbound != null && r.state != 'conflict')
-        .toList();
-    if (!manual && forms.isEmpty) {
-      var pendingPhotos = false;
-      for (final record in candidates.where(
-        (r) => r.revision > 0 && r.state != 'conflict',
-      )) {
-        pendingPhotos = (await store.attachments(current.scope, record.id)).any(
-          (photo) => photo['state'] == 'pending' || photo['state'] == 'error',
-        );
-        if (pendingPhotos) break;
-      }
-      if (!pendingPhotos) return;
-    }
-    // No await between the final guard and lock; simultaneous resume/manual
-    // requests cannot send the same form concurrently.
-    if (syncing ||
-        busy ||
-        session?.scope != current.scope ||
-        session?.token != current.token) {
-      return;
-    }
     syncing = true;
+    syncMessage = 'Sync in progress…';
     notifyListeners();
     var formCount = 0, photoCount = 0, failures = 0;
     var networkStopped = false;
+    final failureReasons = <String>[];
     try {
+      final candidates = await store.surveys(current.scope);
+      if (session?.scope != current.scope || session?.token != current.token) {
+        syncMessage = 'Sync cancelled because the signed-in account changed.';
+        return;
+      }
+      final forms = candidates
+          .where((r) => r.outbound != null && r.state != 'conflict')
+          .toList();
+      if (forms.isEmpty) {
+        var pendingPhotos = false;
+        for (final record in candidates.where(
+          (r) => r.revision > 0 && r.state != 'conflict',
+        )) {
+          pendingPhotos = (await store.attachments(
+            current.scope,
+            record.id,
+          )).any((photo) => ['pending', 'error'].contains(photo['state']));
+          if (pendingPhotos) break;
+        }
+        if (!pendingPhotos) {
+          if (manual) {
+            syncMessage =
+                'Sync completed successfully. No pending uploads. Local drafts upload after you submit them.';
+          } else {
+            syncMessage = '';
+          }
+          return;
+        }
+      }
       for (final record in forms) {
         try {
           final reply = await api.sync(current, record.outbound!);
@@ -228,17 +235,20 @@ class FieldController extends ChangeNotifier {
             correctable: error.status == 422,
           );
           failures++;
+          failureReasons.add(error.message);
           if (error.status == 401) {
             needsLogin = true;
             networkStopped = true;
             break;
           }
-        } on Object {
+        } on Object catch (error) {
+          final reason = _syncFailureReason(error);
           await store.reject(
             record,
-            'Connection interrupted. This survey remains queued on the phone. Retry Sync when connected.',
+            '$reason This survey remains saved on the phone and can be retried.',
           );
           failures++;
+          failureReasons.add(reason);
           networkStopped = true;
           break;
         }
@@ -279,18 +289,21 @@ class FieldController extends ChangeNotifier {
                 error.message,
               );
               failures++;
+              failureReasons.add(error.message);
               if (error.status == 401) {
                 needsLogin = true;
                 networkStopped = true;
                 break;
               }
-            } on Object {
+            } on Object catch (error) {
+              final reason = _syncFailureReason(error);
               await store.attachmentState(
                 photo['uuid'],
                 'error',
-                'Connection interrupted. Photo preserved on the phone.',
+                '$reason Photo preserved on the phone and can be retried.',
               );
               failures++;
+              failureReasons.add(reason);
               networkStopped = true;
               break;
             }
@@ -298,19 +311,66 @@ class FieldController extends ChangeNotifier {
           if (networkStopped) break;
         }
       }
-      syncMessage = needsLogin
-          ? 'Sign in again to sync. Saved surveys and photos remain on this phone.'
-          : networkStopped
-          ? 'Connection unavailable. Pending work is saved on this phone.'
-          : failures > 0
-          ? '$formCount survey${formCount == 1 ? '' : 's'} and $photoCount photo${photoCount == 1 ? '' : 's'} synced. $failures ${failures == 1 ? 'item needs' : 'items need'} attention.'
-          : formCount + photoCount > 0
-          ? '$formCount survey${formCount == 1 ? '' : 's'} and $photoCount photo${photoCount == 1 ? '' : 's'} synced.'
-          : 'No pending uploads. Local drafts are uploaded after you submit them.';
+      if (failures > 0) {
+        final reasons = failureReasons
+            .map(
+              (reason) => reason.replaceFirst(
+                'No internet connection or server is unreachable: ',
+                '',
+              ),
+            )
+            .toSet()
+            .take(3)
+            .join(' | ');
+        final noInternet = failureReasons.any(
+          (reason) => reason.startsWith('No internet connection'),
+        );
+        syncMessage = noInternet
+            ? 'No internet connection. Sync failed: $reasons Pending surveys and photos remain saved on this phone.'
+            : needsLogin
+            ? 'Sync failed: sign-in is required. $reasons Saved surveys and photos remain on this phone.'
+            : 'Sync failed: $reasons Pending surveys and photos remain saved on this phone.';
+      } else if (formCount + photoCount > 0) {
+        syncMessage =
+            'Sync completed successfully. $formCount survey${formCount == 1 ? '' : 's'} and $photoCount photo${photoCount == 1 ? '' : 's'} uploaded.';
+      } else {
+        syncMessage =
+            'Sync completed successfully. No pending uploads. Local drafts upload after you submit them.';
+      }
+    } catch (error) {
+      syncMessage =
+          'Sync failed: ${_syncFailureReason(error)} Pending surveys and photos remain saved on this phone.';
     } finally {
-      syncing = false;
-      await reload();
+      try {
+        await reload();
+      } catch (error) {
+        if (failureReasons.isEmpty) {
+          syncMessage =
+              'Sync failed while refreshing saved surveys: ${_syncFailureReason(error)}';
+        }
+      } finally {
+        syncing = false;
+        notifyListeners();
+      }
     }
+  }
+
+  String _syncFailureReason(Object error) {
+    if (error is SocketException) {
+      return 'No internet connection or server is unreachable: ${error.message}.';
+    }
+    if (error is TimeoutException) {
+      return 'The server request timed out: ${error.message ?? 'no response received'}.';
+    }
+    final detail = error.toString().replaceFirst('Exception: ', '');
+    final normalized = detail.toLowerCase();
+    if (normalized.contains('failed host lookup') ||
+        normalized.contains('network is unreachable') ||
+        normalized.contains('no address associated') ||
+        normalized.contains('connection refused')) {
+      return 'No internet connection or server is unreachable: $detail.';
+    }
+    return 'Request failed: $detail.';
   }
 
   void resumed(bool value) {

@@ -11,6 +11,9 @@ class WorkflowAccess
     public const ABILITIES = ['view', 'upload', 'edit', 'submit', 'verify', 'configure', 'analyze', 'export', 'surveyVerify', 'process', 'generate', 'prepare'];
 
     public const SURVEY_ROLE_ABILITIES = [
+        'surveyor' => [],
+        'data_entry_verification_team_leader' => ['view'],
+        'mdb_creation_team_leader' => ['view', 'prepare', 'export', 'generate'],
         'survey_data_entry_operator' => ['view', 'upload', 'edit', 'submit'],
         'survey_data_verifier' => ['view', 'surveyVerify'],
         'mdb_generator' => ['view', 'prepare', 'export', 'generate'],
@@ -59,7 +62,7 @@ class WorkflowAccess
         $role = match ($ability) {
             'edit', 'upload', 'submit' => 'survey_data_entry_operator',
             'surveyVerify' => 'survey_data_verifier',
-            'generate', 'export', 'prepare' => 'mdb_generator',
+            'generate', 'export', 'prepare' => $user->hasRole('mdb_creation_team_leader') ? 'mdb_creation_team_leader' : 'mdb_generator',
             'verify', 'process' => 'super_admin',
             default => null,
         };

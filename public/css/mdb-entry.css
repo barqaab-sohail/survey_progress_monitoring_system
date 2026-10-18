@@ -71,3 +71,8 @@
 .entry-pdf-row[data-entered=true]{background:transparent;border-color:transparent}
 
 .mdb-entry .entry-required { color: #dc2626; font-weight: 700; }
+
+/* Hide browser-native number spinners in the PDF Data Entry create/edit form. */
+.mdb-entry input[type=number]::-webkit-inner-spin-button,
+.mdb-entry input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.mdb-entry input[type=number] { -moz-appearance: textfield; appearance: textfield; }

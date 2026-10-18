@@ -16,6 +16,7 @@ use App\Models\Project;
 use App\Models\SubDivision;
 use App\Models\SurveyDailyEntry;
 use App\Models\SurveyTeam;
+use App\Models\SurveyorAssignment;
 use App\Models\Transformer;
 use App\Models\User;
 use App\Services\Mdb\EntryLookups;
@@ -152,6 +153,32 @@ class FieldSurveyApiTest extends TestCase
         $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonCount(1, 'feeders');
         $this->project->update(['status' => 'inactive']);
         $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonCount(0, 'teams')->assertJsonCount(0, 'feeders');
+    }
+
+    public function test_surveyor_mobile_access_is_limited_to_personal_assignments_and_sync_updates_task_audit(): void
+    {
+        $surveyor = User::factory()->create(['organization_id' => $this->organization->id, 'role' => UserRole::Surveyor]);
+        $this->team->members()->attach($surveyor->id, ['is_leader' => false]);
+        $other = $this->feeder->replicate(); $other->feeder_code = '0022'; $other->feeder_name = 'Not assigned'; $other->save();
+        FeederAssignment::create(['feeder_id' => $other->id, 'survey_team_id' => $this->team->id, 'assigned_by' => $this->admin->id, 'start_date' => today(), 'status' => 'active']);
+        $this->actingAs($this->leader)->post(route('team-work.survey.assign'), ['survey_team_id' => $this->team->id, 'surveyor_id' => $surveyor->id,
+            'feeder_ids' => [$this->feeder->id], 'assigned_at' => today()->toDateString(), 'deadline' => today()->addDays(2)->toDateString(), 'priority' => 'high',
+            'instructions' => 'Photograph both pole labels.'])->assertRedirect()->assertSessionHasNoErrors();
+        $task = SurveyorAssignment::firstOrFail();
+        $this->assertDatabaseHas('audit_logs', ['action' => 'survey.tasks_assigned']);
+
+        $login = $this->postJson('/api/v1/field/login', ['email' => $surveyor->email, 'password' => 'password', 'device_name' => 'Surveyor device'])->assertOk();
+        $this->withHeader('Authorization', 'Bearer '.$login->json('token'));
+        $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonCount(1, 'feeders')
+            ->assertJsonPath('feeders.0.id', $this->feeder->id)->assertJsonPath('feeders.0.tasks.0.assignment_id', $task->assignment_uuid)
+            ->assertJsonPath('feeders.0.tasks.0.priority', 'high')->assertJsonPath('feeders.0.tasks.0.instructions', 'Photograph both pole labels.');
+        $payload = $this->payload();
+        $payload['feeder_id'] = $other->id;
+        $this->postJson('/api/v1/field/surveys/sync', $payload)->assertForbidden();
+        $payload['feeder_id'] = $this->feeder->id;
+        $this->postJson('/api/v1/field/surveys/sync', $payload)->assertCreated();
+        $this->assertSame('submitted', $task->fresh()->status);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'survey.task_status_changed', 'auditable_id' => $task->id]);
     }
 
     public function test_full_sheet_sync_preserves_paper_fields_and_leading_zeros_without_creating_progress(): void

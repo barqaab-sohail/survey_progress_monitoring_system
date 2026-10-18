@@ -11,12 +11,13 @@ import 'package:hazeco_field_survey/local_store.dart';
 import 'package:hazeco_field_survey/main.dart';
 import 'package:hazeco_field_survey/models.dart';
 import 'package:hazeco_field_survey/survey_editor.dart';
-import 'models_test.dart' show readySurvey;
+import 'models_test.dart' show readySurvey, testSession;
 
 // UI tests use synchronous in-memory persistence; real SQLite has separate checks.
 class WidgetSurveyStore extends LocalStore {
   WidgetSurveyStore(super.database);
   final saved = <String, SurveyRecord>{};
+  final savedPhotos = <String, Json>{};
   @override
   Future<void> save(SurveyRecord record) async {
     saved[record.id] = record.clone();
@@ -25,8 +26,49 @@ class WidgetSurveyStore extends LocalStore {
   @override
   Future<SurveyRecord?> survey(String scope, String id) async =>
       saved[id]?.clone();
+
   @override
-  Future<List<Json>> attachments(String scope, String surveyId) async => [];
+  Future<List<SurveyRecord>> surveys(String scope) async => saved.values
+      .where((record) => record.scope == scope)
+      .map((record) => record.clone())
+      .toList();
+
+  @override
+  Future<Json?> bootstrap(String scope) async => null;
+
+  @override
+  Future<void> queue(SurveyRecord record) async {
+    final queued = record.clone()
+      ..data['status'] = 'submitted'
+      ..outbound = record.payload(submitted: true)
+      ..state = 'queued';
+    saved[record.id] = queued;
+    record
+      ..data = queued.data
+      ..outbound = queued.outbound
+      ..state = queued.state;
+  }
+
+  @override
+  Future<List<Json>> attachments(String scope, String surveyId) async =>
+      savedPhotos.values
+          .where(
+            (photo) =>
+                photo['scope'] == scope && photo['survey_uuid'] == surveyId,
+          )
+          .map(copyJson)
+          .toList();
+
+  @override
+  Future<void> addAttachment(Json data) async {
+    savedPhotos[data['uuid']] = copyJson(data);
+  }
+}
+
+class NoSyncFieldController extends FieldController {
+  NoSyncFieldController(super.store);
+  @override
+  Future<void> sync({bool manual = true}) async {}
 }
 
 void main() {
@@ -229,6 +271,9 @@ void main() {
     );
     await store.setSetting('last_url', 'https://old.example.test');
     await controller.login('inspector@example.test', 'test-password');
+    while (controller.syncing) {
+      await Future<void>.delayed(Duration.zero);
+    }
     expect(urls, contains('$applicationBaseUrl/api/v1/field/login'));
     expect(urls, contains('$applicationBaseUrl/api/v1/field/bootstrap'));
     expect(urls.every((url) => url.startsWith('$applicationBaseUrl/')), true);
@@ -286,6 +331,26 @@ void main() {
     expect(record.solar, hasLength(2));
     expect(record.solar[0], isNot(contains('row_id')));
     expect(record.solar[1]['row_id'], record.rows.first['row_id']);
+    final reference = find.widgetWithText(
+      TextFormField,
+      'Consumer reference number',
+    );
+    await tester.scrollUntilVisible(
+      reference,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await Scrollable.ensureVisible(tester.element(reference), alignment: 0.5);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextField>(
+            find.descendant(of: reference, matching: find.byType(TextField)),
+          )
+          .keyboardType,
+      TextInputType.number,
+    );
+    await tester.enterText(reference, '00001234');
     final meter = find.widgetWithText(TextFormField, 'Meter Number');
     await tester.scrollUntilVisible(
       meter,
@@ -294,6 +359,14 @@ void main() {
     );
     await Scrollable.ensureVisible(tester.element(meter), alignment: 0.5);
     await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextField>(
+            find.descendant(of: meter, matching: find.byType(TextField)),
+          )
+          .keyboardType,
+      TextInputType.number,
+    );
     await tester.enterText(meter, '001-A/9');
     await tester.pump(const Duration(milliseconds: 600));
     await tester.scrollUntilVisible(
@@ -302,6 +375,7 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Choose image'), findsOneWidget);
+    expect(record.solar[1]['consumer_reference'], '00001234');
     expect(record.solar[1]['meter_number'], '001-A/9');
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
@@ -455,6 +529,117 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     },
   );
+
+  testWidgets(
+    'post-submit Create New Survey opens an empty survey for the same feeder and retains queued attachments',
+    (tester) async {
+      final record = readySurvey();
+      final uiStore = WidgetSurveyStore(store.database);
+      await uiStore.save(record);
+      await uiStore.addAttachment({
+        'uuid': 'saved-photo',
+        'scope': record.scope,
+        'survey_uuid': record.id,
+        'row_id': record.rows.first['row_id'],
+        'kind': 'photo',
+        'path': 'unused.jpg',
+        'state': 'pending',
+        'error': '',
+      });
+      controller.dispose();
+      controller = NoSyncFieldController(uiStore)
+        ..session = testSession
+        ..reference = {
+          'teams': [
+            {'id': 4, 'name': 'Survey Team 01'},
+          ],
+          'feeders': [
+            {
+              'id': 7,
+              'feeder_code': '0012',
+              'feeder_name': 'Test feeder',
+              'team_ids': [4],
+            },
+          ],
+        }
+        ..records = [record];
+      await tester.pumpWidget(
+        MaterialApp(home: SurveyHome(controller: controller)),
+      );
+      await tester.tap(find.text('001234'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('S/E rows'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Submit survey'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Submit'));
+      await tester.pumpAndSettle();
+      expect(find.text('Create New Survey'), findsOneWidget);
+      final queued = (await uiStore.survey(record.scope, record.id))!;
+      expect(queued.data['status'], 'submitted');
+      expect(queued.state, anyOf('queued', 'synced'));
+      await tester.tap(find.text('Create New Survey'));
+      await tester.pumpAndSettle();
+      final savedSurveys = await uiStore.surveys(record.scope);
+      final created = savedSurveys.singleWhere((item) => item.id != record.id);
+      expect(created.data['survey_team_id'], record.data['survey_team_id']);
+      expect(created.data['feeder_id'], record.data['feeder_id']);
+      expect(created.data['transformer_code'], '');
+      expect(created.rows, isEmpty);
+      expect(created.solar, isEmpty);
+      expect(await uiStore.attachments(record.scope, created.id), isEmpty);
+      expect(
+        (await uiStore.attachments(record.scope, record.id)).single['uuid'],
+        'saved-photo',
+      );
+      expect(
+        (await uiStore.attachments(record.scope, record.id)).single['state'],
+        'pending',
+      );
+      expect(find.text('New field survey'), findsOneWidget);
+    },
+  );
+
+  testWidgets('post-submit Go to Home returns to the home screen', (
+    tester,
+  ) async {
+    final record = readySurvey();
+    final uiStore = WidgetSurveyStore(store.database)
+      ..saved[record.id] = record;
+    controller.dispose();
+    controller = FieldController(uiStore);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      SurveyEditor(controller: controller, record: record),
+                ),
+              ),
+              child: const Text('Home screen'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Home screen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('S/E rows'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Submit survey'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Submit'));
+    await tester.pumpAndSettle();
+    final saved = (await uiStore.survey(record.scope, record.id))!;
+    expect(saved.data['status'], 'submitted');
+    expect(find.text('Go to Home'), findsOneWidget);
+    await tester.tap(find.text('Go to Home'));
+    await tester.pumpAndSettle();
+    expect(find.text('Home screen'), findsOneWidget);
+  });
 
   testWidgets(
     'Done keeps an incomplete row open, shows errors and retains zero values',

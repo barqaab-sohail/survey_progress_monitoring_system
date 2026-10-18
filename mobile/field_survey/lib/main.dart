@@ -286,6 +286,7 @@ class _SurveyHomeState extends State<SurveyHome> {
   Future<void> open(SurveyRecord record) async {
     if (opening || controller.busy) return;
     opening = true;
+    var createInSameFeeder = false;
     try {
       final current = await controller.store.survey(record.scope, record.id);
       if (!mounted ||
@@ -293,16 +294,22 @@ class _SurveyHomeState extends State<SurveyHome> {
           controller.session?.scope != current.scope) {
         return;
       }
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) =>
-              SurveyEditor(controller: controller, record: current.clone()),
-        ),
-      );
-      await controller.reload();
-      unawaited(controller.sync(manual: false));
+      createInSameFeeder =
+          await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (_) =>
+                  SurveyEditor(controller: controller, record: current.clone()),
+            ),
+          ) ??
+          false;
     } finally {
       opening = false;
+    }
+    if (!mounted) return;
+    await controller.reload();
+    unawaited(controller.sync(manual: false));
+    if (createInSameFeeder) {
+      await createFor(record.data['survey_team_id'], record.data['feeder_id']);
     }
   }
 
@@ -385,11 +392,21 @@ class _SurveyHomeState extends State<SurveyHome> {
       ),
     );
     if (accepted != true || !mounted) return;
-    final record = SurveyRecord.create(
-      controller.session!,
-      selectedTeam,
-      selectedFeeder,
-    );
+    await createFor(selectedTeam['id'], selectedFeeder['id']);
+  }
+
+  Future<void> createFor(int teamId, int feederId) async {
+    final team = controller.team(teamId);
+    final feeder = controller.feeder(feederId);
+    final session = controller.session;
+    if (team == null || feeder == null || session == null) return;
+    if (teamGroupIdentifier(team) == null) {
+      notice(
+        'This team has no valid group number. Ask the administrator to correct it.',
+      );
+      return;
+    }
+    final record = SurveyRecord.create(session, team, feeder);
     await controller.store.save(record);
     if (mounted) await open(record);
   }

@@ -19,7 +19,12 @@ void main() {
           final data = jsonDecode(request.body);
           expect(data['rows'][0]['gps_waypoint'], '0005');
           return http.Response(
-            jsonEncode({'id': 1, 'revision': 2, 'status': 'submitted'}),
+            jsonEncode({
+              'id': 1,
+              'client_uuid': data['client_uuid'],
+              'revision': 2,
+              'status': 'submitted',
+            }),
             200,
           );
         }),
@@ -30,6 +35,28 @@ void main() {
           readySurvey().payload(submitted: true),
         ))['revision'],
         2,
+      );
+    },
+  );
+  test(
+    'sync requires a matching server confirmation before acknowledging',
+    () async {
+      final record = readySurvey();
+      final api = FieldApi(
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'client_uuid': 'another-survey',
+              'revision': 1,
+              'status': 'submitted',
+            }),
+            200,
+          ),
+        ),
+      );
+      await expectLater(
+        api.sync(testSession, record.payload(submitted: true)),
+        throwsA(isA<FormatException>()),
       );
     },
   );

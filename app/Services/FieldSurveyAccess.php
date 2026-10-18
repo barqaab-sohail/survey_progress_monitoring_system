@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\Feeder;
 use App\Models\FieldSurvey;
 use App\Models\SurveyTeam;
+use App\Models\SurveyorAssignment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -30,6 +31,13 @@ class FieldSurveyAccess
     {
         $teamIds = $this->teams($user)->select('survey_teams.id');
 
+        if ($user->hasRole(UserRole::Surveyor->value)) {
+            return Feeder::active()->whereIn('id', SurveyorAssignment::where('surveyor_id', $user->id)
+                ->whereIn('status', ['assigned', 'in_progress', 'draft', 'returned', 'submitted'])->whereDate('assigned_at', '<=', today())
+                ->where(fn (Builder $q) => $q->whereNull('deadline')->orWhereDate('deadline', '>=', today()))
+                ->whereIn('survey_team_id', $teamIds)->select('feeder_id'));
+        }
+
         return Feeder::active()->whereHas('project', fn (Builder $query) => $query->where('status', 'active'))
             ->whereHas('assignments', function (Builder $query) use ($teamIds): void {
                 $this->activeAssignments($query);
@@ -41,13 +49,19 @@ class FieldSurveyAccess
     public function authorizeCollection(User $user, int $teamId, int $feederId): array
     {
         abort_unless($user->isActive() && (! $user->organization_id || $user->organization?->status->value === 'active'), 403, 'Your account or organization is inactive.');
-        abort_unless($user->hasAnyRole([UserRole::SuperAdmin->value, UserRole::SurveyTeamLeader->value]), 403);
+        abort_unless($user->hasAnyRole([UserRole::SuperAdmin->value, UserRole::SurveyTeamLeader->value, UserRole::Surveyor->value]), 403);
         $team = $this->teams($user)->find($teamId);
         $feeder = Feeder::active()->find($feederId);
         abort_unless($team && $feeder && $team->project_id === $feeder->project_id, 403, 'Your survey team or feeder is unavailable. Download assignments again.');
         $assignment = $feeder->assignments()->where('survey_team_id', $team->id);
         $this->activeAssignments($assignment->getQuery());
         abort_unless($assignment->exists(), 403, 'This feeder is no longer assigned to your survey team.');
+        if ($user->hasRole(UserRole::Surveyor->value)) {
+            abort_unless(SurveyorAssignment::where('surveyor_id', $user->id)->where('survey_team_id', $team->id)->where('feeder_id', $feeder->id)
+                ->whereIn('status', ['assigned', 'in_progress', 'draft', 'returned', 'submitted'])->whereDate('assigned_at', '<=', today())
+                ->where(fn (Builder $q) => $q->whereNull('deadline')->orWhereDate('deadline', '>=', today()))->exists(),
+                403, 'This task is not assigned to your account. Refresh assignments or contact your team leader.');
+        }
 
         return [$team, $feeder];
     }
@@ -59,7 +73,11 @@ class FieldSurveyAccess
         if ($user->hasAnyRole([UserRole::SuperAdmin->value, UserRole::ProjectManager->value, UserRole::ManagementViewer->value])) {
             return $query;
         }
-        abort_unless($user->hasRole(UserRole::SurveyTeamLeader->value), 403);
+        abort_unless($user->hasAnyRole([UserRole::SurveyTeamLeader->value, UserRole::Surveyor->value]), 403);
+
+        if ($user->hasRole(UserRole::Surveyor->value)) {
+            return $query->where('collected_by', $user->id);
+        }
 
         return $query->where('collected_by', $user->id)
             ->whereIn('survey_team_id', $this->teams($user)->select('survey_teams.id'))

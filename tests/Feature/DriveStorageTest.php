@@ -113,6 +113,49 @@ class DriveStorageTest extends TestCase
         $this->assertSame(1, $this->uploads);
     }
 
+    public function test_identical_content_with_a_different_name_reuses_one_archive_and_cleans_duplicate_staging(): void
+    {
+        $first = $this->stage();
+        Storage::disk('local')->put('stage/renamed.pdf', $this->body);
+        $second = app(FileStorage::class)->register('local', 'stage/renamed.pdf', 'renamed.pdf', 'application/pdf', ['feeder_id' => 99]);
+        $this->assertSame($first->id, $second->id);
+        $this->assertTrue($second->duplicate_content);
+        $this->assertSame(1, DriveStoredFile::count());
+        Storage::disk('local')->assertMissing('stage/renamed.pdf');
+        app(FileStorage::class)->transfer($first->id);
+        $this->assertSame(1, $this->uploads);
+    }
+
+    public function test_different_content_with_same_filename_is_kept_as_a_unique_file_name(): void
+    {
+        $first = $this->stage();
+        $otherBody = '%PDF-1.4 different source';
+        Storage::disk('local')->put('stage/other.pdf', $otherBody);
+        $second = app(FileStorage::class)->register('local', 'stage/other.pdf', 'original.pdf', 'application/pdf', ['feeder_id' => 35]);
+        $this->assertNotSame($first->id, $second->id);
+        $this->assertNotSame($first->original_name, $second->original_name);
+        $this->assertStringContainsString(substr(hash('sha256', $otherBody), 0, 8), $second->original_name);
+    }
+
+    public function test_duplicate_report_and_cleanup_repoint_references_before_deleting_only_confirmed_copy(): void
+    {
+        $keeper = $this->stage();
+        $keeper->update(['status' => 'uploaded', 'drive_file_id' => 'drive-file-12345', 'account_id' => 'account-12345', 'uploaded_at' => now()]);
+        $duplicate = DriveStoredFile::create(['uuid' => (string) \Illuminate\Support\Str::uuid(), 'drive_file_id' => 'drive-file-duplicate',
+            'original_name' => 'renamed.pdf', 'mime' => 'application/pdf', 'bytes' => strlen($this->body), 'sha256' => hash('sha256', $this->body),
+            'md5' => md5($this->body), 'local_disk' => 'local', 'local_path' => 'stage/duplicate.pdf', 'account_id' => 'account-12345',
+            'status' => 'uploaded', 'uploaded_at' => now()->addMinute(), 'context' => ['feeder_code' => 'F-2']]);
+        \Illuminate\Support\Facades\DB::table('drive_file_hash_claims')->where('sha256', $keeper->sha256)->update(['drive_stored_file_id' => $keeper->id]);
+        Storage::disk('local')->put($duplicate->local_path, $this->body);
+        $this->assertCount(1, app(\App\Services\DriveStorage\DuplicateFiles::class)->groups());
+
+        $plan = app(\App\Services\DriveStorage\DuplicateFiles::class)->cleanup($keeper->sha256, auth()->user());
+        $this->assertSame($keeper->id, $plan['keeper_id']);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'drive.duplicate_cleanup_requested', 'auditable_id' => $keeper->id]);
+        $this->assertDatabaseHas('drive_stored_files', ['id' => $duplicate->id]); // no automatic deletion during planning
+        $this->assertSame(0, \Illuminate\Support\Facades\DB::table('mdb_workflow_sources')->where('drive_stored_file_id', $duplicate->id)->count());
+    }
+
     public function test_interrupted_upload_retains_original_and_retry_uses_same_remote_file(): void
     {
         $file = $this->stage();

@@ -87,15 +87,25 @@ class FieldApi {
     );
   }
 
-  Future<Json> sync(FieldSession session, Json data) async => read(
-    await client
-        .post(
-          endpoint(session.url, '/surveys/sync'),
-          headers: headers(session),
-          body: jsonEncode(data),
-        )
-        .timeout(const Duration(seconds: 40)),
-  );
+  Future<Json> sync(FieldSession session, Json data) async {
+    final reply = read(
+      await client
+          .post(
+            endpoint(session.url, '/surveys/sync'),
+            headers: headers(session),
+            body: jsonEncode(data),
+          )
+          .timeout(const Duration(seconds: 40)),
+    );
+    if (reply['client_uuid'] != data['client_uuid'] ||
+        reply['revision'] is! int) {
+      throw const FormatException(
+        'The server response did not confirm this survey. It remains saved on this phone.',
+      );
+    }
+    return reply;
+  }
+
   Future<Json> upload(FieldSession session, Json attachment) async {
     final file = File(attachment['path']);
     if (!await file.exists()) {
@@ -135,10 +145,16 @@ class FieldApi {
     final response = await client
         .send(request)
         .timeout(const Duration(seconds: 60));
-    return read(
+    final reply = read(
       await http.Response.fromStream(
         response,
       ).timeout(const Duration(seconds: 30)),
     );
+    if (reply['client_uuid'] != attachment['uuid']) {
+      throw const FormatException(
+        'The server response did not confirm this photo. It remains saved on this phone.',
+      );
+    }
+    return reply;
   }
 }

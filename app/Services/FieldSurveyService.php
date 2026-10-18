@@ -6,6 +6,7 @@ use App\Models\FieldSurvey;
 use App\Models\FieldSurveyAttachment;
 use App\Models\Transformer;
 use App\Models\User;
+use App\Models\SurveyorAssignment;
 use App\Services\DriveStorage\FileStorage;
 use App\Support\FieldTransformerIdentity;
 use App\Support\SurveyTeamGroup;
@@ -92,6 +93,15 @@ class FieldSurveyService
                     'remarks' => $data['remarks'] ?? null,
                     'submitted_at' => $data['status'] === 'submitted' ? ($survey->submitted_at ?? now()) : null,
                 ])->save();
+                $task = SurveyorAssignment::where('surveyor_id', $actor->id)->where('survey_team_id', $team->id)->where('feeder_id', $feeder->id)
+                    ->whereIn('status', ['assigned', 'in_progress', 'draft', 'returned'])
+                    ->first();
+                if ($task) {
+                    $taskOld = $task->toArray();
+                    $task->update(['status' => $data['status'] === 'submitted' ? 'submitted' : 'in_progress',
+                        'started_at' => $task->started_at ?? now(), 'completed_at' => $data['status'] === 'submitted' ? now() : null]);
+                    if ($task->wasChanged('status')) $this->audit->record($actor, 'survey.task_status_changed', $task, $taskOld, $task->fresh()->toArray());
+                }
                 $this->audit->record($actor, $isNew ? 'field_survey.created' : 'field_survey.updated', $survey, $old, $survey->toArray());
 
                 return [$survey, $isNew];
@@ -135,6 +145,7 @@ class FieldSurveyService
                     $archive = app(FileStorage::class)->register('local', $path, $file->getClientOriginalName(), $attachment->mime_type, [
                         'project_id' => $survey->feeder->project_id, 'feeder_id' => $survey->feeder_id,
                         'field_survey_id' => $survey->id, 'transformer_id' => $survey->transformer_id, 'transformer_code' => $survey->transformer_code,
+                        'uploaded_by' => $actor->id,
                     ]);
                     $attachment->update(['drive_stored_file_id' => $archive->id]);
                 }

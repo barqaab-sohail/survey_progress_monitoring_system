@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Enums\UserRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -63,6 +64,18 @@ class GoogleDriveTest extends TestCase
             'state' => 'expired', 'user_id' => $user->id, 'expires_at' => now()->subMinute()->timestamp,
         ]])->get('/auth/google/callback?state=expired&code=test')->assertForbidden();
         Http::assertNothingSent();
+    }
+
+    public function test_only_super_admin_can_view_or_submit_duplicate_cleanup(): void
+    {
+        config(['drive_storage.enabled' => true]);
+        $viewer = User::factory()->create(['role' => UserRole::ProjectManager]);
+        $hash = str_repeat('a', 64);
+        $this->actingAs($viewer)->get(route('google-drive.index'))->assertDontSee('Existing duplicate PDF and GPX files');
+        $this->post(route('google-drive.duplicates.cleanup', $hash), ['confirm' => '1'])->assertForbidden();
+
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $this->actingAs($admin)->get(route('google-drive.index'))->assertSee('Existing duplicate PDF and GPX files');
     }
 
     public function test_denied_authorization_and_failed_exchange_do_not_store_tokens(): void

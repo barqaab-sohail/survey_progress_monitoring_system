@@ -89,6 +89,7 @@ class FieldSurveyTestController extends Controller
                     $archive = app(\App\Services\DriveStorage\FileStorage::class)->register('local', $path, $request->file('file')->getClientOriginalName(), $attachment->mime_type, [
                         'project_id' => $feeder->project_id, 'feeder_id' => $feeder->id, 'field_survey_test_id' => $survey->id,
                         'transformer_code' => $survey->payload['transformer_code'] ?? null,
+                        'uploaded_by' => $request->user()->id,
                     ]);
                     $attachment->update(['drive_stored_file_id' => $archive->id]);
                 }

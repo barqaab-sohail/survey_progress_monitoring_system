@@ -2,6 +2,7 @@
 @section('title', 'Review transformer MDB network')
 @section('content')
 <div class="page-head"><div><h1>{{ $project->transformer_code }}: network review</h1><p>{{ $project->feeder->feeder_name }} &middot; Saved revision {{ $project->revision }}</p></div><div class="actions">@if(auth()->user()->hasRole('super_admin'))<a class="btn btn-light" href="{{ route('mdb-builder.edit', $project) }}">Edit survey / fix links</a>@endif<a class="btn btn-light" href="{{ route('mdb-builder.index') }}">All workspaces</a></div></div>
+<section class="card"><h2>Saved transformer measurements</h2><p><strong>Capacity:</strong> {{ $project->header['capacity_kva'] ?? 'Not entered' }} kVA</p><div class="table-wrap"><table class="table"><thead><tr><th>Row</th><th>Pole / tower height</th></tr></thead><tbody>@foreach($project->rows as $index=>$row)<tr><td>{{ $index + 1 }} · {{ $row['se'] ?? '—' }}</td><td>{{ $row['pole_height_ft'] ?? 'Not entered' }} ft</td></tr>@endforeach</tbody></table></div></section>
 @if($problems)
 <section class="card"><h2>Complete the network before creating MDB</h2><ul>@foreach($problems as $messages)@foreach($messages as $message)<li>{{ $message }}</li>@endforeach @endforeach</ul><p>Your survey remains saved. Correct the fields, save, and review again.</p></section>
 @else

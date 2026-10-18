@@ -118,7 +118,7 @@ class MdbWorkflowController extends Controller
                 fn () => count(app(NetworkValidator::class)->validate($record)['errors']));
         }
 
-        return view('mdb-workflow.index', ['batches' => $query->with(['project', 'feeder', 'surveyTeam'])->withCount(['transformers', 'sources', 'exports'])->latest()->paginate(20)->withQueryString(),
+        return view('mdb-workflow.index', ['batches' => $query->with(['project', 'feeder', 'surveyTeam', 'transformers', 'sources'])->withCount(['transformers', 'sources', 'exports'])->latest()->paginate(20)->withQueryString(),
             'metrics' => $metrics, 'filters' => $filters, 'stageCounts' => $stageCounts] + $this->references($request));
     }
 
@@ -212,6 +212,78 @@ class MdbWorkflowController extends Controller
             'canUpload' => $this->access->canUpload($request->user(), $batch)]);
     }
 
+    public function destroy(Request $request, SurveyBatch $batch)
+    {
+        abort_unless($request->user()->role?->value === 'super_admin', 403);
+        $request->validate(['confirmed' => ['required', 'accepted']]);
+
+        try {
+            $filesToRemove = DB::transaction(function () use ($request, $batch) {
+                $locked = SurveyBatch::query()->lockForUpdate()->findOrFail($batch->id);
+                $sources = $locked->sources()->get();
+                $transformerIds = $locked->transformers()->pluck('id');
+                $sectionIds = NetworkSection::whereIn('transformer_id', $transformerIds)->pluck('id');
+                $entryRowIds = EntryRow::whereIn('transformer_id', $transformerIds)->pluck('id');
+                $exportIds = $locked->exports()->pluck('id');
+                $pdfNames = $sources->where('kind', 'pdf')->pluck('original_name')->values()->all();
+                $transformerCodes = $locked->transformers()->pluck('code')->values()->all();
+                $files = $sources->map(fn ($source) => ['disk' => $source->disk, 'path' => $source->path])->all();
+                $files = array_merge($files, DB::table('mdb_workflow_generation_inputs')->where('batch_id', $locked->id)->get(['disk', 'path'])->map(fn ($file) => (array) $file)->all());
+                $files = array_merge($files, $locked->exports()->get(['output_disk', 'output_path', 'payload_path'])->flatMap(fn ($export) => collect([
+                    ['disk' => $export->output_disk, 'path' => $export->output_path], ['disk' => $export->output_disk, 'path' => $export->payload_path],
+                ]))->all());
+                $driveFileIds = $sources->pluck('drive_stored_file_id')->filter()->unique()->values();
+
+                $this->audit->record($request->user(), 'mdb.pdf_entry_deleted', $locked, [
+                    'batch_id' => $locked->id, 'survey_date' => $locked->survey_date?->toDateString(), 'pdf_files' => $pdfNames,
+                    'transformer_codes' => $transformerCodes, 'source_count' => $sources->count(),
+                ], [], 'Super Admin permanently deleted PDF data entry Batch #'.$locked->id.'.');
+
+                DB::table('mdb_workflow_model_validations')->whereIn('export_job_id', $exportIds)->delete();
+                DB::table('mdb_workflow_exports')->where('batch_id', $locked->id)->delete();
+                DB::table('mdb_workflow_decisions')->where('batch_id', $locked->id)->delete();
+                DB::table('mdb_workflow_revisions')->where('batch_id', $locked->id)->delete();
+                DB::table('mdb_workflow_pv_records')->whereIn('transformer_id', $transformerIds)->delete();
+                DB::table('mdb_workflow_entry_rows')->whereIn('id', $entryRowIds)->delete();
+                DB::table('mdb_workflow_consumers')->whereIn('section_id', $sectionIds)->delete();
+                DB::table('mdb_workflow_sections')->whereIn('id', $sectionIds)->delete();
+                DB::table('mdb_workflow_transformers')->whereIn('id', $transformerIds)->update(['source_waypoint_id' => null]);
+                DB::table('mdb_workflow_transformers')->whereIn('id', $transformerIds)->delete();
+                DB::table('mdb_workflow_waypoints')->where('batch_id', $locked->id)->delete();
+                DB::table('mdb_workflow_sources')->where('batch_id', $locked->id)->update(['parent_source_id' => null]);
+                DB::table('mdb_workflow_sources')->where('batch_id', $locked->id)->delete();
+                $locked->delete();
+
+                return ['files' => $files, 'drive_file_ids' => $driveFileIds];
+            });
+
+            foreach ($filesToRemove['files'] as $file) {
+                if (! empty($file['path']) && ! empty($file['disk'])) {
+                    Storage::disk($file['disk'])->delete($file['path']);
+                }
+            }
+            foreach ($filesToRemove['drive_file_ids'] as $driveFileId) {
+                $stillUsed = DB::table('mdb_workflow_sources')->where('drive_stored_file_id', $driveFileId)->exists()
+                    || DB::table('field_survey_attachments')->where('drive_stored_file_id', $driveFileId)->exists()
+                    || DB::table('field_survey_test_attachments')->where('drive_stored_file_id', $driveFileId)->exists()
+                    || DB::table('transformer_mdb_projects')->where(fn ($query) => $query->where('pdf_drive_stored_file_id', $driveFileId)->orWhere('gpx_drive_stored_file_id', $driveFileId))->exists();
+                if (! $stillUsed) {
+                    $driveFile = DB::table('drive_stored_files')->where('id', $driveFileId)->first();
+                    if ($driveFile?->local_path) {
+                        Storage::disk($driveFile->local_disk)->delete($driveFile->local_path);
+                    }
+                    DB::table('drive_stored_files')->where('id', $driveFileId)->delete();
+                }
+            }
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return back()->withErrors(['delete' => 'The PDF data entry could not be deleted. No entry data was changed. Please try again or contact support.']);
+        }
+
+        return to_route('mdb-workflow.index')->with('success', 'PDF data entry Batch #'.$batch->id.' was permanently deleted.');
+    }
+
     public function review(Request $request, SurveyBatch $batch)
     {
         $this->access->authorize($request->user(), $batch);
@@ -250,14 +322,19 @@ class MdbWorkflowController extends Controller
     {
         $this->access->authorize($request->user(), $batch, 'upload');
         $request->validate(['file' => 'required_without:drive_file_id|file', 'drive_file_id' => 'required_without:file|nullable|string|max:200', 'parent_source_id' => 'nullable|integer']);
-        $this->mutate($request, $batch, function (SurveyBatch $locked) use ($request) {
+        $uploadedSource = null;
+        $this->mutate($request, $batch, function (SurveyBatch $locked) use ($request, &$uploadedSource) {
             $parent = $request->filled('parent_source_id') ? $locked->sources()->findOrFail($request->input('parent_source_id')) : null;
 
-            return $request->hasFile('file') ? app(SourceService::class)->store($locked, $request->user(), $request->file('file'), $parent)
+            return $uploadedSource = $request->hasFile('file') ? app(SourceService::class)->store($locked, $request->user(), $request->file('file'), $parent)
                 : app(SourceService::class)->importDrive($locked, $request->user(), $request->input('drive_file_id'), $parent);
         });
-
-        return back()->with('success', 'Source preserved and queued for processing.');
+        $message = 'Source preserved and queued for processing.';
+        if ($uploadedSource?->driveStoredFile?->duplicate_content) {
+            $match = $uploadedSource->driveStoredFile->duplicate_details;
+            $message .= ' This file has already been uploaded and will not be uploaded again. Existing file: '.$match['name'].'; feeder '.$match['feeder'].'; uploaded '.$match['uploaded_at'].'; uploader '.$match['uploader'].'.';
+        }
+        return back()->with('success', $message);
     }
 
     public function retrySource(Request $request, SurveyBatch $batch, SourceFile $source)
@@ -301,7 +378,7 @@ class MdbWorkflowController extends Controller
             $request->merge(['code' => trim($request->input('code'))]);
         }
         $data = $request->validate(['code' => ['required', 'string', 'max:255', Rule::unique('mdb_workflow_transformers')->where('batch_id', $batch->id)->ignore($transformer?->id)],
-            'capacity_kva' => 'nullable|numeric|min:0.001|max:1000000', 'source_waypoint_id' => 'nullable|integer', 'header' => 'nullable|array', 'original_header' => 'nullable|array']);
+            'capacity_kva' => 'required|numeric|gt:0|max:1000000', 'source_waypoint_id' => 'nullable|integer', 'header' => 'nullable|array', 'original_header' => 'nullable|array']);
         $data['header'] = array_replace($transformer?->header ?? [], $this->sanitizeJson($data['header'] ?? []));
         $data['header']['manually_verified'] = $request->boolean('header.manually_verified');
         // Continuation associations are changed only through the explicit confirmed route.
@@ -323,10 +400,11 @@ class MdbWorkflowController extends Controller
     {
         $this->access->authorize($request->user(), $batch, $batch->staged_workflow ? 'process' : 'edit');
         abort_unless($transformer->batch_id === $batch->id && (! $section || $section->transformer_id === $transformer->id), 404);
+        $entryRowsOwnHeight = $section?->entryRows()->exists() ?? false;
         $data = $request->validate(['start_reference' => 'nullable|string|max:255', 'end_reference' => 'nullable|string|max:255',
             'start_source_file_id' => 'nullable|integer', 'end_source_file_id' => 'nullable|integer', 'start_waypoint_id' => 'nullable|integer', 'end_waypoint_id' => 'nullable|integer',
             'phases' => 'nullable|array|max:4', 'phases.*' => 'required|in:R,Y,B,N', 'conductors' => 'nullable|array', 'conductors.*' => 'nullable|string|max:255',
-            'equipment_type' => 'nullable|string|max:255', 'equipment_ref' => 'nullable|string|max:255', 'pole_class' => 'nullable|string|max:255', 'pole_height' => 'nullable|numeric|min:0|max:200',
+            'equipment_type' => 'nullable|string|max:255', 'equipment_ref' => 'nullable|string|max:255', 'pole_class' => 'nullable|string|max:255', 'pole_height' => ($entryRowsOwnHeight ? 'nullable|' : 'required|').'numeric|gt:0|max:10000',
             'pole_height_unit' => 'nullable|in:m,ft', 'source_pdf_id' => 'nullable|integer', 'source_page' => 'nullable|integer|min:1', 'source_row' => 'nullable|string|max:60',
             'original_entry' => 'nullable|array', 'geometry_json' => 'nullable|json', 'measured_length_m' => 'nullable|numeric|min:0.001|max:1000000', 'measured_length_reason' => 'nullable|string|max:4000',
             'consumers' => 'nullable|array', 'consumers.*.count' => 'nullable|integer|min:0|max:1000000', 'consumers.*.original_value' => 'nullable|string|max:1000', 'consumers.*.demand' => 'nullable|array']);
@@ -341,6 +419,10 @@ class MdbWorkflowController extends Controller
         if (! empty($data['source_pdf_id'])) {
             $batch->sources()->where('kind', 'pdf')->findOrFail($data['source_pdf_id']);
         }
+        if (($data['pole_height_unit'] ?? null) === 'm') {
+            $data['pole_height'] = round((float) $data['pole_height'] * 3.280839895, 4);
+        }
+        $data['pole_height_unit'] = 'ft';
         $consumers = $data['consumers'] ?? [];
         unset($data['consumers']);
         $data['geometry'] = empty($data['geometry_json']) ? null : json_decode($data['geometry_json'], true, 64, JSON_THROW_ON_ERROR);

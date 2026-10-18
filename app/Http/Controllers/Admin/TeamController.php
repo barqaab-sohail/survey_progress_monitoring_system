@@ -54,6 +54,11 @@ class TeamController extends Controller
         $team = match ($data['type']) {
             'survey' => SurveyTeam::findOrFail($data['team_id']), 'mdb' => MdbTeam::findOrFail($data['team_id'])
         };
+        $member = User::findOrFail($data['user_id']);
+        abort_unless($data['type'] === 'survey'
+            ? $member->hasAnyRole(['surveyor', 'survey_team_leader', 'super_admin'])
+            : $member->hasAnyRole(['mdb_generator', 'mdb_creation_team_leader', 'mdb_team_user', 'super_admin']),
+            422, 'The selected role is not allowed in this team type.');
         $team->members()->syncWithoutDetaching([$data['user_id'] => $data['type'] === 'survey' ? ['is_leader' => $request->boolean('is_leader')] : []]);
 
         return back()->with('success', 'Team member assigned.');

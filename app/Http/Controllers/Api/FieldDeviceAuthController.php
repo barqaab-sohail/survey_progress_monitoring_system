@@ -28,7 +28,7 @@ class FieldDeviceAuthController extends Controller
             throw ValidationException::withMessages(['email' => 'The provided credentials are incorrect.']);
         }
         abort_unless($user->isActive() && (! $user->organization_id || $user->organization?->status->value === 'active'), 403, 'Your account or organization is inactive.');
-        abort_unless($user->hasAnyRole([UserRole::SurveyTeamLeader->value, UserRole::SuperAdmin->value]), 403, 'Use an assigned survey-team-leader account to collect field surveys.');
+        abort_unless($user->hasAnyRole([UserRole::SurveyTeamLeader->value, UserRole::Surveyor->value, UserRole::SuperAdmin->value]), 403, 'Use an assigned survey team account to collect field surveys.');
         RateLimiter::clear($key);
         $plain = bin2hex(random_bytes(64));
         $token = MobileDeviceToken::create(['user_id' => $user->id, 'device_name' => $data['device_name'], 'token_hash' => hash('sha256', $plain), 'expires_at' => now()->addDays(30)]);

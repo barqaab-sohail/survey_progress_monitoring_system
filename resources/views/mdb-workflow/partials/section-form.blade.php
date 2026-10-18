@@ -2,6 +2,7 @@
     $saved = $section?->toArray() ?? [];
     $submitted = old('form_key') === $formKey ? old() : [];
     $value = fn ($key, $default = '') => data_get($submitted, $key, data_get($saved, $key, $default));
+    $entryRowsOwnHeight = $section?->entryRows()->exists() ?? false;
     $consumers = $section?->consumers->keyBy('category') ?? collect();
     $consumerValue = fn ($category, $key) => data_get($submitted, 'consumers.'.$category.'.'.$key, data_get($consumers->get($category), $key, ''));
 @endphp
@@ -26,8 +27,7 @@
     <label>Approved equipment library reference<input name="equipment_ref" value="{{ $value('equipment_ref') }}" maxlength="200" data-copy-key="equipment_ref"><small>Use an approved reference present in the target SynerGEE library.</small></label>
     <label>Pole class<input name="pole_class" value="{{ $value('pole_class') }}" maxlength="100" data-copy-key="pole_class"></label>
     <label>Pole class as written<input name="original_entry[pole_class]" value="{{ $value('original_entry.pole_class') }}" maxlength="200"></label>
-    <label>Pole height<input name="pole_height" value="{{ $value('pole_height') }}" type="number" min="0" step="any" data-copy-key="pole_height"></label>
-    <label>Pole height unit<select name="pole_height_unit" data-copy-key="pole_height_unit"><option value="">Not recorded</option>@foreach(['m'=>'metres','ft'=>'feet'] as $unit=>$label)<option value="{{ $unit }}" @selected($value('pole_height_unit') === $unit)>{{ $label }}</option>@endforeach</select></label>
+    <label>Pole / tower height (ft)<input type="search" data-measurement-search placeholder="Search height options" aria-label="Search pole heights"><select data-height-choice data-saved-height="{{ $value('pole_height') }}" data-saved-unit="{{ $value('pole_height_unit') }}" data-copy-key="pole_height" @required(!$entryRowsOwnHeight)><option value="">Choose height</option><option value="31" @selected((float) $value('pole_height') === 31.0 && $value('pole_height_unit') !== 'm')>31 ft</option><option value="36" @selected((float) $value('pole_height') === 36.0 && $value('pole_height_unit') !== 'm')>36 ft</option><option value="__custom__" @selected($value('pole_height') !== '' && !((float) $value('pole_height') === 31.0 && $value('pole_height_unit') !== 'm') && !((float) $value('pole_height') === 36.0 && $value('pole_height_unit') !== 'm'))>Other / Custom Value</option></select><input name="pole_height" type="hidden" value="{{ $value('pole_height') }}" data-height-value><input type="number" min="0.001" max="10000" step="any" value="{{ $value('pole_height') }}" placeholder="Enter height in ft" aria-label="Custom pole/tower height in feet" data-height-custom hidden><input type="hidden" name="pole_height_unit" value="ft"><small>All saved heights use feet (ft).</small></label>
     <label>Pole height and unit as written<input name="original_entry[pole_height]" value="{{ $value('original_entry.pole_height') }}" maxlength="200"></label>
     <label>Printed Int field as written<input name="original_entry[int]" value="{{ $value('original_entry.int') }}" maxlength="200"><small>Preserve the printed value; confirm its interpretation during review.</small></label>
     <label>Survey group as written<input name="original_entry[team_group]" value="{{ $value('original_entry.team_group') }}" maxlength="200"></label>

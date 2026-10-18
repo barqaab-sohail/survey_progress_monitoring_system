@@ -20,6 +20,7 @@ Route::middleware(['auth', 'active'])->prefix('mdb-workflow')->name('mdb-workflo
     Route::get('/create', 'create')->name('create');
     Route::post('/drive-preview', 'previewDrive')->middleware('throttle:20,1')->name('drive-preview');
     Route::post('/', 'store')->name('store');
+    Route::delete('/{batch}', 'destroy')->middleware('role:super_admin')->name('destroy');
     Route::get('/configuration/{project}', 'configuration')->name('config');
     Route::put('/configuration/{project}', 'saveConfiguration')->name('config.update');
     Route::post('/templates', 'storeTemplate')->name('templates.store');

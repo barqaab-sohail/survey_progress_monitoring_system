@@ -7,7 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#0b1f3a">
     <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
-    <title>@yield('title', 'Dashboard') Â· {{ $branding->projectName() }}</title>
+    <title>@yield('title', 'Dashboard') &middot; {{ $branding->projectName() }}</title>
     <link rel="icon" type="image/png" href="{{ $branding->faviconUrl() }}">
     <link rel="apple-touch-icon" href="{{ $branding->faviconUrl() }}">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20261009-mdb-sidebar-fixed">
@@ -18,7 +18,7 @@
     <header class="topbar">
         <a class="brand" href="{{ route('dashboard') }}">
             <span class="brand-mark brand-logo-mark"><img src="{{ $branding->faviconUrl() }}" alt=""></span>
-            <span class="brand-copy"><strong>{{ $branding->projectName() }}</strong><small>{{ auth()->user()->hasRole('survey_team_leader') ? 'Survey Operations' : 'Survey Â· MDB Â· Verification' }}</small></span>
+            <span class="brand-copy"><strong>{{ $branding->projectName() }}</strong><small>{{ auth()->user()->hasRole('survey_team_leader') ? 'Survey Operations' : 'Survey &middot; MDB &middot; Verification' }}</small></span>
         </a>
         @if(request()->routeIs('mdb-workflow.*'))
             <button class="btn btn-sm logout-btn sidebar-collapse-toggle" id="sidebar-collapse-toggle" type="button" aria-controls="primary-navigation" aria-expanded="true" title="Hide left navigation and use the full page width">Hide menu</button>
@@ -44,11 +44,12 @@
                 <a class="nav-link {{ request()->routeIs('survey-progress.*') ? 'active' : '' }}" href="{{ route('survey-progress.index') }}">Automatic Survey Progress</a>
                 <a class="nav-link {{ request()->routeIs('field-surveys.*') ? 'active' : '' }}" href="{{ route('field-surveys.index') }}">Mobile Field Surveys</a>
             @endif
-            @if(auth()->user()->hasAnyRole(['survey_team_leader','super_admin']))
+            @if(auth()->user()->hasAnyRole(['survey_team_leader','surveyor','super_admin']))
                 <div class="nav-label">Survey</div>
                 @unless(config('survey_progress.automatic'))<a class="nav-link {{ request()->routeIs('survey.create') ? 'active' : '' }}" href="{{ route('survey.create') }}">Add Daily Survey</a>@endunless
                 <a class="nav-link {{ request()->routeIs('survey.index') ? 'active' : '' }}" href="{{ route('survey.index') }}">My Survey Entries</a>
                 <a class="nav-link {{ request()->routeIs('survey.returned') ? 'active' : '' }}" href="{{ route('survey.returned') }}">Returned Entries</a>
+                @if(auth()->user()->hasAnyRole(['survey_team_leader','super_admin']))<a class="nav-link {{ request()->routeIs('team-work.*') ? 'active' : '' }}" href="{{ route('team-work.index') }}">Survey Task Assignments</a>@endif
             @endif
             @if(auth()->user()->hasAnyRole(['mdb_team_user','super_admin']))
                 <div class="nav-label">MDB workflow</div>
@@ -90,6 +91,7 @@
         </aside>
         <main class="main">
             @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
+            @if(session('warning'))<div class="alert alert-warning">{{ session('warning') }}</div>@endif
             @if($errors->any())<div class="alert alert-danger"><strong>Please correct the following:</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
             @yield('content')
             <footer><a href="{{ route('privacy-policy') }}">Privacy Policy</a> | <a href="{{ route('terms-of-service') }}">Terms of Service</a></footer>

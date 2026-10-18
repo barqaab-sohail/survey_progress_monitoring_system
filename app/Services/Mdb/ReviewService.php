@@ -19,7 +19,7 @@ class ReviewService
             return compact('path', 'label', 'value', 'type', 'options', 'group', 'editable');
         };
         $fields = [$field('code', 'Transformer number', $transformer->code, 'text', [], 'Header', false),
-            $field('capacity_kva', 'Capacity (kVA)', $transformer->capacity_kva, 'number', [], 'Header')];
+            $field('capacity_kva', 'Capacity (kVA)', $transformer->capacity_kva, 'capacity', [], 'Header')];
         foreach (['substation_name'=>'Substation', 'feeder_name'=>'Feeder', 'feeder_identifier'=>'Feeder code', 'division'=>'Division',
             'subdivision'=>'Subdivision', 'subdivision_code'=>'Subdivision code', 'make'=>'Make', 'inspector'=>'Inspector',
             'location'=>'Location', 'survey_date'=>'Survey date', 'team_group'=>'Group / team', 'client_transformer_information'=>'Client transformer information'] as $key => $label) {
@@ -54,8 +54,9 @@ class ReviewService
                 }
                 $fields[] = $field('equipment_type','Type',$row->equipment_type,'select',$lookups['equipment_types'],'Electrical');
                 $fields[] = $field('pole_class','Pole class',$row->pole_class,'select',$lookups['pole_classes'],'Electrical');
-                $fields[] = $field('pole_height','Pole / tower height',$row->pole_height,'number',[],'Electrical');
-                $fields[] = $field('pole_height_unit','Height unit',$row->pole_height_unit,'select',['ft'=>'Feet (ft)','m'=>'Metres (m)'],'Electrical');
+                $heightInFeet = $row->pole_height === null ? null : round((float) $row->pole_height * ($row->pole_height_unit === 'm' ? 3.280839895 : 1), 4);
+                $fields[] = $field('pole_height','Pole / tower height (ft)',$heightInFeet,'height',[],'Electrical');
+                $fields[] = $field('pole_height_unit','Height unit','ft','text',[],'Electrical',false);
                 foreach (EntryLookups::CONSUMERS as $key => $description) {
                     $fields[] = $field('consumers.'.$key,strtoupper($key).' — '.$description,$row->consumers[$key] ?? null,'number',[],'Consumers');
                 }

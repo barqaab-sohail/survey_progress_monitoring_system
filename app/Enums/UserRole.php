@@ -7,6 +7,9 @@ enum UserRole: string
     case SuperAdmin = 'super_admin';
     case ProjectManager = 'project_manager';
     case SurveyTeamLeader = 'survey_team_leader';
+    case Surveyor = 'surveyor';
+    case DataEntryVerificationTeamLeader = 'data_entry_verification_team_leader';
+    case MdbCreationTeamLeader = 'mdb_creation_team_leader';
     case MdbTeamUser = 'mdb_team_user';
     case MdbProcessingUser = 'mdb_processing_user';
     case ManagementViewer = 'management_viewer';
@@ -21,6 +24,9 @@ enum UserRole: string
             self::SuperAdmin => 'Super Admin',
             self::ProjectManager => 'Project Manager',
             self::SurveyTeamLeader => 'Survey Team Leader',
+            self::Surveyor => 'Surveyor',
+            self::DataEntryVerificationTeamLeader => 'Data Entry & Verification Team Leader',
+            self::MdbCreationTeamLeader => 'MDB Creation Team Leader',
             self::MdbTeamUser => 'MDB User',
             self::MdbProcessingUser => 'Third-Party Processor',
             self::ManagementViewer => 'Management / Viewer',

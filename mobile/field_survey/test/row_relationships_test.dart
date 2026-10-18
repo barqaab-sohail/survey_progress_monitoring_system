@@ -245,10 +245,13 @@ void main() {
                 jsonDecode(request.body)['rows'][0]['row_id'],
                 record.rows.first['row_id'],
               );
-              return http.Response('{"revision":1}', 201);
+              return http.Response(
+                jsonEncode({'client_uuid': record.id, 'revision': 1}),
+                201,
+              );
             }
             expect(request.body, contains(record.rows.first['row_id']));
-            return http.Response('{}', 201);
+            return http.Response('{"client_uuid":"linked"}', 201);
           }),
         ),
       )..session = testSession;
@@ -299,6 +302,128 @@ void main() {
     },
   );
 
+  test(
+    'a photo stays pending for retry until the server confirms its UUID',
+    () async {
+      final record = readySurvey();
+      final file = File('${directory.path}/photo-retry.jpg');
+      await file.writeAsBytes([1, 2, 3]);
+      var formRequests = 0;
+      var photoRequests = 0;
+      final controller = FieldController(
+        store,
+        api: FieldApi(
+          client: MockClient((request) async {
+            if (request.url.path.endsWith('/surveys/sync')) {
+              formRequests++;
+              return http.Response(
+                jsonEncode({'client_uuid': record.id, 'revision': 1}),
+                201,
+              );
+            }
+            photoRequests++;
+            return http.Response(
+              jsonEncode({
+                'client_uuid': photoRequests == 1
+                    ? 'unexpected'
+                    : 'retry-photo',
+              }),
+              201,
+            );
+          }),
+        ),
+      )..session = testSession;
+      await store.save(record);
+      await store.addAttachment({
+        'uuid': 'retry-photo',
+        'scope': record.scope,
+        'survey_uuid': record.id,
+        'row_id': record.rows.first['row_id'],
+        'kind': 'photo',
+        'path': file.path,
+        'state': 'pending',
+        'error': '',
+      });
+      await store.queue(record);
+      await controller.sync();
+      var photo = (await store.attachments(record.scope, record.id)).single;
+      expect((await store.survey(record.scope, record.id))!.state, 'synced');
+      expect(photo['state'], 'error');
+      expect(photo['error'], contains('did not confirm this photo'));
+      await controller.sync();
+      photo = (await store.attachments(record.scope, record.id)).single;
+      expect(formRequests, 1);
+      expect(photoRequests, 2);
+      expect(photo['state'], 'synced');
+      controller.dispose();
+    },
+  );
+
+  test(
+    'offline to online sync delivers the queued survey and its photo once',
+    () async {
+      final record = readySurvey();
+      final file = File('${directory.path}/offline-to-online.jpg');
+      await file.writeAsBytes([1, 2, 3]);
+      var online = false;
+      final surveyIds = <String>[];
+      final photoIds = <String>[];
+      final controller = FieldController(
+        store,
+        api: FieldApi(
+          client: MockClient((request) async {
+            if (!online) throw const SocketException('Network is unreachable');
+            if (request.url.path.endsWith('/surveys/sync')) {
+              final data = jsonDecode(request.body) as Map<String, dynamic>;
+              surveyIds.add(data['client_uuid'] as String);
+              return http.Response(
+                jsonEncode({'client_uuid': data['client_uuid'], 'revision': 1}),
+                201,
+              );
+            }
+            photoIds.add('offline-photo');
+            return http.Response('{"client_uuid":"offline-photo"}', 201);
+          }),
+        ),
+      )..session = testSession;
+      await store.save(record);
+      await store.addAttachment({
+        'uuid': 'offline-photo',
+        'scope': record.scope,
+        'survey_uuid': record.id,
+        'row_id': record.rows.first['row_id'],
+        'kind': 'photo',
+        'path': file.path,
+        'state': 'pending',
+        'error': '',
+      });
+      await store.queue(record);
+
+      await controller.sync();
+      expect(controller.syncMessage, contains('No internet connection'));
+      expect(
+        (await store.survey(record.scope, record.id))!.outbound,
+        isNotNull,
+      );
+      expect(
+        (await store.attachments(record.scope, record.id)).single['state'],
+        'pending',
+      );
+
+      online = true;
+      await controller.sync();
+      expect(surveyIds, [record.id]);
+      expect(photoIds, ['offline-photo']);
+      expect((await store.survey(record.scope, record.id))!.state, 'synced');
+      expect(
+        (await store.attachments(record.scope, record.id)).single['state'],
+        'synced',
+      );
+      expect(controller.syncMessage, contains('Sync completed successfully'));
+      controller.dispose();
+    },
+  );
+
   test('photo multipart uploads transmit the stable row identifier', () async {
     final file = File('${directory.path}/photo.jpg');
     await file.writeAsBytes([1, 2, 3]);
@@ -306,7 +431,10 @@ void main() {
     final api = FieldApi(
       client: MockClient((request) async {
         body = request.body;
-        return http.Response('{"row_id":"stable-row"}', 201);
+        return http.Response(
+          '{"client_uuid":"photo","row_id":"stable-row"}',
+          201,
+        );
       }),
     );
     await api.upload(testSession, {

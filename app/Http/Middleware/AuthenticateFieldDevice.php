@@ -19,7 +19,7 @@ class AuthenticateFieldDevice
         abort_unless($token && $token->expires_at->isFuture(), 401, 'This device session has expired or was revoked.');
         $user = $token->user;
         abort_unless($user?->isActive() && (! $user->organization_id || $user->organization?->status->value === 'active'), 403, 'Your account or organization is inactive.');
-        abort_unless($user->hasAnyRole([UserRole::SurveyTeamLeader->value, UserRole::SuperAdmin->value]), 403, 'This account cannot collect field surveys.');
+        abort_unless($user->hasAnyRole([UserRole::SurveyTeamLeader->value, UserRole::Surveyor->value, UserRole::SuperAdmin->value]), 403, 'This account cannot collect field surveys.');
         $request->setUserResolver(fn () => $user);
         $request->attributes->set('field_device_token', $token);
         if (! $token->last_used_at || $token->last_used_at->lt(now()->subMinutes(5))) {
