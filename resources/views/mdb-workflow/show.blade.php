@@ -78,9 +78,9 @@
                     <strong title="{{ $description }}">{{ strtoupper($key) }}</strong>
                     <div class="entry-consumer-phase-inputs">
                         @foreach(['R','Y','B'] as $phase)<label>{{ $phase }}<input name="consumer_phases[{{ $key }}][{{ $phase }}]" type="number" min="0" max="1000000" step="1" inputmode="numeric" aria-label="{{ strtoupper($key) }} {{ $phase }} phase consumer count"></label>@endforeach
-                        <label>Total<input name="consumers[{{ $key }}]" type="number" readonly tabindex="-1" aria-label="{{ strtoupper($key) }} total consumer count"></label>
+                        <label>Total<input name="consumers[{{ $key }}]" type="number" min="0" max="1000000" step="1" inputmode="numeric" aria-label="{{ strtoupper($key) }} total consumer count" title="Enter a total directly when R, Y and B are blank; otherwise it is calculated."></label>
                     </div>
-                    <small data-consumer-legacy="{{ $key }}" hidden>Recorded total; phases not recorded. Enter phases to replace.</small>
+                    <small data-consumer-legacy="{{ $key }}" hidden>Total only; phases not recorded.</small>
                 </div>
                 @else
                 <label title="{{ $description }}"><strong>{{ strtoupper($key) }}</strong><input name="consumers[{{ $key }}]" type="number" min="0" max="1000000" step="1" aria-label="{{ strtoupper($key) }} — {{ $description }} consumer count"></label>

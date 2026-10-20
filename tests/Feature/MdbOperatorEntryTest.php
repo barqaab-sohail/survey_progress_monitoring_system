@@ -126,7 +126,7 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertSame(0, $this->transformer->entryRows()->count());
     }
 
-    public function test_single_phase_form_has_labelled_phase_inputs_and_readonly_totals(): void
+    public function test_single_phase_form_has_labelled_phase_inputs_and_editable_totals(): void
     {
         $html = $this->get(route('mdb-workflow.show', $this->batch))->assertOk()->getContent();
         foreach (EntryLookups::SINGLE_PHASE_CONSUMERS as $category) {
@@ -134,7 +134,7 @@ class MdbOperatorEntryTest extends TestCase
                 $this->assertStringContainsString('name="consumer_phases['.$category.']['.$phase.']"', $html);
                 $this->assertStringContainsString('aria-label="'.strtoupper($category).' '.$phase.' phase consumer count"', $html);
             }
-            $this->assertStringContainsString('name="consumers['.$category.']" type="number" readonly', $html);
+            $this->assertStringNotContainsString('name="consumers['.$category.']" type="number" readonly', $html);
         }
         foreach (['rl', 'lc', 'li', 'pb', 'ag', 'pv'] as $category) {
             $this->assertStringNotContainsString('name="consumer_phases['.$category.']', $html);
@@ -195,7 +195,7 @@ class MdbOperatorEntryTest extends TestCase
     {
         $row = $this->save(['consumer_phases' => ['rs' => ['R' => '', 'Y' => null, 'B' => ''],
             'st' => ['R' => '0', 'Y' => '', 'B' => null]], 'consumers' => ['rs' => 14]]);
-        $this->assertNull($row->consumers['rs']);
+        $this->assertSame(14, $row->consumers['rs']);
         $this->assertSame(0, $row->consumers['st']);
         $this->assertSame(['R' => null, 'Y' => null, 'B' => null], $row->surveyData()['consumer_phases']['rs']);
         foreach ([-1, 1.5, 1000001] as $invalid) {
@@ -209,6 +209,29 @@ class MdbOperatorEntryTest extends TestCase
         $this->postJson(route('mdb-workflow.entry.rows.store', [$this->batch, $this->transformer]),
             $this->payload(['consumer_phases' => ['rl' => ['R' => 1, 'Y' => 1, 'B' => 1]]]))
             ->assertUnprocessable()->assertJsonValidationErrors('consumer_phases');
+    }
+
+    public function test_single_phase_totals_can_be_entered_without_allocation_and_replaced_after_clearing_phases(): void
+    {
+        $blank = ['R' => null, 'Y' => null, 'B' => null];
+        $row = $this->save(['consumers' => ['rs' => 14, 'sc' => 0, 'si' => null, 'st' => 3],
+            'consumer_phases' => array_fill_keys(['rs', 'sc', 'si', 'st'], $blank)]);
+        $this->assertSame(14, $row->consumers['rs']);
+        $this->assertSame(0, $row->consumers['sc']);
+        $this->assertNull($row->consumers['si']);
+        $this->assertSame(3, $row->consumers['st']);
+        $url = route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $row]);
+        $this->putJson($url, $this->payload(['client_uuid' => $row->client_uuid, 'consumers' => ['rs' => 99],
+            'consumer_phases' => ['rs' => ['R' => 5, 'Y' => 2, 'B' => 7]]]))->assertOk();
+        $this->assertSame(14, $row->fresh()->consumers['rs']);
+        foreach ([25, 0, null] as $total) {
+            $this->putJson($url, $this->payload(['client_uuid' => $row->client_uuid, 'consumers' => ['rs' => $total],
+                'consumer_phases' => ['rs' => $blank]]))->assertOk();
+            $this->assertSame($total, $row->fresh()->consumers['rs']);
+            $this->assertSame($blank, $row->fresh()->surveyData()['consumer_phases']['rs']);
+            $this->getJson(route('mdb-workflow.entry.data', $this->batch))->assertOk()
+                ->assertJsonPath('transformers.0.rows.0.consumers.rs', $total);
+        }
     }
 
     private function entrySettings(): void

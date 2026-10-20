@@ -19,7 +19,10 @@ test('all blanks remain unknown; explicit zero and partial allocation survive JS
     phases.rs.B=null;
     assert.equal(consumerCounts({},phases).rs,7);
     phases.rs={R:null,Y:null,B:null};
-    assert.equal(consumerCounts({rs:14},phases).rs,null);
+    assert.equal(consumerCounts({rs:14},phases).rs,14);
+    assert.equal(consumerCounts({rs:null},phases).rs,null);
+    assert.equal(consumerCounts({rs:0},phases).rs,0);
+    assert.equal(consumerSummary({consumers:{rs:14},consumer_phases:phases}),'RS: 14 · SC: 0 (R=0, Y=blank, B=blank) · ST: 0 (R=0, Y=0, B=0)');
 });
 
 test('legacy totals remain unallocated and summaries show recorded phases without converting blanks to zero',()=>{

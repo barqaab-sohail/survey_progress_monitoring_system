@@ -75,7 +75,8 @@ class EntryService
                     $phases[$category][$phase] = $value === null || $value === '' ? null : (int) $value;
                 }
                 $entered = array_filter($phases[$category], fn ($value) => $value !== null);
-                $consumers[$category] = $entered === [] ? null : array_sum($entered);
+                // With no phase allocation, retain the explicitly entered total.
+                $consumers[$category] = $entered === [] ? $consumers[$category] : array_sum($entered);
                 if ($consumers[$category] > 1000000) {
                     throw ValidationException::withMessages(['consumer_phases.'.$category => strtoupper($category).' total cannot exceed 1,000,000.']);
                 }

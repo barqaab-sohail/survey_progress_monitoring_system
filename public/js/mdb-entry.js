@@ -61,14 +61,14 @@ export function derivePhase(conductors) {
 
 export const singlePhaseConsumers = ['rs', 'sc', 'si', 'st'];
 
-// An absent category has an unallocated historical total. An explicit all-blank
-// phase set means unrecorded, while a phase containing 0 is an entered zero.
+// Blank phases permit a directly entered total. An entered phase, including 0,
+// makes the total calculated without inventing values for the blank phases.
 export function consumerCounts(consumers = {}, phases = {}) {
     const totals = {...consumers};
     for (const category of singlePhaseConsumers) {
         if (!Object.hasOwn(phases, category)) continue;
         const entered = ['R','Y','B'].map(phase=>phases[category][phase]).filter(value=>value!==null && value!==undefined && value!=='');
-        totals[category] = entered.length ? entered.reduce((sum,value)=>sum+Number(value),0) : null;
+        totals[category] = entered.length ? entered.reduce((sum,value)=>sum+Number(value),0) : (totals[category] ?? null);
     }
     return totals;
 }
@@ -81,7 +81,8 @@ export function consumerTotal(consumers, phases = {}) {
 export function consumerSummary(row) {
     const phases=row.consumer_phases ?? row.original_entry?.consumer_phases ?? {};
     return Object.entries(consumerCounts(row.consumers,phases)).filter(([,value])=>value!==null).map(([category,value])=>{
-        const counts=phases[category];
+        const recorded=phases[category];
+        const counts=recorded && ['R','Y','B'].some(phase=>recorded[phase]!==null && recorded[phase]!==undefined && recorded[phase]!=='') ? recorded : null;
         return `${category.toUpperCase()}: ${value}${counts ? ' ('+['R','Y','B'].map(phase=>`${phase}=${counts[phase] ?? 'blank'}`).join(', ')+')' : ''}`;
     }).join(' · ') || 'Blank';
 }
@@ -489,8 +490,11 @@ function initialize(boot) {
         $('entry-unit-convert').hidden=true;
         for(const category of singlePhaseConsumers) {
             set(rowForm,`consumers[${category}]`,payload.consumers[category]);
+            const hasPhases=Object.values(payload.consumer_phases?.[category] || {}).some(value=>value!==null);
+            const total=field(rowForm,`consumers[${category}]`);
+            if(total){total.readOnly=hasPhases;total.tabIndex=hasPhases ? -1 : 0;}
             const legacyNote=rowForm.querySelector(`[data-consumer-legacy="${category}"]`);
-            if(legacyNote)legacyNote.hidden=Object.hasOwn(payload.consumer_phases || {},category) || payload.consumers[category]===null;
+            if(legacyNote)legacyNote.hidden=hasPhases || payload.consumers[category]===null;
         }
         const blankPhases=Object.values(payload.consumer_phases || {}).some(counts=>Object.values(counts).some(value=>value===null));
         $('entry-consumer-total').textContent=`Entered consumer total: ${consumerTotal(payload.consumers)}${Object.values(payload.consumers).some(v=>v===null) || blankPhases ? ' (blank fields retained)' : ''}`;
@@ -543,7 +547,10 @@ function initialize(boot) {
         if(scope==='header') headerDirty=true;
         else { rowDirty=true; saveUuid=null;
             const phaseCategory=event.target.name?.match(/^consumer_phases\[(rs|sc|si|st)\]/)?.[1];
-            if(phaseCategory)enteredConsumerPhases.add(phaseCategory);
+            if(phaseCategory){
+                enteredConsumerPhases.add(phaseCategory);
+                if(['R','Y','B'].every(phase=>val(rowForm,`consumer_phases[${phaseCategory}][${phase}]`)===''))set(rowForm,`consumers[${phaseCategory}]`,null);
+            }
             if(event.target.name?.startsWith('conductors[')) delete inheritance.conductors;
             if(['equipment_type','pole_class','pole_height','pole_height_unit'].includes(event.target.name)
                 || ['entry-height-choice','entry-height-custom'].includes(event.target.id)) delete inheritance.equipment;
