@@ -198,15 +198,21 @@ class ExportPayloadBuilder
                 }
                 $points[] = $this->point($waypoints, $section['end_waypoint_id']);
                 $length = $this->length($points, $epsg);
+                $sag = SagAllowance::apply($length, $settings['engineering']['sag_allowance_percent'] ?? null);
+                $length = $sag['length_m'];
+                $sagStatus = $sag['sag_allowance_percent'] === null ? 'not_configured' : ($length === null ? 'unresolved' : 'applied');
                 $elevationStatus = ProjectionService::elevationStatus($points);
                 $lengthSource = count($points) > 2 ? 'survey_geometry' : 'endpoint_estimate';
                 if (($section['measured_length_m'] ?? null) !== null) {
                     $this->engineering(! empty($section['length_approved_by']) && ! empty($section['measured_length_reason']), 'Measured length override needs verifier approval and a reason.');
                     $length = (float) $section['measured_length_m'];
                     $lengthSource = 'approved_measured';
+                    $sag['sag_allowance_percent'] = null;
+                    $sag['sag_addition_m'] = 0.0;
+                    $sagStatus = 'measured_override';
                 }
                 if ($length !== null && $lengthSource !== 'approved_measured' && $elevationStatus !== 'elevation_adjusted') {
-                    $this->omissions[] = 'Section #'.$section['id'].' uses horizontal length: elevation is missing or invalid at one or more route points.';
+                    $this->omissions[] = 'Section #'.$section['id'].' uses a horizontal base span: elevation is missing or invalid at one or more route points.';
                 }
                 $conductors = $section['conductors'] ?? [];
                 $row = array_replace($base['InstSection'], [
@@ -226,7 +232,7 @@ class ExportPayloadBuilder
                     }
                     $tables['Loads'][] = $this->load($consumer, $id, $base['Loads'], $sectionPhases);
                 }
-                $provenance[] = ['section_id' => $id, 'survey_section_id' => $section['id'], 'pdf_id' => $section['source_pdf_id'] ?? null, 'page' => $section['source_page'] ?? null, 'row' => $section['source_row'] ?? null, 'length_source' => $lengthSource, 'elevation_status' => $length === null ? null : ($lengthSource === 'approved_measured' ? 'measured_override' : $elevationStatus)];
+                $provenance[] = ['section_id' => $id, 'survey_section_id' => $section['id'], 'pdf_id' => $section['source_pdf_id'] ?? null, 'page' => $section['source_page'] ?? null, 'row' => $section['source_row'] ?? null, 'length_source' => $lengthSource, 'elevation_status' => $length === null ? null : ($lengthSource === 'approved_measured' ? 'measured_override' : $elevationStatus), 'span_length_m' => $sag['span_length_m'], 'sag_allowance_percent' => $sag['sag_allowance_percent'], 'sag_addition_m' => $sag['sag_addition_m'], 'sag_status' => $sagStatus];
             }
             if ($version === self::EXTENDED_VERSION) {
                 $extra = app(SupplementalMapping::class)->build($transformer, $configuration);

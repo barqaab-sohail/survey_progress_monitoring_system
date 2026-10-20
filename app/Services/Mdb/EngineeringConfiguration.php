@@ -33,6 +33,7 @@ class EngineeringConfiguration
             'phase_spacing_cm' => 'nullable|numeric|gt:0|max:10000',
             'neutral_spacing_cm' => 'nullable|numeric|gt:0|max:10000',
             'conductor_height_m' => 'nullable|numeric|gt:0|max:200',
+            'sag_allowance_percent' => 'nullable|numeric|min:0|max:100',
             'pole_height_unit' => 'nullable|in:ft,m', 'two_digit_year_start' => 'nullable|integer|between:1800,9900',
             'load_mode' => 'nullable|in:manual,category_rates', 'load_evidence' => 'nullable|string|max:4000',
             'blank_consumers_zero' => 'nullable|boolean',
@@ -45,6 +46,9 @@ class EngineeringConfiguration
             $rules['rates.'.$category.'.power_factor'] = 'nullable|numeric|gt:0|max:1';
         }
         $data = $request->validate($rules);
+        if (array_key_exists('sag_allowance_percent', $data)) {
+            $data['sag_allowance_percent'] = SagAllowance::percent($data['sag_allowance_percent']);
+        }
         $objects = [];
         foreach (['mapping_json', 'transformer_types_json', 'equipment_references_json'] as $field) {
             if (isset($data[$field])) {
@@ -87,7 +91,7 @@ class EngineeringConfiguration
                     $settings['entry'][$key] = $data[$key];
                 }
             }
-            foreach (['crs_name', 'projection_wkt', 'configuration_id', 'supply_conductor_id', 'secondary_conductor_id', 'phase_spacing_cm', 'neutral_spacing_cm', 'conductor_height_m', 'blank_consumers_zero'] as $key) {
+            foreach (['crs_name', 'projection_wkt', 'configuration_id', 'supply_conductor_id', 'secondary_conductor_id', 'phase_spacing_cm', 'neutral_spacing_cm', 'conductor_height_m', 'sag_allowance_percent', 'blank_consumers_zero'] as $key) {
                 if (array_key_exists($key, $data)) {
                     $settings['engineering'][$key] = $data[$key];
                 }
@@ -144,6 +148,7 @@ class EngineeringConfiguration
             'phase_spacing_cm' => 'required|numeric|gt:0|max:10000',
             'neutral_spacing_cm' => 'required|numeric|gt:0|max:10000',
             'conductor_height_m' => 'required|numeric|gt:0|max:200',
+            'sag_allowance_percent' => 'nullable|numeric|min:0|max:100',
             'pole_height_unit' => 'required|in:ft,m', 'two_digit_year_start' => 'required|integer|between:1800,9900',
             'load_mode' => 'required|in:manual,category_rates', 'load_evidence' => 'required|string|max:4000',
             'blank_consumers_zero' => 'required|boolean',
@@ -157,6 +162,9 @@ class EngineeringConfiguration
             $rules['rates.'.$category.'.power_factor'] = $required.'|numeric|gt:0|max:1';
         }
         $data = $request->validate($rules);
+        if (array_key_exists('sag_allowance_percent', $data)) {
+            $data['sag_allowance_percent'] = SagAllowance::percent($data['sag_allowance_percent']);
+        }
         $mapping = $this->object($data['mapping_json'], 'mapping_json');
         $types = $this->object($data['transformer_types_json'], 'transformer_types_json');
         $references = isset($data['equipment_references_json'])
@@ -222,7 +230,11 @@ class EngineeringConfiguration
             }
             $settings['template_id'] = $template->id;
             $settings['entry'] = ['pole_height_unit' => $data['pole_height_unit'], 'two_digit_year_start' => (int) $data['two_digit_year_start']];
-            $settings['engineering'] = array_intersect_key($data, array_flip(['crs_name', 'projection_wkt', 'configuration_id', 'supply_conductor_id', 'secondary_conductor_id', 'phase_spacing_cm', 'neutral_spacing_cm', 'conductor_height_m', 'blank_consumers_zero']));
+            $previousSag = $settings['engineering']['sag_allowance_percent'] ?? null;
+            $settings['engineering'] = array_intersect_key($data, array_flip(['crs_name', 'projection_wkt', 'configuration_id', 'supply_conductor_id', 'secondary_conductor_id', 'phase_spacing_cm', 'neutral_spacing_cm', 'conductor_height_m', 'sag_allowance_percent', 'blank_consumers_zero']));
+            if (! array_key_exists('sag_allowance_percent', $data) && $previousSag !== null) {
+                $settings['engineering']['sag_allowance_percent'] = $previousSag;
+            }
             $settings['engineering']['transformer_types'] = $types;
             $settings['engineering']['version'] = 1;
             $mapping['reviewed_by'] = $request->user()->id;

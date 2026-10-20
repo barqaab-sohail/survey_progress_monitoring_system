@@ -65,6 +65,18 @@ class MdbExportPayloadTest extends TestCase
         $this->assertSame(array_keys($baseline['tables']['InstSection'][2]), array_keys($payload['tables']['InstSection'][2]));
         $this->assertSame(ProjectionService::LENGTH_METHOD, $payload['settings']['length_calculation']);
 
+        $snapshot['configuration']['settings']['engineering'] = ['sag_allowance_percent' => 2.5,
+            'transformer_types' => ['100' => 'reviewed-100']];
+        $snapshot['transformers'][0]['capacity_kva'] = 100;
+        $revision->snapshot = $snapshot;
+        $withSag = $builder->build($revision, $template, 1, str_repeat('f', 64));
+        $this->assertEqualsWithDelta(hypot(10, 10) * 1.025, $withSag['tables']['InstSection'][2]['SectionLength_MUL'], 0.001);
+        $this->assertEqualsWithDelta(20 * 1.025, $withSag['tables']['InstSection'][3]['SectionLength_MUL'], 0.001);
+        $this->assertSame('applied', $withSag['provenance'][0]['sag_status']);
+        $this->assertSame(2.5, $withSag['provenance'][0]['sag_allowance_percent']);
+        $this->assertEqualsWithDelta(hypot(10, 10) * 0.025, $withSag['provenance'][0]['sag_addition_m'], 0.001);
+        $this->assertSame($payload['tables']['InstSection'][0]['SectionLength_MUL'], $withSag['tables']['InstSection'][0]['SectionLength_MUL']);
+
         $snapshot['transformers'][0]['sections'][0] = array_replace($snapshot['transformers'][0]['sections'][0],
             ['measured_length_m' => 16, 'measured_length_reason' => 'Verified measurement', 'length_approved_by' => 2]);
         $revision->snapshot = $snapshot;
@@ -72,6 +84,9 @@ class MdbExportPayloadTest extends TestCase
         $this->assertSame(16.0, $measured['tables']['InstSection'][2]['SectionLength_MUL']);
         $this->assertSame('approved_measured', $measured['provenance'][0]['length_source']);
         $this->assertSame('measured_override', $measured['provenance'][0]['elevation_status']);
+        $this->assertSame('measured_override', $measured['provenance'][0]['sag_status']);
+        $this->assertSame(0.0, $measured['provenance'][0]['sag_addition_m']);
+        $this->assertNull($measured['provenance'][0]['sag_allowance_percent']);
     }
 
     public function test_branch_endpoints_distinct_conductors_and_approved_load_values_map_exactly(): void

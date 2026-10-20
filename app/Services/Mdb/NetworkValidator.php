@@ -30,6 +30,12 @@ class NetworkValidator
         };
         $config = is_array($data['configuration'] ?? null) ? $data['configuration'] : [];
         $settings = is_array($config['settings'] ?? null) ? $config['settings'] : [];
+        try {
+            $sagPercent = SagAllowance::percent($settings['engineering']['sag_allowance_percent'] ?? null);
+        } catch (\InvalidArgumentException $exception) {
+            $sagPercent = null;
+            $issue('invalid_sag_allowance', $exception->getMessage());
+        }
         $epsg = $config['epsg'] ?? null;
         if (! ($config['approved_by'] ?? null) || ! ($config['approved_at'] ?? null)) {
             $issue('unapproved_settings', 'Project electrical settings and coordinate projection require engineering approval.');
@@ -319,8 +325,14 @@ class NetworkValidator
                     }
                 }
                 $measured = $section['measured_length_m'] ?? null;
+                $sag = SagAllowance::apply($estimate, $measured === null ? $sagPercent : null);
+                if ($measured !== null) {
+                    $sag['sag_addition_m'] = 0.0;
+                }
+                $estimate = $sag['length_m'];
+                $sagStatus = $measured !== null ? 'measured_override' : ($sagPercent === null ? 'not_configured' : ($estimate === null ? 'unresolved' : 'applied'));
                 if ($measured === null && $elevationStatus !== null && $elevationStatus !== 'elevation_adjusted') {
-                    $issue('length_elevation_unavailable', 'Section length uses horizontal distance because elevation is missing or invalid at one or more route points. Elevation was not assumed to be zero.', $sc, true);
+                    $issue('length_elevation_unavailable', 'Base span uses horizontal distance because elevation is missing or invalid at one or more route points. Elevation was not assumed to be zero.', $sc, true);
                 }
                 if ($measured !== null && (! is_numeric($measured) || $measured <= 0 || empty($section['measured_length_reason']) || empty($section['length_approved_by']))) {
                     $issue('unapproved_measured_length', 'Measured length overrides require positive metres, provenance/reason and verifier approval.', $sc, $simple && is_numeric($measured) && $measured > 0);
@@ -329,7 +341,7 @@ class NetworkValidator
                 if ($length !== null && ($length < 0.5 || $length > (float) ($settings['review_length_above_m'] ?? 2000))) {
                     $issue('suspicious_length', 'Section length is unusual and requires engineering review.', $sc, true);
                 }
-                $edges[] = ['section_id' => $sid, 'id' => $this->stableId('S', $data, $tid, $sid), 'from' => $this->stableId('N', $data, $tid, $start), 'to' => $this->stableId('N', $data, $tid, $end), 'start_waypoint_id' => $points[$start]['id'], 'end_waypoint_id' => $points[$end]['id'], 'estimated_length_m' => $estimate, 'horizontal_length_m' => $horizontalLength, 'elevation_status' => $elevationStatus, 'length_m' => $length, 'length_kind' => $measured !== null ? 'approved_measured' : (! empty($section['geometry']) ? 'geometry_estimate' : 'endpoint_estimate')];
+                $edges[] = ['section_id' => $sid, 'id' => $this->stableId('S', $data, $tid, $sid), 'from' => $this->stableId('N', $data, $tid, $start), 'to' => $this->stableId('N', $data, $tid, $end), 'start_waypoint_id' => $points[$start]['id'], 'end_waypoint_id' => $points[$end]['id'], 'estimated_length_m' => $estimate, 'horizontal_length_m' => $horizontalLength, 'elevation_status' => $elevationStatus, 'span_length_m' => $sag['span_length_m'], 'sag_allowance_percent' => $sag['sag_allowance_percent'], 'sag_addition_m' => $sag['sag_addition_m'], 'sag_status' => $sagStatus, 'length_m' => $length, 'length_kind' => $measured !== null ? 'approved_measured' : (! empty($section['geometry']) ? 'geometry_estimate' : 'endpoint_estimate')];
             }
             if (! $edges) {
                 $issue('empty_network', 'Enter verified section endpoint pairs for this transformer.', $tc);

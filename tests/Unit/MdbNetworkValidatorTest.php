@@ -118,6 +118,28 @@ class MdbNetworkValidatorTest extends TestCase
         self::assertSame('elevation_adjusted', $edge['elevation_status']);
     }
 
+    public function test_optional_admin_sag_allowance_is_applied_after_elevation_and_measured_lengths_take_priority(): void
+    {
+        $data = $this->fixture();
+        $data['waypoints'][0]['elevation'] = 0;
+        $data['waypoints'][1]['elevation'] = 10;
+        $data['configuration']['settings']['engineering']['sag_allowance_percent'] = 2.5;
+        $result = $this->validator()->validate($data);
+        $edges = $result['topology'][0]['sections'];
+        self::assertEqualsWithDelta(hypot(100, 10), $edges[0]['span_length_m'], 0.001);
+        self::assertEqualsWithDelta(hypot(100, 10) * 1.025, $edges[0]['length_m'], 0.001);
+        self::assertSame('applied', $edges[0]['sag_status']);
+        self::assertEqualsWithDelta(102.5, $edges[1]['length_m'], 0.001);
+        $data['transformers'][0]['sections'][0] += ['measured_length_m' => 120, 'measured_length_reason' => 'Verified measurement', 'length_approved_by' => 1];
+        $edge = $this->validator()->validate($data)['topology'][0]['sections'][0];
+        self::assertSame(120.0, $edge['length_m']);
+        self::assertSame('measured_override', $edge['sag_status']);
+        self::assertSame(0.0, $edge['sag_addition_m']);
+
+        $data['configuration']['settings']['engineering']['sag_allowance_percent'] = -1;
+        self::assertContains('invalid_sag_allowance', array_column($this->validator()->validate($data)['errors'], 'code'));
+    }
+
     public function test_missing_sample_waypoints_878_879_link_to_pdf_row(): void
     {
         $data = $this->fixture();

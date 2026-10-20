@@ -8,7 +8,7 @@ use Symfony\Component\Process\Process;
 
 class ProjectionService
 {
-    public const LENGTH_METHOD = 'gpx-elevation-v1';
+    public const LENGTH_METHOD = 'gpx-elevation-sag-allowance-v1';
 
     public function project(float $latitude, float $longitude, int $epsg): array
     {

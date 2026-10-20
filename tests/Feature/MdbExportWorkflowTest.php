@@ -75,7 +75,7 @@ class MdbExportWorkflowTest extends TestCase
         $old = $exports->request($this->batch, $this->actor);
         $revision = $this->batch->approvedRevision;
         $mapping = $revision->snapshot['configuration']['settings']['mapping']['version'] ?? ExportPayloadBuilder::VERSION;
-        $oldKey = hash('sha256', implode('|', [$revision->sha256, 'feeder', $this->template->sha256, $mapping]));
+        $oldKey = hash('sha256', implode('|', [$revision->sha256, 'feeder', $this->template->sha256, $mapping, 'gpx-elevation-v1']));
         $old->update(['idempotency_key' => $oldKey]);
 
         $updated = $exports->request($this->batch, $this->actor);

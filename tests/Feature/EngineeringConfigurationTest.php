@@ -84,6 +84,47 @@ class EngineeringConfigurationTest extends TestCase
         return Configuration::firstOrFail();
     }
 
+    public function test_optional_sag_allowance_saves_reloads_preserves_zero_and_can_be_cleared(): void
+    {
+        $this->put(route('engineering.update', $this->project), $this->payload() + ['sag_allowance_percent' => '2.5'])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $configuration = Configuration::firstOrFail();
+        $this->assertEquals(2.5, $configuration->settings['engineering']['sag_allowance_percent']);
+        $this->get(route('engineering.edit', $this->project))->assertOk()->assertSee('Optional sag allowance (%)')
+            ->assertSee('name="sag_allowance_percent"', false)->assertSee('value="2.5"', false);
+        $payload = array_replace($this->payload(), ['revision' => $configuration->revision]);
+        $this->put(route('engineering.update', $this->project), $payload)->assertSessionHasNoErrors();
+        $this->assertEquals(2.5, $configuration->fresh()->settings['engineering']['sag_allowance_percent']);
+
+        foreach (['0' => 0, '' => null] as $entered => $expected) {
+            $payload = array_replace($this->payload(), ['revision' => $configuration->fresh()->revision, 'sag_allowance_percent' => (string) $entered]);
+            $this->put(route('engineering.update', $this->project), $payload)->assertSessionHasNoErrors();
+            $this->assertSame($expected, $configuration->fresh()->settings['engineering']['sag_allowance_percent']);
+        }
+    }
+
+    public function test_sag_allowance_is_optional_for_drafts_and_invalid_percentages_are_rejected(): void
+    {
+        $configuration = $this->saveConfiguration();
+        $this->assertArrayNotHasKey('sag_allowance_percent', $configuration->settings['engineering']);
+        foreach ([-1, 100.1, 'invalid'] as $invalid) {
+            foreach (['draft', null] as $action) {
+                $this->put(route('engineering.update', $this->project), array_replace($this->payload(),
+                    ['revision' => $configuration->revision, 'save_action' => $action, 'sag_allowance_percent' => $invalid]))
+                    ->assertSessionHasErrors('sag_allowance_percent');
+            }
+        }
+        $this->put(route('engineering.update', $this->project), ['revision' => $configuration->revision,
+            'save_action' => 'draft', 'sag_allowance_percent' => 3.5, 'reason' => 'Admin reviewed sag allowance'])
+            ->assertSessionHasNoErrors();
+        $this->assertEquals(3.5, $configuration->fresh()->settings['engineering']['sag_allowance_percent']);
+        $this->assertNull($configuration->fresh()->approved_by);
+        $this->put(route('engineering.update', $this->project), ['revision' => $configuration->fresh()->revision,
+            'save_action' => 'draft', 'sag_allowance_percent' => '', 'reason' => 'Admin disabled sag allowance'])
+            ->assertSessionHasNoErrors();
+        $this->assertNull($configuration->fresh()->settings['engineering']['sag_allowance_percent']);
+    }
+
     public function test_admin_can_configure_once_and_render_saved_engineering_settings(): void
     {
         $this->get(route('engineering.index'))->assertOk()->assertSee('HAZECO');

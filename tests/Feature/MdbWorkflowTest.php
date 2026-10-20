@@ -339,15 +339,18 @@ class MdbWorkflowTest extends TestCase
     {
         $transformer = $this->batch->transformers()->create(['code' => 'TX-elevation', 'capacity_kva' => 100]);
         $edge = ['section_id' => 1, 'start_waypoint_id' => 1, 'end_waypoint_id' => 2,
-            'horizontal_length_m' => 30, 'estimated_length_m' => sqrt(1000), 'length_m' => sqrt(1000),
-            'length_kind' => 'endpoint_estimate', 'elevation_status' => 'elevation_adjusted'];
+            'horizontal_length_m' => 30, 'estimated_length_m' => sqrt(1000) * 1.025, 'length_m' => sqrt(1000) * 1.025,
+            'length_kind' => 'endpoint_estimate', 'elevation_status' => 'elevation_adjusted',
+            'span_length_m' => sqrt(1000), 'sag_allowance_percent' => 2.5, 'sag_addition_m' => sqrt(1000) * 0.025, 'sag_status' => 'applied'];
         $this->mock(NetworkValidator::class)->shouldReceive('validate')->andReturn(['valid' => true,
             'errors' => [], 'warnings' => [], 'topology' => [['transformer_id' => $transformer->id, 'nodes' => [],
                 'sections' => [$edge, array_replace($edge, ['section_id' => 2, 'estimated_length_m' => 30,
-                    'length_m' => 30, 'elevation_status' => 'horizontal_missing_elevation'])]]]]);
+                    'length_m' => 30, 'span_length_m' => 30, 'sag_allowance_percent' => null, 'sag_addition_m' => 0,
+                    'sag_status' => 'not_configured', 'elevation_status' => 'horizontal_missing_elevation'])]]]]);
         $this->get(route('mdb-workflow.advanced', $this->batch))->assertOk()
             ->assertSee('Horizontal estimate (m)')->assertSee('Calculated span (m)')->assertSee('31.62')
-            ->assertSee('Elevation adjusted')->assertSee('Horizontal; elevation missing');
+            ->assertSee('Elevation adjusted')->assertSee('Horizontal; elevation missing')
+            ->assertSee('Sag allowance')->assertSee('2.50%')->assertSee('32.41')->assertSee('Not configured');
     }
 
     public function test_dashboard_simple_entry_and_advanced_records_render_with_project_configuration(): void
