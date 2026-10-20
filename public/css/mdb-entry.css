@@ -35,7 +35,8 @@
 .entry-pole-height-field{grid-column:auto}.entry-height-input{grid-template-columns:minmax(70px,1fr) minmax(88px,.85fr);gap:4px}.entry-height-input input{min-width:0}
 .entry-identity-foot{gap:4px 10px;line-height:1.3;margin:0 0 3px}.entry-identity-foot small,.entry-identity-foot .entry-inheritance{font-size:10px;margin:0}.entry-identity-foot small:empty{display:none}
 .entry-legend-note{font-weight:400;color:var(--muted);font-size:11px}
-.entry-consumer-fields{grid-template-columns:repeat(10,minmax(0,1fr)) 56px;gap:6px}.entry-intersection-field{align-items:center}.entry-intersection-field input{width:20px;height:20px;margin:5px 0 0;accent-color:#168346}
+.entry-consumer-fields{grid-template-columns:repeat(10,minmax(0,1fr));gap:8px;align-items:start}.entry-intersection-field{align-items:center}.entry-intersection-field input{width:20px;height:20px;margin:5px 0 0;accent-color:#168346}
+.entry-consumer-phase-group{grid-column:span 2;min-width:0;padding:8px;border:1px solid var(--line);border-radius:6px;background:#f8fafc}.entry-consumer-phase-inputs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-top:5px}.entry-consumer-phase-inputs label{display:flex;flex-direction:column;gap:3px;font-size:11px;font-weight:650;min-width:0}.entry-consumer-phase-inputs input[readonly]{background:#edf3f8;font-weight:750}.entry-consumer-phase-group>small{display:block;margin-top:5px}.entry-consumer-phase-group>small[hidden]{display:none}
 .entry-count-foot{gap:10px;margin-top:4px;font-size:11px}.entry-count-foot details{margin-left:auto}.entry-count-foot p{margin:3px 0;line-height:1.5}
 .mdb-entry details>summary{padding:3px 0;font-size:12px}.mdb-entry details[open]>summary{margin-bottom:5px}
 .entry-row-options .entry-fields{grid-template-columns:minmax(160px,240px) minmax(120px,180px)}.entry-row-options .entry-paste-controls{padding:5px 0}.entry-paste-controls label{display:flex;align-items:center;gap:6px;font-size:12px}
@@ -76,3 +77,4 @@
 .mdb-entry input[type=number]::-webkit-inner-spin-button,
 .mdb-entry input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .mdb-entry input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+@media(max-width:650px){.entry-consumer-phase-group{grid-column:1 / -1}}

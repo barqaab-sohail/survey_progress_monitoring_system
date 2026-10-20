@@ -38,6 +38,9 @@ class EntryRow extends Model
             'waypoint_reference', 'gpx_source_id', 'source_pdf_id', 'source_page', 'source_row', 'conductors', 'equipment_type',
             'pole_class', 'pole_height', 'pole_height_unit', 'consumers', 'intersection', 'pv_details', 'inheritance', 'original_entry', 'manually_verified']);
         $data['row_date'] = $this->row_date?->format('Y-m-d');
+        if (isset($this->original_entry['consumer_phases'])) {
+            $data['consumer_phases'] = $this->original_entry['consumer_phases'];
+        }
         if ($this->composite_identifier !== null || $this->identity_version !== null) {
             $data += $this->only(['composite_identifier', 'identity_version', 'entry_sequence']);
         }

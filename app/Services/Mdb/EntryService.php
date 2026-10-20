@@ -63,6 +63,25 @@ class EntryService
             $value = $data['consumers'][$category] ?? null;
             $consumers[$category] = $value === null || $value === '' ? null : (int) $value;
         }
+        if (array_key_exists('consumer_phases', $data)) {
+            $phases = [];
+            foreach (EntryLookups::SINGLE_PHASE_CONSUMERS as $category) {
+                if (! array_key_exists($category, $data['consumer_phases'])) {
+                    continue;
+                }
+                $phases[$category] = [];
+                foreach (['R', 'Y', 'B'] as $phase) {
+                    $value = $data['consumer_phases'][$category][$phase] ?? null;
+                    $phases[$category][$phase] = $value === null || $value === '' ? null : (int) $value;
+                }
+                $entered = array_filter($phases[$category], fn ($value) => $value !== null);
+                $consumers[$category] = $entered === [] ? null : array_sum($entered);
+                if ($consumers[$category] > 1000000) {
+                    throw ValidationException::withMessages(['consumer_phases.'.$category => strtoupper($category).' total cannot exceed 1,000,000.']);
+                }
+            }
+            $data['consumer_phases'] = $phases;
+        }
         $data['conductors'] = $conductors;
         $data['pair_number'] = (int) $data['pair_number'];
         foreach (['gpx_source_id', 'source_pdf_id', 'source_page'] as $field) {

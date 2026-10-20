@@ -44,6 +44,7 @@ class MdbOperatorEntryController extends Controller
             'source_page' => 'nullable|integer|min:1|max:10000', 'source_row' => 'nullable|string|max:40', 'conductors' => 'required|array:R,Y,B,N',
             'equipment_type' => 'required|string|max:255', 'pole_class' => 'required|string|max:255', 'pole_height' => 'required|numeric|gt:0|max:10000', 'pole_height_unit' => 'nullable|in:m,ft',
             'consumers' => 'required|array:rs,rl,sc,lc,si,li,pb,ag,st,pv', 'intersection' => 'required|boolean',
+            'consumer_phases' => 'sometimes|array:rs,sc,si,st',
             'pv_details' => 'nullable|array|max:100', 'pv_details.*' => 'array:reference,service_load_kw,installed_capacity_kw,meter_number,remarks',
             'pv_details.*.reference' => 'nullable|string|max:255', 'pv_details.*.service_load_kw' => 'nullable|numeric|min:0|max:1000000',
             'pv_details.*.installed_capacity_kw' => 'nullable|numeric|min:0|max:1000000', 'pv_details.*.meter_number' => 'nullable|string|max:255', 'pv_details.*.remarks' => 'nullable|string|max:4000',
@@ -55,6 +56,12 @@ class MdbOperatorEntryController extends Controller
         }
         foreach (array_keys(EntryLookups::CONSUMERS) as $category) {
             $rules['consumers.'.$category] = 'nullable|integer|min:0|max:1000000';
+        }
+        foreach (EntryLookups::SINGLE_PHASE_CONSUMERS as $category) {
+            $rules['consumer_phases.'.$category] = 'sometimes|array:R,Y,B|required_array_keys:R,Y,B';
+            foreach (['R', 'Y', 'B'] as $phase) {
+                $rules['consumer_phases.'.$category.'.'.$phase] = 'nullable|integer|min:0|max:1000000';
+            }
         }
         if ((string) $request->input('identity_version') === '2') {
             $rules['pole_height_unit'] = 'nullable|in:ft';
@@ -138,6 +145,11 @@ class MdbOperatorEntryController extends Controller
         if ($request->attributes->get('mdb_verifier_correction')) {
             $validated['manually_verified'] = false;
         }
+        // Older clients can edit a row without sending its phase metadata.
+        $savedPhases = $row?->original_entry['consumer_phases'] ?? [];
+        if ($savedPhases || array_key_exists('consumer_phases', $validated)) {
+            $validated['consumer_phases'] = array_replace($savedPhases, $validated['consumer_phases'] ?? []);
+        }
         $data = $this->entries->normalized($validated);
         if (strlen(json_encode($data, JSON_THROW_ON_ERROR)) > 256 * 1024) {
             throw ValidationException::withMessages(['pv_details' => 'This row exceeds the 256 KB entry limit.']);
@@ -209,6 +221,10 @@ class MdbOperatorEntryController extends Controller
                 $values['source_row'] = 'PDF row '.$progress->row_number;
             }
             $values['original_entry'] = $existing?->original_entry ?? ['first_entry' => $data];
+            if (array_key_exists('consumer_phases', $data)) {
+                $values['original_entry']['consumer_phases'] = $data['consumer_phases'];
+            }
+            unset($values['consumer_phases']);
             $record = $existing ? tap($existing)->update($values) : $transformer->entryRows()->create($values);
             if ($progress) {
                 $progress->update(['entry_row_id' => $record->id, 'entered' => true]);

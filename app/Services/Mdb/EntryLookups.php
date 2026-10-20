@@ -7,6 +7,8 @@ use App\Models\Mdb\Template;
 
 class EntryLookups
 {
+    public const SINGLE_PHASE_CONSUMERS = ['rs', 'sc', 'si', 'st'];
+
     public const CONSUMERS = ['rs' => '1-phase residential', 'rl' => '3-phase residential', 'sc' => '1-phase commercial',
         'lc' => 'Commercial (LC; confirm classification)', 'si' => '1-phase industrial', 'li' => '3-phase industrial',
         'pb' => 'Public buildings', 'ag' => 'Agriculture', 'st' => 'Street lights', 'pv' => 'PV solar'];

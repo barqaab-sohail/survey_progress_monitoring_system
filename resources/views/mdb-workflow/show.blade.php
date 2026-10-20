@@ -72,7 +72,20 @@
         </fieldset></div>
         <div class="entry-identity-foot"><small id="entry-waypoint-status"></small><small id="entry-group-date-status" class="entry-inheritance"></small><small id="entry-conductor-copy-status" class="entry-inheritance"></small><small id="entry-equipment-copy-status" class="entry-inheritance"></small></div>
         <fieldset class="entry-compact-fieldset entry-count-fieldset"><legend>Consumer counts <span class="entry-legend-note">— blank means not entered; 0 means none</span></legend><div class="entry-consumer-fields">
-            @foreach(\App\Services\Mdb\EntryLookups::CONSUMERS as $key=>$description)<label title="{{ $description }}"><strong>{{ strtoupper($key) }}</strong><input name="consumers[{{ $key }}]" type="number" min="0" max="1000000" step="1" aria-label="{{ strtoupper($key) }} — {{ $description }} consumer count"></label>@endforeach
+            @foreach(\App\Services\Mdb\EntryLookups::CONSUMERS as $key=>$description)
+                @if(in_array($key, \App\Services\Mdb\EntryLookups::SINGLE_PHASE_CONSUMERS, true))
+                <div class="entry-consumer-phase-group" role="group" aria-label="{{ strtoupper($key) }} — {{ $description }} phase counts">
+                    <strong title="{{ $description }}">{{ strtoupper($key) }}</strong>
+                    <div class="entry-consumer-phase-inputs">
+                        @foreach(['R','Y','B'] as $phase)<label>{{ $phase }}<input name="consumer_phases[{{ $key }}][{{ $phase }}]" type="number" min="0" max="1000000" step="1" inputmode="numeric" aria-label="{{ strtoupper($key) }} {{ $phase }} phase consumer count"></label>@endforeach
+                        <label>Total<input name="consumers[{{ $key }}]" type="number" readonly tabindex="-1" aria-label="{{ strtoupper($key) }} total consumer count"></label>
+                    </div>
+                    <small data-consumer-legacy="{{ $key }}" hidden>Recorded total; phases not recorded. Enter phases to replace.</small>
+                </div>
+                @else
+                <label title="{{ $description }}"><strong>{{ strtoupper($key) }}</strong><input name="consumers[{{ $key }}]" type="number" min="0" max="1000000" step="1" aria-label="{{ strtoupper($key) }} — {{ $description }} consumer count"></label>
+                @endif
+            @endforeach
             <label class="entry-intersection-field" title="Intersection, excluded from consumer total"><strong>Int</strong><input name="intersection" type="checkbox" value="1" aria-label="Intersection (Int)"></label>
         </div><div class="entry-count-foot"><span id="entry-consumer-total">Entered consumer total: 0</span><details><summary>Consumer code key</summary><p>@foreach(\App\Services\Mdb\EntryLookups::CONSUMERS as $key=>$description)<span><strong>{{ strtoupper($key) }}</strong>: {{ $description }}@if(!$loop->last) · @endif</span>@endforeach</p>Intersection is excluded from the total. PV counts remain separate in export.</details></div></fieldset>
         <details class="entry-pv"><summary>Optional PV details <span id="entry-pv-count"></span></summary><div id="entry-pv-records"></div><button type="button" class="btn btn-sm btn-light" id="entry-pv-add">Add PV record</button></details>

@@ -59,8 +59,31 @@ export function derivePhase(conductors) {
     return {display: present.join(''), complete: ['R', 'Y', 'B'].every(key => conductors[key] !== null && conductors[key] !== undefined)};
 }
 
-export function consumerTotal(consumers) {
+export const singlePhaseConsumers = ['rs', 'sc', 'si', 'st'];
+
+// An absent category has an unallocated historical total. An explicit all-blank
+// phase set means unrecorded, while a phase containing 0 is an entered zero.
+export function consumerCounts(consumers = {}, phases = {}) {
+    const totals = {...consumers};
+    for (const category of singlePhaseConsumers) {
+        if (!Object.hasOwn(phases, category)) continue;
+        const entered = ['R','Y','B'].map(phase=>phases[category][phase]).filter(value=>value!==null && value!==undefined && value!=='');
+        totals[category] = entered.length ? entered.reduce((sum,value)=>sum+Number(value),0) : null;
+    }
+    return totals;
+}
+
+export function consumerTotal(consumers, phases = {}) {
+    consumers = consumerCounts(consumers, phases);
     return ['rs', 'rl', 'sc', 'lc', 'si', 'li', 'pb', 'ag', 'st', 'pv'].reduce((sum, key) => sum + (Number(consumers[key]) || 0), 0);
+}
+
+export function consumerSummary(row) {
+    const phases=row.consumer_phases ?? row.original_entry?.consumer_phases ?? {};
+    return Object.entries(consumerCounts(row.consumers,phases)).filter(([,value])=>value!==null).map(([category,value])=>{
+        const counts=phases[category];
+        return `${category.toUpperCase()}: ${value}${counts ? ' ('+['R','Y','B'].map(phase=>`${phase}=${counts[phase] ?? 'blank'}`).join(', ')+')' : ''}`;
+    }).join(' · ') || 'Blank';
 }
 
 // Blank fields remain valid for drafts; entered values must have a valid shape/range.
@@ -77,6 +100,13 @@ export function rowValidationErrors(payload, yearStart = null) {
     if(payload.pole_height !== null && (!Number.isFinite(payload.pole_height) || payload.pole_height <= 0 || payload.pole_height > 10000))add('pole_height','Enter a positive pole/tower height in feet, up to 10,000 ft.');
     for(const [key, value] of Object.entries(payload.consumers || {})) {
         if(value !== null && (!Number.isInteger(value) || value < 0 || value > 1000000))add('consumers.'+key,`${key.toUpperCase()}: enter a whole number from 0 to 1,000,000, or leave it blank.`);
+    }
+    for(const [category, counts] of Object.entries(payload.consumer_phases || {})) {
+        for(const phase of ['R','Y','B']) {
+            const value=counts[phase];
+            if(value!==null && value!==undefined && (!Number.isInteger(value) || value<0 || value>1000000))add(`consumer_phases.${category}.${phase}`,`${category.toUpperCase()} ${phase}: enter a whole number from 0 to 1,000,000, or leave it blank.`);
+        }
+        if(consumerCounts({}, {[category]:counts})[category]>1000000)add(`consumer_phases.${category}`,`${category.toUpperCase()} total cannot exceed 1,000,000.`);
     }
     for(const [index, pv] of (payload.pv_details || []).entries()) {
         for(const key of ['service_load_kw','installed_capacity_kw']) {
@@ -151,6 +181,7 @@ function initialize(boot) {
     let data = boot, activeId = boot.active_transformer_id || boot.transformers[0]?.id || null;
     let registeredId = null, manualTransformer = false;
     let rowId = null, clientUuid = uuid(), saveUuid = null, inheritance = {}, headerDirty = false, rowDirty = false, busy = false;
+    let enteredConsumerPhases = new Set();
     let pageNumber = 1, rotation = 0, zoom = 1, pdf = null, pdfLoading = null, pdfLib = null, pdfGeneration = 0, renderTask = null, renderChain = Promise.resolve();
     let selectedPdfRowId = null, drawingLines = false, lineStart = null, linePreview = null, linePointer = null;
     let renderedPdfLocation = null;
@@ -367,6 +398,14 @@ function initialize(boot) {
         // Send the internal explicit-absence token so Laravel's empty-string middleware does not turn a blank select into unknown NULL.
         payload.conductors=Object.fromEntries(['R','Y','B','N'].map(key=>[key,val(rowForm,`conductors[${key}]`) || '__none__']));
         payload.consumers=Object.fromEntries(Object.keys(data.lookups.consumers).map(key=>[key,number(val(rowForm,`consumers[${key}]`))]));
+        const consumerPhases={};
+        for(const category of singlePhaseConsumers) {
+            const counts=Object.fromEntries(['R','Y','B'].map(phase=>[phase,number(val(rowForm,`consumer_phases[${category}][${phase}]`))]));
+            if(enteredConsumerPhases.has(category) || Object.values(counts).some(value=>value!==null))consumerPhases[category]=counts;
+        }
+        // Keep the payload compatible with older recovery drafts when no phase was entered.
+        if(Object.keys(consumerPhases).length)payload.consumer_phases=consumerPhases;
+        payload.consumers=consumerCounts(payload.consumers,consumerPhases);
         payload.intersection=field(rowForm,'intersection').checked; payload.pv_details=pvPayload(); payload.inheritance=inheritance; payload.manually_verified=false;
         payload.row_date=isoDate(payload.row_date,data.entry_settings?.two_digit_year_start ?? 2000) || null;
         const saved=active()?.rows.find(row=>row.id===rowId);
@@ -388,15 +427,18 @@ function initialize(boot) {
         selectedPdfRowId=pdfRows().find(row=>row.entry_row_id===id && id)?.id || payload.pdf_progress_row_id || null;
         rowId=id; clientUuid=identity || uuid(); saveUuid=null; inheritance=structuredClone(payload.inheritance || {});
         rowForm.reset(); pairs(payload.pair_number);
+        const consumerPhases=payload.consumer_phases ?? payload.original_entry?.consumer_phases ?? {};
+        enteredConsumerPhases=new Set(Object.keys(consumerPhases));
         const legacy=!!id && !payload.identity_version && !payload.composite_identifier;
         field(rowForm,'waypoint_reference').maxLength=legacy ? 255 : 3;field(rowForm,'group_number').maxLength=legacy ? 40 : 2;
         for(const [name,pattern] of [['waypoint_reference','[0-9]{3}'],['group_number','[0-9]{2}']]){if(legacy)field(rowForm,name).removeAttribute('pattern');else field(rowForm,name).setAttribute('pattern',pattern);}
         for (const [key,value] of Object.entries(payload)) {
             if (key==='conductors') for (const phase of ['R','Y','B','N']) set(rowForm,`conductors[${phase}]`,value[phase]==='' ? '__none__' : value[phase]);
             else if (key==='consumers') for (const category of Object.keys(data.lookups.consumers)) set(rowForm,`consumers[${category}]`,value[category]);
-            else if (key==='pole_height' || key==='pole_height_unit') continue;
+            else if (key==='pole_height' || key==='pole_height_unit' || key==='consumer_phases' || key==='original_entry') continue;
             else set(rowForm,key,value);
         }
+        for(const category of singlePhaseConsumers)for(const phase of ['R','Y','B'])set(rowForm,`consumer_phases[${category}][${phase}]`,consumerPhases[category]?.[phase] ?? null);
         setPoleHeight(payload.pole_height,payload.pole_height_unit || 'ft');
         $('entry-pv-records').replaceChildren(); (payload.pv_details || []).forEach(addPv);
         $('entry-pv-count').textContent=`(${payload.pv_details?.length || 0})`;
@@ -445,7 +487,13 @@ function initialize(boot) {
         $('entry-group-date-status').textContent=inheritance.group_date ? `Group/date inherited from saved row #${inheritance.group_date}; correct either field if different.` : '';
         $('entry-height-unit-note').hidden=false;
         $('entry-unit-convert').hidden=true;
-        $('entry-consumer-total').textContent=`Entered consumer total: ${consumerTotal(payload.consumers)}${Object.values(payload.consumers).some(v=>v===null) ? ' (blank fields retained)' : ''}`;
+        for(const category of singlePhaseConsumers) {
+            set(rowForm,`consumers[${category}]`,payload.consumers[category]);
+            const legacyNote=rowForm.querySelector(`[data-consumer-legacy="${category}"]`);
+            if(legacyNote)legacyNote.hidden=Object.hasOwn(payload.consumer_phases || {},category) || payload.consumers[category]===null;
+        }
+        const blankPhases=Object.values(payload.consumer_phases || {}).some(counts=>Object.values(counts).some(value=>value===null));
+        $('entry-consumer-total').textContent=`Entered consumer total: ${consumerTotal(payload.consumers)}${Object.values(payload.consumers).some(v=>v===null) || blankPhases ? ' (blank fields retained)' : ''}`;
         $('entry-row-page').textContent=`Row source: page ${payload.source_page ?? 'not entered'}`;
         $('entry-pair-caption').textContent=`· Pair ${payload.pair_number || 'not selected'}`;
         for (const scope of ['conductors','equipment']) $('entry-'+(scope==='conductors' ? 'conductor' : 'equipment')+'-copy-status').textContent=inheritance[scope] ? `Explicitly copied from saved row #${inheritance[scope]} in this transformer.` : '';
@@ -462,7 +510,7 @@ function initialize(boot) {
         $('entry-saved-count').textContent=`${rows.length} rows`;
         $('entry-row-panel')?.classList.toggle('entry-row-panel-disabled',!t);
         $('entry-review-link').href=`${boot.base_url}/review${t ? '?transformer_id='+t.id : ''}`;
-        $('entry-saved-rows').innerHTML=rows.length ? '<div class="table-wrap"><table class="table entry-saved-table"><thead><tr><th>Pair / S/E</th><th>Page / entry</th><th>Waypoint</th><th>Phase / conductors</th><th>Equipment</th><th>Entered counts</th><th>Int</th><th></th></tr></thead><tbody>'+rows.map(row=>`<tr class="${row.designation==='S' ? 'entry-pair-start' : ''}"><td>${row.pair_number} / <strong>${row.designation}</strong>${rows.filter(r=>r.pair_number===row.pair_number).length===1 ? '<small class="entry-pair-incomplete">Incomplete pair</small>' : ''}</td><td>${row.source_page ?? '—'} / ${esc(row.source_row || '—')}</td><td>${esc(row.composite_identifier || 'Legacy identity')}<small>GPS ${esc(row.waypoint_reference || '')} ? ${esc(row.group_number)} ? ${esc(displayDate(row.row_date))} ? source #${esc(row.gpx_source_id || 'unresolved')}</small></td><td>${derivePhase(row.conductors).display || '—'}<small>${['R','Y','B','N'].map(k=>`${k}: ${esc(row.conductors[k] ?? '')}`).join(' · ')}</small></td><td>${esc(row.equipment_type || '—')} / ${esc(row.pole_class || '—')}<small>${row.pole_height ?? '—'} ${esc(row.pole_height_unit || '(unit unconfirmed)')}</small></td><td>${Object.entries(row.consumers).filter(([,v])=>v!==null).map(([k,v])=>`${k.toUpperCase()}: ${v}`).join(' · ') || 'Blank'}<small>Total: ${consumerTotal(row.consumers)}</small></td><td>${row.intersection ? '✓' : '—'}</td><td>${editable() ? `<button type="button" class="btn btn-sm btn-light" data-entry-edit="${row.id}">Edit</button> <button type="button" class="btn btn-sm btn-light" data-entry-delete="${row.id}">Delete</button>` : ''}</td></tr>`).join('')+'</tbody></table></div>' : '<p class="entry-empty">Save the transformer header, then enter its first S row.</p>';
+        $('entry-saved-rows').innerHTML=rows.length ? '<div class="table-wrap"><table class="table entry-saved-table"><thead><tr><th>Pair / S/E</th><th>Page / entry</th><th>Waypoint</th><th>Phase / conductors</th><th>Equipment</th><th>Entered counts</th><th>Int</th><th></th></tr></thead><tbody>'+rows.map(row=>`<tr class="${row.designation==='S' ? 'entry-pair-start' : ''}"><td>${row.pair_number} / <strong>${row.designation}</strong>${rows.filter(r=>r.pair_number===row.pair_number).length===1 ? '<small class="entry-pair-incomplete">Incomplete pair</small>' : ''}</td><td>${row.source_page ?? '—'} / ${esc(row.source_row || '—')}</td><td>${esc(row.composite_identifier || 'Legacy identity')}<small>GPS ${esc(row.waypoint_reference || '')} ? ${esc(row.group_number)} ? ${esc(displayDate(row.row_date))} ? source #${esc(row.gpx_source_id || 'unresolved')}</small></td><td>${derivePhase(row.conductors).display || '—'}<small>${['R','Y','B','N'].map(k=>`${k}: ${esc(row.conductors[k] ?? '')}`).join(' · ')}</small></td><td>${esc(row.equipment_type || '—')} / ${esc(row.pole_class || '—')}<small>${row.pole_height ?? '—'} ${esc(row.pole_height_unit || '(unit unconfirmed)')}</small></td><td>${esc(consumerSummary(row))}<small>Total: ${consumerTotal(row.consumers)}</small></td><td>${row.intersection ? '✓' : '—'}</td><td>${editable() ? `<button type="button" class="btn btn-sm btn-light" data-entry-edit="${row.id}">Edit</button> <button type="button" class="btn btn-sm btn-light" data-entry-delete="${row.id}">Delete</button>` : ''}</td></tr>`).join('')+'</tbody></table></div>' : '<p class="entry-empty">Save the transformer header, then enter its first S row.</p>';
         rows.forEach((row,index)=>{
             const height=$('entry-saved-rows').querySelector(`tbody tr:nth-child(${index+1}) td:nth-child(5) small`);
             if(height)height.textContent=`${heightInFeet(row.pole_height,row.pole_height_unit) ?? '—'} ft`;
@@ -494,6 +542,8 @@ function initialize(boot) {
         if (event.target.type==='search') return;
         if(scope==='header') headerDirty=true;
         else { rowDirty=true; saveUuid=null;
+            const phaseCategory=event.target.name?.match(/^consumer_phases\[(rs|sc|si|st)\]/)?.[1];
+            if(phaseCategory)enteredConsumerPhases.add(phaseCategory);
             if(event.target.name?.startsWith('conductors[')) delete inheritance.conductors;
             if(['equipment_type','pole_class','pole_height','pole_height_unit'].includes(event.target.name)
                 || ['entry-height-choice','entry-height-custom'].includes(event.target.id)) delete inheritance.equipment;
