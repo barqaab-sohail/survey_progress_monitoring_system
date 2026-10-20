@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Mdb\Configuration;
+use App\Models\Mdb\EngineeringPreset;
 use App\Models\Mdb\Template;
 use App\Models\Project;
 use App\Services\AuditService;
 use App\Services\Mdb\EngineeringConfiguration;
+use App\Services\Mdb\EngineeringDefaults;
 use App\Services\Mdb\SchemaTemplate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,7 +30,7 @@ class EngineeringConfigurationController extends Controller
         Gate::authorize('mdb-workflow.configure');
 
         return view('engineering.edit', ['project' => $project,
-            'configuration' => Configuration::where('project_id', $project->id)->first(),
+            'configuration' => app(EngineeringDefaults::class)->preview($project),
             'templates' => Template::where('active', true)->whereNotNull('approved_by')->whereNotNull('approved_at')->get()]);
     }
 
@@ -43,6 +45,33 @@ class EngineeringConfigurationController extends Controller
         $engineering->save($project, $request);
 
         return back()->with('success', 'Engineering configuration saved centrally. All MDBs for this project use this revision. Affected survey approvals must be renewed.');
+    }
+
+    public function library(EngineeringDefaults $defaults)
+    {
+        Gate::authorize('mdb-workflow.configure');
+
+        return view('engineering.library', ['preset' => $defaults->library()]);
+    }
+
+    public function updateLibrary(Request $request, EngineeringDefaults $defaults, AuditService $audit)
+    {
+        Gate::authorize('mdb-workflow.configure');
+        $data = $request->validate(['revision' => 'required|integer|min:1', 'name' => 'required|string|max:255',
+            'enabled' => 'required|boolean', 'configuration_json' => 'required|json|max:262144', 'reason' => 'required|string|min:5|max:4000']);
+        $payload = $defaults->validate($data['configuration_json']);
+        DB::transaction(function () use ($request, $data, $payload, $audit) {
+            $preset = EngineeringPreset::where('code', EngineeringDefaults::CODE)->lockForUpdate()->firstOrFail();
+            if ($preset->revision !== (int) $data['revision']) {
+                throw ValidationException::withMessages(['revision' => 'Another Admin updated this library. Reload before saving.']);
+            }
+            $before = $preset->toArray();
+            $preset->fill(['name' => $data['name'], 'enabled' => $data['enabled'], 'configuration' => $payload,
+                'revision' => $preset->revision + 1])->save();
+            $audit->record($request->user(), 'mdb.engineering_library_updated', $preset, $before, $preset->toArray(), $data['reason']);
+        });
+
+        return back()->with('success', 'Engineering library updated. Future project configurations use these defaults; existing project settings retain their values.');
     }
 
     public function updateMode(Request $request, Project $project, AuditService $audit)

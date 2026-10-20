@@ -35,17 +35,27 @@ class FieldApi {
       );
     }
     if (response.statusCode >= 400) {
+      final message =
+          data['message']?.toString() ??
+          'Request failed (${response.statusCode}).';
       final errors = data['errors'];
       final details = errors is Map
           ? errors.entries
-                .map(
-                  (entry) => '${entry.key}: ${(entry.value as List).join(' ')}',
-                )
+                .expand((entry) {
+                  final values = entry.value is List
+                      ? entry.value as List
+                      : [entry.value];
+                  return values
+                      .map((value) => value.toString())
+                      .where((value) => value.isNotEmpty && value != message)
+                      .map((value) => '${entry.key}: $value');
+                })
+                .toSet()
                 .join('\n')
           : '';
       throw ApiFailure(
         response.statusCode,
-        '${data['message'] ?? 'Request failed (${response.statusCode}).'}${details.isEmpty ? '' : '\n$details'}',
+        '$message${details.isEmpty ? '' : '\n$details'}',
       );
     }
     return data;

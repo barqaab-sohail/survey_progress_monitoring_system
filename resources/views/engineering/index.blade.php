@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Engineering Configuration')
 @section('content')
-<div class="page-head"><div><h1>Engineering Configuration</h1><p>Set up the approved engineering standard once for each project. All its MDB files inherit the same settings.</p></div></div>
+<div class="page-head"><div><h1>Engineering Configuration</h1><p>Set up the approved engineering standard once for each project. All its MDB files inherit the same settings.</p></div><a class="btn btn-light" href="{{ route('engineering.library') }}">Engineering defaults library</a></div>
 <section class="card"><div class="table-wrap"><table class="table"><thead><tr><th>Project</th><th>Configuration</th><th>Last approved</th><th></th></tr></thead><tbody>
 @forelse($projects as $project)
 @php($configuration = $configurations->get($project->id))

@@ -76,6 +76,7 @@ class DatabaseSeeder extends Seeder
         $admin->syncRoles([UserRole::SuperAdmin->value]);
         $this->call(ShieldPermissionSeeder::class);
         $this->call(MdbWorkflowPermissionSeeder::class);
+        $this->call(EngineeringDefaultsSeeder::class);
     }
 
     private function user(Organization $organization, string $name, string $email, UserRole $role, string $password, string $suffix): User

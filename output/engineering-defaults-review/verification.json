@@ -1,0 +1,64 @@
+{
+  "sources": [
+    {
+      "file": "Allah AbadT-4130116282.mdb",
+      "sha256": "187ac736140f8ecfab9f831d95cb46a2e738525e197343e07b4795cd81e82845",
+      "source_unchanged": true,
+      "canonical_schema_match": true
+    },
+    {
+      "file": "Allah AbadT-4130116284.mdb",
+      "sha256": "ce6fe957962bd85057fb24f8d6558e4d377c0e375325bbef1071c121b2d4a7c0",
+      "source_unchanged": true,
+      "canonical_schema_match": true
+    },
+    {
+      "file": "IndustrialT-4060116233.mdb",
+      "sha256": "4549ff4d5b29e7a2bde79ec3295aff3396af45709bce062ef1c47e30c1de3262",
+      "source_unchanged": true,
+      "canonical_schema_match": true
+    },
+    {
+      "file": "IndustrialT-4120623648.mdb",
+      "sha256": "7e9dd3ff99722fc74170513d774fb769d6b8a2bfde4c9c2b06b15f9ab956368e",
+      "source_unchanged": true,
+      "canonical_schema_match": true
+    },
+    {
+      "file": "Kot MadinaT-8160421110.mdb",
+      "sha256": "eba5711b1c633c48839146bb42ed9ebec6cbe7d6028a81f77cb6345d69a995fd",
+      "source_unchanged": true,
+      "canonical_schema_match": true
+    },
+    {
+      "file": "Kot MadinaT-8160421145.mdb",
+      "sha256": "1065f140ba2c964c1fb30d4e0e73aa581db03913b5e0ca90f3b1bae5c731bf3a",
+      "source_unchanged": true,
+      "canonical_schema_match": true
+    },
+    {
+      "file": "Mosa PakT-2241017145.mdb",
+      "sha256": "f1c885148452de3bc0be5d02b329f82cd32a6b8053ef69d1c45a65b0d20e6035",
+      "source_unchanged": true,
+      "canonical_schema_match": true
+    },
+    {
+      "file": "New BosanT-2211117034.mdb",
+      "sha256": "52b87163f6fefceaa1eb60571ef0803984ac5c4e545777823f454208e0cafd38",
+      "source_unchanged": true,
+      "canonical_schema_match": true
+    },
+    {
+      "file": "Z TownT-2301017107.mdb",
+      "sha256": "43570810f75671ac3cf9ff94f2780345edc050452d21467b442b92cbbd24bcf5",
+      "source_unchanged": true,
+      "canonical_schema_match": true
+    }
+  ],
+  "consistent_parameters": 133,
+  "conflicts": 8,
+  "tests": 93,
+  "assertions": 768,
+  "test_database": "SQLite :memory:",
+  "reference_files_modified": false
+}

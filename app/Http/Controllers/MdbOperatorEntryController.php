@@ -191,7 +191,10 @@ class MdbOperatorEntryController extends Controller
                 foreach ($keys as $key) {
                     $sourceValue = $key === 'row_date' ? $source->row_date?->format('Y-m-d') : $source->$key;
                     if ($sourceValue != ($data[$key] ?? null)) {
-                        throw ValidationException::withMessages(['inheritance' => 'Copied values changed; clear the copy marker or copy them again.']);
+                        // Copying is a starting point, not a restriction. Keep source provenance only
+                        // while the copied scope still matches; manual corrections are valid values.
+                        unset($data['inheritance'][$scope]);
+                        break;
                     }
                 }
             }
@@ -301,7 +304,8 @@ class MdbOperatorEntryController extends Controller
         $rules = ['manual_transformer' => 'sometimes|boolean', 'revision' => 'required|integer', 'code' => ['required', 'string', 'max:255', Rule::unique('mdb_workflow_transformers', 'code')->where('batch_id', $batch->id)->ignore($transformer?->id)],
             'capacity_kva' => 'required|numeric|gt:0|max:1000000', 'source_waypoint_id' => 'nullable|integer', 'header' => 'required|array',
             'header.survey_date' => 'nullable|date_format:Y-m-d', 'header.mounting' => ['nullable', Rule::in(array_filter(['Single Pole', 'Double Pole', 'Pad', $transformer?->header['mounting'] ?? null]))],
-            'header.service_category' => 'nullable|in:General Duty,Dedicated', 'header.source_survey_identifier' => 'nullable|string|regex:/^\d{11}$/D', 'source_pdf_id' => 'required|integer', 'source_page' => 'required|integer|min:1'];
+            'header.inspector' => 'required|string|max:500', 'header.location' => 'required|string|max:500',
+            'header.service_category' => 'required|in:General Duty,Dedicated', 'header.source_survey_identifier' => 'nullable|string|regex:/^\d{11}$/D', 'source_pdf_id' => 'required|integer', 'source_page' => 'required|integer|min:1'];
         $fields = ['substation_name', 'substation_identifier', 'feeder_identifier', 'feeder_name', 'division', 'subdivision', 'subdivision_code',
             'make', 'inspector', 'location', 'survey_date', 'mounting', 'service_category', 'team_group', 'source_survey_identifier', 'client_transformer_information'];
         foreach ($fields as $field) {
@@ -313,6 +317,9 @@ class MdbOperatorEntryController extends Controller
             $attributes['header.'.$field] = str_replace('_', ' ', $field);
         }
         $data = $request->validate($rules, [
+            'header.inspector.required' => 'Enter the inspector name.',
+            'header.location.required' => 'Enter the transformer location.',
+            'header.service_category.required' => 'Choose a service category.',
             'source_pdf_id.required' => 'Choose the PDF containing this transformer.',
             'source_page.required' => 'Enter the starting PDF page number for this transformer.',
             'code.required' => 'Enter a transformer code or choose a registered transformer.',

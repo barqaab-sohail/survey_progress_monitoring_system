@@ -427,6 +427,59 @@ void main() {
     expect(find.widgetWithText(TextFormField, 'Email'), findsOneWidget);
   });
 
+  testWidgets('rejected login retains password for correction and visibility', (
+    tester,
+  ) async {
+    controller.dispose();
+    controller = FieldController(
+      store,
+      api: FieldApi(
+        client: MockClient(
+          (request) async => http.Response(
+            '{"message":"The provided credentials are incorrect.","errors":{"email":["The provided credentials are incorrect."]}}',
+            422,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: LoginPage(controller: controller)),
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'surveyor@example.test',
+    );
+    final passwordField = find.widgetWithText(TextFormField, 'Password');
+    await tester.enterText(passwordField, 'typed-password');
+    final button = find.text('Sign in and download assignments');
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Email or password is incorrect.'),
+      findsOneWidget,
+    );
+    final input = tester.widget<TextField>(
+      find.descendant(of: passwordField, matching: find.byType(TextField)),
+    );
+    expect(input.controller!.text, 'typed-password');
+    expect(input.obscureText, isTrue);
+    await tester.ensureVisible(find.byIcon(Icons.visibility));
+    await tester.tap(find.byIcon(Icons.visibility));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextField>(
+            find.descendant(
+              of: passwordField,
+              matching: find.byType(TextField),
+            ),
+          )
+          .obscureText,
+      isFalse,
+    );
+  });
+
   testWidgets(
     'S completion opens E automatically and submission is only in S/E stage',
     (tester) async {

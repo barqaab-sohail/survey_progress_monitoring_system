@@ -113,6 +113,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> signIn() async {
+    if (widget.controller.busy) return;
     if (!form.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
     setState(() => error = null);
@@ -120,8 +121,6 @@ class _LoginPageState extends State<LoginPage> {
       await widget.controller.login(email.text, password.text);
     } on Object catch (e) {
       if (mounted) setState(() => error = signInErrorMessage(e));
-    } finally {
-      if (mounted) password.clear();
     }
   }
 
@@ -165,6 +164,9 @@ class _LoginPageState extends State<LoginPage> {
                   TextFormField(
                     controller: email,
                     keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.username],
+                    textCapitalization: TextCapitalization.none,
+                    enableSuggestions: false,
                     autocorrect: false,
                     decoration: const InputDecoration(labelText: 'Email'),
                     validator: (value) => value == null || !value.contains('@')
@@ -174,6 +176,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 14),
                   TextFormField(
                     controller: password,
+                    autofillHints: const [AutofillHints.password],
                     obscureText: hide,
                     autocorrect: false,
                     enableSuggestions: false,

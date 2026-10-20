@@ -75,7 +75,7 @@ class EngineeringConfiguration
                 throw ValidationException::withMessages(['revision' => 'Another Admin updated these settings. Reload before saving.']);
             }
             $before = $configuration?->toArray() ?? [];
-            $configuration ??= new Configuration(['project_id' => $project->id]);
+            $configuration ??= app(EngineeringDefaults::class)->preview($project) ?? new Configuration(['project_id' => $project->id]);
             $settings = $configuration->settings ?? [];
             foreach (['frequency_hz', 'nominal_voltage_kv', 'secondary_voltage_kv', 'template_id', 'conductor_library_revision', 'transformer_library_revision'] as $key) {
                 if (array_key_exists($key, $data)) {
@@ -212,7 +212,7 @@ class EngineeringConfiguration
                 throw ValidationException::withMessages(['revision' => 'Another Admin updated these settings. Reload before saving.']);
             }
             $before = $configuration?->toArray() ?? [];
-            $configuration ??= new Configuration(['project_id' => $project->id]);
+            $configuration ??= app(EngineeringDefaults::class)->preview($project) ?? new Configuration(['project_id' => $project->id]);
             $settings = $configuration->settings ?? [];
             if (array_key_exists('equipment_references_json', $data)) {
                 $settings['reference_import']['equipment_references'] = $references;

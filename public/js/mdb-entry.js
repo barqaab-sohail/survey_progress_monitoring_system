@@ -1,4 +1,4 @@
-import {installCompactSelects} from './mdb-entry-select.js?v=3';
+import {installCompactSelects} from './mdb-entry-select.js?v=4';
 import {pdfLoadErrorMessage, clearPdfFallback, showPdfFallback} from './mdb-pdf-errors.js';
 
 export function transformerCodeKey(code) {
@@ -281,7 +281,7 @@ function initialize(boot) {
         if(!result || typeof result!=='object')throw new Error('The server returned an unexpected response and saving could not be confirmed. Your fields are retained.');
         return result;
     }
-    function optionList(select, entries, empty = 'Not entered', selected = '') {
+    function optionList(select, entries, empty = '', selected = '') {
         if (!select) return;
         select.replaceChildren(new Option(empty, ''));
         for (const [value,label] of entries) select.add(new Option(label, String(value)));
@@ -300,10 +300,10 @@ function initialize(boot) {
         if (rowForm) {
             for (const key of ['R','Y','B','N']) {
                 const select = field(rowForm,`conductors[${key}]`), selected = select.value;
-                optionList(select, [['__none__','None / Not Present'],...Object.entries(data.lookups.conductors)], 'Not Entered', selected);
+                optionList(select, Object.entries(data.lookups.conductors), '', selected === '__none__' ? '' : selected);
             }
-            optionList($('entry-equipment'), Object.entries(data.lookups.equipment_types), 'Not entered', val(rowForm,'equipment_type'));
-            optionList($('entry-pole-class'), Object.entries(data.lookups.pole_classes), 'Not entered', val(rowForm,'pole_class'));
+            optionList($('entry-equipment'), Object.entries(data.lookups.equipment_types), '', val(rowForm,'equipment_type'));
+            optionList($('entry-pole-class'), Object.entries(data.lookups.pole_classes), '', val(rowForm,'pole_class'));
         }
         document.querySelectorAll('[data-entry-revision]').forEach(input=>input.value=data.revision);
         $('entry-sources-list').innerHTML = '<ul>'+data.sources.map(s=>`<li>${esc(s.original_name)} — ${esc(s.status)}${s.kind==='gpx' ? ` · ${data.waypoints.filter(p=>p.source_file_id===s.id).length} waypoints` : ''}${s.metadata?.error ? ` · ${esc(s.metadata.error)}` : ''}</li>`).join('')+'</ul>';
@@ -364,7 +364,8 @@ function initialize(boot) {
             payload[key]=['pair_number','gpx_source_id','source_pdf_id','source_page'].includes(key) ? number(value) : (value || null);
         }
         payload.pole_height=poleHeightValue();payload.pole_height_unit='ft';
-        payload.conductors=Object.fromEntries(['R','Y','B','N'].map(key=>[key,val(rowForm,`conductors[${key}]`) || null]));
+        // Send the internal explicit-absence token so Laravel's empty-string middleware does not turn a blank select into unknown NULL.
+        payload.conductors=Object.fromEntries(['R','Y','B','N'].map(key=>[key,val(rowForm,`conductors[${key}]`) || '__none__']));
         payload.consumers=Object.fromEntries(Object.keys(data.lookups.consumers).map(key=>[key,number(val(rowForm,`consumers[${key}]`))]));
         payload.intersection=field(rowForm,'intersection').checked; payload.pv_details=pvPayload(); payload.inheritance=inheritance; payload.manually_verified=false;
         payload.row_date=isoDate(payload.row_date,data.entry_settings?.two_digit_year_start ?? 2000) || null;
@@ -461,7 +462,7 @@ function initialize(boot) {
         $('entry-saved-count').textContent=`${rows.length} rows`;
         $('entry-row-panel')?.classList.toggle('entry-row-panel-disabled',!t);
         $('entry-review-link').href=`${boot.base_url}/review${t ? '?transformer_id='+t.id : ''}`;
-        $('entry-saved-rows').innerHTML=rows.length ? '<div class="table-wrap"><table class="table entry-saved-table"><thead><tr><th>Pair / S/E</th><th>Page / entry</th><th>Waypoint</th><th>Phase / conductors</th><th>Equipment</th><th>Entered counts</th><th>Int</th><th></th></tr></thead><tbody>'+rows.map(row=>`<tr class="${row.designation==='S' ? 'entry-pair-start' : ''}"><td>${row.pair_number} / <strong>${row.designation}</strong>${rows.filter(r=>r.pair_number===row.pair_number).length===1 ? '<small class="entry-pair-incomplete">Incomplete pair</small>' : ''}</td><td>${row.source_page ?? '—'} / ${esc(row.source_row || '—')}</td><td>${esc(row.composite_identifier || 'Legacy identity')}<small>GPS ${esc(row.waypoint_reference || 'Not entered')} ? ${esc(row.group_number)} ? ${esc(displayDate(row.row_date))} ? source #${esc(row.gpx_source_id || 'unresolved')}</small></td><td>${derivePhase(row.conductors).display || '—'}<small>${['R','Y','B','N'].map(k=>`${k}: ${esc(row.conductors[k]===null ? 'Not entered' : row.conductors[k]==='' ? 'None' : row.conductors[k])}`).join(' · ')}</small></td><td>${esc(row.equipment_type || '—')} / ${esc(row.pole_class || '—')}<small>${row.pole_height ?? '—'} ${esc(row.pole_height_unit || '(unit unconfirmed)')}</small></td><td>${Object.entries(row.consumers).filter(([,v])=>v!==null).map(([k,v])=>`${k.toUpperCase()}: ${v}`).join(' · ') || 'Blank'}<small>Total: ${consumerTotal(row.consumers)}</small></td><td>${row.intersection ? '✓' : '—'}</td><td>${editable() ? `<button type="button" class="btn btn-sm btn-light" data-entry-edit="${row.id}">Edit</button> <button type="button" class="btn btn-sm btn-light" data-entry-delete="${row.id}">Delete</button>` : ''}</td></tr>`).join('')+'</tbody></table></div>' : '<p class="entry-empty">Save the transformer header, then enter its first S row.</p>';
+        $('entry-saved-rows').innerHTML=rows.length ? '<div class="table-wrap"><table class="table entry-saved-table"><thead><tr><th>Pair / S/E</th><th>Page / entry</th><th>Waypoint</th><th>Phase / conductors</th><th>Equipment</th><th>Entered counts</th><th>Int</th><th></th></tr></thead><tbody>'+rows.map(row=>`<tr class="${row.designation==='S' ? 'entry-pair-start' : ''}"><td>${row.pair_number} / <strong>${row.designation}</strong>${rows.filter(r=>r.pair_number===row.pair_number).length===1 ? '<small class="entry-pair-incomplete">Incomplete pair</small>' : ''}</td><td>${row.source_page ?? '—'} / ${esc(row.source_row || '—')}</td><td>${esc(row.composite_identifier || 'Legacy identity')}<small>GPS ${esc(row.waypoint_reference || '')} ? ${esc(row.group_number)} ? ${esc(displayDate(row.row_date))} ? source #${esc(row.gpx_source_id || 'unresolved')}</small></td><td>${derivePhase(row.conductors).display || '—'}<small>${['R','Y','B','N'].map(k=>`${k}: ${esc(row.conductors[k] ?? '')}`).join(' · ')}</small></td><td>${esc(row.equipment_type || '—')} / ${esc(row.pole_class || '—')}<small>${row.pole_height ?? '—'} ${esc(row.pole_height_unit || '(unit unconfirmed)')}</small></td><td>${Object.entries(row.consumers).filter(([,v])=>v!==null).map(([k,v])=>`${k.toUpperCase()}: ${v}`).join(' · ') || 'Blank'}<small>Total: ${consumerTotal(row.consumers)}</small></td><td>${row.intersection ? '✓' : '—'}</td><td>${editable() ? `<button type="button" class="btn btn-sm btn-light" data-entry-edit="${row.id}">Edit</button> <button type="button" class="btn btn-sm btn-light" data-entry-delete="${row.id}">Delete</button>` : ''}</td></tr>`).join('')+'</tbody></table></div>' : '<p class="entry-empty">Save the transformer header, then enter its first S row.</p>';
         rows.forEach((row,index)=>{
             const height=$('entry-saved-rows').querySelector(`tbody tr:nth-child(${index+1}) td:nth-child(5) small`);
             if(height)height.textContent=`${heightInFeet(row.pole_height,row.pole_height_unit) ?? '—'} ft`;
@@ -494,7 +495,8 @@ function initialize(boot) {
         if(scope==='header') headerDirty=true;
         else { rowDirty=true; saveUuid=null;
             if(event.target.name?.startsWith('conductors[')) delete inheritance.conductors;
-            if(['equipment_type','pole_class','pole_height','pole_height_unit'].includes(event.target.name)) delete inheritance.equipment;
+            if(['equipment_type','pole_class','pole_height','pole_height_unit'].includes(event.target.name)
+                || ['entry-height-choice','entry-height-custom'].includes(event.target.id)) delete inheritance.equipment;
             if(['group_number','row_date'].includes(event.target.name))delete inheritance.group_date;
             if(['group_number','row_date','waypoint_reference'].includes(event.target.name))set(rowForm,'gpx_source_id',null);
         }

@@ -1,0 +1,30 @@
+[
+  {
+    "path": "storage\\app\\private\\mdb-workflow\\sources\\1\\060a8d3f-a801-44f4-99d0-660820c87773.gpx",
+    "bytes": 20908,
+    "copies": 21,
+    "sha256": "59f376830b3119a81f3f79cd607abc1cc71798ea4d8ff147c3b0ac1f3fde1fe6",
+    "waypoints": 120
+  },
+  {
+    "path": "storage\\app\\private\\mdb-workflow\\sources\\1\\0c1896c6-9ada-43ee-b302-c7ec36d3dae9.pdf",
+    "bytes": 7184122,
+    "copies": 18,
+    "sha256": "170b782cb55a9923e4590b5dcc3a46e30224ce4f0d5ccfc317b800a637c9f969",
+    "pages": 14
+  },
+  {
+    "path": "storage\\app\\private\\mdb-workflow\\sources\\15\\00a32a0c-3b67-4db2-b8fb-c3274dcfe205.gpx",
+    "bytes": 100471,
+    "copies": 2,
+    "sha256": "46c4de155a6e137187b3b66d1d30962dda1a7c4ffd9fb50d4d17f2f6039f9b6f",
+    "waypoints": 217
+  },
+  {
+    "path": "storage\\app\\private\\mdb-workflow\\sources\\15\\5caa2b3b-0d4e-49ab-95fb-598d5d42bca9.pdf",
+    "bytes": 22271420,
+    "copies": 2,
+    "sha256": "f47ea2f9a55bd7b076fa3a43445f8b6a91f3893534f6abce0373a111272dee52",
+    "pages": 28
+  }
+]

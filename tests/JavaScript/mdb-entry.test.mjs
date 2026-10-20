@@ -241,6 +241,8 @@ test('rendered operator DOM retains drafts across pages/reload, saves once, copi
     d.getElementById('entry-copy-both').click();assert.equal(d.querySelector('[name="conductors[R]"]').value,'A');assert.equal(d.querySelector('[name="consumers[rs]"]').value,'5');assert.equal(d.querySelector('[name="intersection"]').checked,true);assert.match(d.getElementById('entry-conductor-copy-status').textContent,/Explicitly copied/);
     assert.equal(d.querySelector('[name="pole_height"]').value,'31');assert.equal(d.querySelector('[name="pole_height_unit"]').value,'ft');assert.equal(d.querySelector('[name="pole_height"]').disabled,false);
     assert.equal(d.querySelector('[name="waypoint_reference"]').value,'002');assert.equal(d.querySelector('[name="row_date"]').value,'131222');assert.equal(d.querySelector('[name="composite_identifier"]').value,'01131222002');assert.equal(d.getElementById('entry-copy-endpoint'),null);
+    const heightChoice=d.getElementById('entry-height-choice');heightChoice.value='36';heightChoice.dispatchEvent(new second.window.Event('change',{bubbles:true}));
+    assert.equal(d.querySelector('[name="pole_height"]').value,'36');assert.equal(d.getElementById('entry-equipment-copy-status').textContent,'');
     setValue('pole_height','30');assert.equal(d.getElementById('entry-equipment-copy-status').textContent,'');
     setValue('consumers[rs]','-2');const beforeInvalid=server.posts.length;
     d.getElementById('entry-save-draft').click();await settle();assert.equal(server.posts.length,beforeInvalid);assert.equal(d.querySelector('[name="consumers[rs]"]').getAttribute('aria-invalid'),'true');assert.equal(d.activeElement,d.querySelector('[name="consumers[rs]"]'));assert.equal(d.querySelector('[name="pole_height"]').value,'30');

@@ -1,0 +1,16 @@
+{
+  "file": "E:\\xampp\\htdocs\\survey_progress_monitoring_system\\outputs\\engineering_requirements_20261019\\Engineering_Configuration_Data_Requirement_Sheet.xlsx",
+  "requirements": 116,
+  "mandatory": 33,
+  "conditional": 62,
+  "optional": 21,
+  "actual_value_cells_all_blank": true,
+  "column_order_verified": true,
+  "unique_serial_numbers_verified": true,
+  "error_cells": 0,
+  "freeze_panes": "C6",
+  "print_format": "A3 landscape, one page wide, repeating title/header rows",
+  "application_code_hashes_unchanged": true,
+  "reference_and_survey_source_hashes_unchanged": true,
+  "bytes": 33438
+}

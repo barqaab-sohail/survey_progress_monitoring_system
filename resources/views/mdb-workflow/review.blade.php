@@ -30,6 +30,7 @@
     $pdfStartPage = $pdfLocation['page'] ?? 1;
 @endphp
 <div class="mdb-workflow mdb-entry">
+    @include('mdb-workflow.partials.data-entry-export-button')
     <div class="page-head"><div><h1>Review survey data</h1><p>{{ $batch->feeder?->feeder_name }} · Batch #{{ $batch->id }} · Revision {{ $batch->revision }}</p></div><a class="btn btn-light" href="{{ route('mdb-workflow.show', [$batch, 'transformer_id'=>$active?->id]) }}">View survey PDF and rows</a></div>
     <nav class="mdb-tabs">@foreach($batch->transformers as $transformer)<a href="{{ route('mdb-workflow.review', [$batch, 'transformer_id'=>$transformer->id]) }}" @if($active?->id === $transformer->id) aria-current="page" @endif>{{ $transformer->code }}</a>@endforeach</nav>
     <div class="mdb-review-comparison" data-review-layout="paper"><section class="card mdb-review-source"><h2>Source PDF and GPX</h2><div class="actions">@foreach($batch->sources as $source)<a class="btn btn-light" href="{{ route('mdb-workflow.source', [$batch, $source]) }}" @if($source->kind === 'pdf') data-review-pdf-source @endif target="_blank" rel="noopener">{{ strtoupper($source->kind) }}: {{ $source->original_name }}</a>@endforeach</div>

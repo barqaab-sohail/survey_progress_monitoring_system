@@ -7,7 +7,15 @@ import 'api_client.dart';
 
 /// User-facing diagnostics without exposing passwords, tokens or server bodies.
 String signInErrorMessage(Object error) {
-  if (error is ApiFailure) return error.message;
+  if (error is ApiFailure) {
+    if (error.status == 422 &&
+        error.message == 'The provided credentials are incorrect.') {
+      return 'Email or password is incorrect. Use your HAZECO website account. '
+          'If you cannot sign in on the website either, ask your administrator '
+          'to reset your password.';
+    }
+    return error.message;
+  }
   if (error is FormatException) return error.message;
   if (error is HandshakeException || error is TlsException) {
     return 'Secure connection failed (TLS certificate). Check the phone date/time. '

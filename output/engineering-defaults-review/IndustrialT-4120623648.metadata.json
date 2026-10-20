@@ -1,0 +1,115 @@
+﻿{
+    "file":  "IndustrialT-4120623648.mdb",
+    "sha256":  "7e9dd3ff99722fc74170513d774fb769d6b8a2bfde4c9c2b06b15f9ab956368e",
+    "database_version":  "4.0",
+    "schema_sha256":  "a2659f32f858dbc0dc25ab75756e7f6d117cd9216a4a8839d938cb014c5bc4cf",
+    "approved_schema_match":  true,
+    "properties":  [
+                       {
+                           "name":  "Name",
+                           "type":  12,
+                           "value":  "C:\\Users\\sohai\\OneDrive\\Desktop\\HAZECO\\Sample data\\IndustrialT-4120623648.mdb"
+                       },
+                       {
+                           "name":  "Connect",
+                           "type":  12,
+                           "value":  ""
+                       },
+                       {
+                           "name":  "Transactions",
+                           "type":  1,
+                           "value":  true
+                       },
+                       {
+                           "name":  "Updatable",
+                           "type":  1,
+                           "value":  false
+                       },
+                       {
+                           "name":  "CollatingOrder",
+                           "type":  3,
+                           "value":  1033
+                       },
+                       {
+                           "name":  "QueryTimeout",
+                           "type":  3,
+                           "value":  60
+                       },
+                       {
+                           "name":  "Version",
+                           "type":  12,
+                           "value":  "4.0"
+                       },
+                       {
+                           "name":  "RecordsAffected",
+                           "type":  4,
+                           "value":  0
+                       },
+                       {
+                           "name":  "ReplicaID",
+                           "type":  15,
+                           "value":  null
+                       },
+                       {
+                           "name":  "DesignMasterID",
+                           "type":  15,
+                           "value":  null
+                       },
+                       {
+                           "name":  "Connection",
+                           "type":  0,
+                           "value":  null
+                       },
+                       {
+                           "name":  "AccessVersion",
+                           "type":  10,
+                           "value":  "08.50"
+                       },
+                       {
+                           "name":  "Build",
+                           "type":  4,
+                           "value":  735
+                       },
+                       {
+                           "name":  "ProjVer",
+                           "type":  3,
+                           "value":  87
+                       },
+                       {
+                           "name":  "NavPane Closed",
+                           "type":  4,
+                           "value":  0
+                       },
+                       {
+                           "name":  "NavPane Width",
+                           "type":  4,
+                           "value":  215
+                       },
+                       {
+                           "name":  "NavPane Category",
+                           "type":  4,
+                           "value":  0
+                       },
+                       {
+                           "name":  "NavPane View By",
+                           "type":  4,
+                           "value":  0
+                       },
+                       {
+                           "name":  "NavPane Sort By",
+                           "type":  4,
+                           "value":  1
+                       }
+                   ],
+    "field_annotations":  [
+                              {
+                                  "table":  "InstBreakers",
+                                  "field":  "GroundCutoffAmps",
+                                  "property":  "Caption",
+                                  "value":  "750"
+                              }
+                          ],
+    "saved_queries":  [
+
+                      ]
+}

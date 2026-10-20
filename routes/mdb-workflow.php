@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DataEntryMdbExportController;
 use App\Http\Controllers\EngineeringConfigurationController;
 use App\Http\Controllers\MdbGenerationInputController;
 use App\Http\Controllers\MdbOperatorEntryController;
@@ -10,6 +11,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'active', 'role:super_admin'])->prefix('admin/engineering')->name('engineering.')->controller(EngineeringConfigurationController::class)->group(function () {
     Route::get('/', 'index')->name('index');
+    Route::get('/defaults-library', 'library')->name('library');
+    Route::put('/defaults-library', 'updateLibrary')->name('library.update');
     Route::get('/{project}', 'edit')->name('edit');
     Route::put('/{project}/simple-mdb-generation', 'updateMode')->name('mode.update');
     Route::put('/{project}', 'update')->name('update');
@@ -30,6 +33,8 @@ Route::middleware(['auth', 'active'])->prefix('mdb-workflow')->name('mdb-workflo
     Route::get('/{batch}', 'show')->name('show');
     Route::get('/{batch}/advanced', 'advanced')->name('advanced');
     Route::get('/{batch}/review', 'review')->name('review');
+    Route::get('/{batch}/data-entry-mdb', [DataEntryMdbExportController::class, 'show'])->name('data-entry-export.show');
+    Route::post('/{batch}/data-entry-mdb', [DataEntryMdbExportController::class, 'download'])->middleware('throttle:10,1')->name('data-entry-export.download');
     Route::post('/{batch}/generation-inputs', [MdbGenerationInputController::class, 'store'])->name('generation.inputs.store');
     Route::get('/{batch}/generation-inputs/{input}', [MdbGenerationInputController::class, 'download'])->name('generation.inputs.download');
     Route::post('/{batch}/survey-decision', 'surveyDecision')->name('survey.decision');

@@ -1,0 +1,410 @@
+{
+  "status": "reference_evidence_only_not_applied_or_approved",
+  "sources": [
+    {
+      "file": "IndustrialT-4060116233.mdb",
+      "sha256": "4549ff4d5b29e7a2bde79ec3295aff3396af45709bce062ef1c47e30c1de3262"
+    },
+    {
+      "file": "IndustrialT-4120623648.mdb",
+      "sha256": "7e9dd3ff99722fc74170513d774fb769d6b8a2bfde4c9c2b06b15f9ab956368e"
+    }
+  ],
+  "fields": [
+    {
+      "label": "Projected CRS (EPSG)",
+      "application_field": "epsg",
+      "observed_or_candidate_value": 32643,
+      "qualification": "Derived from the recorded CRS label using the PROJ EPSG database; no numeric EPSG code is stored in either MDB. Confirm using original GPS/control points."
+    },
+    {
+      "label": "CRS name",
+      "application_field": "crs_name",
+      "observed_or_candidate_value": "WGS 1984 UTM Zone 43N",
+      "qualification": "Exact SAI_Control.ProjectionFile in both files. This confirms the label only, not its geographical correctness."
+    },
+    {
+      "label": "Frequency (Hz)",
+      "application_field": "frequency_hz",
+      "observed_or_candidate_value": 60,
+      "qualification": "Exact SAI_Control.Frequency in both files. Retain 60 as source evidence; project frequency needs engineering confirmation."
+    },
+    {
+      "label": "Supply voltage, line-to-line (kV)",
+      "application_field": "nominal_voltage_kv",
+      "observed_or_candidate_value": 11,
+      "qualification": "Exact InstFeeders.NominalKvll. BusVoltageLevel is separately 11.37 and is not the nominal-voltage field."
+    },
+    {
+      "label": "LT secondary voltage, line-to-line (kV)",
+      "application_field": "secondary_voltage_kv",
+      "observed_or_candidate_value": null,
+      "qualification": "Not established. NomKvMode=C and SpecNomKv=4.16 are recorded, but mode meaning/library voltage must be checked. PTSecondary=120 is a separate control field. The earlier 0.4kV Data Entry export convention is not evidence from these MDBs."
+    },
+    {
+      "label": "Projection WKT / reference",
+      "application_field": "projection_wkt",
+      "observed_or_candidate_value": "",
+      "qualification": "ProjectionWKT is an empty string in both files. Optional; leave blank when reproducing the source."
+    },
+    {
+      "label": "Approved MDB template",
+      "application_field": "template_id",
+      "observed_or_candidate_value": null,
+      "qualification": "Application-specific registered template ID is not contained in a reference MDB. Select an approved, clean template with the matching schema; do not use a populated source file as the template."
+    },
+    {
+      "label": "Conductor library revision",
+      "application_field": "conductor_library_revision",
+      "observed_or_candidate_value": null,
+      "qualification": "Not stored. Referenced conductor names are present, but definitions and library revision are absent."
+    },
+    {
+      "label": "Transformer library revision",
+      "application_field": "transformer_library_revision",
+      "observed_or_candidate_value": null,
+      "qualification": "Not stored. Referenced transformer name is present, but its library revision and electrical definition are absent."
+    },
+    {
+      "label": "Line configuration library ID",
+      "application_field": "configuration_id",
+      "observed_or_candidate_value": "12.5/7.2 kV cross arm C2-2",
+      "qualification": "Exact ConfigurationId on all 19 sections. It is an identifier; the voltage-looking text is not the network nominal supply voltage."
+    },
+    {
+      "label": "Transformer supply conductor library ID",
+      "application_field": "supply_conductor_id",
+      "observed_or_candidate_value": "DOG",
+      "qualification": "Candidate family only: supply R/B are DOG, Y is ' DOG' with one leading space; neutral is blank. Verify literal IDs/alias policy in the installed library."
+    },
+    {
+      "label": "Transformer secondary-link conductor library ID",
+      "application_field": "secondary_conductor_id",
+      "observed_or_candidate_value": "ANT",
+      "qualification": "Candidate family only: link R/B are ANT, Y is ' ANT'; SectionPhases=RYBN but the neutral ID is blank. Resolve the neutral and whitespace policy."
+    },
+    {
+      "label": "Phase-to-phase spacing (cm)",
+      "application_field": "phase_spacing_cm",
+      "observed_or_candidate_value": 121.9,
+      "qualification": "Exact PhaseToPhaseSpacing_MUL on all sections. The application labels this field cm; the MDB declares Metric globally and provides no field-level unit annotation. Confirm the spacing unit before approval; no conversion was applied."
+    },
+    {
+      "label": "Phase-to-neutral spacing (cm)",
+      "application_field": "neutral_spacing_cm",
+      "observed_or_candidate_value": 91.4,
+      "qualification": "Exact PhaseToNeutralSpacing_MUL; same spacing-unit qualification applies."
+    },
+    {
+      "label": "Average conductor height (m)",
+      "application_field": "conductor_height_m",
+      "observed_or_candidate_value": 9.1,
+      "qualification": "Exact AveHeightAboveGround_MUL; Metric is recorded. This is model conductor height, not an individual surveyed pole height."
+    },
+    {
+      "label": "Survey pole-height unit",
+      "application_field": "pole_height_unit",
+      "observed_or_candidate_value": null,
+      "qualification": "These electrical models do not establish the paper form's pole-height unit. Current PDF Data Entry saves feet under the existing application policy; that policy comes from the application, not these MDBs."
+    },
+    {
+      "label": "Two-digit survey-year window starts at",
+      "application_field": "two_digit_year_start",
+      "observed_or_candidate_value": null,
+      "qualification": "Not established. Historical model-year labels 2015-2025 are not a DDMMYY interpretation policy."
+    },
+    {
+      "label": "Transformer capacity to library type",
+      "application_field": "transformer_types_json",
+      "observed_or_candidate_value": {
+        "100": "100 KVA"
+      },
+      "qualification": "Candidate mapping inferred from the type label only. Both instances use '100 KVA'; verify its capacity and electrical definition in the selected library. No other capacities are established by these two files."
+    },
+    {
+      "label": "Approved demand method",
+      "application_field": "load_mode",
+      "observed_or_candidate_value": null,
+      "qualification": "No approved application demand method is stored. Existing rows use fractional equal phase allocation, which differs from the application's whole-customer balancing method."
+    },
+    {
+      "label": "Blank consumer cells",
+      "application_field": "blank_consumers_zero",
+      "observed_or_candidate_value": null,
+      "qualification": "The files contain numeric model loads, not the original blank paper cells. They do not establish this policy. The Data Entry MDB export-only zero rule does not automatically approve this final-generation setting."
+    },
+    {
+      "label": "Category kVA and power-factor rates",
+      "application_field": "rates",
+      "observed_or_candidate_value": null,
+      "qualification": "No RS/RL/SC/LC/SI/LI/PB/AG/ST/PV rate table is present. Observed aggregate ratio is 3 kVA/customer for 39 nonzero phase records, but power factor cannot be established from positive kVA with zero kW/kvar."
+    },
+    {
+      "label": "Demand method evidence",
+      "application_field": "load_evidence",
+      "observed_or_candidate_value": null,
+      "qualification": "This review supplies observed load evidence, not an approved demand standard. Document the selected method and its approval separately."
+    },
+    {
+      "label": "Advanced electrical mapping",
+      "application_field": "mapping_json",
+      "observed_or_candidate_value": null,
+      "qualification": "133 cross-file consistent nonblank, non-instance parameters are in engineering-analysis.json. Review these observations and role-dependent settings before populating the advanced mapping; survey topology must come from the current network."
+    },
+    {
+      "label": "Observed equipment references",
+      "application_field": "equipment_references_json",
+      "observed_or_candidate_value": {
+        "conductors": [
+          " ANT",
+          " DOG",
+          " WASP",
+          "ANT",
+          "DOG",
+          "WASP"
+        ],
+        "transformers": [
+          "100 KVA"
+        ],
+        "configurations": [
+          "12.5/7.2 kV cross arm C2-2"
+        ]
+      },
+      "qualification": "Literal names, including significant leading spaces, are in observed-equipment-references.json. They are references, not complete library contents."
+    }
+  ],
+  "coordinate_derivation": {
+    "pyproj": "3.8.0",
+    "proj": "9.8.1",
+    "epsg_database_version": "v12.029",
+    "derived_crs": "WGS 84 / UTM zone 43N",
+    "authority": [
+      "EPSG",
+      "32643"
+    ],
+    "axes": [
+      {
+        "name": "Easting",
+        "unit": "metre"
+      },
+      {
+        "name": "Northing",
+        "unit": "metre"
+      }
+    ],
+    "source_wkt_is_blank": true
+  },
+  "file_summaries": [
+    {
+      "file": "IndustrialT-4060116233.mdb",
+      "sha256": "4549ff4d5b29e7a2bde79ec3295aff3396af45709bce062ef1c47e30c1de3262",
+      "tables": 50,
+      "fields": 1065,
+      "indexes": 133,
+      "relationships": 41,
+      "row_counts": {
+        "Gnodes": 0,
+        "InstAreaOfInt": 0,
+        "InstAreaOfIntPts": 0,
+        "InstBkrRelays": 0,
+        "InstBreakers": 0,
+        "InstCapacitors": 0,
+        "InstDGens": 0,
+        "InstDTrans": 0,
+        "InstFaultEvents": 0,
+        "InstFeeders": 1,
+        "InstFeederSet": 0,
+        "InstFeederSetItem": 0,
+        "InstFuses": 0,
+        "InstGenerators": 0,
+        "InstLargeCust": 0,
+        "InstMeterPoints": 1,
+        "InstMotors": 0,
+        "InstMymAreaOfInt": 0,
+        "InstMymDGens": 0,
+        "InstMymLargeCust": 0,
+        "InstMymLoads": 0,
+        "InstMymMeter": 0,
+        "InstMymProjLoads": 0,
+        "InstMymSections": 0,
+        "InstMymSwDevPos": 0,
+        "InstPrimaryTransformers": 1,
+        "InstProjLoads": 0,
+        "InstProtectiveDevices": 0,
+        "InstReclosers": 0,
+        "InstRecRelays": 0,
+        "InstRegulators": 0,
+        "InstSchematic": 0,
+        "InstSchematicItem": 0,
+        "InstSection": 9,
+        "InstSectionalizers": 0,
+        "InstSubstationTransformers": 0,
+        "InstSwitches": 0,
+        "InstSwPlan": 0,
+        "InstSwPlanItem": 0,
+        "InstTccItem": 0,
+        "InstTccSet": 0,
+        "InstTextLabels": 0,
+        "InstTranBus": 0,
+        "InstTranLine": 0,
+        "InstTranVertices": 0,
+        "InstViews": 0,
+        "InstWhatIf": 0,
+        "Loads": 8,
+        "Node": 11,
+        "SAI_Control": 1
+      },
+      "populated_tables": 7,
+      "xy_extent": [
+        776727,
+        3363193,
+        776829,
+        3363413
+      ],
+      "lon_lat_extent_if_epsg32643_label_is_correct": [
+        77.87934311787428,
+        30.36900891718436,
+        77.88040789722425,
+        30.370977419235473
+      ],
+      "unreferenced_nodes": [
+        "4060116233"
+      ],
+      "missing_node_references": [],
+      "unmatched_declared_relationship_values": [],
+      "all_section_lengths_match_node_distances": true,
+      "section_phases": {
+        "RYBN": 8,
+        "RYB": 1
+      },
+      "consumer_total": 50.0,
+      "modeled_kva_total": 150,
+      "fractional_customer_phase_values": 15,
+      "conductors_by_column": {
+        "PhaseConductorId": {
+          "WASP": 7,
+          "DOG": 1,
+          "ANT": 1
+        },
+        "PhaseConductor2Id": {
+          " WASP": 7,
+          " DOG": 1,
+          " ANT": 1
+        },
+        "PhaseConductor3Id": {
+          "WASP": 7,
+          "DOG": 1,
+          "ANT": 1
+        },
+        "NeutralConductorId": {
+          "WASP": 7,
+          "": 2
+        }
+      }
+    },
+    {
+      "file": "IndustrialT-4120623648.mdb",
+      "sha256": "7e9dd3ff99722fc74170513d774fb769d6b8a2bfde4c9c2b06b15f9ab956368e",
+      "tables": 50,
+      "fields": 1065,
+      "indexes": 133,
+      "relationships": 41,
+      "row_counts": {
+        "Gnodes": 0,
+        "InstAreaOfInt": 0,
+        "InstAreaOfIntPts": 0,
+        "InstBkrRelays": 0,
+        "InstBreakers": 0,
+        "InstCapacitors": 0,
+        "InstDGens": 0,
+        "InstDTrans": 0,
+        "InstFaultEvents": 0,
+        "InstFeeders": 1,
+        "InstFeederSet": 0,
+        "InstFeederSetItem": 0,
+        "InstFuses": 0,
+        "InstGenerators": 0,
+        "InstLargeCust": 0,
+        "InstMeterPoints": 1,
+        "InstMotors": 0,
+        "InstMymAreaOfInt": 0,
+        "InstMymDGens": 0,
+        "InstMymLargeCust": 0,
+        "InstMymLoads": 0,
+        "InstMymMeter": 0,
+        "InstMymProjLoads": 0,
+        "InstMymSections": 0,
+        "InstMymSwDevPos": 0,
+        "InstPrimaryTransformers": 1,
+        "InstProjLoads": 0,
+        "InstProtectiveDevices": 0,
+        "InstReclosers": 0,
+        "InstRecRelays": 0,
+        "InstRegulators": 0,
+        "InstSchematic": 0,
+        "InstSchematicItem": 0,
+        "InstSection": 10,
+        "InstSectionalizers": 0,
+        "InstSubstationTransformers": 0,
+        "InstSwitches": 0,
+        "InstSwPlan": 0,
+        "InstSwPlanItem": 0,
+        "InstTccItem": 0,
+        "InstTccSet": 0,
+        "InstTextLabels": 0,
+        "InstTranBus": 0,
+        "InstTranLine": 0,
+        "InstTranVertices": 0,
+        "InstViews": 0,
+        "InstWhatIf": 0,
+        "Loads": 9,
+        "Node": 12,
+        "SAI_Control": 1
+      },
+      "populated_tables": 7,
+      "xy_extent": [
+        776719,
+        3363500,
+        776949,
+        3363514
+      ],
+      "lon_lat_extent_if_epsg32643_label_is_correct": [
+        77.87930860000564,
+        30.371753568647698,
+        77.88170215904685,
+        30.37185314309307
+      ],
+      "unreferenced_nodes": [
+        "4120623648"
+      ],
+      "missing_node_references": [],
+      "unmatched_declared_relationship_values": [],
+      "all_section_lengths_match_node_distances": true,
+      "section_phases": {
+        "RYBN": 9,
+        "RYB": 1
+      },
+      "consumer_total": 49.0,
+      "modeled_kva_total": 147,
+      "fractional_customer_phase_values": 18,
+      "conductors_by_column": {
+        "PhaseConductorId": {
+          "ANT": 9,
+          "DOG": 1
+        },
+        "PhaseConductor2Id": {
+          " ANT": 9,
+          " DOG": 1
+        },
+        "PhaseConductor3Id": {
+          "ANT": 9,
+          "DOG": 1
+        },
+        "NeutralConductorId": {
+          "ANT": 8,
+          "": 2
+        }
+      }
+    }
+  ]
+}

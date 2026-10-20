@@ -15,7 +15,11 @@ export function installCompactSelects(root = document) {
         const close = () => { popup.hidden = true; trigger.setAttribute('aria-expanded','false'); };
         function sync() {
             const option = select.selectedOptions[0];
-            trigger.textContent = select.hasAttribute('data-full-label') ? (option?.text || 'Choose a transformer') : !select.value ? 'Not Entered' : select.value === '__none__' ? 'None' : select.value;
+            // Empty survey values are intentionally displayed as blank. Keep any
+            // explicit prompt text (for example, "Choose a pair") for other selects.
+            trigger.textContent = select.hasAttribute('data-full-label')
+                ? (option?.text || 'Choose a transformer')
+                : (option?.text || (select.value === '__none__' ? '' : select.value));
             trigger.title = option?.text || ''; trigger.disabled = select.disabled;
             if(select.disabled) close();
         }

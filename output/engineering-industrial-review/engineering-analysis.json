@@ -1,0 +1,5267 @@
+{
+    "epsg": 32643,
+    "settings": {
+        "frequency_hz": 60,
+        "nominal_voltage_kv": 11,
+        "secondary_voltage_kv": null,
+        "conductor_library_revision": null,
+        "transformer_library_revision": null,
+        "entry": {
+            "pole_height_unit": null,
+            "two_digit_year_start": null
+        },
+        "engineering": {
+            "version": 1,
+            "crs_name": "WGS 1984 UTM Zone 43N",
+            "projection_wkt": null,
+            "configuration_id": "12.5/7.2 kV cross arm C2-2",
+            "phase_spacing_cm": 121.9,
+            "neutral_spacing_cm": 91.4,
+            "conductor_height_m": 9.1,
+            "supply_conductor_id": null,
+            "secondary_conductor_id": null,
+            "blank_consumers_zero": null,
+            "transformer_types": []
+        },
+        "mapping": {
+            "version": "synergee-reviewed-v2",
+            "table_values": {
+                "SAI_Control": {
+                    "VoltageFactor": 11,
+                    "Frequency": 60,
+                    "LengthUnits": "Metric",
+                    "Phase1": "R",
+                    "Phase2": "Y",
+                    "Phase3": "B",
+                    "Product": "SynerGEE Electric 5.0.0.324",
+                    "VoltageInPercent": 0,
+                    "ProjectionFile": "WGS 1984 UTM Zone 43N",
+                    "PTSecondary": 120
+                },
+                "Node": {
+                    "IsPadMountGear": 0
+                },
+                "InstFeeders": {
+                    "DefaultSelect": 1,
+                    "ConnectionType": "YG",
+                    "NominalKvll": 11,
+                    "BusVoltageLevel": 11.37,
+                    "PosSequenceResistance": 0,
+                    "PosSequenceReactance": 0,
+                    "ZeroSequenceResistance": 0,
+                    "ZeroSequenceReactance": 0,
+                    "LineToGroundFaultResistance": 0,
+                    "FeederMultiplier": 1,
+                    "Phase1KvaDemand": 0,
+                    "Phase2KvaDemand": 0,
+                    "Phase3KvaDemand": 0,
+                    "Phase1PercentPF": 0,
+                    "Phase2PercentPF": 0,
+                    "Phase3PercentPF": 0,
+                    "FeederRGBColor": "0,255,0",
+                    "UseByPhVoltLevel": 0,
+                    "ByPhVoltLevelPh1": 11,
+                    "ByPhVoltDegPh1": 0,
+                    "ByPhVoltLevelPh2": 11,
+                    "ByPhVoltDegPh2": -120,
+                    "ByPhVoltLevelPh3": 11,
+                    "ByPhVoltDegPh3": 120,
+                    "SustFailuresPrYear": 0,
+                    "TempFailuresPrYear": 0,
+                    "SustFailRepairTime_Hr": 0,
+                    "AvgCrewOperResetTime_Hr": 1,
+                    "AmpRating": 0,
+                    "UseGrowthCurve": 0,
+                    "EmerAmpRating": 0
+                },
+                "InstSection": {
+                    "PhaseToPhaseSpacing_MUL": 121.9,
+                    "PhaseToNeutralSpacing_MUL": 91.4,
+                    "AveHeightAboveGround_MUL": 9.1,
+                    "PercentDistLoadConstImpedance": 40,
+                    "PercentDistLoadConstCurrent": 10,
+                    "PercentSpotLoadConstImpedance": 40,
+                    "PercentSpotLoadConstCurrent": 30,
+                    "PercentLoadGrowthRate": 2,
+                    "MappingLink": 0,
+                    "UseEquivSpacing": 0,
+                    "IdenticalPhaseConductors": 0,
+                    "PositionCode": 0,
+                    "ConfigurationId": "12.5/7.2 kV cross arm C2-2",
+                    "IsContingency": 0,
+                    "UseSectAmpRating": 0,
+                    "AmpRating": 100,
+                    "UseDistCustZone": 0,
+                    "UseSpotCustZone": 0,
+                    "UseCustClassDistLoadIzpq": 0,
+                    "UseCustClassSpotLoadIzpq": 0,
+                    "GrowthZone": "Unknown",
+                    "FromElbowOrBayStatus": "N",
+                    "ToElbowOrBayStatus": "N",
+                    "ElbowOrBayAmpRating": 100,
+                    "DuctBankCircuit": 1,
+                    "UseDuctBankAmpRating": 0,
+                    "UseDuctBankConfiguration": 0,
+                    "SpotLoadIsOff": 0,
+                    "EnergizeYear": 0,
+                    "RetireYear": 100,
+                    "LoadCategory": 0,
+                    "NeutIsGrounded": 1,
+                    "HideMapResults": 0,
+                    "ExpFactPermFail": 1,
+                    "ExpFactTempFail": 1,
+                    "ExpFactRepair": 1
+                },
+                "InstPrimaryTransformers": {
+                    "ConnectedPhases": "RYB",
+                    "TapSetting": 1,
+                    "NearFromNode": 0,
+                    "HighSideNearFromNode": 1,
+                    "HighSideGroundingResistance": 0,
+                    "LowSideGroundingResistance": 0,
+                    "HighSideGroundingReactance": 0,
+                    "LowSideGroundingReactance": 0,
+                    "HighSideConnectionCode": "YG",
+                    "LowSideConnectionCode": "YG",
+                    "SustFailuresPrYear": 0,
+                    "TempFailuresPrYear": 0,
+                    "SustFailRepairTime_Hr": 6,
+                    "SustFailRepairCost_MU": 5000,
+                    "LTCIsGangOperated": 1,
+                    "GangOperatingPhase": "R",
+                    "LTCInManualMode": 0,
+                    "LTCTapPosPh1": 0,
+                    "LTCTapPosPh2": 0,
+                    "LTCTapPosPh3": 0,
+                    "LTCFwdVoltSettingPh1": 122,
+                    "LTCFwdVoltSettingPh2": 122,
+                    "LTCFwdVoltSettingPh3": 122,
+                    "LTCFwdBWSettingPh1": 0.75,
+                    "LTCFwdBWSettingPh2": 0.75,
+                    "LTCFwdBWSettingPh3": 0.75,
+                    "LTCFwdRDialPhase1": 0,
+                    "LTCFwdXDialPhase1": 0,
+                    "LTCFwdRDialPhase2": 0,
+                    "LTCFwdXDialPhase2": 0,
+                    "LTCFwdRDialPhase3": 0,
+                    "LTCFwdXDialPhase3": 0,
+                    "LTCTapLimActive": 0,
+                    "LTCTapLimHigh": 6,
+                    "LTCTapLimLow": -4,
+                    "TertIncidentSectId1": "*",
+                    "TertIncidentSectId2": "*",
+                    "TertIncidentSectId3": "*",
+                    "TertConnectCode": "YG",
+                    "EnergizeYear": 0,
+                    "RetireYear": 100,
+                    "FirstHouseActive": 0,
+                    "FirstHouseHighVoltage": 124,
+                    "FirstHouseLowVoltage": 124,
+                    "NetProtEnabled": 0,
+                    "NetProtIsAuto": 0,
+                    "NetProtIsOpen": 0,
+                    "UseInstanceImpedance": 0,
+                    "PercentImpedance": 0,
+                    "PercentResistance": 0,
+                    "NomKvMode": "C",
+                    "SpecNomKv": 4.16
+                },
+                "Loads": {
+                    "IsSpotLoad": 0,
+                    "LocationToModelSpotLoads": "C",
+                    "CapacityFactor": 1
+                },
+                "InstMeterPoints": [],
+                "InstDGens": [],
+                "InstMymDGens": []
+            },
+            "networks": []
+        },
+        "reference_import": {
+            "status": "needs_review",
+            "sources": [
+                {
+                    "file": "IndustrialT-4060116233.mdb",
+                    "sha256": "4549ff4d5b29e7a2bde79ec3295aff3396af45709bce062ef1c47e30c1de3262",
+                    "table_count": 50,
+                    "relationship_count": 41
+                },
+                {
+                    "file": "IndustrialT-4120623648.mdb",
+                    "sha256": "7e9dd3ff99722fc74170513d774fb769d6b8a2bfde4c9c2b06b15f9ab956368e",
+                    "table_count": 50,
+                    "relationship_count": 41
+                }
+            ],
+            "schema_sha256": "28374aabd4291794f270c9fce028afbde01bcd7a1ba4deaf7ec737426373c3fb",
+            "consistent_parameter_count": 133,
+            "conditional_parameter_count": 0,
+            "conditional_table_values": [],
+            "role_table_values": {
+                "transformer_supply": {
+                    "SectionPhases": "RYB",
+                    "PhaseConductorId": "DOG",
+                    "PhaseConductor2Id": " DOG",
+                    "PhaseConductor3Id": "DOG",
+                    "NeutralConductorId": "",
+                    "LoadConnectionPhaseGnd": 0,
+                    "SectionLength_MUL": 1
+                },
+                "transformer_secondary_link": {
+                    "SectionPhases": "RYBN",
+                    "PhaseConductorId": "ANT",
+                    "PhaseConductor2Id": " ANT",
+                    "PhaseConductor3Id": "ANT",
+                    "NeutralConductorId": "",
+                    "LoadConnectionPhaseGnd": 1,
+                    "SectionLength_MUL": 1
+                }
+            },
+            "load_evidence": {
+                "nonzero_customer_phase_records": 39,
+                "three_kva_per_customer_records": 39,
+                "other_ratio_records": 0,
+                "inconsistent_power_records": 39
+            },
+            "conflicts": [
+                {
+                    "field": "InstSection.LoadConnectionPhaseGnd",
+                    "values": [
+                        {
+                            "value": 1,
+                            "files": [
+                                "IndustrialT-4060116233.mdb",
+                                "IndustrialT-4120623648.mdb"
+                            ],
+                            "rows": 17
+                        },
+                        {
+                            "value": 0,
+                            "files": [
+                                "IndustrialT-4060116233.mdb",
+                                "IndustrialT-4120623648.mdb"
+                            ],
+                            "rows": 2
+                        }
+                    ]
+                },
+                {
+                    "field": "Loads.power_factor_inputs",
+                    "values": [
+                        {
+                            "value": "Positive kVA with zero kW and kvar in 39 phase records; no verified power factor can be derived.",
+                            "files": [
+                                "IndustrialT-4060116233.mdb",
+                                "IndustrialT-4120623648.mdb"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "field": "equipment_references.conductors.ANT",
+                    "values": [
+                        {
+                            "value": " ANT",
+                            "files": [
+                                "IndustrialT-4060116233.mdb",
+                                "IndustrialT-4120623648.mdb"
+                            ]
+                        },
+                        {
+                            "value": "ANT",
+                            "files": [
+                                "IndustrialT-4060116233.mdb",
+                                "IndustrialT-4120623648.mdb"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "field": "equipment_references.conductors.DOG",
+                    "values": [
+                        {
+                            "value": " DOG",
+                            "files": [
+                                "IndustrialT-4060116233.mdb",
+                                "IndustrialT-4120623648.mdb"
+                            ]
+                        },
+                        {
+                            "value": "DOG",
+                            "files": [
+                                "IndustrialT-4060116233.mdb",
+                                "IndustrialT-4120623648.mdb"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "field": "equipment_references.conductors.WASP",
+                    "values": [
+                        {
+                            "value": " WASP",
+                            "files": [
+                                "IndustrialT-4060116233.mdb"
+                            ]
+                        },
+                        {
+                            "value": "WASP",
+                            "files": [
+                                "IndustrialT-4060116233.mdb"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "field": "transformer_secondary_link.neutral",
+                    "values": [
+                        {
+                            "value": "N is present in section phases but the neutral conductor reference is blank.",
+                            "files": [
+                                "IndustrialT-4060116233.mdb",
+                                "IndustrialT-4120623648.mdb"
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "missing": [
+                {
+                    "field": "SAI_Control.ProjectionWKT",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstFeeders.LockedBy",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstFeeders.GrowthCurveId",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstSection.DistLoadCustZone",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstSection.SpotLoadCustZone",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstSection.ExposureZone",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstSection.MitiZone",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstSection.DuctBankId",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstSection.DuctBankInst",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstSection.Monitor",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstSection.CostZone",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.Phase1Value",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.Phase2Value",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.Phase3Value",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.Phase1Value2",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.Phase2Value2",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.Phase3Value2",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.CalibSAIFI",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.CalibSAIDI_Hr",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.CalibMAIFI",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.ContinuousCurrentRating",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.EmergencyCurrentRating",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.MeterIsOpen",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.UseDemandAsLoad",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.Enabled",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.EnableReliCalibration",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.NearFromNode",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.Type",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.OverriddenUpstream",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.EnergizeYear",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.RetireYear",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.Note_",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.UseGrowthCurve",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.GrowthCurveId",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.UseDefDistCustZone",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.DefDistCustZone",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.UseDefSpotCustZone",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.DefSpotCustZone",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.IsColorBy",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.RGBColor",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.LocationLink",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.AMSLink",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "InstMeterPoints.LockFedLoad",
+                    "reason": "Blank in all populated reference rows."
+                },
+                {
+                    "field": "secondary_voltage_kv",
+                    "reason": "Actual LT secondary voltage is not established by the references; SpecNomKv=4.16 with NomKvMode=C is preserved separately."
+                },
+                {
+                    "field": "template_id",
+                    "reason": "No clean HAZECO-approved template is established by populated reference databases."
+                },
+                {
+                    "field": "conductor_library_revision",
+                    "reason": "Installed conductor library version and its electrical definitions are not present."
+                },
+                {
+                    "field": "transformer_library_revision",
+                    "reason": "Installed transformer library version and winding/impedance definitions are not present."
+                },
+                {
+                    "field": "transformer_types",
+                    "reason": "The reference type label alone does not independently verify a capacity-to-library mapping for HAZECO."
+                },
+                {
+                    "field": "supply_conductor_id",
+                    "reason": "A single ID for all supply phases cannot resolve whitespace-distinct library references without an approved alias policy."
+                },
+                {
+                    "field": "secondary_conductor_id",
+                    "reason": "Secondary-link neutral is marked present in phases but its conductor ID is blank."
+                },
+                {
+                    "field": "pole_height_unit",
+                    "reason": "The handwritten survey pole-height unit is not recorded by this electrical model."
+                },
+                {
+                    "field": "two_digit_year_start",
+                    "reason": "A survey date interpretation policy cannot be derived from historical model-year labels."
+                },
+                {
+                    "field": "load_mode",
+                    "reason": "Consumer categories and an approved category demand/power-factor method are absent."
+                },
+                {
+                    "field": "blank_consumers_zero",
+                    "reason": "No policy for interpreting blank survey consumer cells is recorded."
+                },
+                {
+                    "field": "mapping.networks",
+                    "reason": "Historical network wiring belongs to different transformers and must not be applied to HAZECO surveys."
+                }
+            ],
+            "equipment_references": {
+                "conductors": [
+                    " ANT",
+                    " DOG",
+                    " WASP",
+                    "ANT",
+                    "DOG",
+                    "WASP"
+                ],
+                "transformers": [
+                    "100 KVA"
+                ],
+                "configurations": [
+                    "12.5/7.2 kV cross arm C2-2"
+                ]
+            },
+            "notes": [
+                "Files are user-supplied reference models. Imported observations do not constitute engineering approval for HAZECO.",
+                "EPSG, when populated, is translated from the recorded WGS84 UTM label only. Coordinates have not independently verified that label.",
+                "Frequency is copied exactly from the references. Do not silently replace the recorded value with a locally expected frequency.",
+                "Spacing and height numbers are copied without conversion into the existing application mapping; the source only explicitly declares Metric length units.",
+                "SpecNomKv is retained with NomKvMode in advanced mapping; it is not used to guess an LT secondary voltage.",
+                "UseInstanceImpedance=0 means the numeric zero impedance fields do not establish physical zero impedance.",
+                "Referenced equipment IDs are retained literally, including whitespace. They do not include installed library revisions or electrical library definitions.",
+                "No previous-project node IDs, coordinates, feeder/substation names, transformer IDs, historic model years or source wiring are installed as HAZECO defaults.",
+                "Repeated kVA/customer ratios are observations, not verified consumer-category rates or a power-factor/phase-allocation policy."
+            ]
+        }
+    },
+    "load_assumptions": {
+        "mode": null,
+        "method": null,
+        "evidence": "2 reference MDBs; see reference_import source SHA-256 and load evidence report.",
+        "rates": []
+    },
+    "field_evidence": {
+        "SAI_Control.VoltageFactor": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 11,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "SAI_Control.Frequency": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 60,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "SAI_Control.LengthUnits": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "Metric",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "SAI_Control.Phase1": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "R",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "SAI_Control.Phase2": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "Y",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "SAI_Control.Phase3": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "B",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "SAI_Control.Product": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "SynerGEE Electric 5.0.0.324",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "SAI_Control.VoltageInPercent": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "SAI_Control.MYM_YearDesc_B": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "2015",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "SAI_Control.MYM_YearDesc_1": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "2016",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "SAI_Control.MYM_YearDesc_2": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "2017",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "SAI_Control.MYM_YearDesc_3": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "2018",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "SAI_Control.MYM_YearDesc_4": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "2019",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "SAI_Control.MYM_YearDesc_5": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "2020",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "SAI_Control.MYM_YearDesc_6": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "2021",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "SAI_Control.MYM_YearDesc_7": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "2022",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "SAI_Control.MYM_YearDesc_8": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "2023",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "SAI_Control.MYM_YearDesc_9": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "2024",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "SAI_Control.MYM_YearDesc10": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "2025",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "SAI_Control.ProjectionFile": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "WGS 1984 UTM Zone 43N",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "SAI_Control.ProjectionWKT": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "SAI_Control.PTSecondary": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 120,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "Node.NodeId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "Industrial",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": "4060116233",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "4060116233.1",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "4060116233.2",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825591",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825592",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825593",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825594",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825595",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825596",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825597",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "4120623648",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "4120623648.1",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "4120623648.2",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825583",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825584",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825585",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825586",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825587",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825588",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825589",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825590",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                }
+            ],
+            "instance_specific": true
+        },
+        "Node.X": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 776727,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 4
+                },
+                {
+                    "value": 776728,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 776729,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": 776732,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 776827,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 776829,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": 776755,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 776947,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": 776948,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": 776949,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 776945,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 776931,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 776914,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 776885,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 776767,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 776719,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                }
+            ],
+            "instance_specific": true
+        },
+        "Node.Y": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 3363317,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 4
+                },
+                {
+                    "value": 3363318,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 3363319,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 3363255,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 3363193,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 3363413,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 3363322,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 3363412,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 3363512,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 5
+                },
+                {
+                    "value": 3363514,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 3363506,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 3363507,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 3363504,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 3363500,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 3363501,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "Node.Description": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 23
+                }
+            ],
+            "instance_specific": true
+        },
+        "Node.IsPadMountGear": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 23
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.FeederId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "Industrial",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstFeeders.SubstationId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "132 KVA K.Wala",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstFeeders.DefaultSelect": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.ConnectionType": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "YG",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.NominalKvll": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 11,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.BusVoltageLevel": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 11.37,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.PosSequenceResistance": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.PosSequenceReactance": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.ZeroSequenceResistance": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.ZeroSequenceReactance": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.LineToGroundFaultResistance": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.FeederMultiplier": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.Phase1KvaDemand": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.Phase2KvaDemand": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.Phase3KvaDemand": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.Phase1PercentPF": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.Phase2PercentPF": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.Phase3PercentPF": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.FeederRGBColor": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "0,255,0",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.UseByPhVoltLevel": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.ByPhVoltLevelPh1": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 11,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.ByPhVoltDegPh1": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.ByPhVoltLevelPh2": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 11,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.ByPhVoltDegPh2": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": -120,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.ByPhVoltLevelPh3": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 11,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.ByPhVoltDegPh3": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 120,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.SustFailuresPrYear": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.TempFailuresPrYear": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.SustFailRepairTime_Hr": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.AvgCrewOperResetTime_Hr": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.LockedBy": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.AmpRating": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.Note_": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstFeeders.LocationLink": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "*",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstFeeders.UseGrowthCurve": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.GrowthCurveId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.EmerAmpRating": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstFeeders.LastSavedDate": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstFeeders.LastSavedBy": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstFeeders.BuiltDate": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstSection.SectionId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "87081140825596",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825597",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87084060116233.1",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87084060116233.2",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825591",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825592",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825593",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825594",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825595",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825588",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825589",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825590",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87084120623648.1",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87084120623648.2",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825583",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825584",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825585",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825586",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825587",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstSection.FeederId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "Industrial",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstSection.FromNodeId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "1140825595",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": "Industrial",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": "4060116233.1",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "4060116233.2",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 4
+                },
+                {
+                    "value": "1140825593",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825587",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825588",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825589",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "4120623648.1",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "4120623648.2",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 3
+                },
+                {
+                    "value": "1140825585",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825586",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstSection.ToNodeId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "1140825596",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825597",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "4060116233.1",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "4060116233.2",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825591",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825592",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825593",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825594",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825595",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825588",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825589",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825590",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "4120623648.1",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "4120623648.2",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825583",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825584",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825585",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825586",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "1140825587",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstSection.SectionPhases": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "RYBN",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 17
+                },
+                {
+                    "value": "RYB",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstSection.Description": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "Secondary Distribution",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 15
+                },
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": "Secondary Pole",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstSection.PhaseConductorId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "WASP",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 7
+                },
+                {
+                    "value": "DOG",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": "ANT",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 10
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstSection.NeutralConductorId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "WASP",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 7
+                },
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 4
+                },
+                {
+                    "value": "ANT",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 8
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstSection.PhaseToPhaseSpacing_MUL": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 121.9,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.PhaseToNeutralSpacing_MUL": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 91.4,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.AveHeightAboveGround_MUL": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 9.1,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.PercentDistLoadConstImpedance": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 40,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.PercentDistLoadConstCurrent": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 10,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.PercentSpotLoadConstImpedance": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 40,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.PercentSpotLoadConstCurrent": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 30,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.SectionLength_MUL": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 91.02197536858888,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 72.00694410957877,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 5
+                },
+                {
+                    "value": 2.23606797749979,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 2.8284271247461903,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 62,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 62.07253821135398,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 137.18600511714013,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 56.1426753904728,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 62.00806399170998,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 48,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 4.47213595499958,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 18.973665961010276,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 17.029386365926403,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 29.154759474226505,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstSection.PercentLoadGrowthRate": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 2,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.MappingLink": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.LoadConnectionPhaseGnd": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 17
+                },
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.UseEquivSpacing": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.IdenticalPhaseConductors": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.PhaseConductor2Id": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": " WASP",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 7
+                },
+                {
+                    "value": " DOG",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": " ANT",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 10
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstSection.PhaseConductor3Id": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "WASP",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 7
+                },
+                {
+                    "value": "DOG",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": "ANT",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 10
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstSection.PositionCode": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.ConfigurationId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "12.5/7.2 kV cross arm C2-2",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.IsContingency": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.UseSectAmpRating": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.AmpRating": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 100,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.DistLoadCustZone": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.SpotLoadCustZone": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.UseDistCustZone": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.UseSpotCustZone": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.UseCustClassDistLoadIzpq": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.UseCustClassSpotLoadIzpq": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.ExposureZone": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.MitiZone": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.GrowthZone": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "Unknown",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.FromElbowOrBayStatus": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "N",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.ToElbowOrBayStatus": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "N",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.ElbowOrBayAmpRating": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 100,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.DuctBankId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.DuctBankInst": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.DuctBankCircuit": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.UseDuctBankAmpRating": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.UseDuctBankConfiguration": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.SpotLoadIsOff": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.EnergizeYear": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.RetireYear": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 100,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.LoadCategory": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.NeutIsGrounded": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.HideMapResults": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.Note_": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstSection.LocationLink": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "*",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstSection.AMSLink": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstSection.Monitor": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.ExpFactPermFail": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.ExpFactTempFail": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.ExpFactRepair": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstSection.CostZone": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 19
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.SectionId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "87084060116233.1",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87084120623648.1",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstPrimaryTransformers.UniqueDeviceId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "T-4060116233",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "T-4120623648",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstPrimaryTransformers.ConnectedPhases": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "RYB",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.TransformerType": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "100 KVA",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstPrimaryTransformers.TapSetting": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.NearFromNode": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.HighSideNearFromNode": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.HighSideGroundingResistance": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LowSideGroundingResistance": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.HighSideGroundingReactance": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LowSideGroundingReactance": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.HighSideConnectionCode": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "YG",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LowSideConnectionCode": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "YG",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.SustFailuresPrYear": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.TempFailuresPrYear": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.SustFailRepairTime_Hr": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 6,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.SustFailRepairCost_MU": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 5000,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCIsGangOperated": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.GangOperatingPhase": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "R",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCInManualMode": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCTapPosPh1": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCTapPosPh2": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCTapPosPh3": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCFwdVoltSettingPh1": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 122,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCFwdVoltSettingPh2": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 122,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCFwdVoltSettingPh3": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 122,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCFwdBWSettingPh1": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0.75,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCFwdBWSettingPh2": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0.75,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCFwdBWSettingPh3": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0.75,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCFwdRDialPhase1": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCFwdXDialPhase1": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCFwdRDialPhase2": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCFwdXDialPhase2": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCFwdRDialPhase3": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCFwdXDialPhase3": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCTapLimActive": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCTapLimHigh": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 6,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LTCTapLimLow": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": -4,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.TertIncidentSectId1": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "*",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.TertIncidentSectId2": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "*",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.TertIncidentSectId3": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "*",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.TertConnectCode": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "YG",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.EnergizeYear": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.RetireYear": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 100,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.FirstHouseActive": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.FirstHouseHighVoltage": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 124,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.FirstHouseLowVoltage": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 124,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.LocationLink": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "*",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstPrimaryTransformers.NetProtEnabled": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.NetProtIsAuto": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.NetProtIsOpen": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.Note_": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstPrimaryTransformers.AMSLink": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstPrimaryTransformers.UseInstanceImpedance": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.PercentImpedance": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.PercentResistance": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.NomKvMode": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "C",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstPrimaryTransformers.SpecNomKv": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 4.16,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "Loads.SectionId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "87084060116233.2",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825591",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825592",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825593",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825594",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825595",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825596",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825597",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87084120623648.2",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825583",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825584",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825585",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825586",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825587",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825588",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825589",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87081140825590",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                }
+            ],
+            "instance_specific": true
+        },
+        "Loads.IsSpotLoad": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 17
+                }
+            ],
+            "instance_specific": false
+        },
+        "Loads.Phase1Customers": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 4
+                },
+                {
+                    "value": 0.6666666666666666,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 1.6666666666666667,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 3
+                },
+                {
+                    "value": 4,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 2.3333333333333335,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 3
+                },
+                {
+                    "value": 2,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 4.333333333333333,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": 0.3333333333333333,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 5.333333333333333,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                }
+            ],
+            "instance_specific": true
+        },
+        "Loads.Phase2Customers": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 4
+                },
+                {
+                    "value": 0.6666666666666666,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 1.6666666666666667,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 3
+                },
+                {
+                    "value": 4,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 2.3333333333333335,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 3
+                },
+                {
+                    "value": 2,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 4.333333333333333,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": 0.3333333333333333,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 5.333333333333333,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                }
+            ],
+            "instance_specific": true
+        },
+        "Loads.Phase3Customers": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 4
+                },
+                {
+                    "value": 0.6666666666666666,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 1.6666666666666667,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 3
+                },
+                {
+                    "value": 4,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 2.3333333333333335,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 3
+                },
+                {
+                    "value": 2,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 4.333333333333333,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": 0.3333333333333333,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 5.333333333333333,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                }
+            ],
+            "instance_specific": true
+        },
+        "Loads.Phase1Kw": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 17
+                }
+            ],
+            "instance_specific": true
+        },
+        "Loads.Phase2Kw": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 17
+                }
+            ],
+            "instance_specific": true
+        },
+        "Loads.Phase3Kw": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 17
+                }
+            ],
+            "instance_specific": true
+        },
+        "Loads.Phase1Kvar": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 17
+                }
+            ],
+            "instance_specific": true
+        },
+        "Loads.Phase2Kvar": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 17
+                }
+            ],
+            "instance_specific": true
+        },
+        "Loads.Phase3Kvar": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 17
+                }
+            ],
+            "instance_specific": true
+        },
+        "Loads.Phase1Kva": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 4
+                },
+                {
+                    "value": 2,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 5,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 3
+                },
+                {
+                    "value": 12,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 7,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 3
+                },
+                {
+                    "value": 6,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 13,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 16,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                }
+            ],
+            "instance_specific": true
+        },
+        "Loads.Phase2Kva": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 4
+                },
+                {
+                    "value": 2,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 5,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 3
+                },
+                {
+                    "value": 12,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 7,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 3
+                },
+                {
+                    "value": 6,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 13,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 16,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                }
+            ],
+            "instance_specific": true
+        },
+        "Loads.Phase3Kva": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 0,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 4
+                },
+                {
+                    "value": 2,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 5,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 3
+                },
+                {
+                    "value": 12,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 7,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 3
+                },
+                {
+                    "value": 6,
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 13,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                },
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": 16,
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                }
+            ],
+            "instance_specific": true
+        },
+        "Loads.Phase1Kwh": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 17
+                }
+            ],
+            "instance_specific": true
+        },
+        "Loads.Phase2Kwh": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 17
+                }
+            ],
+            "instance_specific": true
+        },
+        "Loads.Phase3Kwh": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 17
+                }
+            ],
+            "instance_specific": true
+        },
+        "Loads.LocationToModelSpotLoads": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "C",
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 17
+                }
+            ],
+            "instance_specific": false
+        },
+        "Loads.CapacityFactor": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": 1,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 17
+                }
+            ],
+            "instance_specific": false
+        },
+        "Loads.Description": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 17
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstMeterPoints.SectionId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": "87084060116233.2",
+                    "files": [
+                        "IndustrialT-4060116233.mdb"
+                    ],
+                    "rows": 1
+                },
+                {
+                    "value": "87084120623648.2",
+                    "files": [
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 1
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstMeterPoints.Phase1Value": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.Phase2Value": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.Phase3Value": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.Phase1Value2": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.Phase2Value2": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.Phase3Value2": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.CalibSAIFI": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.CalibSAIDI_Hr": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.CalibMAIFI": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.ContinuousCurrentRating": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.EmergencyCurrentRating": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.MeterIsOpen": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.UseDemandAsLoad": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.Description": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": true
+        },
+        "InstMeterPoints.Enabled": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.EnableReliCalibration": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.NearFromNode": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.Type": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.OverriddenUpstream": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.EnergizeYear": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.RetireYear": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.Note_": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.UseGrowthCurve": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.GrowthCurveId": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.UseDefDistCustZone": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.DefDistCustZone": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.UseDefSpotCustZone": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.DefSpotCustZone": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.IsColorBy": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.RGBColor": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.LocationLink": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.AMSLink": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        },
+        "InstMeterPoints.LockFedLoad": {
+            "files_with_rows": 2,
+            "variants": [
+                {
+                    "value": null,
+                    "files": [
+                        "IndustrialT-4060116233.mdb",
+                        "IndustrialT-4120623648.mdb"
+                    ],
+                    "rows": 2
+                }
+            ],
+            "instance_specific": false
+        }
+    }
+}

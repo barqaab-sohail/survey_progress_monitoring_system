@@ -1,0 +1,119 @@
+[
+  {
+    "file": "A0808.gpx",
+    "sha256": "ed0055525e5a7aaa3fa66dc7266e9b1169099dbb48183dfea6b56d17cea9dbb0",
+    "type": "GPX",
+    "waypoints": 62,
+    "waypoint_fields": [
+      "cmt",
+      "desc",
+      "ele",
+      "extensions",
+      "name",
+      "sym",
+      "time",
+      "type"
+    ],
+    "lat_lon_extent": [
+      30.319493981078267,
+      71.91668503917754,
+      30.326597979292274,
+      71.93577096797526
+    ],
+    "first_names": [
+      "001",
+      "002",
+      "003",
+      "004",
+      "005",
+      "006"
+    ],
+    "duplicate_names": []
+  },
+  {
+    "file": "A0808.pdf",
+    "sha256": "e97216a7e849f3f4d3291bd4397d184984f916aa76cd594cfa56e49eae4d0e0c",
+    "type": "survey PDF",
+    "pages": 10,
+    "extractable_text_characters": 0,
+    "text_excerpt": "\n\n\n\n\n\n\n\n\n"
+  },
+  {
+    "file": "A1308.gpx",
+    "sha256": "1488392706bb07161f0ca2813060163e25cac0f3cbe552f88e0237b9af851982",
+    "type": "GPX",
+    "waypoints": 86,
+    "waypoint_fields": [
+      "cmt",
+      "desc",
+      "ele",
+      "extensions",
+      "name",
+      "sym",
+      "time",
+      "type"
+    ],
+    "lat_lon_extent": [
+      30.222638994455338,
+      71.54082298278809,
+      30.289559019729495,
+      71.60496901720762
+    ],
+    "first_names": [
+      "413",
+      "414",
+      "415",
+      "416",
+      "417",
+      "418"
+    ],
+    "duplicate_names": []
+  },
+  {
+    "file": "A1308.pdf",
+    "sha256": "718593b9597f6a16f18fe046ad87db091419b6b2e851810c1c224778964b0663",
+    "type": "survey PDF",
+    "pages": 14,
+    "extractable_text_characters": 0,
+    "text_excerpt": "\n\n\n\n\n\n\n\n\n\n\n\n\n"
+  },
+  {
+    "file": "A1408.gpx",
+    "sha256": "c30e940261fa1eaa5c418355ee7117d6710b40dc9b03dc02247b47c8f5188709",
+    "type": "GPX",
+    "waypoints": 54,
+    "waypoint_fields": [
+      "cmt",
+      "desc",
+      "ele",
+      "extensions",
+      "name",
+      "sym",
+      "time",
+      "type"
+    ],
+    "lat_lon_extent": [
+      30.369012001901865,
+      71.86293700709939,
+      30.403926987200975,
+      71.89918999560177
+    ],
+    "first_names": [
+      "576",
+      "577",
+      "578",
+      "579",
+      "580",
+      "581"
+    ],
+    "duplicate_names": []
+  },
+  {
+    "file": "A1408.pdf",
+    "sha256": "394ee22bee502fa6f05a39834121b8790a7272a312ab8d9d4c8a6735aa7cba50",
+    "type": "survey PDF",
+    "pages": 9,
+    "extractable_text_characters": 0,
+    "text_excerpt": "\n\n\n\n\n\n\n\n"
+  }
+]

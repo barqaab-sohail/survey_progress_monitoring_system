@@ -13,6 +13,7 @@ use App\Services\AuditService;
 use App\Services\DriveStorage\FileStorage;
 use App\Services\GpxWaypointService;
 use App\Services\Mdb\EngineeringConfiguration;
+use App\Services\Mdb\EngineeringDefaults;
 use App\Services\Mdb\GenerationMode;
 use App\Services\TransformerMdbNetworkService;
 use App\Services\TransformerMdbWriter;
@@ -99,6 +100,9 @@ class TransformerMdbBuilderController extends Controller
                 }
                 if ((int) $data['revision'] !== ($existing ? $project->revision : 0)) {
                     throw ValidationException::withMessages(['revision' => 'This workspace changed in another tab. Reload it before saving to avoid overwriting changes.']);
+                }
+                if (! $existing) {
+                    app(EngineeringDefaults::class)->initialize(Feeder::findOrFail($data['feeder_id'])->project, $request->user());
                 }
                 foreach ($newPaths as $key => $path) {
                     if ($project->$key) {

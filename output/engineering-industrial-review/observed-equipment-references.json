@@ -1,0 +1,16 @@
+{
+  "conductors": [
+    " ANT",
+    " DOG",
+    " WASP",
+    "ANT",
+    "DOG",
+    "WASP"
+  ],
+  "transformers": [
+    "100 KVA"
+  ],
+  "configurations": [
+    "12.5/7.2 kV cross arm C2-2"
+  ]
+}

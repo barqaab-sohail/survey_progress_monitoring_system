@@ -1027,7 +1027,7 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertDatabaseCount('mdb_workflow_entry_rows', 0);
     }
 
-    public function test_continuation_inherits_only_omitted_components_and_keeps_an_older_date(): void
+    public function test_continuation_inherits_omitted_components_and_manual_edits_clear_copy_provenance(): void
     {
         $this->entrySettings();
         $start = $this->save(['identity_version' => 2, 'row_date' => '2022-12-13']);
@@ -1035,8 +1035,22 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertSame('01131222002', $end->composite_identifier);
         $this->assertSame('2022-12-13', $end->row_date->format('Y-m-d'));
         $this->assertSame($start->id, $end->inheritance['group_date']);
-        $this->postJson(route('mdb-workflow.entry.rows.store', [$this->batch, $this->transformer]), $this->payload(['identity_version' => 2, 'pair_number' => 2,
-            'group_number' => '02', 'inheritance' => ['group_date' => $start->id]]))->assertUnprocessable();
+        $changed = $this->payload(['identity_version' => 2, 'pair_number' => 2, 'designation' => 'E', 'waypoint_reference' => '002',
+            'group_number' => '02', 'row_date' => '2022-12-14', 'inheritance' => ['group_date' => $start->id]]);
+        $this->putJson(route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $end]), $changed)->assertOk();
+        $end->refresh();
+        $this->assertSame('02', $end->group_number);
+        $this->assertSame('2022-12-14', $end->row_date->format('Y-m-d'));
+        $this->assertArrayNotHasKey('group_date', $end->inheritance);
+
+        $copied = $this->save(['pair_number' => 3, 'designation' => 'E', 'waypoint_reference' => '003', 'group_number' => '01',
+            'row_date' => '2026-10-08', 'inheritance' => ['equipment' => $start->id]]);
+        $changedHeight = $this->payload(['client_uuid' => $copied->client_uuid, 'pair_number' => 3, 'designation' => 'E', 'waypoint_reference' => '003',
+            'inheritance' => ['equipment' => $start->id], 'pole_height' => 45]);
+        $this->putJson(route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $copied]), $changedHeight)->assertOk();
+        $copied->refresh();
+        $this->assertSame(45.0, $copied->pole_height);
+        $this->assertArrayNotHasKey('equipment', $copied->inheritance);
     }
 
     public function test_repeated_gps_numbers_resolve_by_date_context_and_keep_distinct_network_nodes(): void

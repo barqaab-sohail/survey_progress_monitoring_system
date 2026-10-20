@@ -22,6 +22,7 @@ use App\Models\Project;
 use App\Models\SurveyTeam;
 use App\Services\AuditService;
 use App\Services\DriveStorage\FileStorage;
+use App\Services\Mdb\EngineeringDefaults;
 use App\Services\Mdb\EntryService;
 use App\Services\Mdb\ExporterFactory;
 use App\Services\Mdb\ExportService;
@@ -176,6 +177,7 @@ class MdbWorkflowController extends Controller
         $storedPaths = [];
         try {
             $batch = DB::transaction(function () use ($data, $request, &$storedPaths) {
+                app(EngineeringDefaults::class)->initialize(Project::findOrFail($data['project_id']), $request->user());
                 $batch = SurveyBatch::create(array_intersect_key($data, array_flip(['project_id', 'feeder_id', 'survey_team_id', 'survey_date'])) + ['created_by' => $request->user()->id, 'status' => 'draft', 'staged_workflow' => true]);
                 foreach (['survey_pdf' => 'pdf', 'gps_gpx' => 'gpx'] as $field => $kind) {
                     try {
