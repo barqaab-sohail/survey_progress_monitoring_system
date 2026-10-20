@@ -69,6 +69,22 @@ class MdbExportWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_new_length_method_does_not_reuse_an_export_with_the_old_calculation_key(): void
+    {
+        $exports = app(ExportService::class);
+        $old = $exports->request($this->batch, $this->actor);
+        $revision = $this->batch->approvedRevision;
+        $mapping = $revision->snapshot['configuration']['settings']['mapping']['version'] ?? ExportPayloadBuilder::VERSION;
+        $oldKey = hash('sha256', implode('|', [$revision->sha256, 'feeder', $this->template->sha256, $mapping]));
+        $old->update(['idempotency_key' => $oldKey]);
+
+        $updated = $exports->request($this->batch, $this->actor);
+        $this->assertNotSame($old->id, $updated->id);
+        $this->assertNotSame($oldKey, $updated->idempotency_key);
+        $this->assertSame($updated->id, $exports->request($this->batch, $this->actor)->id);
+        $this->assertDatabaseCount('mdb_workflow_exports', 2);
+    }
+
     public function test_duplicate_requests_bind_one_export_and_one_job_to_approval(): void
     {
         $exports = app(ExportService::class);

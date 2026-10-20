@@ -8,6 +8,10 @@ For staged survey entry, both PDF and GPX must show **ready** before saving. A P
 
 The PDF stays above the form. Use previous/next, page number, zoom, rotation and the viewing-height slider. Zoomed pages scroll inside the viewer. Changing pages keeps the selected transformer and entered fields. A new row records the currently displayed PDF page automatically. Editing an already saved row preserves its recorded page unless **Use displayed PDF page** is chosen.
 
+GPX pole-span lengths include elevation when all points along the section have recorded finite elevations. Each segment uses `sqrt(horizontal_metres^2 + elevation_difference_metres^2)`. Zero and negative elevations are valid. If an endpoint or intermediate geometry point has no usable elevation, the whole section retains its horizontal estimate and an elevation-unavailable flag; no missing elevation is assumed to be zero. **Advanced records → Current revision validation** shows horizontal distance, calculated span, the elevation status and the used length. An approved measured length takes priority. These are estimates between surveyed points and include neither cable sag nor pole attachment-height adjustments.
+
+After deploying this calculation update, request a new MDB generation to apply it; existing downloaded files and queued export payloads retain their original values. New export requests use the updated calculation version. GPX waypoints already imported with elevations can be used directly; no database migration is needed.
+
 Before entry, an administrator should configure the verified pole-height unit and two-digit-year window once in **Project entry settings**. For example, a window starting at 2000 interprets YY 00–99 as 2000–2099. No unit or century rule is assumed when unconfigured. Existing saved row units remain intact.
 
 1. **Add Transformer**, enter its header once and select its surveyed GPS waypoint. Feeder, substation, division and subdivision values come from existing reference records; correct them against the PDF. Saving a header confirms the displayed page as its header page after source processing finishes.

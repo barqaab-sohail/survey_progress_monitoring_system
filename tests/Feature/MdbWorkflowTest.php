@@ -335,6 +335,21 @@ class MdbWorkflowTest extends TestCase
         $this->assertSame($this->admin->id, $point->fresh()->correction_approved_by);
     }
 
+    public function test_advanced_review_shows_horizontal_and_elevation_adjusted_lengths_and_fallback(): void
+    {
+        $transformer = $this->batch->transformers()->create(['code' => 'TX-elevation', 'capacity_kva' => 100]);
+        $edge = ['section_id' => 1, 'start_waypoint_id' => 1, 'end_waypoint_id' => 2,
+            'horizontal_length_m' => 30, 'estimated_length_m' => sqrt(1000), 'length_m' => sqrt(1000),
+            'length_kind' => 'endpoint_estimate', 'elevation_status' => 'elevation_adjusted'];
+        $this->mock(NetworkValidator::class)->shouldReceive('validate')->andReturn(['valid' => true,
+            'errors' => [], 'warnings' => [], 'topology' => [['transformer_id' => $transformer->id, 'nodes' => [],
+                'sections' => [$edge, array_replace($edge, ['section_id' => 2, 'estimated_length_m' => 30,
+                    'length_m' => 30, 'elevation_status' => 'horizontal_missing_elevation'])]]]]);
+        $this->get(route('mdb-workflow.advanced', $this->batch))->assertOk()
+            ->assertSee('Horizontal estimate (m)')->assertSee('Calculated span (m)')->assertSee('31.62')
+            ->assertSee('Elevation adjusted')->assertSee('Horizontal; elevation missing');
+    }
+
     public function test_dashboard_simple_entry_and_advanced_records_render_with_project_configuration(): void
     {
         $this->source();

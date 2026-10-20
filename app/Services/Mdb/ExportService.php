@@ -46,7 +46,7 @@ class ExportService
                 $this->require($validation['valid'], implode(' ', array_column($validation['errors'], 'message')));
             }
             $mappingVersion = $revision->snapshot['configuration']['settings']['mapping']['version'] ?? ($simple ? ExportPayloadBuilder::EXTENDED_VERSION : ExportPayloadBuilder::VERSION);
-            $identity = [$revision->sha256, $transformerId ?? 'feeder', $template->sha256, $mappingVersion];
+            $identity = [$revision->sha256, $transformerId ?? 'feeder', $template->sha256, $mappingVersion, ProjectionService::LENGTH_METHOD];
             if ($manifest) {
                 $identity[] = $this->snapshots->hash($manifest);
             }

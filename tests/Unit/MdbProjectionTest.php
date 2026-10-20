@@ -37,4 +37,46 @@ class MdbProjectionTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         (new ProjectionService)->project(91, 73.5, 32643);
     }
+
+    public function test_elevation_adjusted_lengths_include_zero_negative_and_descending_elevations(): void
+    {
+        foreach ([[0, 10], [10, 0], [-10, 0], [0, -10]] as [$from, $to]) {
+            $lengths = ProjectionService::lengthFromProjected([['elevation' => $from], ['elevation' => $to]],
+                [['x' => 0, 'y' => 0], ['x' => 30, 'y' => 0]]);
+            self::assertEqualsWithDelta(sqrt(1000), $lengths['length_m'], 1e-10);
+            self::assertSame(30.0, $lengths['horizontal_length_m']);
+            self::assertSame('elevation_adjusted', $lengths['elevation_status']);
+        }
+    }
+
+    public function test_missing_or_invalid_elevation_falls_back_without_assuming_zero(): void
+    {
+        foreach ([null, '', 'invalid', INF, NAN] as $unavailable) {
+            $lengths = ProjectionService::lengthFromProjected([['elevation' => 100], ['elevation' => $unavailable]],
+                [['x' => 0, 'y' => 0], ['x' => 30, 'y' => 0]]);
+            self::assertSame(30.0, $lengths['length_m']);
+            self::assertSame($unavailable === null || $unavailable === '' ? 'horizontal_missing_elevation' : 'horizontal_invalid_elevation', $lengths['elevation_status']);
+        }
+    }
+
+    public function test_intermediate_geometry_uses_each_elevation_change_and_requires_all_elevations(): void
+    {
+        $points = [['elevation' => 0], ['elevation' => 10], ['elevation' => 0]];
+        $xy = [['x' => 0, 'y' => 0], ['x' => 30, 'y' => 0], ['x' => 60, 'y' => 0]];
+        self::assertEqualsWithDelta(2 * sqrt(1000), ProjectionService::lengthFromProjected($points, $xy)['length_m'], 1e-10);
+        unset($points[1]['elevation']);
+        $lengths = ProjectionService::lengthFromProjected($points, $xy);
+        self::assertSame(60.0, $lengths['length_m']);
+        self::assertSame('horizontal_missing_elevation', $lengths['elevation_status']);
+    }
+
+    public function test_real_projection_uses_gpx_elevations_in_metres(): void
+    {
+        $parsed = (new \App\Services\Mdb\GpxParser)->parse('<gpx xmlns="http://www.topografix.com/GPX/1/1"><wpt lat="31.7" lon="73.5"><ele>0</ele><name>001</name></wpt><wpt lat="31.7" lon="73.501"><ele>10</ele><name>002</name></wpt></gpx>');
+        $service = new ProjectionService;
+        $details = $service->lengthDetails($parsed['waypoints'], 32643);
+        self::assertEqualsWithDelta(94.785206, $details['horizontal_length_m'], 0.01);
+        self::assertEqualsWithDelta(hypot($details['horizontal_length_m'], 10), $service->length($parsed['waypoints'], 32643), 1e-8);
+        self::assertSame('elevation_adjusted', $details['elevation_status']);
+    }
 }

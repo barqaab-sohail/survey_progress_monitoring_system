@@ -123,7 +123,10 @@ class SurveyWaypoint
                 }
                 $key = 'survey:'.$identity;
                 $point = $points[$raw];
-                if (isset($points[$key]) && ($points[$key]['latitude'] != $point['latitude'] || $points[$key]['longitude'] != $point['longitude'] || ($points[$key]['correction'] ?? null) != ($point['correction'] ?? null))) {
+                $previousElevation = $points[$key]['elevation'] ?? null;
+                $elevation = $point['elevation'] ?? null;
+                $differentElevation = ($previousElevation === null) !== ($elevation === null) || $previousElevation != $elevation;
+                if (isset($points[$key]) && ($points[$key]['latitude'] != $point['latitude'] || $points[$key]['longitude'] != $point['longitude'] || $differentElevation || ($points[$key]['correction'] ?? null) != ($point['correction'] ?? null))) {
                     throw ValidationException::withMessages(['waypoints' => 'The same complete survey identifier has conflicting coordinate evidence. Resolve its source.']);
                 }
                 $points[$key] = array_replace($point, ['id' => $key, 'gpx_waypoint_id' => $point['id'], 'survey_identifier' => $identity]);

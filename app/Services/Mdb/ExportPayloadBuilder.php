@@ -198,11 +198,15 @@ class ExportPayloadBuilder
                 }
                 $points[] = $this->point($waypoints, $section['end_waypoint_id']);
                 $length = $this->length($points, $epsg);
+                $elevationStatus = ProjectionService::elevationStatus($points);
                 $lengthSource = count($points) > 2 ? 'survey_geometry' : 'endpoint_estimate';
                 if (($section['measured_length_m'] ?? null) !== null) {
                     $this->engineering(! empty($section['length_approved_by']) && ! empty($section['measured_length_reason']), 'Measured length override needs verifier approval and a reason.');
                     $length = (float) $section['measured_length_m'];
                     $lengthSource = 'approved_measured';
+                }
+                if ($length !== null && $lengthSource !== 'approved_measured' && $elevationStatus !== 'elevation_adjusted') {
+                    $this->omissions[] = 'Section #'.$section['id'].' uses horizontal length: elevation is missing or invalid at one or more route points.';
                 }
                 $conductors = $section['conductors'] ?? [];
                 $row = array_replace($base['InstSection'], [
@@ -222,7 +226,7 @@ class ExportPayloadBuilder
                     }
                     $tables['Loads'][] = $this->load($consumer, $id, $base['Loads'], $sectionPhases);
                 }
-                $provenance[] = ['section_id' => $id, 'survey_section_id' => $section['id'], 'pdf_id' => $section['source_pdf_id'] ?? null, 'page' => $section['source_page'] ?? null, 'row' => $section['source_row'] ?? null, 'length_source' => $lengthSource];
+                $provenance[] = ['section_id' => $id, 'survey_section_id' => $section['id'], 'pdf_id' => $section['source_pdf_id'] ?? null, 'page' => $section['source_page'] ?? null, 'row' => $section['source_row'] ?? null, 'length_source' => $lengthSource, 'elevation_status' => $length === null ? null : ($lengthSource === 'approved_measured' ? 'measured_override' : $elevationStatus)];
             }
             if ($version === self::EXTENDED_VERSION) {
                 $extra = app(SupplementalMapping::class)->build($transformer, $configuration);
@@ -286,7 +290,7 @@ class ExportPayloadBuilder
             'payload_version' => 1, 'mapping_version' => $version, 'idempotency_key' => $idempotencyKey,
             'revision' => ['id' => $revision->id, 'number' => $revision->number, 'sha256' => $revision->sha256],
             'template' => ['code' => $template->code, 'version' => $template->version, 'sha256' => $template->sha256, 'synergee_version' => $template->synergee_version, 'permitted_static_tables' => $template->metadata['permitted_static_tables'] ?? []],
-            'settings' => ['epsg' => $epsg ?: null, 'configuration_revision' => $configuration['revision'] ?? null, 'electrical' => $settings, 'simple_mdb_generation' => $this->simple],
+            'settings' => ['epsg' => $epsg ?: null, 'configuration_revision' => $configuration['revision'] ?? null, 'electrical' => $settings, 'simple_mdb_generation' => $this->simple, 'length_calculation' => ProjectionService::LENGTH_METHOD],
             'tables' => $tables, 'provenance' => $provenance,
             'sources' => array_map(fn ($source) => array_intersect_key($source, array_flip(['id', 'kind', 'original_name', 'sha256', 'bytes', 'version', 'uploaded_by'])), $snapshot['sources'] ?? []),
             'pv_records' => array_merge(...array_map(fn ($t) => $t['pv_records'] ?? [], $transformers)),
@@ -367,6 +371,9 @@ class ExportPayloadBuilder
             $this->require(! empty($point['correction_approved_by']) && ! empty($point['correction_approved_at']), 'Coordinate correction needs verifier approval.');
             $point['latitude'] = $point['correction']['latitude'] ?? null;
             $point['longitude'] = $point['correction']['longitude'] ?? null;
+            if (array_key_exists('elevation', $point['correction'])) {
+                $point['elevation'] = $point['correction']['elevation'];
+            }
         }
         $this->require(is_numeric($point['latitude']) && is_numeric($point['longitude']) && abs((float) $point['latitude']) <= 90 && abs((float) $point['longitude']) <= 180, 'Approved coordinates are missing or out of range.');
         $point['latitude'] = (float) $point['latitude'];

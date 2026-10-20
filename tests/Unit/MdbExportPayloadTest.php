@@ -40,6 +40,40 @@ class MdbExportPayloadTest extends TestCase
         return new ExportPayloadBuilder($projection);
     }
 
+    public function test_export_uses_elevation_adjusted_lengths_with_flagged_fallback_and_measured_override(): void
+    {
+        [$revision, $template] = $this->fixture();
+        $projection = new class extends ProjectionService
+        {
+            public function projectMany(array $points, int $epsg): array
+            {
+                return array_map(fn ($point) => ['x' => $point['longitude'] * 100000, 'y' => $point['latitude'] * 100000], $points);
+            }
+        };
+        $builder = new ExportPayloadBuilder($projection);
+        $baseline = $builder->build($revision, $template, 1, str_repeat('c', 64));
+        $snapshot = $revision->snapshot;
+        $snapshot['waypoints'][0]['elevation'] = 0;
+        $snapshot['waypoints'][1]['elevation'] = 10;
+        $revision->snapshot = $snapshot;
+        $payload = $builder->build($revision, $template, 1, str_repeat('d', 64));
+        $this->assertEqualsWithDelta(hypot(10, 10), $payload['tables']['InstSection'][2]['SectionLength_MUL'], 0.001);
+        $this->assertSame('elevation_adjusted', $payload['provenance'][0]['elevation_status']);
+        $this->assertEqualsWithDelta(20, $payload['tables']['InstSection'][3]['SectionLength_MUL'], 0.001);
+        $this->assertSame('horizontal_missing_elevation', $payload['provenance'][1]['elevation_status']);
+        $this->assertStringContainsString('elevation is missing', implode(' ', $payload['engineering_omissions']));
+        $this->assertSame(array_keys($baseline['tables']['InstSection'][2]), array_keys($payload['tables']['InstSection'][2]));
+        $this->assertSame(ProjectionService::LENGTH_METHOD, $payload['settings']['length_calculation']);
+
+        $snapshot['transformers'][0]['sections'][0] = array_replace($snapshot['transformers'][0]['sections'][0],
+            ['measured_length_m' => 16, 'measured_length_reason' => 'Verified measurement', 'length_approved_by' => 2]);
+        $revision->snapshot = $snapshot;
+        $measured = $builder->build($revision, $template, 1, str_repeat('e', 64));
+        $this->assertSame(16.0, $measured['tables']['InstSection'][2]['SectionLength_MUL']);
+        $this->assertSame('approved_measured', $measured['provenance'][0]['length_source']);
+        $this->assertSame('measured_override', $measured['provenance'][0]['elevation_status']);
+    }
+
     public function test_branch_endpoints_distinct_conductors_and_approved_load_values_map_exactly(): void
     {
         [$revision, $template] = $this->fixture();

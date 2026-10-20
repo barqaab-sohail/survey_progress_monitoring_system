@@ -116,7 +116,7 @@ class NetworkValidator
             if (! is_numeric($lat) || ! is_numeric($lon) || ! is_finite((float) $lat) || ! is_finite((float) $lon) || $lat < -90 || $lat > 90 || $lon < -180 || $lon > 180) {
                 $issue('invalid_coordinates', 'Waypoint '.$point['name'].' has missing or invalid WGS84 coordinates.', $context);
             } else {
-                $effective[$id] = ['latitude' => (float) $lat, 'longitude' => (float) $lon];
+                $effective[$id] = ['latitude' => (float) $lat, 'longitude' => (float) $lon, 'elevation' => $coordinates['elevation'] ?? null];
             }
         }
         foreach ($bySourceName as $ids) {
@@ -304,19 +304,24 @@ class NetworkValidator
                 }
                 $adjacency[$start][] = $end;
                 $adjacency[$end][] = $start;
-                $estimate = null;
+                $estimate = $horizontalLength = $elevationStatus = null;
                 if (isset($projected[$start], $projected[$end])) {
-                    if (! empty($section['geometry'])) {
-                        try {
-                            $estimate = $this->projection->length([$effective[$start], ...$section['geometry'], $effective[$end]], (int) $epsg);
-                        } catch (\Throwable $exception) {
-                            $issue('invalid_geometry', $exception->getMessage(), $sc);
-                        }
-                    } else {
-                        $estimate = hypot($projected[$start]['x'] - $projected[$end]['x'], $projected[$start]['y'] - $projected[$end]['y']);
+                    try {
+                        $route = [$effective[$start], ...($section['geometry'] ?? []), $effective[$end]];
+                        $lengths = ! empty($section['geometry'])
+                            ? $this->projection->lengthDetails($route, (int) $epsg)
+                            : ProjectionService::lengthFromProjected($route, [$projected[$start], $projected[$end]]);
+                        $estimate = $lengths['length_m'];
+                        $horizontalLength = $lengths['horizontal_length_m'];
+                        $elevationStatus = $lengths['elevation_status'];
+                    } catch (\Throwable $exception) {
+                        $issue('invalid_geometry', $exception->getMessage(), $sc);
                     }
                 }
                 $measured = $section['measured_length_m'] ?? null;
+                if ($measured === null && $elevationStatus !== null && $elevationStatus !== 'elevation_adjusted') {
+                    $issue('length_elevation_unavailable', 'Section length uses horizontal distance because elevation is missing or invalid at one or more route points. Elevation was not assumed to be zero.', $sc, true);
+                }
                 if ($measured !== null && (! is_numeric($measured) || $measured <= 0 || empty($section['measured_length_reason']) || empty($section['length_approved_by']))) {
                     $issue('unapproved_measured_length', 'Measured length overrides require positive metres, provenance/reason and verifier approval.', $sc, $simple && is_numeric($measured) && $measured > 0);
                 }
@@ -324,7 +329,7 @@ class NetworkValidator
                 if ($length !== null && ($length < 0.5 || $length > (float) ($settings['review_length_above_m'] ?? 2000))) {
                     $issue('suspicious_length', 'Section length is unusual and requires engineering review.', $sc, true);
                 }
-                $edges[] = ['section_id' => $sid, 'id' => $this->stableId('S', $data, $tid, $sid), 'from' => $this->stableId('N', $data, $tid, $start), 'to' => $this->stableId('N', $data, $tid, $end), 'start_waypoint_id' => $points[$start]['id'], 'end_waypoint_id' => $points[$end]['id'], 'estimated_length_m' => $estimate, 'length_m' => $length, 'length_kind' => $measured !== null ? 'approved_measured' : (! empty($section['geometry']) ? 'geometry_estimate' : 'endpoint_estimate')];
+                $edges[] = ['section_id' => $sid, 'id' => $this->stableId('S', $data, $tid, $sid), 'from' => $this->stableId('N', $data, $tid, $start), 'to' => $this->stableId('N', $data, $tid, $end), 'start_waypoint_id' => $points[$start]['id'], 'end_waypoint_id' => $points[$end]['id'], 'estimated_length_m' => $estimate, 'horizontal_length_m' => $horizontalLength, 'elevation_status' => $elevationStatus, 'length_m' => $length, 'length_kind' => $measured !== null ? 'approved_measured' : (! empty($section['geometry']) ? 'geometry_estimate' : 'endpoint_estimate')];
             }
             if (! $edges) {
                 $issue('empty_network', 'Enter verified section endpoint pairs for this transformer.', $tc);

@@ -8,6 +8,8 @@ use Symfony\Component\Process\Process;
 
 class ProjectionService
 {
+    public const LENGTH_METHOD = 'gpx-elevation-v1';
+
     public function project(float $latitude, float $longitude, int $epsg): array
     {
         return $this->projectMany([['latitude' => $latitude, 'longitude' => $longitude]], $epsg)[0];
@@ -45,21 +47,59 @@ class ProjectionService
         return $result['points'];
     }
 
-    /** Geometry includes endpoints; its Euclidean projected distance is an estimate. */
+    /** Geometry includes endpoints. Missing elevations retain a horizontal estimate. */
     public function length(array $points, int $epsg): float
+    {
+        return $this->lengthDetails($points, $epsg)['length_m'];
+    }
+
+    public function lengthDetails(array $points, int $epsg): array
     {
         if (count($points) < 2) {
             throw new InvalidArgumentException('Length requires at least two geometry points.');
         }
-        $projected = $this->projectMany($points, $epsg);
-        $length = 0.0;
-        foreach ($projected as $index => $point) {
-            if ($index > 0) {
-                $previous = $projected[$index - 1];
-                $length += hypot($point['x'] - $previous['x'], $point['y'] - $previous['y']);
+        return self::lengthFromProjected($points, $this->projectMany($points, $epsg));
+    }
+
+    public static function elevationStatus(array $points): string
+    {
+        $missing = false;
+        foreach ($points as $point) {
+            $value = $point['elevation'] ?? null;
+            if ($value === null || $value === '') {
+                $missing = true;
+            } elseif (! is_numeric($value) || ! is_finite((float) $value)) {
+                return 'horizontal_invalid_elevation';
             }
         }
 
-        return $length;
+        return $missing ? 'horizontal_missing_elevation' : 'elevation_adjusted';
+    }
+
+    /** Reuse projected coordinates so validation and export apply identical maths. */
+    public static function lengthFromProjected(array $points, array $projected): array
+    {
+        if (count($points) < 2) {
+            throw new InvalidArgumentException('Length requires at least two geometry points.');
+        }
+        if (count($points) !== count($projected)) {
+            throw new InvalidArgumentException('Each geometry point needs projected coordinates.');
+        }
+        $points = array_values($points);
+        $projected = array_values($projected);
+        $status = self::elevationStatus($points);
+        $horizontalLength = $length = 0.0;
+        foreach ($projected as $index => $point) {
+            if ($index > 0) {
+                $previous = $projected[$index - 1];
+                $horizontal = hypot($point['x'] - $previous['x'], $point['y'] - $previous['y']);
+                $horizontalLength += $horizontal;
+                $length += $status === 'elevation_adjusted'
+                    ? hypot($horizontal, (float) $points[$index]['elevation'] - (float) $points[$index - 1]['elevation'])
+                    : $horizontal;
+            }
+        }
+
+        return ['length_m' => $length, 'horizontal_length_m' => $horizontalLength, 'elevation_status' => $status];
     }
 }

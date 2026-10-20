@@ -97,4 +97,22 @@ class MdbSurveyIdentityTest extends TestCase
         $this->expectException(ValidationException::class);
         (new SurveyWaypoint)->network($transformer, $points);
     }
+
+    public function test_one_survey_identity_cannot_silently_choose_between_conflicting_elevations(): void
+    {
+        $points = [1 => ['id' => 1, 'name' => '001', 'source_file_id' => 1, 'latitude' => 30, 'longitude' => 71, 'elevation' => 0],
+            2 => ['id' => 2, 'name' => '001', 'source_file_id' => 2, 'latitude' => 30, 'longitude' => 71, 'elevation' => 0.0]];
+        $transformer = ['source_waypoint_id' => 1, 'sections' => [['start_waypoint_id' => 1, 'end_waypoint_id' => 2,
+            'original_entry' => ['start_survey_identifier' => '01081026001', 'end_survey_identifier' => '01081026001']]]];
+        $this->assertSame(0.0, (new SurveyWaypoint)->network($transformer, $points)['points']['survey:01081026001']['elevation']);
+        foreach ([10, null] as $conflicting) {
+            $points[2]['elevation'] = $conflicting;
+            try {
+                (new SurveyWaypoint)->network($transformer, $points);
+                $this->fail('Conflicting or missing elevation evidence must be resolved.');
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('waypoints', $exception->errors());
+            }
+        }
+    }
 }

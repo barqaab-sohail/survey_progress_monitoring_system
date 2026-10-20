@@ -87,6 +87,37 @@ class MdbNetworkValidatorTest extends TestCase
         self::assertSame($result['topology'], $this->validator()->validate($this->fixture())['topology']);
     }
 
+    public function test_validation_reports_elevation_adjusted_length_and_missing_elevation_fallback(): void
+    {
+        $data = $this->fixture();
+        $data['waypoints'][0]['elevation'] = 0;
+        $data['waypoints'][1]['elevation'] = 10;
+        $result = $this->validator()->validate($data);
+        self::assertTrue($result['valid'], json_encode($result['errors']));
+        $edges = $result['topology'][0]['sections'];
+        self::assertEqualsWithDelta(100, $edges[0]['horizontal_length_m'], 0.001);
+        self::assertEqualsWithDelta(hypot(100, 10), $edges[0]['length_m'], 0.001);
+        self::assertSame('elevation_adjusted', $edges[0]['elevation_status']);
+        self::assertSame('horizontal_missing_elevation', $edges[1]['elevation_status']);
+        self::assertContains('length_elevation_unavailable', array_column($result['warnings'], 'code'));
+
+        $data['transformers'][0]['sections'][0] += ['measured_length_m' => 120, 'measured_length_reason' => 'Verified tape measurement', 'length_approved_by' => 1];
+        self::assertSame(120.0, $this->validator()->validate($data)['topology'][0]['sections'][0]['length_m']);
+    }
+
+    public function test_validation_preserves_elevation_for_geometry_and_approved_coordinate_corrections(): void
+    {
+        $data = $this->fixture();
+        $data['waypoints'][0]['elevation'] = 0;
+        $data['waypoints'][1]['elevation'] = 0;
+        $data['waypoints'][1] += ['correction' => ['latitude' => 31.7, 'longitude' => 73.501, 'elevation' => 10, 'reason' => 'Verified correction'],
+            'correction_approved_by' => 1, 'correction_approved_at' => '2026-10-20T00:00:00Z'];
+        $data['transformers'][0]['sections'][0]['geometry'] = [['latitude' => 31.7, 'longitude' => 73.5005, 'elevation' => 20]];
+        $edge = $this->validator()->validate($data)['topology'][0]['sections'][0];
+        self::assertEqualsWithDelta(hypot(50, 20) + hypot(50, 10), $edge['length_m'], 0.001);
+        self::assertSame('elevation_adjusted', $edge['elevation_status']);
+    }
+
     public function test_missing_sample_waypoints_878_879_link_to_pdf_row(): void
     {
         $data = $this->fixture();
