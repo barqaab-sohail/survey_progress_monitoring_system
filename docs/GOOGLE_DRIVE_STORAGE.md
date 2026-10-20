@@ -161,6 +161,24 @@ php artisan drive-storage:migrate-existing --limit=100 --include-workspaces
 
 Repeat in batches until eligible originals have a storage reference; monitor transfers before continuing. Each original remains available during transfer and its existing route stays the same afterward. Original file versions are retained in Drive. Missing or checksum-invalid local survey sources are reported and left unchanged. The optional workspace migration skips workspaces without an eligible original. Existing PDF sketch attachments remain local and accessible until separately migrated by an administrator; newly uploaded PDF sketches are archived automatically.
 
+## PDF viewer returns 503
+
+The 2026-10-20 production logs exposed a batch deletion failure: the old controller deleted a staging file, then tried to delete its archive row while `drive_file_hash_claims` still referenced it. This left an archive record pointing to a missing original. Identical later uploads reused that record and discarded their fresh staging copies.
+
+Deploy `app/Http/Controllers/MdbWorkflowController.php` and `app/Services/DriveStorage/FileStorage.php` together. Batch deletion now retains the reusable archive record and its staging original; Drive transfer cleanup still removes staging after a confirmed upload. Re-uploading an identical PDF/GPX restores a missing or invalid staging copy on a pending/failed archive without changing its ID or existing source references. Uploaded archives are never replaced by this recovery path. Restart the workers, re-upload the original files through the source upload form, and retry failed source processing as needed. No database reset or OAuth credential replacement is required by this fix.
+
+After deploying `FileStorage.php`, reproduce the failed preview and inspect the application log for `Source storage read failed.`. The entry records only the stored-file ID, failure stage and exception class; do not enable public debug output or share OAuth credentials.
+
+- `temporary_storage`: ensure the PHP application account can create private files in `storage/app/private/drive-storage/work` (or the configured local disk root).
+- `storage_lock`: check the configured cache/lock backend and whether a transfer is still running. Retry after it completes; do not clear active locks while transfers run.
+- `storage_record`: check database availability and the stored-file record.
+- `drive_account`: reconnect the original application storage account.
+- `drive_download`: check the application storage connection, outbound Google HTTPS access, and remote file availability.
+- `staged_original`: check that the original staging file still exists and is readable by the PHP application account.
+- `integrity_verification`: investigate the file size/hash mismatch; restore the correct original rather than bypassing verification.
+
+A `queued` PDF also requires the source worker described above. With the default Drive queue settings, start `php artisan queue:work drive-storage --queue=drive-storage,mdb-sources --sleep=3 --tries=5 --timeout=420` under the host's process manager, or use the documented cron alternative. PDF inspection additionally requires the configured Python executable and PyMuPDF.
+
 ## Validation performed
 
 Automated tests use fake Google HTTP responses, not production credentials. They cover verified transfer/cleanup, ambiguous upload completion and retry without duplicates, checksum rejection, temporary-file cleanup, pending access during an outage, encrypted token refresh, admin-only storage consent, separate personal disconnect, source processing after local removal and existing route access controls. A real OAuth/upload/download acceptance check on the deployment account remains necessary during activation.

@@ -356,6 +356,24 @@ class MdbWorkflowTest extends TestCase
         $this->get(route('mdb-workflow.config', $this->batch->project))->assertOk();
     }
 
+    public function test_batch_deletion_preserves_the_reusable_drive_archive_and_staging(): void
+    {
+        config(['drive_storage.enabled' => false]);
+        $source = $this->source();
+        config(['drive_storage.enabled' => true]);
+        $storage = app(\App\Services\DriveStorage\FileStorage::class);
+        $archive = $storage->register($source->disk, $source->path, $source->original_name, $source->mime, []);
+        $source->update(['drive_stored_file_id' => $archive->id]);
+
+        $this->delete(route('mdb-workflow.destroy', $this->batch), ['confirmed' => '1'])
+            ->assertRedirect(route('mdb-workflow.index'))->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('mdb_workflow_batches', ['id' => $this->batch->id]);
+        $this->assertDatabaseHas('drive_stored_files', ['id' => $archive->id]);
+        $this->assertDatabaseHas('drive_file_hash_claims', ['sha256' => $archive->sha256, 'drive_stored_file_id' => $archive->id]);
+        Storage::disk('local')->assertExists($archive->local_path);
+    }
+
     public function test_super_admin_can_delete_pdf_entry_and_audit_it_without_touching_an_unrelated_batch(): void
     {
         $source = $this->source();

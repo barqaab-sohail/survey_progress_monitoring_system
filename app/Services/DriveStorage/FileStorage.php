@@ -33,6 +33,21 @@ class FileStorage
                     ?? DriveStoredFile::where('sha256', $sha256)->whereIn('status', ['pending', 'failed'])->orderBy('id')->first();
             }
             if ($existing) {
+                // A failed transfer may have lost its staging copy during an older
+                // batch deletion. Keep the verified re-upload instead of discarding it.
+                Cache::lock('drive-storage:file:'.$existing->id, 600)->block(10, function () use ($existing, $disk, $path, $full, $bytes) {
+                    $existing->refresh();
+                    if ($existing->status === 'uploaded') {
+                        return;
+                    }
+                    try {
+                        $this->verifyLocal($existing, Storage::disk($existing->local_disk)->path($existing->local_path));
+                    } catch (RuntimeException) {
+                        $existing->update(['local_disk' => $disk, 'local_path' => $path,
+                            'bytes' => $bytes, 'md5' => md5_file($full), 'status' => 'pending',
+                            'local_deleted_at' => null, 'last_error' => null, 'next_attempt_at' => null]);
+                    }
+                });
                 if (! $claim->drive_stored_file_id) {
                     DB::table('drive_file_hash_claims')->where('sha256', $sha256)->update([
                         'drive_stored_file_id' => $existing->id, 'updated_at' => now(),
@@ -105,6 +120,7 @@ class FileStorage
                 throw new RuntimeException('Automatic Drive storage is disabled; the staged file is retained.');
             }
             $file->increment('attempts');
+            $stage = 'storage_account';
             try {
                 $connection = DriveStorageConnection::find(1);
                 if (! $connection) {
@@ -113,16 +129,21 @@ class FileStorage
                 if ($file->account_id && $file->account_id !== $connection->account_id) {
                     throw new RuntimeException('Reconnect the original storage account.');
                 }
+                $stage = 'staged_original';
                 $path = Storage::disk($file->local_disk)->path($file->local_path);
                 $this->verifyLocal($file, $path);
                 $client = app(DriveClient::class);
                 if (! $file->drive_file_id) {
+                    $stage = 'drive_identity';
                     $file->update(['drive_file_id' => $client->generateId(), 'account_id' => $connection->account_id]);
                 }
+                $stage = 'drive_upload';
                 $client->upload($file, $path);
                 // Commit the remote pointer before deleting the only local recovery copy.
                 $file->update(['status' => 'uploaded', 'uploaded_at' => now(), 'last_error' => null, 'next_attempt_at' => null]);
-            } catch (\Throwable) {
+            } catch (\Throwable $exception) {
+                Log::warning('Drive storage transfer failed.', ['stored_file_id' => $id,
+                    'stage' => $stage, 'exception_type' => $exception::class]);
                 $file->update(['status' => 'failed', 'last_error' => 'Drive transfer failed. The private staged original is retained; check storage connection, quota and worker, then retry.',
                     'next_attempt_at' => now()->addMinutes(min(360, 2 ** min($file->attempts, 8)))]);
                 // Do not log Google responses, OAuth credentials or resumable session URLs.
@@ -161,28 +182,48 @@ class FileStorage
 
     private function snapshot(DriveStoredFile $file): string
     {
-        Storage::disk('local')->makeDirectory('drive-storage/work');
-        $temporary = tempnam(Storage::disk('local')->path('drive-storage/work'), 'source-');
+        $temporary = null;
+        $stage = 'temporary_storage';
         try {
-            Cache::lock('drive-storage:file:'.$file->id, 600)->block(10, function () use ($file, $temporary) {
+            $workDirectory = Storage::disk('local')->path('drive-storage/work');
+            if (! Storage::disk('local')->makeDirectory('drive-storage/work') || ! is_writable($workDirectory)) {
+                throw new RuntimeException('Private temporary storage is not writable.');
+            }
+            $temporary = tempnam($workDirectory, 'source-');
+            if ($temporary === false) {
+                throw new RuntimeException('Private temporary file could not be created.');
+            }
+            $stage = 'storage_lock';
+            Cache::lock('drive-storage:file:'.$file->id, 600)->block(10, function () use ($file, $temporary, &$stage) {
+                $stage = 'storage_record';
                 $file->refresh();
                 if ($file->status === 'uploaded') {
+                    $stage = 'drive_account';
                     if ($file->account_id !== DriveStorageConnection::find(1)?->account_id) {
                         throw new RuntimeException('The original Drive storage account must be connected.');
                     }
+                    $stage = 'drive_download';
                     app(DriveClient::class)->download($file, $temporary);
                 } else {
+                    $stage = 'staged_original';
                     $source = Storage::disk($file->local_disk)->path($file->local_path);
                     if (! is_file($source) || ! copy($source, $temporary)) {
                         throw new RuntimeException('The staged original is unavailable.');
                     }
                 }
+                $stage = 'integrity_verification';
                 $this->verifyLocal($file, $temporary);
             });
 
             return $temporary;
-        } catch (\Throwable) {
-            if (is_file($temporary)) {
+        } catch (\Throwable $exception) {
+            // Record actionable context without OAuth tokens, API bodies or private paths.
+            Log::warning('Source storage read failed.', [
+                'stored_file_id' => $file->id,
+                'stage' => $stage,
+                'exception_type' => $exception::class,
+            ]);
+            if (is_string($temporary) && is_file($temporary)) {
                 unlink($temporary);
             }
             throw new RuntimeException('Source file is temporarily unavailable or failed integrity verification. Please retry or contact the administrator.');

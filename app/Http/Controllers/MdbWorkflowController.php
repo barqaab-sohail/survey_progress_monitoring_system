@@ -233,12 +233,13 @@ class MdbWorkflowController extends Controller
                 $exportIds = $locked->exports()->pluck('id');
                 $pdfNames = $sources->where('kind', 'pdf')->pluck('original_name')->values()->all();
                 $transformerCodes = $locked->transformers()->pluck('code')->values()->all();
-                $files = $sources->map(fn ($source) => ['disk' => $source->disk, 'path' => $source->path])->all();
+                // Drive archive rows own their staging files. Other batches can
+                // reuse the same archive through the content hash claim.
+                $files = $sources->whereNull('drive_stored_file_id')->map(fn ($source) => ['disk' => $source->disk, 'path' => $source->path])->all();
                 $files = array_merge($files, DB::table('mdb_workflow_generation_inputs')->where('batch_id', $locked->id)->get(['disk', 'path'])->map(fn ($file) => (array) $file)->all());
                 $files = array_merge($files, $locked->exports()->get(['output_disk', 'output_path', 'payload_path'])->flatMap(fn ($export) => collect([
                     ['disk' => $export->output_disk, 'path' => $export->output_path], ['disk' => $export->output_disk, 'path' => $export->payload_path],
                 ]))->all());
-                $driveFileIds = $sources->pluck('drive_stored_file_id')->filter()->unique()->values();
 
                 $this->audit->record($request->user(), 'mdb.pdf_entry_deleted', $locked, [
                     'batch_id' => $locked->id, 'survey_date' => $locked->survey_date?->toDateString(), 'pdf_files' => $pdfNames,
@@ -260,25 +261,12 @@ class MdbWorkflowController extends Controller
                 DB::table('mdb_workflow_sources')->where('batch_id', $locked->id)->delete();
                 $locked->delete();
 
-                return ['files' => $files, 'drive_file_ids' => $driveFileIds];
+                return ['files' => $files];
             });
 
             foreach ($filesToRemove['files'] as $file) {
                 if (! empty($file['path']) && ! empty($file['disk'])) {
                     Storage::disk($file['disk'])->delete($file['path']);
-                }
-            }
-            foreach ($filesToRemove['drive_file_ids'] as $driveFileId) {
-                $stillUsed = DB::table('mdb_workflow_sources')->where('drive_stored_file_id', $driveFileId)->exists()
-                    || DB::table('field_survey_attachments')->where('drive_stored_file_id', $driveFileId)->exists()
-                    || DB::table('field_survey_test_attachments')->where('drive_stored_file_id', $driveFileId)->exists()
-                    || DB::table('transformer_mdb_projects')->where(fn ($query) => $query->where('pdf_drive_stored_file_id', $driveFileId)->orWhere('gpx_drive_stored_file_id', $driveFileId))->exists();
-                if (! $stillUsed) {
-                    $driveFile = DB::table('drive_stored_files')->where('id', $driveFileId)->first();
-                    if ($driveFile?->local_path) {
-                        Storage::disk($driveFile->local_disk)->delete($driveFile->local_path);
-                    }
-                    DB::table('drive_stored_files')->where('id', $driveFileId)->delete();
                 }
             }
         } catch (\Throwable $exception) {

@@ -11,6 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -126,6 +127,24 @@ class DriveStorageTest extends TestCase
         $this->assertSame(1, $this->uploads);
     }
 
+    public function test_reupload_restores_missing_staging_without_creating_another_archive(): void
+    {
+        $first = $this->stage();
+        Storage::disk('local')->delete($first->local_path);
+        $first->update(['status' => 'failed']);
+        Storage::disk('local')->put('stage/recovery.pdf', $this->body);
+
+        $restored = app(FileStorage::class)->register('local', 'stage/recovery.pdf', 'recovery.pdf', 'application/pdf', []);
+
+        $this->assertSame($first->id, $restored->id);
+        $this->assertSame(1, DriveStoredFile::count());
+        Storage::disk('local')->assertExists($restored->local_path);
+        app(FileStorage::class)->withPath($restored, 'local', $restored->local_path,
+            fn ($path) => $this->assertSame($this->body, file_get_contents($path)));
+        app(FileStorage::class)->transfer($restored->id);
+        $this->assertSame('uploaded', $restored->fresh()->status);
+    }
+
     public function test_different_content_with_same_filename_is_kept_as_a_unique_file_name(): void
     {
         $first = $this->stage();
@@ -195,6 +214,7 @@ class DriveStorageTest extends TestCase
         $file = $this->stage();
         app(FileStorage::class)->transfer($file->id);
         $this->corrupt = true;
+        Log::spy();
         try {
             app(FileStorage::class)->withPath($file, 'local', $file->local_path, fn () => null);
             $this->fail('Expected integrity rejection.');
@@ -202,6 +222,11 @@ class DriveStorageTest extends TestCase
         }
         $this->assertSame([], Storage::disk('local')->allFiles('drive-storage/work'));
         $this->assertSame('uploaded', $file->fresh()->status);
+        Log::shouldHaveReceived('warning')->once()->with('Source storage read failed.', [
+            'stored_file_id' => $file->id,
+            'stage' => 'integrity_verification',
+            'exception_type' => \RuntimeException::class,
+        ]);
     }
 
     public function test_pending_file_remains_viewable_when_google_is_unavailable(): void
