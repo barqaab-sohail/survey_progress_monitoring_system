@@ -71,7 +71,7 @@
             </div>
         </fieldset></div>
         <div class="entry-identity-foot"><small id="entry-waypoint-status"></small><small id="entry-group-date-status" class="entry-inheritance"></small><small id="entry-conductor-copy-status" class="entry-inheritance"></small><small id="entry-equipment-copy-status" class="entry-inheritance"></small></div>
-        <fieldset class="entry-compact-fieldset entry-count-fieldset"><legend>Consumer counts <span class="entry-legend-note">— blank means not entered; 0 means none</span></legend><div class="entry-consumer-fields">
+        <fieldset class="entry-compact-fieldset entry-count-fieldset"><legend>Consumer counts <span class="entry-legend-note">— blank means not entered; 0 means none</span></legend><div class="entry-consumer-scroll" tabindex="0" role="region" aria-label="Consumer count fields"><div class="entry-consumer-fields">
             @foreach(\App\Services\Mdb\EntryLookups::CONSUMERS as $key=>$description)
                 @if(in_array($key, \App\Services\Mdb\EntryLookups::SINGLE_PHASE_CONSUMERS, true))
                 <div class="entry-consumer-phase-group" role="group" aria-label="{{ strtoupper($key) }} — {{ $description }} phase counts">
@@ -87,7 +87,7 @@
                 @endif
             @endforeach
             <label class="entry-intersection-field" title="Intersection, excluded from consumer total"><strong>Int</strong><input name="intersection" type="checkbox" value="1" aria-label="Intersection (Int)"></label>
-        </div><div class="entry-count-foot"><span id="entry-consumer-total">Entered consumer total: 0</span><details><summary>Consumer code key</summary><p>@foreach(\App\Services\Mdb\EntryLookups::CONSUMERS as $key=>$description)<span><strong>{{ strtoupper($key) }}</strong>: {{ $description }}@if(!$loop->last) · @endif</span>@endforeach</p>Intersection is excluded from the total. PV counts remain separate in export.</details></div></fieldset>
+        </div></div><div class="entry-count-foot"><span id="entry-consumer-total">Entered consumer total: 0</span><details><summary>Consumer code key</summary><p>@foreach(\App\Services\Mdb\EntryLookups::CONSUMERS as $key=>$description)<span><strong>{{ strtoupper($key) }}</strong>: {{ $description }}@if(!$loop->last) · @endif</span>@endforeach</p>Intersection is excluded from the total. PV counts remain separate in export.</details></div></fieldset>
         <details class="entry-pv"><summary>Optional PV details <span id="entry-pv-count"></span></summary><div id="entry-pv-records"></div><button type="button" class="btn btn-sm btn-light" id="entry-pv-add">Add PV record</button></details>
         <div id="entry-gpx-ambiguity" class="entry-source-resolution" hidden><label>GPX source / confirm match<select name="gpx_source_id" id="entry-gpx" aria-label="Select GPX source to confirm waypoint match"></select></label><small id="entry-gpx-help">Choose the GPX file containing this surveyed GPS point.</small></div>
         <details class="entry-row-options"><summary>Row identity / section pairing <span id="entry-pair-caption"></span></summary><div class="entry-fields">
