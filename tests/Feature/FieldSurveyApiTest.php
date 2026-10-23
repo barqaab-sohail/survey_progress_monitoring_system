@@ -299,6 +299,25 @@ class FieldSurveyApiTest extends TestCase
             ->assertJsonValidationErrors(['rows.0.group', 'rows.0.gps_waypoint', 'rows.0.equipment_type']);
     }
 
+    public function test_mobile_consumer_phases_survive_sync_and_recalculate_totals(): void
+    {
+        $data = $this->payload();
+        $data['rows'][0]['consumer_phases'] = [
+            'rs' => ['R' => 2, 'Y' => null, 'B' => 3],
+            'sc' => ['R' => 0, 'Y' => null, 'B' => null],
+        ];
+        $data['rows'][0]['consumers']['rs'] = 999;
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
+        $row = FieldSurvey::firstOrFail()->rows[0];
+        $this->assertEquals(5, $row['consumers']['rs']);
+        $this->assertEquals(0, $row['consumers']['sc']);
+        $this->assertSame($data['rows'][0]['consumer_phases'], $row['consumer_phases']);
+        $data['base_revision'] = 1;
+        $data['rows'][0]['consumer_phases']['rs']['R'] = -1;
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()
+            ->assertJsonValidationErrors(['rows.0.consumer_phases.rs.R']);
+    }
+
     public function test_same_uuid_retry_is_idempotent_and_edits_require_current_revision(): void
     {
         $data = $this->payload();

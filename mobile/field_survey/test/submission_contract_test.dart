@@ -5,6 +5,34 @@ import 'package:hazeco_field_survey/models.dart';
 import 'models_test.dart' show readySurvey;
 
 void main() {
+  test(
+    'RS and SC phases survive sync with automatic totals and blank distinction',
+    () {
+      final record = readySurvey();
+      final row = record.rows.first;
+      row['consumer_phases'] = <String, dynamic>{
+        'rs': <String, dynamic>{'R': '2', 'Y': '', 'B': '3'},
+        'sc': <String, dynamic>{'R': '0', 'Y': '', 'B': ''},
+      };
+      row['consumers']['si'] = '8';
+      updatePhaseConsumerTotals(row);
+      expect(row['consumers']['rs'], 5);
+      expect(row['consumers']['sc'], 0);
+      final wire = record.payload()['rows'][0];
+      expect(wire['consumer_phases']['rs'], {'R': 2, 'Y': null, 'B': 3});
+      expect(wire['consumers']['si'], 8);
+      row['consumer_phases']['rs']['R'] = '';
+      row['consumer_phases']['rs']['B'] = '';
+      updatePhaseConsumerTotals(row);
+      expect(record.payload()['rows'][0]['consumers'].containsKey('rs'), false);
+      row['consumer_phases']['sc']['R'] = '-1';
+      expect(
+        SurveyValidation.errors(record),
+        contains('rows.0.consumer_phases.sc.R'),
+      );
+    },
+  );
+
   test('mobile serializes the same full submission accepted by the API', () {
     final fixture =
         jsonDecode(

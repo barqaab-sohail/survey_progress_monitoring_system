@@ -136,15 +136,35 @@ class MdbOperatorEntryTest extends TestCase
             }
             $this->assertStringNotContainsString('name="consumers['.$category.']" type="number" readonly', $html);
         }
-        foreach (['rl', 'lc', 'li', 'pb', 'ag', 'pv'] as $category) {
+        foreach (['rl', 'lc', 'si', 'li', 'pb', 'ag', 'pv'] as $category) {
             $this->assertStringNotContainsString('name="consumer_phases['.$category.']', $html);
+        }
+    }
+
+    public function test_si_saves_as_one_three_phase_consumer_count(): void
+    {
+        $row = $this->save(['consumers' => ['si' => 8]]);
+        $this->assertSame(8, $row->fresh()->consumers['si']);
+        $this->assertArrayNotHasKey('si', $row->original_entry['consumer_phases'] ?? []);
+    }
+
+    public function test_clearing_pv_count_removes_blank_pv_details_and_projected_records(): void
+    {
+        $blank = ['reference' => null, 'meter_number' => null, 'service_load_kw' => null, 'installed_capacity_kw' => null, 'remarks' => null];
+        $row = $this->save(['consumers' => ['pv' => 1], 'pv_details' => [$blank]]);
+        $this->assertCount(1, $row->pvRecords);
+        foreach ([null, 0] as $count) {
+            $this->putJson(route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $row]),
+                $this->payload(['client_uuid' => $row->client_uuid, 'consumers' => ['pv' => $count], 'pv_details' => [$blank]]))->assertOk();
+            $this->assertSame([], $row->fresh()->pv_details);
+            $this->assertSame(0, $row->pvRecords()->count());
         }
     }
 
     public function test_single_phase_counts_save_reload_edit_and_keep_scalar_export_totals(): void
     {
         $phases = ['rs' => ['R' => 5, 'Y' => 2, 'B' => 7], 'sc' => ['R' => 0, 'Y' => null, 'B' => 3],
-            'si' => ['R' => null, 'Y' => null, 'B' => null], 'st' => ['R' => 1, 'Y' => null, 'B' => 0]];
+            'st' => ['R' => 1, 'Y' => null, 'B' => 0]];
         $row = $this->save(['consumer_phases' => $phases, 'consumers' => ['rs' => 999, 'rl' => 4, 'sc' => 999, 'pv' => 2]]);
         $this->assertSame($phases, $row->original_entry['consumer_phases']);
         $this->assertSame(14, $row->consumers['rs']);
@@ -215,7 +235,7 @@ class MdbOperatorEntryTest extends TestCase
     {
         $blank = ['R' => null, 'Y' => null, 'B' => null];
         $row = $this->save(['consumers' => ['rs' => 14, 'sc' => 0, 'si' => null, 'st' => 3],
-            'consumer_phases' => array_fill_keys(['rs', 'sc', 'si', 'st'], $blank)]);
+            'consumer_phases' => array_fill_keys(['rs', 'sc', 'st'], $blank)]);
         $this->assertSame(14, $row->consumers['rs']);
         $this->assertSame(0, $row->consumers['sc']);
         $this->assertNull($row->consumers['si']);
@@ -781,7 +801,7 @@ class MdbOperatorEntryTest extends TestCase
     public function test_role_specific_pages_hide_other_actions_and_readonly_pdf_viewer_keeps_navigation(): void
     {
         [$operator, $verifier, $creator] = $this->workflowActors();
-        $operatorPage = $this->actingAs($operator)->get(route('mdb-workflow.show', $this->batch))->assertOk()->assertSee('Submit for Verification')
+        $operatorPage = $this->actingAs($operator)->get(route('mdb-workflow.show', $this->batch))->assertOk()->assertSee('Submit Transformer')->assertSee('Enter another transformer from the same PDF?')
             ->assertDontSee('Review all rows &amp; generate MDB', false)->assertDontSee('Review &amp; generate MDB', false)->getContent();
         if (getenv('MDB_ENTRY_QA_ARTIFACTS')) {
             file_put_contents(base_path('tmp/mdb-entry-qa/operator-workflow.html'), $operatorPage);
@@ -1231,12 +1251,14 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertStringContainsString('id="sidebar-collapse-toggle"', $html);
         $this->assertStringContainsString('Hide menu', $html);
         $this->assertStringContainsString('entry-electrical-equipment-fields', $html);
-        $this->assertStringContainsString('Phase / conductors / equipment', $html);
+        $this->assertStringContainsString('<legend>Conductor Detail</legend>', $html);
+        $this->assertStringContainsString('<legend>Equipment Detail</legend>', $html);
+        $this->assertStringContainsString('<input type="hidden" id="entry-phase">', $html);
         $this->assertStringContainsString('id="entry-height-choice"', $html);
         $this->assertStringContainsString('31 ft', $html);
         $this->assertStringContainsString('36 ft', $html);
         $this->assertStringContainsString('Other / Custom Value', $html);
-        $this->assertSame(1, substr_count($html, 'class="entry-compact-fieldset entry-electrical-equipment"'));
+        $this->assertSame(1, substr_count($html, 'class="entry-electrical-equipment"'));
         $this->assertSame(8, substr_count($html, 'data-compact-select'));
         $this->assertStringNotContainsString('entry-copy-endpoint', $html);
         $columns = ['name="designation"', 'name="group_number"', 'name="row_date"', 'name="waypoint_reference"', 'id="entry-phase"',
@@ -1439,6 +1461,94 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertTrue($this->transformer->fresh()->header['manually_verified']);
         $this->assertSame(2, $this->transformer->entryRows()->where('manually_verified', true)->count());
         $this->assertTrue($this->transformer->sections()->first()->original_entry['manually_verified']);
+    }
+
+    public function test_submitting_one_transformer_as_json_keeps_same_pdf_open_for_another_transformer(): void
+    {
+        [$operator] = $this->workflowActors();
+        $this->actingAs($operator);
+        $this->save();
+        $url = route('mdb-workflow.entry.review', $this->batch);
+        $this->postJson($url, ['revision' => $this->batch->fresh()->revision, 'transformer_id' => $this->transformer->id, 'confirmed' => true])
+            ->assertUnprocessable()->assertJsonValidationErrors('rows');
+        $this->save(['designation' => 'E', 'waypoint_reference' => '010']);
+        $revision = $this->batch->fresh()->revision;
+        $this->postJson($url, ['revision' => $revision, 'transformer_id' => $this->transformer->id, 'confirmed' => true])
+            ->assertOk()->assertJsonPath('revision', $revision + 1)->assertJsonPath('survey_status', 'entry');
+        $this->postJson($url, ['revision' => $revision, 'transformer_id' => $this->transformer->id, 'confirmed' => true])
+            ->assertUnprocessable()->assertJsonValidationErrors('revision');
+        $this->assertTrue($this->transformer->fresh()->header['manually_verified']);
+        $this->postJson(route('mdb-workflow.entry.headers.store', $this->batch), $this->headerPayload(['code' => 'NEXT-PDF-TRANSFORMER', 'manual_transformer' => true,
+            'registered_transformer_id' => null, 'header' => ['inspector' => 'Surveyor', 'location' => 'Next transformer', 'service_category' => 'General Duty']]))
+            ->assertOk();
+        $next = $this->batch->transformers()->where('code', 'NEXT-PDF-TRANSFORMER')->firstOrFail();
+        $this->assertEquals($this->pdf->id, $next->header['pdf_source_id']);
+        $this->assertSame(2, $this->transformer->entryRows()->count());
+        $this->assertSame(0, $next->entryRows()->count());
+        $this->postJson(route('mdb-workflow.survey.decision', $this->batch), ['revision' => $this->batch->fresh()->revision, 'action' => 'submit'])
+            ->assertUnprocessable();
+        $this->assertSame('entry', $this->batch->fresh()->survey_status);
+    }
+
+    public function test_finishing_transformer_entry_returns_dashboard_after_successful_verification_submission(): void
+    {
+        [$operator] = $this->workflowActors();
+        $this->completeSurvey($operator);
+        $this->postJson(route('mdb-workflow.survey.decision', $this->batch), ['revision' => $this->batch->fresh()->revision, 'action' => 'submit'])
+            ->assertOk()->assertJsonPath('redirect_url', route('mdb-workflow.index'));
+        $this->assertSame('awaiting_verification', $this->batch->fresh()->survey_status);
+        $this->assertNull($this->batch->fresh()->approved_revision_id);
+        $this->postJson(route('mdb-workflow.entry.headers.store', $this->batch), $this->headerPayload())->assertForbidden();
+    }
+
+    public function test_empty_survey_submission_returns_to_pdf_entry_with_a_validation_message(): void
+    {
+        [$operator] = $this->workflowActors();
+        $this->actingAs($operator);
+        $this->transformer->delete();
+        $revision = $this->batch->fresh()->revision;
+        $entryUrl = route('mdb-workflow.show', $this->batch);
+
+        // A feeder's registered transformers and uploaded files are not saved survey entries.
+        $this->assertNotEmpty($this->batch->feeder->transformers);
+        $this->assertNotEmpty($this->batch->sources);
+        foreach ([$entryUrl, route('mdb-workflow.review', $this->batch)] as $previousUrl) {
+            $this->from($previousUrl)->post(route('mdb-workflow.survey.decision', $this->batch), ['revision' => $revision, 'action' => 'submit'])
+                ->assertRedirect($entryUrl)->assertSessionHasErrors('transformer_id');
+        }
+        $this->get($entryUrl)->assertOk()->assertSee('Save at least one transformer header and its S/E rows');
+        $this->assertSame('entry', $this->batch->fresh()->survey_status);
+        $this->assertSame($revision, $this->batch->fresh()->revision);
+        $this->assertNull($this->batch->fresh()->entry_completed_at);
+        $this->assertSame(0, $this->batch->decisions()->count());
+    }
+
+    public function test_empty_survey_json_submission_returns_field_errors_without_changing_the_batch(): void
+    {
+        [$operator] = $this->workflowActors();
+        $this->actingAs($operator);
+        $this->transformer->delete();
+        $revision = $this->batch->fresh()->revision;
+        $this->postJson(route('mdb-workflow.survey.decision', $this->batch), ['revision' => $revision, 'action' => 'submit'])
+            ->assertUnprocessable()->assertJsonValidationErrors('transformer_id');
+        $this->assertSame('entry', $this->batch->fresh()->survey_status);
+        $this->assertSame($revision, $this->batch->fresh()->revision);
+        $this->assertSame(0, $this->batch->revisions()->count());
+    }
+
+    public function test_empty_survey_pages_disable_submission_and_link_to_pdf_entry(): void
+    {
+        [$operator] = $this->workflowActors();
+        $this->actingAs($operator);
+        $this->transformer->delete();
+        $entry = $this->get(route('mdb-workflow.show', $this->batch))->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('/<button\b[^>]*id="entry-transformer-submit"[^>]*disabled[^>]*>Submit Transformer<\/button>/', $entry);
+        $review = $this->get(route('mdb-workflow.review', $this->batch))->assertOk()->assertSee('No transformer has been saved in this batch yet.')
+            ->assertSee(route('mdb-workflow.show', $this->batch), false)->getContent();
+        $this->assertMatchesRegularExpression('/<button\b[^>]*disabled[^>]*>Submit for Verification<\/button>/', $review);
+        if (getenv('MDB_ENTRY_QA_ARTIFACTS')) {
+            file_put_contents(base_path('tmp/mdb-entry-qa/empty-operator-workflow.html'), $entry);
+        }
     }
 
     public function test_row_edit_preserves_first_entry_invalidates_approval_and_retries_once(): void

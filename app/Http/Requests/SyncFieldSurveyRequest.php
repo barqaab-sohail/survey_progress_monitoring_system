@@ -38,7 +38,7 @@ class SyncFieldSurveyRequest extends FormRequest
             'header.mounting' => ['nullable', Rule::in(['S.Pole', 'D.Pole', 'Pad'])],
             'header.duty' => ['nullable', Rule::in(['General Duty', 'Dedicated'])],
             'rows' => ['present', 'array', $submitted ? 'min:1' : 'min:0', 'max:500'],
-            'rows.*' => ['array:row_id,legacy_row_index,pair_id,entry_version,se,group,date,gps_waypoint,latitude,longitude,gps_accuracy_m,phase,conductor_r,conductor_y,conductor_b,conductor_neutral,equipment_type,pole_class,pole_height_ft,consumers,intersection,remarks'],
+            'rows.*' => ['array:row_id,legacy_row_index,pair_id,entry_version,se,group,date,gps_waypoint,latitude,longitude,gps_accuracy_m,phase,conductor_r,conductor_y,conductor_b,conductor_neutral,equipment_type,pole_class,pole_height_ft,consumers,consumer_phases,intersection,remarks'],
             'rows.*.row_id' => ['nullable', 'uuid', 'distinct'],
             'rows.*.legacy_row_index' => ['nullable', 'integer', 'between:0,499'],
             'rows.*.pair_id' => ['nullable', 'uuid'],
@@ -78,6 +78,14 @@ class SyncFieldSurveyRequest extends FormRequest
             $rules['rows.*.consumers.'.$key] = ['nullable', 'integer', 'between:0,1000000'];
         }
 
+        $rules['rows.*.consumer_phases'] = ['sometimes', 'array:rs,sc'];
+        foreach (['rs', 'sc'] as $category) {
+            $rules['rows.*.consumer_phases.'.$category] = ['sometimes', 'array:R,Y,B'];
+            foreach (['R', 'Y', 'B'] as $phase) {
+                $rules['rows.*.consumer_phases.'.$category.'.'.$phase] = ['nullable', 'integer', 'between:0,1000000'];
+            }
+        }
+
         // Older clients and saved free-text rows remain readable and editable.
         $equipment = null;
         foreach (is_array($this->input('rows')) ? $this->input('rows') : [] as $index => $row) {
@@ -106,6 +114,14 @@ class SyncFieldSurveyRequest extends FormRequest
             foreach ($rows as &$row) {
                 if (is_array($row)) {
                     $row['phase'] = ConductorPhase::fromRow($row);
+                    foreach (['rs', 'sc'] as $category) {
+                        $counts = $row['consumer_phases'][$category] ?? null;
+                        if (is_array($counts)) {
+                            $values = array_filter($counts, fn ($value) => $value !== null && $value !== '');
+                            $row['consumers'][$category] = $values === [] ? null : array_sum(array_map(fn ($value) => is_numeric($value) ? (float) $value : 0, $values));
+                        }
+                    }
+
                     if (array_key_exists('intersection', $row)) {
                         $row['intersection'] = IntersectionFlag::normalize($row['intersection']);
                     }

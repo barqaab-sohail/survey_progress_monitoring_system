@@ -372,7 +372,8 @@ class NetworkValidator
             foreach ($transformer['pv_records'] ?? [] as $pv) {
                 $pc = $tc + array_intersect_key($pv['original_entry'] ?? [], array_flip(['source_pdf_id', 'source_page', 'source_row']));
                 $hasIdentity = trim((string) ($pv['reference'] ?? '')) !== '' || trim((string) ($pv['meter_number'] ?? '')) !== '';
-                if (! $hasIdentity || ! is_numeric($pv['installed_capacity_kw'] ?? null) || $pv['installed_capacity_kw'] < 0) {
+                $optionalEntryCapacity = ! empty($pv['entry_row_id']) && ($pv['installed_capacity_kw'] ?? null) === null;
+                if (! $hasIdentity || (! $optionalEntryCapacity && (! is_numeric($pv['installed_capacity_kw'] ?? null) || $pv['installed_capacity_kw'] < 0))) {
                     $issue('incomplete_pv_record', 'PV consumer reference or meter number and verified installed capacity in kW are required.', $pc, $simple && $hasIdentity && ($pv['installed_capacity_kw'] ?? null) === null);
                 }
                 if (! in_array($pv['original_entry']['manually_verified'] ?? false, [true, 1, '1'], true)) {

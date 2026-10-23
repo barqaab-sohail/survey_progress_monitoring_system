@@ -619,8 +619,12 @@ class MdbWorkflowController extends Controller
             $before = $locked->toArray();
             if ($data['action'] === 'submit') {
                 abort_unless(in_array($locked->survey_status, ['entry', 'returned'], true), 422);
+                if (! $locked->transformers()->exists()) {
+                    throw ValidationException::withMessages([
+                        'transformer_id' => 'Save at least one transformer header and its S/E rows in PDF Data Entry before submitting for verification. Uploading PDF and GPX files alone does not create a transformer entry.',
+                    ])->redirectTo(route('mdb-workflow.show', $locked));
+                }
                 app(EntryService::class)->assertComplete($locked);
-                abort_unless($locked->transformers()->exists(), 422, 'Enter at least one transformer.');
                 $this->snapshots->invalidate($locked);
                 $this->access->recordEntry($locked, $request->user());
                 $locked->update(['survey_status' => 'awaiting_verification', 'status' => 'awaiting_verification', 'entry_completed_at' => now('UTC'),
@@ -661,12 +665,19 @@ class MdbWorkflowController extends Controller
             $this->audit->record($request->user(), 'mdb.survey_'.$data['action'], $locked, $before, $locked->toArray(), $data['remarks'] ?? null);
         });
 
-        return back()->with('success', match ($data['action']) {
+        $message = match ($data['action']) {
             'submit' => 'Submitted for verification. Survey data is locked until returned for correction.',
             'approve' => 'Survey approved. The data revision is frozen for MDB creation.',
             'return' => 'Returned for correction with comments. The operator can edit the draft again.',
             'flag' => 'Discrepancy recorded. The survey remains pending verification.',
-        });
+        };
+        if ($request->expectsJson()) {
+            $request->session()->flash('success', $message);
+
+            return response()->json(['redirect_url' => route('mdb-workflow.index')]);
+        }
+
+        return back()->with('success', $message);
     }
 
     public function transition(Request $request, SurveyBatch $batch)

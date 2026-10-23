@@ -37,6 +37,9 @@
                 <a class="nav-link {{ request()->routeIs('google-drive.*') ? 'active' : '' }}" href="{{ route('google-drive.index') }}">Google Drive</a>
             @endif
             <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">Overview Dashboard</a>
+            @can('gpx-calculator.use')
+                <a class="nav-link {{ request()->routeIs('gpx-calculator.*') ? 'active' : '' }}" href="{{ route('gpx-calculator.index') }}">GPX Length &amp; KMZ Export</a>
+            @endcan
             @can('mdb-workflow.view')
                 <a class="nav-link {{ request()->routeIs('mdb-workflow.*') ? 'active' : '' }}" href="{{ route('mdb-workflow.index') }}">MDB Creation &amp; Validation</a>
             @endcan

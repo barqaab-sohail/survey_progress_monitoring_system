@@ -32,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(ProjectBranding $branding): void
     {
+        Gate::define('gpx-calculator.use', fn ($user) => app(\App\Services\Gpx\Access::class)->allows($user));
         Gate::policy(SurveyBatch::class, SurveyBatchPolicy::class);
         foreach (WorkflowAccess::ABILITIES as $ability) {
             Gate::define('mdb-workflow.'.$ability, fn ($user) => app(WorkflowAccess::class)->allows($user, $ability));

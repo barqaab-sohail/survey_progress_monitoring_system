@@ -3,7 +3,12 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 typedef Json = Map<String, dynamic>;
-const applicationBaseUrl = 'https://hazeco.barqaab.pk';
+const applicationBaseUrl = kDebugMode
+    ? String.fromEnvironment(
+        'API_BASE_URL',
+        defaultValue: 'https://hazeco.barqaab.pk',
+      )
+    : 'https://hazeco.barqaab.pk';
 
 // Keep the wire contract independent of local editing/display metadata. Stable
 // row/PV IDs are part of the contract and must never be stripped for sync.
@@ -28,6 +33,7 @@ const surveyRowFields = {
   'pole_class',
   'pole_height_ft',
   'consumers',
+  'consumer_phases',
   'intersection',
   'remarks',
 };
@@ -40,6 +46,23 @@ const surveyPvFields = {
   'meter_number',
   'remarks',
 };
+
+void updatePhaseConsumerTotals(Json row) {
+  final all = row['consumer_phases'] as Json? ?? {};
+  for (final category in ['rs', 'sc']) {
+    if (!all.containsKey(category)) continue;
+    final phases = all[category] as Json;
+    final entered = phases.values.where(
+      (v) => (v ?? '').toString().trim().isNotEmpty,
+    );
+    row['consumers'][category] = entered.isEmpty
+        ? ''
+        : entered.fold<int>(
+            0,
+            (sum, value) => sum + (int.tryParse(value.toString()) ?? 0),
+          );
+  }
+}
 
 String dayString(DateTime date) => date.toIso8601String().substring(0, 10);
 Json copyJson(Json value) => jsonDecode(jsonEncode(value)) as Json;
@@ -326,6 +349,15 @@ class SurveyRecord {
         'pole_height_ft',
       ]) {
         row[key] = parseNumber(row[key]);
+      }
+      updatePhaseConsumerTotals(row);
+      final phases = row['consumer_phases'] as Json? ?? {};
+      for (final category in phases.keys) {
+        final values = phases[category] as Json;
+        for (final phase in ['R', 'Y', 'B']) {
+          final value = (values[phase] ?? '').toString().trim();
+          values[phase] = value.isEmpty ? null : int.parse(value);
+        }
       }
       final counts = row['consumers'] as Json;
       for (final key in counts.keys.toList()) {
@@ -648,6 +680,17 @@ class SurveyValidation {
       number('$prefix.longitude', row['longitude'], min: -180, max: 180);
       number('$prefix.gps_accuracy_m', row['gps_accuracy_m'], max: 100000000);
       number('$prefix.pole_height_ft', row['pole_height_ft'], max: 1000000);
+      final phases = row['consumer_phases'] as Json? ?? {};
+      for (final category in ['rs', 'sc']) {
+        for (final phase in ['R', 'Y', 'B']) {
+          number(
+            '$prefix.consumer_phases.$category.$phase',
+            (phases[category] as Json?)?[phase],
+            integer: true,
+            max: 1000000,
+          );
+        }
+      }
       for (final key in consumerLabels.keys) {
         number(
           '$prefix.consumers.$key',

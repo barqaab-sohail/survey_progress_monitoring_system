@@ -39,6 +39,13 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', 'active'])->group(function () {
+    Route::prefix('gpx-calculator')->name('gpx-calculator.')->controller(\App\Http\Controllers\GpxCalculatorController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->middleware('throttle:10,1')->name('store');
+        Route::get('/{calculation}', 'show')->whereNumber('calculation')->name('show');
+        Route::post('/{calculation}/preview', 'preview')->whereNumber('calculation')->middleware('throttle:120,1')->name('preview');
+        Route::post('/{calculation}', 'update')->whereNumber('calculation')->middleware('throttle:30,1')->name('update');
+    });
     Route::middleware('role:super_admin')->prefix('field-survey-test')->name('field-survey-test.')->group(function () {
         Route::get('/', [FieldSurveyTestController::class, 'index'])->name('index');
         Route::get('/bootstrap', [FieldSurveyApiController::class, 'bootstrap'])->name('bootstrap');

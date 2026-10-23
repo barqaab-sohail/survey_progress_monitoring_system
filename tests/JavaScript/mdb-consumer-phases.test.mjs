@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import {consumerCounts, consumerTotal, consumerSummary, rowValidationErrors, nextDraft} from '../../public/js/mdb-entry.js';
 
 test('R/Y/B counts update only single-phase categories and each contributes once to the overall total',()=>{
-    const phases={rs:{R:5,Y:2,B:7},sc:{R:0,Y:null,B:3},si:{R:null,Y:null,B:null},st:{R:1,Y:null,B:0}};
+    const phases={rs:{R:5,Y:2,B:7},sc:{R:0,Y:null,B:3},st:{R:1,Y:null,B:0}};
     const counts=consumerCounts({rs:999,sc:999,rl:4,lc:5,li:6,pb:7,ag:8,pv:2},phases);
-    assert.deepEqual(counts,{rs:14,sc:3,si:null,st:1,rl:4,lc:5,li:6,pb:7,ag:8,pv:2});
+    assert.deepEqual(counts,{rs:14,sc:3,st:1,rl:4,lc:5,li:6,pb:7,ag:8,pv:2});
     assert.equal(consumerTotal(counts),50);
     assert.equal(consumerTotal({rs:999,sc:999,rl:4,pv:2},phases),24);
     assert.equal(consumerCounts({rl:4,pv:2},{rl:{R:1,Y:2,B:3},pv:{R:9,Y:9,B:9}}).rl,4);
@@ -38,4 +38,10 @@ test('phase validation rejects negatives, fractions and oversized totals',()=>{
     }
     assert.ok(rowValidationErrors({...nextDraft(),consumer_phases:{rs:{R:1000000,Y:1,B:null}}})['consumer_phases.rs']);
     assert.deepEqual(rowValidationErrors({...nextDraft(),consumer_phases:{rs:{R:0,Y:null,B:7}}}),{});
+});
+
+test('SI uses one scalar count even with legacy phase data',()=>{
+    const phases={si:{R:1,Y:2,B:3}};
+    assert.equal(consumerCounts({si:8},phases).si,8);
+    assert.equal(consumerTotal({si:8},phases),8);
 });

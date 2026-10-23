@@ -67,6 +67,19 @@ class MdbNetworkValidatorTest extends TestCase
         self::assertContains('incomplete_pv_record', array_column($this->validator()->validate($data)['errors'], 'code'));
     }
 
+    public function test_pdf_entry_pv_capacity_is_optional_but_identifier_is_required(): void
+    {
+        $data = $this->fixture();
+        $data['transformers'][0]['pv_records'] = [['entry_row_id' => 1, 'reference' => 'C-01', 'installed_capacity_kw' => null, 'original_entry' => []]];
+        self::assertNotContains('incomplete_pv_record', array_column($this->validator()->validate($data)['errors'], 'code'));
+        $data['transformers'][0]['pv_records'][0]['reference'] = '';
+        self::assertContains('incomplete_pv_record', array_column($this->validator()->validate($data)['errors'], 'code'));
+        $data['transformers'][0]['pv_records'][0]['meter_number'] = 'M-01';
+        self::assertNotContains('incomplete_pv_record', array_column($this->validator()->validate($data)['errors'], 'code'));
+        $data['transformers'][0]['pv_records'][0]['installed_capacity_kw'] = -1;
+        self::assertContains('incomplete_pv_record', array_column($this->validator()->validate($data)['errors'], 'code'));
+    }
+
     public function test_kmz_start_requires_its_own_coordinates_for_generation(): void
     {
         $data = $this->fixture();

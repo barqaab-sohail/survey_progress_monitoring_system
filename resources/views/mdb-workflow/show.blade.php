@@ -5,7 +5,7 @@
     <div class="page-head"><div><span class="eyebrow">{{ $batch->project?->name }}</span><h1>PDF Data Entry</h1><p>{{ $batch->feeder?->feeder_name }} · Batch #{{ $batch->id }}</p></div><div class="actions"><a class="btn btn-light" href="{{ route('mdb-workflow.index') }}">All batches</a><a class="btn btn-primary" data-entry-leave href="{{ route('mdb-workflow.review', $batch) }}">Review saved survey</a></div></div>
     <p class="mdb-note">Status: <strong>{{ $batch->workflow_label }}</strong>@if($batch->survey_remarks) &middot; Verification / correction comments: {{ $batch->survey_remarks }}@endif</p>
     @include('mdb-workflow.partials.data-entry-export-button')
-    <p class="entry-steps">1. Upload PDF + GPX <span>›</span> 2. Transformer header <span>›</span> 3. S/E rows <span>›</span> 4. Submit for Verification</p>
+    <p class="entry-steps">1. Upload PDF + GPX <span>›</span> 2. Transformer header <span>›</span> 3. S/E rows <span>›</span> 4. Submit Transformer</p>
     <div class="entry-workspace-columns">
     <section class="card entry-document" aria-label="Survey PDF above the entry form">
         <div class="entry-pdf-toolbar">
@@ -61,15 +61,20 @@
             <label>Date (DDMMYY)<input name="row_date" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="131222"></label>
             <label><span>GPS number <span class="entry-required" aria-hidden="true">*</span></span><input name="waypoint_reference" required list="entry-waypoint-options" inputmode="numeric" maxlength="3" pattern="[0-9]{3}" placeholder="001"></label>
         </div></fieldset>
-        <fieldset class="entry-compact-fieldset entry-electrical-equipment"><legend>Phase / conductors / equipment</legend>
-            <div class="entry-fields entry-electrical-equipment-fields entry-compact-fields">
-                <label class="entry-phase-field">Phase<input id="entry-phase" readonly tabindex="-1" aria-describedby="entry-phase-note"><small id="entry-phase-note" hidden></small></label>
+        <div class="entry-electrical-equipment">
+        <input type="hidden" id="entry-phase"><small id="entry-phase-note" hidden></small>
+        <fieldset class="entry-compact-fieldset"><legend>Conductor Detail</legend>
+            <div class="entry-fields entry-electrical-equipment-fields entry-conductor-detail-fields entry-compact-fields">
                 @foreach(['R'=>'R','Y'=>'Y','B'=>'B','N'=>'Neutral'] as $key=>$label)<label>{{ $label }}<select id="entry-conductor-{{ $key }}" name="conductors[{{ $key }}]" data-entry-conductor data-compact-select aria-label="{{ $label }} conductor"></select></label>@endforeach
+            </div>
+        </fieldset>
+        <fieldset class="entry-compact-fieldset"><legend>Equipment Detail</legend>
+            <div class="entry-fields entry-electrical-equipment-fields entry-equipment-detail-fields entry-compact-fields">
                 <label><span>Type <span class="entry-required" aria-hidden="true">*</span></span><select name="equipment_type" required id="entry-equipment" data-compact-select aria-label="Equipment type"></select></label>
                 <label><span>Pole class <span class="entry-required" aria-hidden="true">*</span></span><select name="pole_class" required id="entry-pole-class" data-compact-select aria-label="Pole class"></select></label>
             <label class="entry-pole-height-field"><span>Pole height (ft) <span class="entry-required" aria-hidden="true">*</span></span><select name="pole_height_choice" id="entry-height-choice" data-compact-select required aria-label="Pole height in feet"><option value=""></option><option value="31">31 ft</option><option value="36">36 ft</option><option value="__custom__">Other / Custom Value</option></select><input id="entry-height-custom" type="number" min="0.001" max="10000" step="any" inputmode="decimal" placeholder="Enter height in ft" aria-label="Custom pole height in feet" hidden><input type="hidden" name="pole_height"><input type="hidden" name="pole_height_unit" value="ft"><small id="entry-height-unit-note">Heights are always saved in feet (ft).</small></label>
             </div>
-        </fieldset></div>
+        </fieldset></div></div>
         <div class="entry-identity-foot"><small id="entry-waypoint-status"></small><small id="entry-group-date-status" class="entry-inheritance"></small><small id="entry-conductor-copy-status" class="entry-inheritance"></small><small id="entry-equipment-copy-status" class="entry-inheritance"></small></div>
         <fieldset class="entry-compact-fieldset entry-count-fieldset"><legend>Consumer counts <span class="entry-legend-note">— blank means not entered; 0 means none</span></legend><div class="entry-consumer-scroll" tabindex="0" role="region" aria-label="Consumer count fields"><div class="entry-consumer-fields">
             @foreach(\App\Services\Mdb\EntryLookups::CONSUMERS as $key=>$description)
@@ -98,8 +103,10 @@
     </section>@endif
     <section class="card" id="entry-saved"><div class="row-card-head"><h2>Saved rows for active transformer</h2><span id="entry-saved-count"></span></div><div id="entry-saved-rows"></div><div id="entry-legacy-records"></div><a class="btn btn-light" data-entry-leave id="entry-review-link" href="{{ route('mdb-workflow.review', $batch) }}">Review saved survey</a></section>
     @if($batch->staged_workflow && in_array($batch->survey_status, ['entry','returned'], true))
-    @can('mdb-workflow.submit')<section class="card"><form id="entry-submit-form" method="POST" action="{{ route('mdb-workflow.survey.decision', $batch) }}">@csrf<input type="hidden" name="revision" value="{{ $batch->revision }}" data-entry-revision><input type="hidden" name="action" value="submit"><button class="btn btn-primary">Submit for Verification</button><p class="mdb-note">Save the header and rows first. Submission locks the survey for the Data Verifier.</p></form></section>@endcan
+    @can('mdb-workflow.submit')<section class="card"><form id="entry-submit-form" method="POST" action="{{ route('mdb-workflow.survey.decision', $batch) }}">@csrf<input type="hidden" name="revision" value="{{ $batch->revision }}" data-entry-revision><input type="hidden" name="action" value="submit"><button type="button" id="entry-transformer-submit" class="btn btn-primary" @disabled($batch->transformers->isEmpty())>Submit Transformer</button><p class="mdb-note">Check and save the header and all S/E rows first. You can then enter another transformer from the same PDF or finish and submit the survey for verification.</p></form></section>@endcan
     @elseif($batch->staged_workflow)<p class="mdb-note">{{ $batch->workflow_label }}. Entry is locked. Use Review saved survey for workflow decisions or to reopen verified data for correction.</p>@endif
+    @if($canEdit && !$batch->staged_workflow)<section class="card"><button type="button" id="entry-transformer-submit" class="btn btn-primary" @disabled($batch->transformers->isEmpty())>Submit Transformer</button><p class="mdb-note">Check and save the header and all S/E rows first.</p></section>@endif
+    @if($canEdit)<dialog id="entry-next-transformer" class="entry-next-transformer" aria-labelledby="entry-next-transformer-title" aria-describedby="entry-next-transformer-help"><h2 id="entry-next-transformer-title">Enter another transformer from the same PDF?</h2><p id="entry-next-transformer-help"></p><div class="actions"><button type="button" id="entry-next-transformer-yes" class="btn btn-primary">Yes, enter another transformer</button><button type="button" id="entry-next-transformer-no" class="btn btn-light">No, go to MDB Creation &amp; Validation</button><button type="button" id="entry-next-transformer-cancel" class="btn btn-light">Keep reviewing</button></div></dialog>@endif
     <details class="card entry-source-files"><summary>Upload PDF + GPX / source processing</summary><div id="entry-sources-list"></div>
         @if($canUpload)<form method="POST" action="{{ route('mdb-workflow.sources.store', $batch) }}" enctype="multipart/form-data">@csrf<input type="hidden" name="revision" value="{{ $batch->revision }}" data-entry-revision><div class="entry-fields"><label><span>Add PDF or GPX <span class="entry-required" aria-hidden="true">*</span></span><input name="file" type="file" required accept=".pdf,.gpx"></label></div><div class="mdb-form-actions"><button class="btn btn-light">Upload source</button></div></form>@endif
         <a href="{{ route('mdb-workflow.advanced', $batch) }}#sources">Source versions and Google Drive import</a>
@@ -109,5 +116,5 @@
 @endsection
 @push('styles')<link rel="stylesheet" href="{{ asset('css/mdb-workflow.css') }}"><link rel="stylesheet" href="{{ asset('css/mdb-entry.css').'?v='.filemtime(public_path('css/mdb-entry.css')) }}">@endpush
 @push('scripts')
-<script>window.mdbEntryBoot = {{ \Illuminate\Support\Js::from($editorData + ['base_url' => route('mdb-workflow.show', $batch), 'settings_url' => route('mdb-workflow.config', $batch->project_id), 'pdfjs_url' => asset('vendor/pdfjs/build/pdf.min.mjs'), 'pdfjs_worker' => asset('vendor/pdfjs/build/pdf.worker.min.mjs'), 'pdfjs_assets' => asset('vendor/pdfjs').'/', 'storage_key' => 'mdb-entry:'.auth()->id().':'.$batch->id, 'can_configure' => auth()->user()->can('mdb-workflow.configure'), 'can_edit' => $canEdit, 'active_transformer_id' => (int) request('transformer_id')]) }};</script><script src="{{ asset('js/mdb-entry.js').'?v='.filemtime(public_path('js/mdb-entry.js')) }}" type="module"></script>
+<script>window.mdbEntryBoot = {{ \Illuminate\Support\Js::from($editorData + ['base_url' => route('mdb-workflow.show', $batch), 'index_url' => route('mdb-workflow.index'), 'settings_url' => route('mdb-workflow.config', $batch->project_id), 'pdfjs_url' => asset('vendor/pdfjs/build/pdf.min.mjs'), 'pdfjs_worker' => asset('vendor/pdfjs/build/pdf.worker.min.mjs'), 'pdfjs_assets' => asset('vendor/pdfjs').'/', 'storage_key' => 'mdb-entry:'.auth()->id().':'.$batch->id, 'can_configure' => auth()->user()->can('mdb-workflow.configure'), 'can_edit' => $canEdit, 'active_transformer_id' => (int) request('transformer_id')]) }};</script><script src="{{ asset('js/mdb-entry.js').'?v='.filemtime(public_path('js/mdb-entry.js')) }}" type="module"></script>
 @endpush

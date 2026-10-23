@@ -92,10 +92,24 @@ class EntryService
         $data['intersection'] = (bool) $data['intersection'];
         $data['manually_verified'] = (bool) ($data['manually_verified'] ?? false);
         $data['pv_details'] = array_values($data['pv_details'] ?? []);
+        if (($consumers['pv'] ?? 0) <= 0) {
+            $data['pv_details'] = array_values(array_filter($data['pv_details'], fn ($pv) => $this->hasPvObservation($pv)));
+        }
         $data['inheritance'] = $data['inheritance'] ?? [];
         unset($data['revision'], $data['save_uuid'], $data['client_uuid'], $data['pdf_progress_row_id']);
 
         return $data;
+    }
+
+    private function hasPvObservation(array $pv): bool
+    {
+        foreach (['reference', 'meter_number', 'service_load_kw', 'installed_capacity_kw', 'remarks'] as $key) {
+            if (trim((string) ($pv[$key] ?? '')) !== '') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** Build only the explicitly entered S/E pair; never sort waypoint references. */
@@ -304,8 +318,11 @@ class EntryService
                         $add('missing_entry_pv_details', $label.'enter details for the recorded PV consumers.', $row);
                     }
                     foreach ($row->pv_details ?? [] as $pv) {
-                        if ((trim((string) ($pv['reference'] ?? '')) === '' && trim((string) ($pv['meter_number'] ?? '')) === '') || (! $simple && (($pv['service_load_kw'] ?? null) === null || ($pv['installed_capacity_kw'] ?? null) === null))) {
-                            $add('incomplete_entry_pv_details', $label.($simple ? 'PV consumer reference or meter number needs verification.' : 'PV consumer reference or meter number, service load and capacity need verification.'), $row);
+                        if (($row->consumers['pv'] ?? 0) <= 0 && ! $this->hasPvObservation($pv)) {
+                            continue;
+                        }
+                        if (trim((string) ($pv['reference'] ?? '')) === '' && trim((string) ($pv['meter_number'] ?? '')) === '') {
+                            $add('incomplete_entry_pv_details', $label.'Enter either Consumer No. or Meter No. for the PV consumer. PV service load and solar capacity are optional.', $row);
                         }
                     }
                 }

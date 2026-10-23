@@ -26,6 +26,11 @@ test('verification PDF controls navigate, zoom, rotate, resize and handle failed
     const dom = new JSDOM(html, {url:'http://localhost/mdb-workflow/1/review'});
     const d = dom.window.document, $ = name => d.getElementById('review-pdf-' + name);
     const savedRows = d.querySelector('.entry-review-table').outerHTML;
+    if (!$('stage')) {
+        const stage=d.createElement('div');stage.id='review-pdf-stage';$('canvas').before(stage);stage.append($('canvas'));
+        stage.insertAdjacentHTML('beforeend','<svg id="review-pdf-lines"></svg>');
+        stage.insertAdjacentHTML('beforebegin','<button id="review-pdf-draw"></button><button id="review-pdf-undo"></button><button id="review-pdf-clear"></button><span id="review-pdf-line-status"></span>');
+    }
     dom.window.HTMLCanvasElement.prototype.getContext = () => ({});
     Object.defineProperty($('scroll'), 'clientWidth', {value:1000});
     Object.assign(globalThis, {window:dom.window, document:d, ResizeObserver:class {observe(){}}});
@@ -36,6 +41,16 @@ test('verification PDF controls navigate, zoom, rotate, resize and handle failed
     assert.equal($('total').textContent,'of 14');assert.equal($('previous').disabled,true);
     assert.equal(pdf.loads[0].options.withCredentials,true);
     assert.equal($('open').href,$('source').value+'#page=1');
+    $('canvas').getBoundingClientRect=()=>({left:0,top:0,width:1000,height:750});
+    $('draw').click();
+    const pointer=(type,x,y)=>$('stage').dispatchEvent(new dom.window.MouseEvent(type,{clientX:x,clientY:y,button:0,bubbles:true}));
+    pointer('pointerdown',100,300);pointer('pointerup',900,350);
+    assert.equal($('lines').querySelectorAll('line').length,1);
+    assert.equal($('lines').firstElementChild.getAttribute('y1'), '0.4');
+    assert.equal($('lines').firstElementChild.getAttribute('y2'), '0.4');
+    $('next').click();await settle();assert.equal($('lines').querySelectorAll('line').length,0);
+    $('previous').click();await settle();assert.equal($('lines').querySelectorAll('line').length,1);
+    $('undo').click();assert.equal($('lines').querySelectorAll('line').length,0);
     $('next').click();await settle();assert.equal($('page').value,'2');assert.equal(pdf.renders.at(-1).number,2);
     $('page').value='99';$('page').dispatchEvent(new dom.window.Event('change'));await settle();
     assert.equal($('page').value,'14');assert.equal($('next').disabled,true);

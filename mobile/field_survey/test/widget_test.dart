@@ -83,17 +83,14 @@ void main() {
         600,
         scrollable: find.byType(Scrollable).first,
       );
-      final residential = find.widgetWithText(
-        TextFormField,
-        'RS · 1-phase residential',
-      );
+      final residential = find.widgetWithText(TextFormField, 'R').first;
       await tester.enterText(residential, '0');
       await tester.pump();
-      expect(record.rows.first['consumers']['rs'], '0');
+      expect(record.rows.first['consumers']['rs'], 0);
       expect(record.rows.first['consumers'].containsKey('rl'), isFalse);
       await tester.enterText(residential, '1.5');
       await tester.pump();
-      expect(record.rows.first['consumers']['rs'], '1.5');
+      expect(record.rows.first['consumer_phases']['rs']['R'], '1.5');
       expect(find.text('Enter a whole number of 0 or more.'), findsOneWidget);
       await tester.enterText(residential, '0');
       await tester.pump();
@@ -108,7 +105,7 @@ void main() {
       await tester.tap(find.byType(CheckboxListTile));
       await tester.pump();
       expect(record.rows.first['intersection'], isTrue);
-      expect(record.rows.first['consumers']['rs'], '0');
+      expect(record.rows.first['consumers']['rs'], 0);
       await tester.tap(find.byType(CheckboxListTile));
       await tester.pump();
       expect(record.rows.first['intersection'], isFalse);

@@ -1336,6 +1336,69 @@ class _RowEditorState extends State<RowEditor> {
     },
   );
 
+  Widget phaseConsumerFields(String category, String label) {
+    final phases = (row['consumer_phases'] as Json?)?[category] as Json? ?? {};
+    final hasPhases = phases.values.any(
+      (value) => (value ?? '').toString().trim().isNotEmpty,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final phase in ['R', 'Y', 'B'])
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: EntryField(
+                    label: phase,
+                    value: phases[phase],
+                    enabled: widget.editable,
+                    integer: true,
+                    error: errors['$prefix.consumer_phases.$category.$phase'],
+                    onChanged: (value) {
+                      final all =
+                          row.putIfAbsent(
+                                'consumer_phases',
+                                () => <String, dynamic>{},
+                              )
+                              as Json;
+                      final counts =
+                          all.putIfAbsent(category, () => <String, dynamic>{})
+                              as Json;
+                      counts[phase] = value;
+                      updatePhaseConsumerTotals(row);
+                      changed();
+                    },
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        EntryField(
+          key: ValueKey(
+            '$category-total:${row['consumers'][category]}:$hasPhases',
+          ),
+          label: 'Total',
+          value: row['consumers'][category],
+          enabled: widget.editable,
+          readOnly: hasPhases,
+          integer: true,
+          helper: hasPhases ? 'Calculated from R, Y and B.' : null,
+          error: errors['$prefix.consumers.$category'],
+          onChanged: (value) {
+            row['consumers'][category] = value;
+            changed();
+          },
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) => PopScope(
     canPop: allowPop,
@@ -1523,17 +1586,19 @@ class _RowEditorState extends State<RowEditor> {
                 'Blank means not recorded. Enter 0 only when no consumers were observed.',
             children: [
               ...consumerLabels.entries.map(
-                (entry) => EntryField(
-                  label: entry.value,
-                  value: (row['consumers'] as Json)[entry.key],
-                  enabled: widget.editable,
-                  integer: true,
-                  error: errors['$prefix.consumers.${entry.key}'],
-                  onChanged: (value) {
-                    (row['consumers'] as Json)[entry.key] = value;
-                    changed();
-                  },
-                ),
+                (entry) => ['rs', 'sc'].contains(entry.key)
+                    ? phaseConsumerFields(entry.key, entry.value)
+                    : EntryField(
+                        label: entry.value,
+                        value: (row['consumers'] as Json)[entry.key],
+                        enabled: widget.editable,
+                        integer: true,
+                        error: errors['$prefix.consumers.${entry.key}'],
+                        onChanged: (value) {
+                          (row['consumers'] as Json)[entry.key] = value;
+                          changed();
+                        },
+                      ),
               ),
               EntryField(
                 label: 'Row remarks',
@@ -1685,7 +1750,7 @@ class ChoiceField extends StatelessWidget {
         .map(
           (item) => DropdownMenuItem(
             value: item,
-            child: Text(item.isEmpty ? 'Not recorded' : labels[item] ?? item),
+            child: Text(item.isEmpty ? '' : labels[item] ?? item),
           ),
         )
         .toList(),

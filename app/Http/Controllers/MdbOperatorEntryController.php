@@ -44,7 +44,7 @@ class MdbOperatorEntryController extends Controller
             'source_page' => 'nullable|integer|min:1|max:10000', 'source_row' => 'nullable|string|max:40', 'conductors' => 'required|array:R,Y,B,N',
             'equipment_type' => 'required|string|max:255', 'pole_class' => 'required|string|max:255', 'pole_height' => 'required|numeric|gt:0|max:10000', 'pole_height_unit' => 'nullable|in:m,ft',
             'consumers' => 'required|array:rs,rl,sc,lc,si,li,pb,ag,st,pv', 'intersection' => 'required|boolean',
-            'consumer_phases' => 'sometimes|array:rs,sc,si,st',
+            'consumer_phases' => 'sometimes|array:rs,sc,st',
             'pv_details' => 'nullable|array|max:100', 'pv_details.*' => 'array:reference,service_load_kw,installed_capacity_kw,meter_number,remarks',
             'pv_details.*.reference' => 'nullable|string|max:255', 'pv_details.*.service_load_kw' => 'nullable|numeric|min:0|max:1000000',
             'pv_details.*.installed_capacity_kw' => 'nullable|numeric|min:0|max:1000000', 'pv_details.*.meter_number' => 'nullable|string|max:255', 'pv_details.*.remarks' => 'nullable|string|max:4000',
@@ -425,6 +425,10 @@ class MdbOperatorEntryController extends Controller
             $locked->increment('revision');
             $this->audit->record($request->user(), 'mdb.operator_review_saved', $transformer, $old, $this->snapshots->snapshot($locked));
         });
+
+        if ($request->expectsJson()) {
+            return response()->json($this->entries->editorData($batch->fresh()));
+        }
 
         return back()->with('success', 'Header and S/E rows checked and saved. Engineering verification is still required before export.');
     }

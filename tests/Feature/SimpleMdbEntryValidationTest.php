@@ -30,13 +30,13 @@ class SimpleMdbEntryValidationTest extends TestCase
         $this->assertSame($original, $data);
     }
 
-    public function test_full_mode_keeps_existing_header_row_and_pv_engineering_requirements(): void
+    public function test_full_mode_keeps_existing_header_and_row_engineering_requirements(): void
     {
         $data = $this->fixture();
         unset($data['configuration']);
         $codes = $this->codes($data);
         foreach (['incomplete_operator_header', 'missing_operator_capacity', 'incomplete_entry_conductors',
-            'incomplete_entry_equipment', 'missing_entry_height_unit', 'incomplete_entry_pv_details'] as $code) {
+            'incomplete_entry_equipment', 'missing_entry_height_unit'] as $code) {
             $this->assertContains($code, $codes);
         }
         $data['configuration'] = ['settings' => ['simple_mdb_generation' => false]];
@@ -93,6 +93,21 @@ class SimpleMdbEntryValidationTest extends TestCase
         $data['transformers'][0]['entry_rows'][1]['pv_details'][0]['reference'] = '';
         $this->assertContains('incomplete_entry_pv_details', $this->codes($data));
         $data['transformers'][0]['entry_rows'][1]['pv_details'][0]['meter_number'] = '001-AB/09';
+        $this->assertNotContains('incomplete_entry_pv_details', $this->codes($data));
+        $data['transformers'][0]['entry_rows'][1]['pv_details'] = [];
+        $this->assertContains('missing_entry_pv_details', $this->codes($data));
+    }
+
+    public function test_full_mode_pv_requires_either_identifier_but_not_load_or_capacity(): void
+    {
+        $data = $this->fixture();
+        $data['configuration'] = ['settings' => ['simple_mdb_generation' => false]];
+        $this->assertNotContains('incomplete_entry_pv_details', $this->codes($data));
+        $data['transformers'][0]['entry_rows'][1]['pv_details'][0]['reference'] = '  ';
+        $this->assertContains('incomplete_entry_pv_details', $this->codes($data));
+        $data['transformers'][0]['entry_rows'][1]['pv_details'][0]['meter_number'] = 'M-01';
+        $this->assertNotContains('incomplete_entry_pv_details', $this->codes($data));
+        $data['transformers'][0]['entry_rows'][1]['pv_details'][0]['reference'] = 'C-01';
         $this->assertNotContains('incomplete_entry_pv_details', $this->codes($data));
         $data['transformers'][0]['entry_rows'][1]['pv_details'] = [];
         $this->assertContains('missing_entry_pv_details', $this->codes($data));

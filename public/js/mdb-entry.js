@@ -59,7 +59,7 @@ export function derivePhase(conductors) {
     return {display: present.join(''), complete: ['R', 'Y', 'B'].every(key => conductors[key] !== null && conductors[key] !== undefined)};
 }
 
-export const singlePhaseConsumers = ['rs', 'sc', 'si', 'st'];
+export const singlePhaseConsumers = ['rs', 'sc', 'st'];
 
 // Blank phases permit a directly entered total. An entered phase, including 0,
 // makes the total calculated without inventing values for the blank phases.
@@ -292,7 +292,7 @@ function initialize(boot) {
         [rowForm, headerForm].filter(Boolean).forEach(form => Array.from(form.elements).forEach(el => el.disabled = value || !editable()));
         document.querySelectorAll('.entry-source-files form input,.entry-source-files form button').forEach(el=>el.disabled=value || !editable());
         $('entry-transformer').disabled = value;
-        document.querySelectorAll('[data-entry-add-transformer],#entry-continue,#entry-submit-form button').forEach(el=>el.disabled=value || !editable());
+        document.querySelectorAll('[data-entry-add-transformer],#entry-continue,#entry-submit-form button,#entry-transformer-submit,#entry-next-transformer button').forEach(el=>el.disabled=value || !editable() || (el.id==='entry-transformer-submit' && !active()));
         document.querySelectorAll('.entry-copy-bar button').forEach(el=>el.disabled=value || !editable());
         $('entry-refresh').disabled=value;
         if (!value) { updateAssociation(); if(rowId && rowForm){field(rowForm,'pair_number').disabled=true;field(rowForm,'designation').disabled=true;} }
@@ -338,6 +338,7 @@ function initialize(boot) {
             optionList($('entry-pole-class'), Object.entries(data.lookups.pole_classes), '', val(rowForm,'pole_class'));
         }
         document.querySelectorAll('[data-entry-revision]').forEach(input=>input.value=data.revision);
+        if($('entry-transformer-submit'))$('entry-transformer-submit').disabled=busy || !editable() || !active();
         $('entry-sources-list').innerHTML = '<ul>'+data.sources.map(s=>`<li>${esc(s.original_name)} — ${esc(s.status)}${s.kind==='gpx' ? ` · ${data.waypoints.filter(p=>p.source_file_id===s.id).length} waypoints` : ''}${s.metadata?.error ? ` · ${esc(s.metadata.error)}` : ''}</li>`).join('')+'</ul>';
         const settings={...data.entry_settings,two_digit_year_start:data.entry_settings?.two_digit_year_start ?? 2000};
         if($('entry-project-settings')) $('entry-project-settings').innerHTML=`Pole / tower height entry unit: <strong>ft (fixed)</strong> &middot; Year window: <strong>${settings.two_digit_year_start}&ndash;${Number(settings.two_digit_year_start)+99}</strong>${boot.can_configure ? ` &middot; <a href="${esc(boot.settings_url)}" data-entry-leave>Project entry settings</a>` : ''}`;
@@ -546,7 +547,7 @@ function initialize(boot) {
         if (event.target.type==='search') return;
         if(scope==='header') headerDirty=true;
         else { rowDirty=true; saveUuid=null;
-            const phaseCategory=event.target.name?.match(/^consumer_phases\[(rs|sc|si|st)\]/)?.[1];
+            const phaseCategory=event.target.name?.match(/^consumer_phases\[(rs|sc|st)\]/)?.[1];
             if(phaseCategory){
                 enteredConsumerPhases.add(phaseCategory);
                 if(['R','Y','B'].every(phase=>val(rowForm,`consumer_phases[${phaseCategory}][${phase}]`)===''))set(rowForm,`consumers[${phaseCategory}]`,null);
@@ -873,7 +874,52 @@ function initialize(boot) {
     headerForm?.addEventListener('submit',saveHeader);headerForm?.addEventListener('input',event=>markDirty(event,'header'));headerForm?.addEventListener('change',event=>markDirty(event,'header'));
     $('entry-submit-form')?.addEventListener('submit',event=>{
         if(busy || !editable() || headerDirty || rowDirty){event.preventDefault();error('Save the header and all row changes before submitting for verification. Your entered fields are retained.');}
+        else if(!data.transformers.length){event.preventDefault();error('Save at least one transformer header and its S/E rows before submitting for verification.');$('entry-header-panel').open=true;}
     });
+    const nextTransformerDialog=$('entry-next-transformer');
+    let completedPdfSource=null;
+    $('entry-transformer-submit')?.addEventListener('click',async()=>{
+        if(busy || !editable())return;
+        if(headerDirty || rowDirty){error('Save the header and all row changes before submitting this transformer. Your entered fields are retained.');return;}
+        if(!active()){error('Choose and save a transformer before submitting.');return;}
+        completedPdfSource=active().header?.pdf_source_id || number($('entry-pdf-source').value);
+        setBusy(true);clearErrors();
+        try{
+            data=await api('/entry-review','POST',{revision:data.revision,transformer_id:activeId,confirmed:true});
+            renderLists();renderSaved();persist();
+            const source=data.sources.find(source=>source.id===Number(completedPdfSource));
+            $('entry-next-transformer-help').textContent=`${active().code} is saved. ${source?.original_name || 'The current PDF'} can contain more transformers.${$('entry-submit-form') ? ' Choose No to submit the completed survey for verification and return to MDB Creation & Validation.' : ''}`;
+            nextTransformerDialog.showModal();
+            status('Transformer checked and saved.');
+        }catch(e){error('Transformer could not be submitted.',e.errors || {submit:[e.message]});}
+        finally{setBusy(false);}
+    });
+    $('entry-next-transformer-yes')?.addEventListener('click',()=>{
+        if(busy || !editable())return;
+        nextTransformerDialog.close();
+        const sourceChanged=number($('entry-pdf-source').value)!==Number(completedPdfSource);
+        $('entry-pdf-source').value=String(completedPdfSource);
+        if(sourceChanged)pageNumber=1;
+        selectedPdfRowId=null;cancelLineDrawing();
+        chooseTransformer('');
+        $('entry-transformer-search').value='';filterSelect($('entry-transformer'),'');
+        persist();
+        if(sourceChanged)loadPdf();
+        status('Choose the next registered transformer, or use Add Transformer to enter its code. The same PDF is open.');
+        $('entry-transformer').focus();
+        $('entry-header-panel').scrollIntoView({block:'nearest'});
+    });
+    $('entry-next-transformer-no')?.addEventListener('click',async()=>{
+        if(busy || !editable())return;
+        if(!$('entry-submit-form')){location.assign(boot.index_url);return;}
+        setBusy(true);clearErrors();
+        try{
+            const result=await api('/survey-decision','POST',{revision:data.revision,action:'submit'});
+            location.assign(result.redirect_url);
+        }catch(e){nextTransformerDialog.close();error('Survey could not be submitted for verification.',e.errors || {submit:[e.message]});}
+        finally{setBusy(false);}
+    });
+    $('entry-next-transformer-cancel')?.addEventListener('click',()=>nextTransformerDialog.close());
     rowForm?.addEventListener('submit',event=>{event.preventDefault();saveRow(true);});rowForm?.addEventListener('input',event=>markDirty(event,'row'));rowForm?.addEventListener('change',event=>markDirty(event,'row'));
     $('entry-save-draft')?.addEventListener('click',()=>saveRow(false));$('entry-row-new')?.addEventListener('click',()=>{if(allowSwitch()){newRow();status('New draft row.');}});
     $('entry-transformer').addEventListener('change',()=>{if(allowSwitch()){chooseTransformer($('entry-transformer').value);persist();}else $('entry-transformer').value=transformerSelection();});
