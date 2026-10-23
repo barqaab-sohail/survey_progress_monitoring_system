@@ -5,13 +5,24 @@ namespace App\Services;
 use App\Enums\UserRole;
 use App\Models\Feeder;
 use App\Models\FieldSurvey;
-use App\Models\SurveyTeam;
 use App\Models\SurveyorAssignment;
+use App\Models\SurveyTeam;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
 class FieldSurveyAccess
 {
+    public function canManage(User $user): bool
+    {
+        return $user->hasAnyRole([UserRole::SuperAdmin->value, UserRole::ProjectManager->value, UserRole::SurveyTeamLeader->value]);
+    }
+
+    public function authorizeManagement(User $user, FieldSurvey $survey): void
+    {
+        abort_unless($this->visible($user)->whereKey($survey->id)->exists(), 404);
+        abort_unless($this->canManage($user), 403);
+    }
+
     public function teams(User $user): Builder
     {
         return SurveyTeam::query()->where('status', 'active')

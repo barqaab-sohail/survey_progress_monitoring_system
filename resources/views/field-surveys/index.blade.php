@@ -15,6 +15,7 @@
     <p>{{ $survey->survey_date->format('d M Y') }} &middot; {{ $survey->team->name }} &middot; {{ $survey->collector->name }}</p>
     <p>{{ count($survey->rows) }} survey rows &middot; {{ count($survey->solar) }} solar entries &middot; {{ $survey->attachments_count }} attachments</p>
     <a class="btn btn-light" href="{{ route('field-surveys.show', $survey->client_uuid) }}">Open survey sheet</a>
+    @include('field-surveys.actions')
 </article>
 @empty
 <div class="card"><h2>No field surveys found</h2><p>Synced survey sheets appear here. Field collection is available for active survey teams with assigned feeders.</p></div>

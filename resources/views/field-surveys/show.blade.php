@@ -9,6 +9,7 @@
         }
     }
 @endphp
+<div class="actions" style="margin-bottom:16px">@include('field-surveys.actions')</div>
 <div class="page-head"><div><h1>{{ $survey->transformer_code ?: 'Untitled draft' }}</h1><p>{{ $survey->reference_snapshot['feeder_code'] ?? $survey->feeder->feeder_code }} &middot; {{ $survey->reference_snapshot['feeder_name'] ?? $survey->feeder->feeder_name }}</p></div><a class="btn btn-light" href="{{ route('field-surveys.index') }}">Back to field surveys</a></div>
 <section class="card"><div class="section-title"><h2>Survey details</h2><span class="status">{{ ucfirst($survey->status) }}</span></div><dl class="detail-list">
     <div><dt>Survey date</dt><dd>{{ $survey->survey_date->format('d M Y') }}</dd></div><div><dt>Collected by / team</dt><dd>{{ $survey->collector->name }} / {{ $survey->team->name }}</dd></div>

@@ -5,9 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class FieldSurvey extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = ['client_uuid', 'collected_by', 'survey_team_id', 'feeder_id', 'transformer_id', 'transformer_code', 'survey_date', 'status', 'revision', 'payload_hash', 'header', 'rows', 'solar', 'reference_snapshot', 'remarks', 'submitted_at'];
 
     protected $hidden = ['payload_hash'];

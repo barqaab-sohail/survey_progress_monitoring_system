@@ -70,6 +70,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('role:survey_team_leader,super_admin,project_manager,management_viewer')->prefix('field-surveys')->name('field-surveys.')->group(function () {
         Route::get('/', [FieldSurveyController::class, 'index'])->name('index');
         Route::get('/attachments/{clientUuid}', [FieldSurveyController::class, 'download'])->whereUuid('clientUuid')->name('attachment');
+        Route::get('/{clientUuid}/edit', [FieldSurveyController::class, 'edit'])->whereUuid('clientUuid')->name('edit');
+        Route::patch('/{clientUuid}', [FieldSurveyController::class, 'update'])->whereUuid('clientUuid')->name('update');
+        Route::delete('/{clientUuid}', [FieldSurveyController::class, 'destroy'])->whereUuid('clientUuid')->name('destroy');
         Route::get('/{clientUuid}', [FieldSurveyController::class, 'show'])->whereUuid('clientUuid')->name('show');
     });
     Route::get('/progress-queue', ProgressQueueController::class)->middleware('role:super_admin,project_manager,management_viewer,survey_team_leader,mdb_team_user,mdb_processing_user')->name('progress.queue');

@@ -7,6 +7,7 @@ use App\Models\Circle;
 use App\Models\Division;
 use App\Models\Feeder;
 use App\Models\FeederAssignment;
+use App\Models\FieldSurvey;
 use App\Models\FieldSurveyTest;
 use App\Models\FieldSurveyTestAttachment;
 use App\Models\GridStation;
@@ -15,10 +16,13 @@ use App\Models\Project;
 use App\Models\SubDivision;
 use App\Models\SurveyTeam;
 use App\Models\User;
+use App\Services\FieldSurveyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class FieldSurveyWebTest extends TestCase
@@ -67,6 +71,106 @@ class FieldSurveyWebTest extends TestCase
                 ['se' => 'E', 'group' => '01', 'date' => today()->toDateString(), 'gps_waypoint' => '0009', 'phase' => 'R', 'conductor_r' => 'A', 'equipment_type' => 'TR', 'pole_class' => 'PCO', 'pole_height_ft' => 0]],
             'solar' => [['consumer_reference' => '0000123', 'installed_pv_kw' => 5.5, 'remarks' => 'Rooftop']], 'remarks' => 'Field visit',
         ];
+    }
+
+    private function uploadedSurvey(): FieldSurvey
+    {
+        $data = $this->payload();
+        foreach ($data['rows'] as &$row) {
+            $row['row_id'] = (string) Str::uuid();
+            $row['phase'] = 'R';
+        }
+        unset($row);
+        $data['solar'][0]['row_id'] = $data['rows'][0]['row_id'];
+        unset($data['base_revision']);
+
+        return FieldSurvey::create($data + ['collected_by' => $this->leader->id, 'revision' => 1,
+            'payload_hash' => str_repeat('a', 64), 'reference_snapshot' => [], 'submitted_at' => now()]);
+    }
+
+    private function correction(FieldSurvey $survey): array
+    {
+        return $survey->only(['client_uuid', 'survey_team_id', 'feeder_id', 'transformer_id', 'transformer_code', 'status', 'header', 'rows', 'solar', 'remarks'])
+            + ['base_revision' => $survey->revision, 'survey_date' => $survey->survey_date->format('Y-m-d')];
+    }
+
+    public function test_server_corrections_show_evidence_preserve_links_and_increment_revision(): void
+    {
+        $survey = $this->uploadedSurvey();
+        $file = $survey->attachments()->create(['client_uuid' => (string) Str::uuid(), 'row_id' => $survey->rows[0]['row_id'],
+            'kind' => 'photo', 'path' => 'field-surveys/test.png', 'mime_type' => 'image/png', 'byte_length' => 10, 'sha256' => str_repeat('b', 64)]);
+        $this->actingAs($this->admin)->get(route('field-surveys.index'))->assertOk()->assertSee('Edit survey')->assertSee('Delete survey');
+        $this->get(route('field-surveys.edit', $survey->client_uuid))->assertOk()->assertSee('Uploaded evidence')
+            ->assertSee(route('field-surveys.attachment', $file->client_uuid), false)->assertSee('Consumer counts');
+        $data = $this->correction($survey);
+        $data['rows'][0]['consumers']['rs'] = 0;
+        $data['rows'][0]['gps_waypoint'] = '000007';
+        $data['header']['capacity_kva'] = 100;
+        $data['solar'][0]['meter_number'] = '000123';
+        $this->patch(route('field-surveys.update', $survey->client_uuid), ['payload' => json_encode($data), 'correction_reason' => 'Checked against photo'])
+            ->assertRedirect(route('field-surveys.show', $survey->client_uuid))->assertSessionHasNoErrors();
+        $fresh = $survey->fresh();
+        $this->assertSame(2, $fresh->revision);
+        $this->assertSame(0, $fresh->rows[0]['consumers']['rs']);
+        $this->assertSame('000007', $fresh->rows[0]['gps_waypoint']);
+        $this->assertSame('000123', $fresh->solar[0]['meter_number']);
+        $this->assertSame($this->leader->id, $fresh->collected_by);
+        $this->assertSame($file->row_id, $fresh->rows[0]['row_id']);
+        $this->assertNotSame($survey->payload_hash, $fresh->payload_hash);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'field_survey.corrected_on_server', 'user_id' => $this->admin->id, 'reason' => 'Checked against photo']);
+    }
+
+    public function test_stale_invalid_and_reidentified_rows_cannot_overwrite_server_data(): void
+    {
+        $survey = $this->uploadedSurvey();
+        $data = $this->correction($survey);
+        $data['base_revision'] = 0;
+        $url = route('field-surveys.update', $survey->client_uuid);
+        $this->actingAs($this->admin)->from(route('field-surveys.edit', $survey->client_uuid))
+            ->patch($url, ['payload' => json_encode($data)])->assertSessionHasErrors('base_revision');
+        $data['base_revision'] = 1;
+        $data['rows'][0]['row_id'] = (string) Str::uuid();
+        $this->patch($url, ['payload' => json_encode($data)])->assertSessionHasErrors('rows');
+        $data = $this->correction($survey);
+        $data['rows'][0]['consumers']['rs'] = -1;
+        $this->patch($url, ['payload' => json_encode($data)])->assertSessionHasErrors('rows.0.consumers.rs');
+        $this->patch($url, ['payload' => '{invalid'])->assertSessionHasErrors('payload');
+        $this->assertSame(1, $survey->fresh()->revision);
+    }
+
+    public function test_management_viewers_and_unrelated_leaders_cannot_change_uploaded_surveys(): void
+    {
+        $survey = $this->uploadedSurvey();
+        $viewer = User::factory()->create(['role' => UserRole::ManagementViewer]);
+        $this->actingAs($viewer)->get(route('field-surveys.show', $survey->client_uuid))->assertOk()->assertDontSee('Edit survey')->assertDontSee('Delete survey');
+        $this->get(route('field-surveys.edit', $survey->client_uuid))->assertForbidden();
+        $this->patch(route('field-surveys.update', $survey->client_uuid), ['payload' => json_encode($this->correction($survey))])->assertForbidden();
+        $this->delete(route('field-surveys.destroy', $survey->client_uuid), ['base_revision' => 1])->assertForbidden();
+        $other = User::factory()->create(['role' => UserRole::SurveyTeamLeader]);
+        $this->actingAs($other)->get(route('field-surveys.edit', $survey->client_uuid))->assertNotFound();
+        $this->delete(route('field-surveys.destroy', $survey->client_uuid), ['base_revision' => 1])->assertNotFound();
+        $this->actingAs($this->leader)->get(route('field-surveys.edit', $survey->client_uuid))->assertOk();
+    }
+
+    public function test_server_deletion_retains_evidence_blocks_old_phone_retry_and_rejects_stale_deletion(): void
+    {
+        $survey = $this->uploadedSurvey();
+        $data = $this->correction($survey);
+        $this->actingAs($this->admin)->delete(route('field-surveys.destroy', $survey->client_uuid), ['base_revision' => 0])->assertSessionHasErrors('base_revision');
+        $this->delete(route('field-surveys.destroy', $survey->client_uuid), ['base_revision' => 1])->assertRedirect(route('field-surveys.index'));
+        $this->assertSoftDeleted('field_surveys', ['id' => $survey->id]);
+        $this->get(route('field-surveys.show', $survey->client_uuid))->assertNotFound();
+        $this->get(route('field-surveys.index'))->assertDontSee('B2308');
+        $this->assertDatabaseHas('audit_logs', ['action' => 'field_survey.deleted_on_server', 'user_id' => $this->admin->id]);
+        $data['base_revision'] = 0;
+        try {
+            app(FieldSurveyService::class)->sync($this->leader, $data);
+            $this->fail('A deleted survey was recreated by a phone retry.');
+        } catch (HttpException $exception) {
+            $this->assertSame(409, $exception->getStatusCode());
+        }
+        $this->assertSame(0, FieldSurvey::count());
+        $this->assertSame(1, FieldSurvey::withTrashed()->count());
     }
 
     public function test_phase_is_derived_from_phase_conductors_only(): void
@@ -173,7 +277,7 @@ class FieldSurveyWebTest extends TestCase
     public function test_attachments_are_private_idempotent_and_separate_from_android(): void
     {
         config(['drive_storage.enabled' => true]);
-        \Illuminate\Support\Facades\Queue::fake();
+        Queue::fake();
         $data = $this->payload();
         $this->actingAs($this->admin)->postJson(route('field-survey-test.sync'), $data)->assertOk();
         $uuid = (string) Str::uuid();

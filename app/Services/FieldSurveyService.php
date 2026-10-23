@@ -4,9 +4,9 @@ namespace App\Services;
 
 use App\Models\FieldSurvey;
 use App\Models\FieldSurveyAttachment;
+use App\Models\SurveyorAssignment;
 use App\Models\Transformer;
 use App\Models\User;
-use App\Models\SurveyorAssignment;
 use App\Services\DriveStorage\FileStorage;
 use App\Support\FieldTransformerIdentity;
 use App\Support\SurveyTeamGroup;
@@ -28,7 +28,8 @@ class FieldSurveyService
                 $actor = User::query()->whereKey($actor->id)->lockForUpdate()->firstOrFail();
                 [$team, $feeder] = $this->access->authorizeCollection($actor, $data['survey_team_id'], $data['feeder_id']);
                 DB::table('feeders')->where('id', $feeder->id)->lockForUpdate()->first();
-                $survey = FieldSurvey::where('client_uuid', $data['client_uuid'])->lockForUpdate()->first();
+                $survey = FieldSurvey::withTrashed()->where('client_uuid', $data['client_uuid'])->lockForUpdate()->first();
+                abort_if($survey?->trashed(), 409, 'This survey was deleted on the server. Your phone copy cannot recreate it.');
                 abort_if($survey && $survey->collected_by !== $actor->id, 409, 'This survey UUID belongs to another account.');
                 $this->validateRowOwnershipAndGroups($data, $survey, SurveyTeamGroup::identifier($team));
                 $hashData = $data;
@@ -101,7 +102,9 @@ class FieldSurveyService
                     $task->update(['status' => $data['status'] === 'submitted' ? 'submitted' : 'in_progress',
                         'started_at' => $task->started_at ?? now(), 'completed_at' => $data['status'] === 'submitted' ? now() : null,
                         'return_comments' => $data['status'] === 'submitted' ? null : $task->return_comments]);
-                    if ($task->wasChanged('status')) $this->audit->record($actor, 'survey.task_status_changed', $task, $taskOld, $task->fresh()->toArray());
+                    if ($task->wasChanged('status')) {
+                        $this->audit->record($actor, 'survey.task_status_changed', $task, $taskOld, $task->fresh()->toArray());
+                    }
                 }
                 $this->audit->record($actor, $isNew ? 'field_survey.created' : 'field_survey.updated', $survey, $old, $survey->toArray());
 
@@ -113,6 +116,60 @@ class FieldSurveyService
                 abort(409, 'This survey UUID was synchronized concurrently. Retry with the same record.');
             }
             throw $exception;
+        }
+    }
+
+    public function updateOnServer(User $actor, FieldSurvey $survey, array $data): FieldSurvey
+    {
+        return DB::transaction(function () use ($actor, $survey, $data): FieldSurvey {
+            // Use the same feeder-before-survey lock order as mobile sync.
+            DB::table('feeders')->where('id', $survey->feeder_id)->lockForUpdate()->first();
+            $locked = FieldSurvey::whereKey($survey->id)->lockForUpdate()->firstOrFail();
+            $this->access->authorizeManagement($actor, $locked);
+            $this->assertWebRevision($locked, (int) $data['base_revision']);
+            if (count($data['rows']) !== count($locked->rows)) {
+                throw ValidationException::withMessages(['rows' => 'Keep the original S/E rows and their photo links when correcting this survey.']);
+            }
+            foreach ($locked->rows as $index => $row) {
+                foreach (['row_id', 'pair_id', 'entry_version', 'se'] as $key) {
+                    if (($row[$key] ?? null) !== ($data['rows'][$index][$key] ?? null)) {
+                        throw ValidationException::withMessages(['rows' => 'The original S/E row identities cannot be changed. Reload the survey.']);
+                    }
+                }
+            }
+            $this->validateRowOwnershipAndGroups($data, $locked, SurveyTeamGroup::identifier($locked->team));
+            $key = FieldTransformerIdentity::key($data['transformer_code'] ?? null);
+            if ($key !== null && FieldSurvey::where('feeder_id', $locked->feeder_id)->where('id', '!=', $locked->id)->where('transformer_key', $key)->exists()) {
+                throw ValidationException::withMessages(['transformer_code' => 'This transformer already has another saved survey on this feeder.']);
+            }
+            $before = $locked->toArray();
+            $hashData = array_intersect_key($data, array_flip(['client_uuid', 'survey_team_id', 'feeder_id', 'transformer_id', 'transformer_code', 'survey_date', 'status', 'header', 'rows', 'solar', 'remarks']));
+            $locked->fill(array_intersect_key($data, array_flip(['transformer_code', 'survey_date', 'header', 'rows', 'solar', 'remarks'])));
+            $locked->forceFill(['transformer_key' => $key, 'revision' => $locked->revision + 1,
+                'payload_hash' => hash('sha256', json_encode($this->canonical($hashData), JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION))])->save();
+            $this->audit->record($actor, 'field_survey.corrected_on_server', $locked, $before, $locked->toArray(), $data['correction_reason'] ?? null);
+
+            return $locked;
+        }, 3);
+    }
+
+    public function deleteOnServer(User $actor, FieldSurvey $survey, int $revision): void
+    {
+        DB::transaction(function () use ($actor, $survey, $revision): void {
+            $locked = FieldSurvey::whereKey($survey->id)->lockForUpdate()->firstOrFail();
+            $this->access->authorizeManagement($actor, $locked);
+            $this->assertWebRevision($locked, $revision);
+            $before = $locked->toArray();
+            // Retain a tombstone and evidence so an old phone retry cannot recreate it.
+            $locked->delete();
+            $this->audit->record($actor, 'field_survey.deleted_on_server', $locked, $before, $locked->toArray());
+        }, 3);
+    }
+
+    private function assertWebRevision(FieldSurvey $survey, int $revision): void
+    {
+        if ($survey->revision !== $revision) {
+            throw ValidationException::withMessages(['base_revision' => 'This survey changed after you opened it. Reload the latest survey before saving or deleting.']);
         }
     }
 
