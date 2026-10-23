@@ -83,9 +83,10 @@
             <select name="user_id" id="member-user" required>
                 <option value="">Select a user</option>
                 @foreach($users as $user)
-                <option value="{{ $user->id }}" @selected(old('user_id') == $user->id)>{{ $user->name }} | {{ $user->role->label() }}</option>
+                <option value="{{ $user->id }}" data-team-types="{{ implode(' ', $memberTeamTypes[$user->id] ?? []) }}" @selected(old('user_id') == $user->id)>{{ $user->name }} | {{ $user->role->label() }}</option>
                 @endforeach
             </select>
+            <small>Only active users with a role allowed in the selected team type are available.</small>
         </div>
         <label style="display:flex;gap:8px;margin-top:12px">
             <input type="checkbox" id="member-leader" name="is_leader" value="1" @checked(old('is_leader', false))>
@@ -158,7 +159,9 @@
     const memberType = document.getElementById('member-type');
     const memberTeam = document.getElementById('member-team');
     const memberLeader = document.getElementById('member-leader');
+    const memberUser = document.getElementById('member-user');
     const teamOptions = Array.from(memberTeam.querySelectorAll('option[data-team-type]'));
+    const userOptions = Array.from(memberUser.querySelectorAll('option[data-team-types]'));
 
     function updateMemberTeams(changedType = false) {
         const selected = changedType ? '' : memberTeam.value;
@@ -166,6 +169,11 @@
         memberTeam.replaceChildren(new Option('Select a team', ''));
         options.forEach(option => memberTeam.appendChild(option.cloneNode(true)));
         memberTeam.value = options.some(option => option.value === selected) ? selected : '';
+        const selectedUser = memberUser.value;
+        const eligibleUsers = userOptions.filter(option => option.dataset.teamTypes.split(' ').includes(memberType.value));
+        memberUser.replaceChildren(new Option('Select a user', ''));
+        eligibleUsers.forEach(option => memberUser.appendChild(option.cloneNode(true)));
+        memberUser.value = eligibleUsers.some(option => option.value === selectedUser) ? selectedUser : '';
         memberLeader.disabled = memberType.value !== 'survey';
     }
 

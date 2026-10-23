@@ -18,7 +18,9 @@ use App\Services\Mdb\DataEntryMdbExport;
 use App\Services\Mdb\DataEntryPayload;
 use App\Services\Mdb\SnapshotService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 use Tests\Fixtures\DataEntrySnapshot;
 use Tests\TestCase;
@@ -147,6 +149,98 @@ class DataEntryMdbExportTest extends TestCase
         array_pop($snapshot['transformers'][0]['entry_rows']);
         $this->expectException(ValidationException::class);
         app(DataEntryPayload::class)->build($snapshot);
+    }
+
+    private function remoteWorker(?callable $alter = null): void
+    {
+        config(['data_entry_mdb.driver' => 'http', 'data_entry_mdb.http_url' => 'https://mdb-worker.example',
+            'data_entry_mdb.secret' => str_repeat('s', 40), 'data_entry_mdb.powershell' => '/not-installed-on-cpanel']);
+        Http::preventStrayRequests();
+        Http::fake(['https://mdb-worker.example/v1/data-entry-exports' => function ($request) use ($alter) {
+            $payload = json_decode($request->body(), true);
+            $this->assertSame(hash('sha256', str_replace("\r\n", "\n", file_get_contents(resource_path('mdb/data-entry/schema.json')))), $payload['schema_sha256']);
+            [$stamp, $signature] = explode(':', substr($request->header('Authorization')[0], 9));
+            $this->assertSame(hash_hmac('sha256', $stamp."\n".hash('sha256', $request->body()), str_repeat('s', 40)), $signature);
+            $bytes = file_get_contents(resource_path('mdb/data-entry/empty.mdb'));
+            $result = ['validated' => true, 'observations' => count($payload['rows']), 'gps_points' => 0,
+                'sha256' => hash('sha256', $bytes), 'payload_sha256' => hash('sha256', $request->body()), 'mdb_base64' => base64_encode($bytes)];
+            if ($alter) {
+                $result = $alter($result);
+            }
+            $body = json_encode($result);
+
+            return Http::response($body, 200, ['X-MDB-Signature' => hash_hmac('sha256', $body, str_repeat('s', 40))]);
+        }]);
+    }
+
+    public function test_http_worker_download_works_without_local_windows_tools(): void
+    {
+        $this->remoteWorker();
+        $batch = $this->batch();
+        $before = $batch->getRawOriginal();
+        $payload = app(DataEntryMdbExport::class)->prepare($batch);
+        $response = $this->post(route('mdb-workflow.data-entry-export.download', $batch), ['revision_sha256' => $payload['revision_sha256']]);
+        $response->assertOk()->assertDownload()->assertHeader('X-Data-Entry-Observations', '2');
+        $path = $response->baseResponse->getFile()->getPathname();
+        try {
+            $this->assertSame(hash_file('sha256', resource_path('mdb/data-entry/empty.mdb')), hash_file('sha256', $path));
+            $this->assertSame($before, $batch->fresh()->getRawOriginal());
+            $this->assertDatabaseCount('mdb_workflow_exports', 0);
+            Http::assertSentCount(1);
+        } finally {
+            unlink($path);
+        }
+    }
+
+    public function test_http_worker_rejects_wrong_payload_counts_hash_and_non_mdb_outputs(): void
+    {
+        $payload = app(DataEntryPayload::class)->build(DataEntrySnapshot::make());
+        foreach (['payload_sha256' => str_repeat('0', 64), 'observations' => 4, 'gps_points' => 1,
+            'sha256' => str_repeat('0', 64), 'mdb_base64' => base64_encode('This is not an MDB file.')] as $key => $value) {
+            $this->remoteWorker(fn ($result) => array_replace($result, [$key => $value]));
+            $files = glob(storage_path('app/private/data-entry-mdb/*'));
+            try {
+                app(DataEntryMdbExport::class)->generate($payload);
+                $this->fail('Invalid worker result was accepted: '.$key);
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('data_entry_mdb', $exception->errors());
+                $this->assertSame($files, glob(storage_path('app/private/data-entry-mdb/*')));
+            }
+        }
+    }
+
+    public function test_http_worker_requires_https_configuration_and_authenticated_responses(): void
+    {
+        $batch = $this->batch();
+        $sha = app(DataEntryMdbExport::class)->prepare($batch)['revision_sha256'];
+        $url = route('mdb-workflow.data-entry-export.download', $batch);
+        config(['data_entry_mdb.driver' => 'http', 'data_entry_mdb.http_url' => null, 'data_entry_mdb.secret' => null]);
+        Http::preventStrayRequests();
+        Http::fake();
+        $this->postJson($url, ['revision_sha256' => $sha])->assertUnprocessable()->assertJsonValidationErrors('data_entry_mdb');
+        Http::assertNothingSent();
+        config(['data_entry_mdb.http_url' => 'http://insecure-worker.example', 'data_entry_mdb.secret' => str_repeat('s', 40)]);
+        $this->postJson($url, ['revision_sha256' => $sha])->assertUnprocessable()->assertJsonValidationErrors('data_entry_mdb');
+        Http::assertNothingSent();
+        config(['data_entry_mdb.http_url' => 'https://mdb-worker.example']);
+        Http::fake(['https://mdb-worker.example/*' => Http::response('{}', 200, ['X-MDB-Signature' => 'invalid'])]);
+        $this->postJson($url, ['revision_sha256' => $sha])->assertUnprocessable()->assertJsonValidationErrors('data_entry_mdb');
+    }
+
+    public function test_unreachable_and_outdated_workers_show_validation_messages(): void
+    {
+        $this->remoteWorker();
+        $batch = $this->batch();
+        $sha = app(DataEntryMdbExport::class)->prepare($batch)['revision_sha256'];
+        $url = route('mdb-workflow.data-entry-export.download', $batch);
+        Http::fake(['https://mdb-worker.example/*' => function () {
+            throw new ConnectionException('Connection failed');
+        }]);
+        $this->postJson($url, ['revision_sha256' => $sha])->assertUnprocessable()->assertJsonValidationErrors('data_entry_mdb');
+        $body = json_encode(['error' => 'Unknown endpoint.']);
+        Http::fake(['https://mdb-worker.example/*' => Http::response($body, 404,
+            ['X-MDB-Signature' => hash_hmac('sha256', $body, str_repeat('s', 40))])]);
+        $this->postJson($url, ['revision_sha256' => $sha])->assertUnprocessable()->assertJsonValidationErrors('data_entry_mdb');
     }
 
     public function test_actual_dao_writer_and_download_match_snapshot_without_database_writes(): void

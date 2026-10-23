@@ -172,8 +172,51 @@ class TeamAssignmentTest extends TestCase
         $this->assertDatabaseCount('survey_team_members', 0);
         $this->assertDatabaseCount('mdb_team_members', 0);
         $this->project->update(['status' => 'active']);
-        $this->post(route('admin.teams.member'), ['type' => 'mdb', 'team_id' => $mdbTeam->id, 'user_id' => $this->surveyor->id])->assertSessionHasNoErrors();
-        $this->assertDatabaseHas('mdb_team_members', ['mdb_team_id' => $mdbTeam->id, 'user_id' => $this->surveyor->id]);
+        $creator = User::factory()->create(['role' => UserRole::MdbGenerator]);
+        $this->post(route('admin.teams.member'), ['type' => 'mdb', 'team_id' => $mdbTeam->id, 'user_id' => $creator->id])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('mdb_team_members', ['mdb_team_id' => $mdbTeam->id, 'user_id' => $creator->id]);
+    }
+
+    public function test_incompatible_member_roles_return_field_errors_without_assigning_or_auditing(): void
+    {
+        $mdbTeam = MdbTeam::create(['project_id' => $this->project->id, 'code' => 'MDB-01', 'name' => 'MDB Team', 'status' => 'active']);
+        $creator = User::factory()->create(['role' => UserRole::MdbGenerator]);
+        $this->actingAs($this->admin);
+        $url = route('admin.teams.member');
+        $index = route('admin.teams.index');
+        foreach ([['type' => 'survey', 'team_id' => $this->team->id, 'user_id' => $creator->id],
+            ['type' => 'mdb', 'team_id' => $mdbTeam->id, 'user_id' => $this->surveyor->id]] as $data) {
+            $this->from($index)->post($url, $data)->assertRedirect($index)->assertSessionHasErrors('user_id')->assertSessionHasInput('user_id', $data['user_id']);
+            $this->postJson($url, $data)->assertUnprocessable()->assertJsonValidationErrors('user_id');
+        }
+        $this->assertDatabaseCount('survey_team_members', 0);
+        $this->assertDatabaseCount('mdb_team_members', 0);
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'team.member_assigned']);
+    }
+
+    public function test_member_options_match_team_roles_including_additional_roles(): void
+    {
+        $creator = User::factory()->create(['role' => UserRole::MdbGenerator]);
+        $viewer = User::factory()->create(['role' => UserRole::ManagementViewer]);
+        $dualRole = User::factory()->create(['role' => UserRole::Surveyor]);
+        $dualRole->assignRole(UserRole::MdbGenerator->value);
+        $inactive = User::factory()->create(['role' => UserRole::MdbGenerator, 'status' => RecordStatus::Inactive]);
+        $mdbTeam = MdbTeam::create(['project_id' => $this->project->id, 'code' => 'MDB-01', 'name' => 'MDB Team', 'status' => 'active']);
+        $response = $this->actingAs($this->admin)->get(route('admin.teams.index'))->assertOk();
+        $types = $response->viewData('memberTeamTypes');
+        $this->assertSame(['survey'], $types[$this->surveyor->id]);
+        $this->assertSame(['mdb'], $types[$creator->id]);
+        $this->assertSame([], $types[$viewer->id]);
+        $this->assertSame(['survey', 'mdb'], $types[$dualRole->id]);
+        $this->assertSame(['survey', 'mdb'], $types[$this->admin->id]);
+        $this->assertArrayNotHasKey($inactive->id, $types);
+        foreach ([['type' => 'survey', 'team_id' => $this->team->id], ['type' => 'mdb', 'team_id' => $mdbTeam->id]] as $team) {
+            $this->from(route('admin.teams.index'))->post(route('admin.teams.member'), $team + ['user_id' => $dualRole->id])
+                ->assertRedirect(route('admin.teams.index'))->assertSessionHasNoErrors();
+        }
+        if (getenv('MDB_ENTRY_QA_ARTIFACTS')) {
+            file_put_contents(base_path('tmp/mdb-entry-qa/team-assignment.html'), $response->getContent());
+        }
     }
 
     public function test_member_and_bulk_assignment_make_all_project_feeders_available_for_survey_entry(): void

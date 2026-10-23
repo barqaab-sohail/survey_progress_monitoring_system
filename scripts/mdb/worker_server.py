@@ -14,6 +14,7 @@ from pathlib import Path
 import re
 import subprocess
 import threading
+import tempfile
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -22,6 +23,8 @@ REGISTRY = Path(os.environ.get("MDB_WORKER_TEMPLATES", "approved-templates.json"
 SECRET = os.environ.get("MDB_EXPORT_WORKER_SECRET", "").encode()
 POWERSHELL = os.environ.get("MDB_EXPORT_POWERSHELL", str(Path(os.environ.get("WINDIR", r"C:\Windows")) / r"SysWOW64\WindowsPowerShell\v1.0\powershell.exe"))
 WRITER = Path(__file__).with_name("export-reviewed-mdb.ps1").resolve()
+DATA_ENTRY_WRITER = Path(__file__).with_name("export-data-entry.ps1").resolve()
+DATA_ENTRY_RESOURCES = Path(__file__).resolve().parents[2] / "resources" / "mdb" / "data-entry"
 MAX_INPUT = int(os.environ.get("MDB_WORKER_MAX_INPUT_BYTES", "10485760"))
 MAX_OUTPUT = int(os.environ.get("MDB_EXPORT_MAX_BYTES", "104857600"))
 TIMEOUT = int(os.environ.get("MDB_EXPORT_TIMEOUT", "180"))
@@ -102,9 +105,43 @@ def export_model(body: bytes) -> dict:
     return result
 
 
+def export_data_entry(body: bytes) -> dict:
+    payload = json.loads(body)
+    if not isinstance(payload, dict) or payload.get("version") != 1:
+        raise ValueError("Unsupported data entry export version.")
+    rows = payload.get("rows")
+    if not isinstance(rows, list) or not rows or len(rows) % 2:
+        raise ValueError("Data entry export needs complete S/E pairs.")
+    schema = DATA_ENTRY_RESOURCES / "schema.json"
+    template = DATA_ENTRY_RESOURCES / "empty.mdb"
+    if payload.get("schema_sha256") != digest(schema.read_bytes().replace(b"\r\n", b"\n")):
+        raise ValueError("Data entry schema differs; deploy matching application and worker resources.")
+    ROOT.mkdir(parents=True, exist_ok=True)
+    # Every path and executable is worker-owned; requests supply only observation values.
+    with tempfile.TemporaryDirectory(prefix="data-entry-", dir=ROOT) as directory:
+        source, output = Path(directory) / "payload.json", Path(directory) / "data-entry.mdb"
+        source.write_bytes(body)
+        completed = subprocess.run([
+            POWERSHELL, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+            "-File", str(DATA_ENTRY_WRITER), "-InputPath", str(source),
+            "-TemplatePath", str(template), "-SchemaPath", str(schema), "-OutputPath", str(output),
+        ], capture_output=True, timeout=TIMEOUT, check=False, encoding="utf-8", errors="replace")
+        if completed.returncode:
+            raise RuntimeError("Data entry MDB writer failed: " + completed.stderr.strip()[:4000])
+        result = json.loads(completed.stdout.strip())
+        if not output.is_file() or output.stat().st_size > MAX_OUTPUT:
+            raise ValueError("Data entry MDB artifact is missing or oversized.")
+        data = output.read_bytes()
+        if (result.get("validated") is not True or result.get("observations") != len(rows)
+                or result.get("gps_points") != 0 or result.get("sha256") != digest(data)):
+            raise ValueError("Data entry MDB integrity/count validation failed.")
+        result.update(payload_sha256=digest(body), mdb_base64=base64.b64encode(data).decode("ascii"))
+        return result
+
+
 class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
-        if self.path != "/v1/exports":
+        if self.path not in {"/v1/exports", "/v1/data-entry-exports"}:
             self.respond(404, {"error": "Unknown endpoint."})
             return
         try:
@@ -123,7 +160,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.respond(401, {"error": "Worker authentication failed."})
                 return
             with LOCK:
-                result = export_model(body)
+                result = export_data_entry(body) if self.path == "/v1/data-entry-exports" else export_model(body)
             self.respond(200, result)
         except (ValueError, KeyError, json.JSONDecodeError) as error:
             self.respond(422, {"error": str(error)[:4000]})
@@ -149,8 +186,8 @@ if __name__ == "__main__":
         raise SystemExit("Set MDB_EXPORT_WORKER_SECRET to a random secret of at least 32 characters.")
     if os.name != "nt" or not Path(POWERSHELL).is_file():
         raise SystemExit("This worker requires Windows and an installed Access DAO/ACE runtime.")
-    if not REGISTRY.is_file():
-        raise SystemExit("Register approved templates in MDB_WORKER_TEMPLATES first.")
+    if not REGISTRY.is_file() and not (DATA_ENTRY_RESOURCES / "empty.mdb").is_file():
+        raise SystemExit("Register approved templates or install the bundled data entry MDB resources first.")
     ROOT.mkdir(parents=True, exist_ok=True)
     # Loopback only. Expose through a firewall-restricted HTTPS reverse proxy.
     ThreadingHTTPServer(("127.0.0.1", int(os.environ.get("MDB_WORKER_PORT", "8766"))), Handler).serve_forever()

@@ -20,11 +20,19 @@ use Illuminate\View\View;
 
 class TeamController extends Controller
 {
+    private const MEMBER_ROLES = [
+        'survey' => ['surveyor', 'survey_team_leader', 'data_entry_verification_team_leader', 'survey_data_entry_operator', 'survey_data_verifier', 'super_admin'],
+        'mdb' => ['mdb_generator', 'mdb_creation_team_leader', 'mdb_team_user', 'super_admin'],
+    ];
+
     public function index(): View
     {
+        $users = User::where('status', 'active')->with('roles')->orderBy('name')->get();
+
         return view('admin.teams.index', [
             'surveyTeams' => SurveyTeam::with(['members', 'project'])->orderBy('name')->get(), 'mdbTeams' => MdbTeam::with(['members', 'project'])->orderBy('name')->get(),
-            'projects' => Project::where('status', 'active')->get(), 'organizations' => Organization::where('status', 'active')->get(), 'users' => User::where('status', 'active')->orderBy('name')->get(),
+            'projects' => Project::where('status', 'active')->get(), 'organizations' => Organization::where('status', 'active')->get(), 'users' => $users,
+            'memberTeamTypes' => $users->mapWithKeys(fn (User $user) => [$user->id => array_keys(array_filter(self::MEMBER_ROLES, fn (array $roles) => $user->hasAnyRole($roles)))])->all(),
             'feeders' => Feeder::active()->orderBy('feeder_code')->get(), 'assignments' => FeederAssignment::with(['feeder', 'surveyTeam'])->where('status', 'active')->get(),
         ]);
     }
@@ -55,10 +63,11 @@ class TeamController extends Controller
             'survey' => SurveyTeam::findOrFail($data['team_id']), 'mdb' => MdbTeam::findOrFail($data['team_id'])
         };
         $member = User::findOrFail($data['user_id']);
-        abort_unless($data['type'] === 'survey'
-            ? $member->hasAnyRole(['surveyor', 'survey_team_leader', 'data_entry_verification_team_leader', 'survey_data_entry_operator', 'survey_data_verifier', 'super_admin'])
-            : $member->hasAnyRole(['mdb_generator', 'mdb_creation_team_leader', 'mdb_team_user', 'super_admin']),
-            422, 'The selected role is not allowed in this team type.');
+        if (! $member->hasAnyRole(self::MEMBER_ROLES[$data['type']])) {
+            throw ValidationException::withMessages([
+                'user_id' => 'The selected user does not have a role allowed in '.($data['type'] === 'survey' ? 'Survey' : 'MDB').' teams. Choose an eligible user for this team type.',
+            ])->redirectTo(route('admin.teams.index'));
+        }
         $old = $team->members()->whereKey($member->id)->first()?->pivot?->toArray() ?? [];
         $team->members()->syncWithoutDetaching([$data['user_id'] => $data['type'] === 'survey' ? ['is_leader' => $request->boolean('is_leader')] : []]);
         $audit->record($request->user(), 'team.member_assigned', $team, $old, ['user_id' => $member->id, 'role' => $member->role->value,
