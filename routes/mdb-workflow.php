@@ -7,6 +7,7 @@ use App\Http\Controllers\MdbOperatorEntryController;
 use App\Http\Controllers\MdbPdfProgressController;
 use App\Http\Controllers\MdbSurveyReviewController;
 use App\Http\Controllers\MdbWorkflowController;
+use App\Http\Controllers\OfflineMdbController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'active', 'role:super_admin'])->prefix('admin/engineering')->name('engineering.')->controller(EngineeringConfigurationController::class)->group(function () {
@@ -19,6 +20,9 @@ Route::middleware(['auth', 'active', 'role:super_admin'])->prefix('admin/enginee
 });
 
 Route::middleware(['auth', 'active'])->prefix('mdb-workflow')->name('mdb-workflow.')->controller(MdbWorkflowController::class)->group(function () {
+    Route::get('/offline-mdb', [OfflineMdbController::class, 'index'])->name('offline-mdb.index');
+    Route::post('/offline-mdb/preview', [OfflineMdbController::class, 'preview'])->middleware('throttle:10,1')->name('offline-mdb.preview');
+    Route::post('/offline-mdb/download', [OfflineMdbController::class, 'download'])->middleware('throttle:10,1')->name('offline-mdb.download');
     Route::get('/', 'index')->name('index');
     Route::get('/create', 'create')->name('create');
     Route::post('/drive-preview', 'previewDrive')->middleware('throttle:20,1')->name('drive-preview');
@@ -35,6 +39,7 @@ Route::middleware(['auth', 'active'])->prefix('mdb-workflow')->name('mdb-workflo
     Route::get('/{batch}/review', 'review')->name('review');
     Route::get('/{batch}/data-entry-mdb', [DataEntryMdbExportController::class, 'show'])->name('data-entry-export.show');
     Route::post('/{batch}/data-entry-mdb', [DataEntryMdbExportController::class, 'download'])->middleware('throttle:10,1')->name('data-entry-export.download');
+    Route::get('/{batch}/transformers/{transformer}/transfer-json', [DataEntryMdbExportController::class, 'transformerJson'])->whereNumber('transformer')->middleware('throttle:20,1')->name('transformer-json.download');
     Route::post('/{batch}/generation-inputs', [MdbGenerationInputController::class, 'store'])->name('generation.inputs.store');
     Route::get('/{batch}/generation-inputs/{input}', [MdbGenerationInputController::class, 'download'])->name('generation.inputs.download');
     Route::post('/{batch}/survey-decision', 'surveyDecision')->name('survey.decision');

@@ -3,6 +3,7 @@
 use App\Services\Mdb\AccessPowerShell;
 
 return [
+    'offline_conversion_enabled' => (bool) env('DATA_ENTRY_MDB_OFFLINE_ENABLED', PHP_OS_FAMILY === 'Windows'),
     'driver' => env('DATA_ENTRY_MDB_DRIVER', 'auto'),
     'powershell' => env('DATA_ENTRY_MDB_POWERSHELL') ?: AccessPowerShell::defaultPath(),
     'timeout' => (int) env('DATA_ENTRY_MDB_TIMEOUT', 180),

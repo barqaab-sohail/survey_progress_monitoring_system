@@ -3,6 +3,14 @@
 @section('content')
 <div class="mdb-workflow">
     <div class="page-head"><div><h1>Export Data Entry MDB</h1><p>Batch #{{ $batch->id }} &middot; Approved revision {{ $payload['revision_number'] }}</p></div><a class="btn btn-light" href="{{ route('mdb-workflow.review', $batch) }}">Back to survey</a></div>
+    <section class="card"><h2>Download Transformer JSON for local MDB conversion</h2>
+        <p>Download one transformer, then upload the file to <strong>JSON to MDB</strong> in your local Windows application. No worker connection is required.</p>
+        @foreach($batch->approvedRevision->snapshot['transformers'] as $transformer)
+        <p><strong>{{ $transformer['code'] }}</strong> &middot; {{ count($transformer['entry_rows'] ?? []) }} observations
+            <a class="btn btn-primary" href="{{ route('mdb-workflow.transformer-json.download', [$batch, 'transformer' => $transformer['id'], 'revision_sha256' => $payload['revision_sha256']]) }}">Download Transformer JSON</a></p>
+        @endforeach
+        @if(PHP_OS_FAMILY === 'Windows' && config('data_entry_mdb.offline_conversion_enabled'))<a class="btn btn-light" href="{{ route('mdb-workflow.offline-mdb.index') }}">Open JSON to MDB</a>@endif
+    </section>
     <section class="card"><p>{{ $payload['transformer_count'] }} transformers &middot; {{ count($payload['rows']) }} observations &middot; {{ count($payload['rows']) / 2 }} S/E pairs.</p>
         <p>This intermediate PDF survey export contains the reference Field_Data (69 fields) and GPS_Points (7 fields) tables. Coordinates stay NULL and GPS_Points stays empty. It is independent of final SynerGEE generation.</p>
         <h2>Format limitations and mappings</h2>

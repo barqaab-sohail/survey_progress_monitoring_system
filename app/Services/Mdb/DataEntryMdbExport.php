@@ -15,7 +15,7 @@ class DataEntryMdbExport
 {
     public function __construct(private SnapshotService $snapshots, private DataEntryPayload $mapper) {}
 
-    public function prepare(SurveyBatch $batch): array
+    public function prepare(SurveyBatch $batch, ?int $transformerId = null): array
     {
         $revision = $batch->approvedRevision;
         $this->require($revision instanceof Revision && $revision->batch_id === $batch->id && $batch->status === 'approved'
@@ -26,14 +26,19 @@ class DataEntryMdbExport
         }
         $this->require(hash_equals($revision->sha256, $this->snapshots->hash($revision->snapshot)), 'The approved snapshot integrity check failed.');
         // Deliberately no live rows, source processing, generation inputs or engineering template lookup.
-        $payload = $this->mapper->build($revision->snapshot);
+        $snapshot = $revision->snapshot;
+        if ($transformerId !== null) {
+            $snapshot['transformers'] = array_values(array_filter($snapshot['transformers'] ?? [], fn ($transformer) => (int) $transformer['id'] === $transformerId));
+            $this->require(count($snapshot['transformers']) === 1, 'Choose a transformer from this approved revision.');
+        }
+        $payload = $this->mapper->build($snapshot);
 
         return $payload + ['revision_id' => $revision->id, 'revision_sha256' => $revision->sha256, 'revision_number' => $revision->number];
     }
 
-    public function generate(array $payload): string
+    public function generate(array $payload, ?string $driver = null): string
     {
-        $driver = config('data_entry_mdb.driver', 'auto');
+        $driver ??= config('data_entry_mdb.driver', 'auto');
         if ($driver === 'auto') {
             $driver = PHP_OS_FAMILY === 'Windows' ? 'windows' : 'http';
         }

@@ -17,8 +17,10 @@ use App\Models\User;
 use App\Services\Mdb\DataEntryMdbExport;
 use App\Services\Mdb\DataEntryPayload;
 use App\Services\Mdb\SnapshotService;
+use App\Services\Mdb\TransformerTransfer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
@@ -264,5 +266,149 @@ class DataEntryMdbExportTest extends TestCase
                 unlink($path);
             }
         }
+    }
+
+    private function transferJson(SurveyBatch $batch, int $transformerId = 1): string
+    {
+        return $this->get(route('mdb-workflow.transformer-json.download', [$batch, 'transformer' => $transformerId,
+            'revision_sha256' => $batch->approvedRevision->sha256]))->assertOk()->assertDownload()->streamedContent();
+    }
+
+    public function test_transformer_json_export_preserves_only_selected_snapshot_without_windows_or_workers(): void
+    {
+        $batch = $this->batch();
+        $snapshot = $batch->approvedRevision->snapshot;
+        $second = $snapshot['transformers'][0];
+        $second['id'] = 2;
+        $second['code'] = 'OTHER-TRANSFORMER';
+        foreach ($second['entry_rows'] as &$row) {
+            $row['id'] += 100;
+        }
+        unset($row);
+        $snapshot['transformers'][] = $second;
+        DB::table('mdb_workflow_revisions')->where('id', $batch->approved_revision_id)->update(['snapshot' => json_encode($snapshot, JSON_PRESERVE_ZERO_FRACTION), 'sha256' => app(SnapshotService::class)->hash($snapshot)]);
+        $batch = $batch->fresh();
+        config(['data_entry_mdb.driver' => 'http', 'data_entry_mdb.http_url' => null, 'data_entry_mdb.powershell' => '/missing-on-linux']);
+        Http::preventStrayRequests();
+        Http::fake();
+        $writes = [];
+        DB::listen(function ($query) use (&$writes) {
+            if (preg_match('/^\s*(insert|update|delete)\b/i', $query->sql)) {
+                $writes[] = $query->sql;
+            }
+        });
+        $json = $this->transferJson($batch);
+        $parsed = app(TransformerTransfer::class)->read($json);
+        $this->assertSame([$snapshot['transformers'][0]], $parsed['package']['snapshot']['transformers']);
+        $this->assertSame('000123', $parsed['package']['snapshot']['transformers'][0]['entry_rows'][1]['pv_details'][0]['meter_number']);
+        $this->assertNull($parsed['package']['snapshot']['transformers'][0]['entry_rows'][0]['consumers']['sc']);
+        $this->assertSame(0, $parsed['package']['snapshot']['transformers'][0]['entry_rows'][0]['consumers']['rs']);
+        $this->assertCount(2, $parsed['payload']['rows']);
+        $this->assertStringNotContainsString('OTHER-TRANSFORMER', $json);
+        $this->assertSame([], $writes);
+        Http::assertNothingSent();
+    }
+
+    public function test_transfer_preview_and_real_local_mdb_download_need_no_local_approved_survey(): void
+    {
+        if (PHP_OS_FAMILY !== 'Windows') {
+            $this->markTestSkipped('Windows local converter required.');
+        }
+        $batch = $this->batch();
+        $json = $this->transferJson($batch);
+        $batch->update(['status' => 'draft', 'approved_revision_id' => null]);
+        config(['data_entry_mdb.offline_conversion_enabled' => true, 'data_entry_mdb.driver' => 'http', 'data_entry_mdb.http_url' => null]);
+        $writes = [];
+        DB::listen(function ($query) use (&$writes) {
+            if (preg_match('/^\s*(insert|update|delete)\b/i', $query->sql)) {
+                $writes[] = $query->sql;
+            }
+        });
+        $preview = $this->post(route('mdb-workflow.offline-mdb.preview'), ['file' => UploadedFile::fake()->createWithContent('transformer.json', $json)])
+            ->assertOk()->assertSee('T-01080825001')->assertSee('2 observations')->assertSee('Generate and download MDB');
+        $this->assertSame($json, $preview->viewData('packageJson'));
+        $response = $this->post(route('mdb-workflow.offline-mdb.download'), ['package' => $json])->assertOk()->assertDownload()->assertHeader('X-Data-Entry-Observations', '2');
+        $path = $response->baseResponse->getFile()->getPathname();
+        try {
+            $this->assertSame("\x00\x01\x00\x00Standard Jet DB\x00", file_get_contents($path, false, null, 0, 20));
+            $this->assertSame([], $writes);
+            $this->assertDatabaseCount('mdb_workflow_transformers', 0);
+            $this->assertDatabaseCount('mdb_workflow_entry_rows', 0);
+        } finally {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        }
+    }
+
+    public function test_transfer_rejects_tampering_unknown_versions_bad_shapes_and_incomplete_pairs(): void
+    {
+        $batch = $this->batch();
+        $original = json_decode($this->transferJson($batch), true);
+        foreach (['tampered', 'version', 'shape', 'pair', 'date'] as $case) {
+            $package = $original;
+            if ($case === 'tampered') {
+                $package['snapshot']['transformers'][0]['code'] = 'CHANGED';
+            }
+            if ($case === 'version') {
+                $package['version'] = 999;
+            }
+            if ($case === 'shape') {
+                $package['snapshot']['transformers'][0]['entry_rows'][0]['conductors'] = 'invalid';
+            }
+            if ($case === 'pair') {
+                $package['snapshot']['transformers'][0]['entry_rows'][1]['designation'] = 'S';
+            }
+            if ($case === 'date') {
+                $package['snapshot']['transformers'][0]['entry_rows'][0]['row_date'] = '2026-02-31';
+            }
+            if ($case !== 'tampered') {
+                unset($package['sha256']);
+                $package['sha256'] = app(SnapshotService::class)->hash($package);
+            }
+            try {
+                app(TransformerTransfer::class)->read(json_encode($package));
+                $this->fail('Invalid package accepted: '.$case);
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('file', $exception->errors());
+            }
+        }
+        foreach (['{broken', 'null', '[]'] as $json) {
+            try {
+                app(TransformerTransfer::class)->read($json);
+                $this->fail('Invalid JSON accepted.');
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('file', $exception->errors());
+            }
+        }
+    }
+
+    public function test_transfer_export_checks_approval_identity_and_user_authorization(): void
+    {
+        $batch = $this->batch();
+        $url = route('mdb-workflow.transformer-json.download', [$batch, 'transformer' => 1]);
+        $this->get($url.'?revision_sha256='.str_repeat('0', 64))->assertConflict();
+        $this->getJson(route('mdb-workflow.transformer-json.download', [$batch, 'transformer' => 999, 'revision_sha256' => $batch->approvedRevision->sha256]))->assertUnprocessable();
+        $this->actingAs(User::factory()->create(['role' => UserRole::Surveyor]));
+        $this->get($url)->assertForbidden();
+        $this->get(route('mdb-workflow.offline-mdb.index'))->assertForbidden();
+        $this->post(route('mdb-workflow.offline-mdb.preview'))->assertForbidden();
+        $this->post(route('mdb-workflow.offline-mdb.download'))->assertForbidden();
+    }
+
+    public function test_offline_conversion_can_be_disabled_and_invalid_uploads_return_validation_errors(): void
+    {
+        $this->batch();
+        config(['data_entry_mdb.offline_conversion_enabled' => false]);
+        $this->get(route('mdb-workflow.offline-mdb.index'))->assertNotFound();
+        $this->post(route('mdb-workflow.offline-mdb.preview'))->assertNotFound();
+        $this->post(route('mdb-workflow.offline-mdb.download'))->assertNotFound();
+        if (PHP_OS_FAMILY !== 'Windows') {
+            return;
+        }
+        config(['data_entry_mdb.offline_conversion_enabled' => true]);
+        $this->post(route('mdb-workflow.offline-mdb.preview'), ['file' => UploadedFile::fake()->create('huge.json', 10241)])->assertSessionHasErrors('file');
+        $this->post(route('mdb-workflow.offline-mdb.preview'), ['file' => UploadedFile::fake()->createWithContent('bad.json', '{broken')])->assertSessionHasErrors('file');
+        $this->post(route('mdb-workflow.offline-mdb.download'), ['package' => '{broken'])->assertSessionHasErrors('file');
     }
 }
