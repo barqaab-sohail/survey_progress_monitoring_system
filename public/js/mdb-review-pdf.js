@@ -27,7 +27,7 @@ export function initializeReviewPdf(boot, root = document) {
     };
     function drawGuides() {
         if (!overlay) return;
-        overlay.hidden = !ready;
+        overlay.toggleAttribute('hidden', !ready);
         overlay.innerHTML = [...points().map(line => ({start:rotatePoint(line.start,rotation),end:rotatePoint(line.end,rotation)})), ...(preview ? [preview] : [])].map(line => `<line x1="${line.start.x}" y1="${line.start.y}" x2="${line.end.x}" y2="${line.end.y}" stroke="#dc2626" stroke-width="2" vector-effect="non-scaling-stroke" />`).join('');
         $('draw').disabled = !ready; $('draw').setAttribute('aria-pressed',String(drawing));
         $('undo').disabled = $('clear').disabled = !ready || !points().length;
