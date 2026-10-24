@@ -78,6 +78,7 @@ Route::middleware(['auth', 'active'])->prefix('mdb-workflow')->name('mdb-workflo
     Route::post('/{batch}/transformers/{transformer}/pv', 'savePv')->name('pv.store');
     Route::put('/{batch}/transformers/{transformer}/pv/{pv}', 'savePv')->name('pv.update');
     Route::post('/{batch}/waypoints/{waypoint}/corrections', 'correctWaypoint')->name('waypoints.corrections.store');
+    Route::post('/{batch}/kmz-waypoints', 'storeKmzWaypoint')->name('kmz-waypoints.store');
     Route::post('/{batch}/transformers/{transformer}/sections/{section}/length-approval', 'approveLength')->name('sections.length.approve');
     Route::post('/{batch}/transformers/{transformer}/sections/{section}/consumers/{consumer}/approval', 'approveDemand')->name('consumers.approve');
     Route::post('/{batch}/transition', 'transition')->name('transition');

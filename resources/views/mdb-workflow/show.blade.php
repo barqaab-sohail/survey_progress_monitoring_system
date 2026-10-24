@@ -111,6 +111,27 @@
         @if($canUpload)<form method="POST" action="{{ route('mdb-workflow.sources.store', $batch) }}" enctype="multipart/form-data">@csrf<input type="hidden" name="revision" value="{{ $batch->revision }}" data-entry-revision><div class="entry-fields"><label><span>Add PDF or GPX <span class="entry-required" aria-hidden="true">*</span></span><input name="file" type="file" required accept=".pdf,.gpx"></label></div><div class="mdb-form-actions"><button class="btn btn-light">Upload source</button></div></form>@endif
         <a href="{{ route('mdb-workflow.advanced', $batch) }}#sources">Source versions and Google Drive import</a>
     </details><datalist id="entry-waypoint-options"></datalist>
+    @if($batch->staged_workflow)
+    <section class="card" id="kmz-start-coordinates"><h2>KMZ-only survey start coordinates</h2>
+        <p class="mdb-note">Use this for the first S point when the survey began at a transformer location from the approved KMZ and the GPS GPX starts at the following point. Coordinates must be read from the matching KMZ and checked by a survey verifier. The KMZ does not replace the GPX for other points.</p>
+        @forelse($batch->waypoints->whereNotNull('generation_input_id') as $point)
+            <p><strong>{{ $point->name }}</strong> &middot; {{ $point->latitude }}, {{ $point->longitude }} &middot; KMZ: {{ $point->generationInput?->original_name ?? 'Unavailable' }}</p>
+        @empty<p class="mdb-note">No verifier-approved KMZ start coordinates have been added to this batch.</p>@endforelse
+        @can('mdb-workflow.surveyVerify')
+        @php($kmzInputs = $batch->generationInputs->where('kind', 'kmz'))
+        @if($kmzInputs->isEmpty())<p class="mdb-note">Upload the matching KMZ in <a href="{{ route('mdb-workflow.advanced', $batch) }}#sources">Source versions and Google Drive import</a> first.</p>
+        @else<form method="POST" action="{{ route('mdb-workflow.kmz-waypoints.store', $batch) }}">@csrf<input type="hidden" name="revision" value="{{ $batch->revision }}"><div class="mdb-fields">
+            <label>Original KMZ file<select name="generation_input_id" required>@foreach($kmzInputs as $input)<option value="{{ $input->id }}">{{ $input->original_name }} · SHA-256 {{ substr($input->sha256, 0, 12) }}…</option>@endforeach</select></label>
+            <label>Survey point name<input name="name" value="{{ old('name', '003') }}" required maxlength="100"></label>
+            <label>Latitude (WGS84)<input name="latitude" type="number" step="any" min="-90" max="90" value="{{ old('latitude') }}" required></label>
+            <label>Longitude (WGS84)<input name="longitude" type="number" step="any" min="-180" max="180" value="{{ old('longitude') }}" required></label>
+            <label>Elevation (m, if recorded)<input name="elevation" type="number" step="any" value="{{ old('elevation') }}"></label>
+            <label class="mdb-span-all">Coordinate source / evidence<input name="evidence" required minlength="3" maxlength="4000" placeholder="KMZ placemark name or transformer identifier and how the coordinate was confirmed"></label>
+            <label class="mdb-span-all">Verification reason<input name="reason" required minlength="5" maxlength="4000" placeholder="For example: confirmed point 003 against transformer placemark in the uploaded KMZ"></label>
+        </div><div class="mdb-form-actions"><button class="btn btn-primary">Record verified KMZ start point</button></div></form>@endif
+        @endcan
+    </section>
+    @endif
     </div></div>
 </div>
 @endsection

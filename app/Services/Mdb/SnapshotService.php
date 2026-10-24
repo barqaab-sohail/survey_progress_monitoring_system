@@ -52,7 +52,7 @@ class SnapshotService
 
     public function snapshot(SurveyBatch $batch): array
     {
-        $batch->load(['sources', 'waypoints', 'transformers.sections.consumers', 'transformers.sections.pvRecords', 'transformers.pvRecords', 'transformers.entryRows']);
+        $batch->load(['sources', 'generationInputs', 'waypoints', 'transformers.sections.consumers', 'transformers.sections.pvRecords', 'transformers.pvRecords', 'transformers.entryRows']);
         $configuration = Configuration::where('project_id', $batch->project_id)->first();
         $templateId = $configuration?->settings['template_id'] ?? null;
         $templateQuery = Template::where('active', true);
@@ -67,8 +67,9 @@ class SnapshotService
             'schema_version' => 1,
             'batch' => $batch->only(['id', 'project_id', 'feeder_id', 'survey_team_id', 'survey_date', 'revision']),
             'sources' => $batch->sources->sortBy('id')->values()->map(fn ($source) => $source->only(['id', 'kind', 'disk', 'path', 'original_name', 'sha256', 'bytes', 'mime', 'version', 'parent_source_id', 'uploaded_by', 'status', 'metadata']))->all(),
+            'generation_inputs' => $batch->generationInputs->sortBy('id')->values()->map(fn ($input) => $input->only(['id', 'kind', 'original_name', 'sha256', 'bytes']))->all(),
             'waypoints' => $batch->waypoints->sortBy('id')->values()->map(function ($waypoint) {
-                $point = $waypoint->only(['id', 'batch_id', 'source_file_id', 'name', 'latitude', 'longitude', 'elevation', 'description', 'original_entry', 'correction', 'correction_approved_by']);
+                $point = $waypoint->only(['id', 'batch_id', 'source_file_id', 'generation_input_id', 'name', 'latitude', 'longitude', 'elevation', 'description', 'original_entry', 'correction', 'correction_approved_by']);
                 $point['recorded_at'] = $waypoint->recorded_at?->utc()->toIso8601String();
                 $point['correction_approved_at'] = $waypoint->correction_approved_at?->utc()->toIso8601String();
 

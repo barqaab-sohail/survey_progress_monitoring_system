@@ -91,6 +91,7 @@ class NetworkValidator
         $byName = [];
         $bySourceName = [];
         $effective = [];
+        $generationInputs = collect($data['generation_inputs'] ?? [])->keyBy('id');
         foreach ($data['waypoints'] ?? [] as $point) {
             $id = (string) $point['id'];
             $context = ['waypoint_id' => $point['id'], 'source_file_id' => $point['source_file_id'] ?? null];
@@ -103,7 +104,9 @@ class NetworkValidator
             $byName[(string) $point['name']][] = $id;
             $scope = (string) ($point['source_file_id'] ?? '').'|'.(string) $point['name'];
             $bySourceName[$scope][] = $id;
-            if (! isset($sources[(string) ($point['source_file_id'] ?? '')]) || ($sources[(string) ($point['source_file_id'] ?? '')]['kind'] ?? '') !== 'gpx') {
+            $point['verified_kmz_source'] = $this->isVerifiedKmzPoint($point, $generationInputs);
+            $points[$id] = $point;
+            if (! $point['verified_kmz_source'] && (! isset($sources[(string) ($point['source_file_id'] ?? '')]) || ($sources[(string) ($point['source_file_id'] ?? '')]['kind'] ?? '') !== 'gpx')) {
                 $issue('wrong_waypoint_source', 'Waypoint must belong to an authorized GPX source in this batch.', $context);
             }
             if (isset($point['batch_id'], $data['batch']['id']) && $point['batch_id'] != $data['batch']['id']) {
@@ -416,7 +419,9 @@ class NetworkValidator
         $source = $section[$end.'_source_file_id'] ?? null;
         if ($id !== null) {
             $point = $points[(string) $id] ?? null;
-            if (! $point || ($source && ! isset($point['survey_identifier']) && $point['source_file_id'] != $source) || ($ref !== null && (string) $point['name'] !== (string) $ref)) {
+            $kmzStart = $end === 'start' && ($section['original_entry']['start_coordinate_source'] ?? null) === 'kmz'
+                && ! empty($point['verified_kmz_source']);
+            if (! $point || ($source && ! isset($point['survey_identifier']) && $point['source_file_id'] != $source && ! $kmzStart) || ($ref !== null && (string) $point['name'] !== (string) $ref)) {
                 $issue('invalid_waypoint_selection', ucfirst($end).' waypoint does not match this batch/source and original text reference.', $context);
 
                 return null;
@@ -431,7 +436,13 @@ class NetworkValidator
         }
         $matches = $source ? ($bySourceName[(string) $source.'|'.(string) $ref] ?? []) : ($byName[(string) $ref] ?? []);
         if ($end === 'start' && ($section['original_entry']['start_coordinate_source'] ?? null) === 'kmz') {
-            $issue('missing_kmz_coordinates', 'The first S point '.(string) $ref.' is a KMZ reference. Resolve its verified KMZ coordinates before MDB generation.', $context);
+            $kmzMatches = array_values(array_filter($byName[(string) $ref] ?? [], fn ($pointId) => ! empty($points[$pointId]['verified_kmz_source'])));
+            if (count($kmzMatches) === 1) {
+                return $kmzMatches[0];
+            }
+            $issue(count($kmzMatches) > 1 ? 'ambiguous_kmz_waypoint' : 'missing_kmz_coordinates', count($kmzMatches) > 1
+                ? 'More than one verifier-approved KMZ coordinate exists for start point '.(string) $ref.'. Keep one correct coordinate and remove duplicates before MDB generation.'
+                : 'The first S point '.(string) $ref.' is a KMZ reference. Add its verifier-approved coordinates from the uploaded KMZ before MDB generation.', $context);
 
             return null;
         }
@@ -443,6 +454,17 @@ class NetworkValidator
         }
 
         return $matches[0];
+    }
+
+    private function isVerifiedKmzPoint(array $point, $generationInputs): bool
+    {
+        $input = $generationInputs->get($point['generation_input_id'] ?? null);
+
+        return ($point['source_file_id'] ?? null) === null
+            && ($point['original_entry']['coordinate_source'] ?? null) === 'kmz'
+            && ! empty($point['original_entry']['verified_by'])
+            && $input && ($input['kind'] ?? null) === 'kmz'
+            && hash_equals((string) ($input['sha256'] ?? ''), (string) ($point['original_entry']['generation_input_sha256'] ?? ''));
     }
 
     private function validateElectrical(array $section, array $libraries, callable $issue, array $context, bool $simple): void

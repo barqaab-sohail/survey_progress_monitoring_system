@@ -25,4 +25,9 @@ class Waypoint extends Model
     {
         return $this->belongsTo(SourceFile::class, 'source_file_id');
     }
+
+    public function generationInput()
+    {
+        return $this->belongsTo(GenerationInput::class, 'generation_input_id');
+    }
 }

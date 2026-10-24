@@ -213,7 +213,7 @@ class MdbWorkflowController extends Controller
     {
         $this->access->authorize($request->user(), $batch);
 
-        return view('mdb-workflow.show', ['batch' => $batch->load(['project', 'feeder', 'surveyTeam']),
+        return view('mdb-workflow.show', ['batch' => $batch->load(['project', 'feeder', 'surveyTeam', 'generationInputs', 'waypoints.generationInput']),
             'editorData' => app(EntryService::class)->editorData($batch), 'canEdit' => $this->access->canEdit($request->user(), $batch),
             'canUpload' => $this->access->canUpload($request->user(), $batch)]);
     }
@@ -407,7 +407,13 @@ class MdbWorkflowController extends Controller
                 $batch->sources()->where('kind', 'gpx')->findOrFail($data[$endpoint.'_source_file_id']);
             }
             if (! empty($data[$endpoint.'_waypoint_id'])) {
-                $batch->waypoints()->findOrFail($data[$endpoint.'_waypoint_id']);
+                $selectedWaypoint = $batch->waypoints()->findOrFail($data[$endpoint.'_waypoint_id']);
+                if ($selectedWaypoint->generation_input_id) {
+                    abort_unless($endpoint === 'start', 422, 'A KMZ-only point can only be used as a section start waypoint.');
+                    $data[$endpoint.'_source_file_id'] = null;
+                    $data[$endpoint.'_reference'] = $selectedWaypoint->name;
+                    $data['original_entry'][$endpoint.'_coordinate_source'] = 'kmz';
+                }
             }
         }
         if (! empty($data['source_pdf_id'])) {
@@ -555,6 +561,42 @@ class MdbWorkflowController extends Controller
         }, $data['reason']);
 
         return back()->with('success', 'Verifier-approved correction recorded; original WGS84 coordinates are preserved.');
+    }
+
+    public function storeKmzWaypoint(Request $request, SurveyBatch $batch)
+    {
+        $this->access->authorize($request->user(), $batch, $batch->staged_workflow ? 'surveyVerify' : 'verify');
+        abort_unless($batch->staged_workflow, 422, 'KMZ coordinate evidence is supported on staged survey batches.');
+        $data = $request->validate([
+            'revision' => 'required|integer', 'generation_input_id' => 'required|integer',
+            'name' => 'required|string|max:100', 'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180', 'elevation' => 'nullable|numeric|between:-12000,100000',
+            'reason' => 'required|string|min:5|max:4000', 'evidence' => 'required|string|min:3|max:4000',
+        ]);
+        $input = $batch->generationInputs()->where('kind', 'kmz')->findOrFail($data['generation_input_id']);
+        $this->assertKmzInputIntegrity($input);
+        $this->mutate($request, $batch, function (SurveyBatch $locked) use ($data, $request) {
+            $input = $locked->generationInputs()->where('kind', 'kmz')->findOrFail($data['generation_input_id']);
+            $this->assertKmzInputIntegrity($input);
+
+            return $locked->waypoints()->create([
+                'source_file_id' => null, 'generation_input_id' => $input->id,
+                'name' => $data['name'], 'latitude' => $data['latitude'], 'longitude' => $data['longitude'],
+                'elevation' => $data['elevation'] ?? null, 'description' => 'Verified KMZ survey start point',
+                'original_entry' => ['coordinate_source' => 'kmz', 'generation_input_sha256' => $input->sha256,
+                    'evidence' => $data['evidence'], 'reason' => $data['reason'], 'verified_by' => $request->user()->id],
+            ]);
+        }, $data['reason']);
+
+        return back()->with('success', 'Verified KMZ waypoint recorded. Submit the changed survey revision for verification; the matching first S point will use these coordinates.');
+    }
+
+    private function assertKmzInputIntegrity(\App\Models\Mdb\GenerationInput $input): void
+    {
+        $disk = Storage::disk($input->disk);
+        if (! $disk->exists($input->path) || ! hash_equals($input->sha256, hash_file('sha256', $disk->path($input->path)))) {
+            throw ValidationException::withMessages(['generation_input_id' => 'The original KMZ evidence file is missing or its checksum changed. Upload the verified KMZ again.']);
+        }
     }
 
     public function approveLength(Request $request, SurveyBatch $batch, NetworkTransformer $transformer, NetworkSection $section)
@@ -965,7 +1007,9 @@ class MdbWorkflowController extends Controller
             if ($locked->staged_workflow) {
                 $entryRoute = $request->routeIs('mdb-workflow.transformers.*', 'mdb-workflow.pages.*');
                 $sourceRoute = $request->routeIs('mdb-workflow.sources.*');
-                $this->access->authorize($request->user(), $locked, $entryRoute ? 'edit' : ($sourceRoute ? 'upload' : 'process'));
+                $kmzWaypointRoute = $request->routeIs('mdb-workflow.kmz-waypoints.store');
+                $ability = $kmzWaypointRoute ? 'surveyVerify' : ($entryRoute ? 'edit' : ($sourceRoute ? 'upload' : 'process'));
+                $this->access->authorize($request->user(), $locked, $ability);
                 if ($entryRoute) {
                     $this->access->recordEntry($locked, $request->user());
                 }
