@@ -133,6 +133,24 @@ class SynergeeTransfer
         }
         $snapshot = $package['snapshot'];
         $snapshot['transformers'] = $this->selected($snapshot, $package['scope']['transformer_id']);
+        // Apply the requested export policy to the modelling copy only. The
+        // checksummed package and original PDF observations remain intact.
+        $blankConsumerCounts = 0;
+        foreach ($snapshot['transformers'] as &$transformer) {
+            foreach ($transformer['sections'] as &$section) {
+                foreach ($section['consumers'] as &$consumer) {
+                    $count = $consumer['count'] ?? null;
+                    if (in_array($consumer['category'] ?? '', EngineeringConfiguration::CATEGORIES, true)
+                        && ($count === null || (is_string($count) && trim($count) === ''))) {
+                        $consumer['count'] = 0;
+                        $blankConsumerCounts++;
+                    }
+                }
+                unset($consumer);
+            }
+            unset($section);
+        }
+        unset($transformer);
         $errors = [];
         foreach ($snapshot['transformers'] as $transformer) {
             $mapped = [];
@@ -179,6 +197,9 @@ class SynergeeTransfer
         }
 
         $warnings = [...($validation['warnings'] ?? []), ...array_map(fn ($message) => ['message' => $message], $payload['engineering_omissions'] ?? [])];
+        if ($blankConsumerCounts > 0) {
+            $warnings[] = ['message' => $blankConsumerCounts.' blank consumer counts are treated as zero for this SynerGEE model. Original survey entries are retained.'];
+        }
         if (($snapshot['configuration']['settings']['mapping']['version'] ?? '') === ExportPayloadBuilder::VERSION
             && collect($snapshot['transformers'])->contains(fn ($t) => collect($t['pv_records'] ?? [])->contains(fn ($pv) => ($pv['installed_capacity_kw'] ?? 0) > 0))) {
             $reason = $snapshot['configuration']['settings']['mapping']['pv_exclusion']['reason'] ?? null;
