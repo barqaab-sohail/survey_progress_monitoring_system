@@ -6,6 +6,100 @@ import 'package:hazeco_field_survey/survey_editor.dart';
 import 'models_test.dart' show readySurvey;
 
 void main() {
+  testWidgets(
+    'consumer counts retain focus through repeated multi-digit edits',
+    (tester) async {
+      final record = readySurvey();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RowEditor(
+            record: record,
+            index: 0,
+            editable: true,
+            onChanged: () {},
+            onSave: () async {},
+          ),
+        ),
+      );
+      for (final category in consumerLabels.keys) {
+        final entry = ['rs', 'sc'].contains(category)
+            ? find.byKey(ValueKey('$category-total'))
+            : find.widgetWithText(EntryField, consumerLabels[category]!);
+        final input = find.descendant(
+          of: entry,
+          matching: find.byType(TextFormField),
+        );
+        await tester.scrollUntilVisible(
+          input,
+          250,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await Scrollable.ensureVisible(tester.element(input), alignment: .5);
+        await tester.pumpAndSettle();
+        for (final count in ['1', '12', '123', '12', '9', '98']) {
+          if (count == '1') await tester.showKeyboard(input);
+          tester.testTextInput.updateEditingValue(
+            TextEditingValue(
+              text: count,
+              selection: TextSelection.collapsed(offset: count.length),
+            ),
+          );
+          await tester.pump();
+          final editable = tester.widget<EditableText>(
+            find.descendant(of: entry, matching: find.byType(EditableText)),
+          );
+          expect(
+            editable.focusNode.hasFocus,
+            isTrue,
+            reason: '$category lost focus at $count',
+          );
+          expect(editable.controller.text, count);
+          expect(record.rows.first['consumers'][category].toString(), count);
+        }
+      }
+    },
+  );
+
+  testWidgets(
+    'calculated consumer totals update without recreating the field',
+    (tester) async {
+      final record = readySurvey();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RowEditor(
+            record: record,
+            index: 0,
+            editable: true,
+            onChanged: () {},
+            onSave: () async {},
+          ),
+        ),
+      );
+      final total = find.byKey(const ValueKey('rs-total'));
+      await tester.scrollUntilVisible(
+        total,
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      final section = find
+          .ancestor(of: total, matching: find.byType(Column))
+          .first;
+      final phase = find.descendant(
+        of: section,
+        matching: find.widgetWithText(TextFormField, 'R'),
+      );
+      await Scrollable.ensureVisible(tester.element(phase), alignment: .5);
+      await tester.pumpAndSettle();
+      await tester.enterText(phase, '12');
+      await tester.pump();
+      final totalInput = tester.widget<EditableText>(
+        find.descendant(of: total, matching: find.byType(EditableText)),
+      );
+      expect(totalInput.controller.text, '12');
+      expect(totalInput.readOnly, isTrue);
+    },
+  );
+
   testWidgets('equipment choices and copied fields update the visible phase', (
     tester,
   ) async {

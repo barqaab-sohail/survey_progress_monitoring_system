@@ -1380,9 +1380,7 @@ class _RowEditorState extends State<RowEditor> {
         ),
         const SizedBox(height: 12),
         EntryField(
-          key: ValueKey(
-            '$category-total:${row['consumers'][category]}:$hasPhases',
-          ),
+          key: ValueKey('$category-total'),
           label: 'Total',
           value: row['consumers'][category],
           enabled: widget.editable,
@@ -1665,7 +1663,7 @@ class SectionCard extends StatelessWidget {
   );
 }
 
-class EntryField extends StatelessWidget {
+class EntryField extends StatefulWidget {
   const EntryField({
     super.key,
     required this.label,
@@ -1690,30 +1688,63 @@ class EntryField extends StatelessWidget {
   final String? error, helper;
   final ValueChanged<String> onChanged;
   @override
+  State<EntryField> createState() => _EntryFieldState();
+}
+
+class _EntryFieldState extends State<EntryField> {
+  late final TextEditingController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = TextEditingController(text: widget.value?.toString() ?? '');
+  }
+
+  @override
+  void didUpdateWidget(covariant EntryField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final text = widget.value?.toString() ?? '';
+    // Refresh copied/calculated values without replacing the focused field.
+    if (controller.text != text) {
+      controller.value = TextEditingValue(
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) => TextFormField(
-    initialValue: value?.toString() ?? '',
-    enabled: enabled,
-    readOnly: readOnly,
-    maxLines: lines,
+    controller: controller,
+    enabled: widget.enabled,
+    readOnly: widget.readOnly,
+    maxLines: widget.lines,
     inputFormatters: [
-      if (digits) FilteringTextInputFormatter.digitsOnly,
-      if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+      if (widget.digits) FilteringTextInputFormatter.digitsOnly,
+      if (widget.maxLength != null)
+        LengthLimitingTextInputFormatter(widget.maxLength),
     ],
-    keyboardType: numericKeyboard || integer || digits
+    keyboardType: widget.numericKeyboard || widget.integer || widget.digits
         ? TextInputType.number
-        : number
+        : widget.number
         ? const TextInputType.numberWithOptions(decimal: true, signed: true)
-        : lines > 1
+        : widget.lines > 1
         ? TextInputType.multiline
         : TextInputType.text,
     decoration: InputDecoration(
-      labelText: label,
-      errorText: error,
-      helperText: helper,
+      labelText: widget.label,
+      errorText: widget.error,
+      helperText: widget.helper,
       helperMaxLines: 3,
       errorMaxLines: 3,
     ),
-    onChanged: onChanged,
+    onChanged: widget.onChanged,
   );
 }
 
