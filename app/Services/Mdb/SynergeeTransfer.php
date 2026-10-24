@@ -140,7 +140,12 @@ class SynergeeTransfer
         // Apply the requested export policy to the modelling copy only. The
         // checksummed package and original PDF observations remain intact.
         $blankConsumerCounts = 0;
+        $coordinateWarnings = [];
         foreach ($snapshot['transformers'] as &$transformer) {
+            $transformer = app(SurveyWaypoint::class)->firstPairCoordinates($transformer, $snapshot['waypoints']);
+            if (app(SurveyWaypoint::class)->firstPair($transformer)['start'] && ! empty($transformer['source_waypoint_id'])) {
+                $coordinateWarnings[] = ['message' => $transformer['code'].': only the first S/E pair shares the first E point\'s GPX coordinates and recorded elevation. Later pairs use their own GPX points.'];
+            }
             foreach ($transformer['sections'] as &$section) {
                 foreach ($section['consumers'] as &$consumer) {
                     $count = $consumer['count'] ?? null;
@@ -200,7 +205,7 @@ class SynergeeTransfer
             $errors[] = ['code' => 'mapping', 'message' => 'The frozen engineering inputs cannot be mapped: '.$exception->getMessage()];
         }
 
-        $warnings = [...($validation['warnings'] ?? []), ...array_map(fn ($message) => ['message' => $message], $payload['engineering_omissions'] ?? [])];
+        $warnings = [...($validation['warnings'] ?? []), ...$coordinateWarnings, ...array_map(fn ($message) => ['message' => $message], $payload['engineering_omissions'] ?? [])];
         if ($blankConsumerCounts > 0) {
             $warnings[] = ['message' => $blankConsumerCounts.' blank consumer counts are treated as zero for this SynerGEE model. Original survey entries are retained.'];
         }

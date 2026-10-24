@@ -11,6 +11,74 @@ class SurveyWaypoint
 {
     public const DEFAULT_YEAR_START = 2000;
 
+    public const FIRST_PAIR_COORDINATE_SOURCE = 'first_e_gpx';
+
+    public function firstPair(array $transformer): array
+    {
+        $rows = collect($transformer['entry_rows'] ?? $transformer['rows'] ?? []);
+        $number = $rows->min('pair_number');
+        $pair = $rows->where('pair_number', $number);
+
+        return ['number' => $number,
+            'start' => $pair->where('designation', 'S')->count() === 1 ? $pair->firstWhere('designation', 'S') : null,
+            'end' => $pair->where('designation', 'E')->count() === 1 ? $pair->firstWhere('designation', 'E') : null];
+    }
+
+    public function validCoordinates(array $point): bool
+    {
+        if (! empty($point['correction']) && ! empty($point['correction_approved_by'])
+            && ! empty($point['correction_approved_at']) && ! empty($point['correction']['reason'])) {
+            $point = array_replace($point, $point['correction']);
+        }
+        $latitude = $point['latitude'] ?? null;
+        $longitude = $point['longitude'] ?? null;
+        $elevation = $point['elevation'] ?? null;
+
+        return is_numeric($latitude) && is_numeric($longitude)
+            && is_finite((float) $latitude) && is_finite((float) $longitude)
+            && abs((float) $latitude) <= 90 && abs((float) $longitude) <= 180
+            && ($elevation === null || (is_numeric($elevation) && is_finite((float) $elevation)));
+    }
+
+    private function isFirstPairSection(array $section, array $pair): bool
+    {
+        if (! $pair['start'] || ! $pair['end']) {
+            return false;
+        }
+
+        return isset($pair['start']['section_id'], $pair['end']['section_id'])
+            ? $pair['start']['section_id'] == $section['id'] && $pair['end']['section_id'] == $section['id']
+            : ! empty($section['original_entry']['entry_rows_managed']) && ($section['original_entry']['entry_pair_number'] ?? null) == $pair['number'];
+    }
+
+    /** Share coordinate evidence only within the first explicitly entered S/E pair. */
+    public function firstPairCoordinates(array $transformer, array $points): array
+    {
+        $pair = $this->firstPair($transformer);
+        if ($pair['number'] === null) {
+            return $transformer;
+        }
+        $transformer = $this->transformerLocation($transformer, $points);
+        if (! $pair['start'] || ! $pair['end']) {
+            return $transformer;
+        }
+        $point = collect($points)->firstWhere('id', $transformer['source_waypoint_id']);
+        foreach ($transformer['sections'] ?? [] as $index => $section) {
+            if (! $this->isFirstPairSection($section, $pair)) {
+                continue;
+            }
+            $section['start_waypoint_id'] = $section['end_waypoint_id'] = $point['id'] ?? null;
+            // S has no original GPX observation; retain its handwritten reference.
+            $section['start_source_file_id'] = null;
+            $section['end_source_file_id'] = $point['source_file_id'] ?? $pair['end']['gpx_source_id'] ?? null;
+            $section['original_entry']['start_coordinate_source'] = self::FIRST_PAIR_COORDINATE_SOURCE;
+            $section['original_entry']['coordinate_entry_row_id'] = $pair['end']['id'] ?? null;
+            $transformer['sections'][$index] = $section;
+        }
+
+        return $transformer;
+    }
+
     /** The first pair's E row is the surveyed GPX transformer connection. */
     public function transformerLocation(array $transformer, array $points): array
     {
@@ -18,17 +86,14 @@ class SurveyWaypoint
         if ($rows->isEmpty() && ($transformer['header']['location_source'] ?? null) !== 'first_e_gpx') {
             return $transformer;
         }
-        $firstPair = $rows->min('pair_number');
-        $end = $rows->first(fn ($row) => $row['pair_number'] == $firstPair && $row['designation'] === 'E');
+        $end = $this->firstPair($transformer)['end'];
         $context = $end ?? [];
         if (empty($context['composite_identifier'])) {
             $context['row_date'] = null;
         }
         $matches = $end ? $this->matches($context, $points) : [];
         $point = count($matches) === 1 ? $matches[0] : null;
-        if ($point && (! is_numeric($point['latitude'] ?? null) || ! is_numeric($point['longitude'] ?? null)
-            || ! is_finite((float) $point['latitude']) || ! is_finite((float) $point['longitude'])
-            || abs((float) $point['latitude']) > 90 || abs((float) $point['longitude']) > 180)) {
+        if ($point && ! $this->validCoordinates($point)) {
             $point = null;
         }
         $transformer['source_waypoint_id'] = $point['id'] ?? null;
@@ -89,7 +154,8 @@ class SurveyWaypoint
 
     public function matches(array $row, array $points): array
     {
-        $matches = array_values(array_filter($points, fn ($p) => ($row['waypoint_reference'] ?? null) !== null && (string) $p['name'] === (string) $row['waypoint_reference']
+        $matches = array_values(array_filter($points, fn ($p) => ! empty($p['source_file_id']) && empty($p['generation_input_id']) && empty($p['gpx_waypoint_id'])
+            && ($row['waypoint_reference'] ?? null) !== null && (string) $p['name'] === (string) $row['waypoint_reference']
             && (empty($row['gpx_source_id']) || $p['source_file_id'] == $row['gpx_source_id'])));
         // Match the GPS number first. Recording dates only disambiguate repeated
         // names; a unique point remains valid when the PDF date differs.
@@ -111,6 +177,11 @@ class SurveyWaypoint
     /** Overlay identity nodes on a frozen network without rewriting any legacy IDs. */
     public function network(array $transformer, array $points): array
     {
+        $transformer = $this->firstPairCoordinates($transformer, $points);
+        $firstPair = $this->firstPair($transformer);
+        if ($firstPair['number'] !== null && empty($transformer['source_waypoint_id'])) {
+            throw ValidationException::withMessages(['waypoints' => 'The first S/E pair requires one matching first E GPX point with valid latitude, longitude and any recorded elevation. Upload or select the correct GPX; a later E point cannot replace it.']);
+        }
         $aliases = [];
         $rootCandidates = [];
         $sections = $transformer['sections'] ?? [];
@@ -118,6 +189,17 @@ class SurveyWaypoint
             foreach (['start', 'end'] as $end) {
                 $identity = $section['original_entry'][$end.'_survey_identifier'] ?? null;
                 $raw = (string) ($section[$end.'_waypoint_id'] ?? '');
+                if ($end === 'start' && $this->isFirstPairSection($section, $firstPair) && isset($points[$raw])) {
+                    // Coordinate equality must not collapse the two S/E observations into a self-loop
+                    // or overwrite a later pole that happens to have the same short name.
+                    $key = 'first-s:'.$transformer['id'].':'.$section['id'];
+                    $points[$key] = array_replace($points[$raw], ['id' => $key, 'name' => $section['start_reference'],
+                        'gpx_waypoint_id' => $points[$raw]['id'], 'survey_identifier' => $identity ?? $section['start_reference'],
+                        'coordinate_source' => self::FIRST_PAIR_COORDINATE_SOURCE]);
+                    $section['start_waypoint_id'] = $key;
+
+                    continue;
+                }
                 if (! $identity || ! isset($points[$raw])) {
                     continue;
                 }

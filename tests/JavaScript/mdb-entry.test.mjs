@@ -201,13 +201,13 @@ test('rendered operator DOM retains drafts across pages/reload, saves once, copi
     const recovery=first.window.localStorage.getItem(first.window.mdbEntryBoot.storage_key);first.window.close();
     const second=await open(recovery);d=second.window.document;
     server.data.sources.push({id:999,kind:'gpx',original_name:'Conflicting source',status:'ready',metadata:{}});server.data.waypoints.push({id:999,name:'001',source_file_id:999,recorded_at:null});
-    d.getElementById('entry-refresh').click();await settle();assert.equal(d.getElementById('entry-gpx-ambiguity').hidden,true); // First S remains a KMZ reference.
+    d.getElementById('entry-refresh').click();await settle();assert.equal(d.getElementById('entry-gpx-ambiguity').hidden,true); // First S uses the first E coordinates, with no GPX source chooser.
     const pdfStub=await import(pathToFileURL(stubPath).href);
     assert.equal(pdfStub.loads.length,3);assert.equal(pdfStub.loads[1].destroyCalls,1);assert.equal(pdfStub.loads[2].destroyCalls,0);
     assert.equal(d.getElementById('entry-pdf-message').hidden,true);assert.equal(d.getElementById('entry-pdf-canvas').hidden,false);
     assert.equal(d.getElementById('entry-errors').hidden,true);
     const gpx=d.getElementById('entry-gpx');gpx.value=String(server.data.sources.find(s=>s.kind==='gpx' && s.id!==999).id);gpx.dispatchEvent(new second.window.Event('change',{bubbles:true}));
-    assert.match(d.getElementById('entry-waypoint-status').textContent,/Matched/);
+    assert.match(d.getElementById('entry-waypoint-status').textContent,/First pair only.*first E/);
     assert.equal(d.querySelector('[name="source_row"]').type,'hidden');assert.equal(d.querySelector('[name="pole_height_unit"]').tagName,'SELECT');assert.equal(d.querySelectorAll('.entry-combobox-trigger').length,7);
     const conductor=d.querySelector('[name="conductors[R]"]'),trigger=conductor.parentElement.querySelector('.entry-combobox-trigger');
     trigger.click();const search=conductor.parentElement.querySelector('input[type="search"]');search.value='Wasp';search.dispatchEvent(new second.window.Event('input',{bubbles:true}));
@@ -629,6 +629,9 @@ test('a unique GPS number matches automatically while a date difference remains 
     assert.equal(d.querySelector('[name="row_date"]').value,'131222');
     const recovery=JSON.parse(dom.window.localStorage.getItem(boot.storage_key));
     assert.equal(recovery.row.gpx_source_id,source);assert.equal(recovery.row.row_date,'2022-12-13');
+    enter('designation','S');enter('waypoint_reference','999');
+    assert.match(d.getElementById('entry-waypoint-status').textContent,/First pair only.*first E/);
+    assert.equal(d.getElementById('entry-gpx-ambiguity').hidden,true); // No S source is needed, even with a prior selection.
     dom.window.close();delete globalThis.window;delete globalThis.document;
 });
 

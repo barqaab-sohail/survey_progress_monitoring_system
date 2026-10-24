@@ -124,6 +124,39 @@ class SynergeeOfflineTest extends TestCase
         $this->assertSame([], $writes);
     }
 
+    public function test_local_json_generation_uses_first_e_for_both_first_pair_nodes(): void
+    {
+        $snapshot = SynergeeSnapshot::make();
+        $transformer = &$snapshot['transformers'][0];
+        $transformer['header'] += ['division' => 'Division', 'subdivision' => 'Subdivision', 'subdivision_code' => 'SD', 'service_category' => 'General Duty'];
+        $row = ['transformer_id' => 1, 'section_id' => 1, 'pair_number' => 1, 'manually_verified' => true,
+            'group_number' => '01', 'row_date' => '2026-10-09', 'source_pdf_id' => 2, 'source_page' => 1, 'source_row' => '1',
+            'conductors' => ['R' => 'DOG', 'Y' => '', 'B' => '', 'N' => 'DOG'], 'equipment_type' => 'pole',
+            'pole_class' => 'concrete', 'pole_height' => 36, 'pole_height_unit' => 'ft', 'consumers' => [], 'pv_details' => []];
+        $transformer['entry_rows'] = [
+            $row + ['id' => 11, 'designation' => 'S', 'waypoint_reference' => '999', 'gpx_source_id' => null],
+            $row + ['id' => 12, 'designation' => 'E', 'waypoint_reference' => '001', 'gpx_source_id' => 1],
+        ];
+        $transformer['sections'][0]['start_reference'] = '999';
+        $transformer['sections'][0]['start_waypoint_id'] = null;
+        $transformer['sections'][0]['start_source_file_id'] = null;
+        $transformer['sections'][0]['end_reference'] = '001';
+        $transformer['sections'][0]['end_waypoint_id'] = 1;
+        $transformer['sections'][0]['original_entry']['start_coordinate_source'] = 'kmz';
+        unset($transformer);
+        $transfer = app(SynergeeTransfer::class);
+        $package = $transfer->read(json_encode(SynergeeSnapshot::package($snapshot), JSON_PRESERVE_ZERO_FRACTION));
+        $before = $package;
+        $report = $transfer->inspect($package, SynergeeSnapshot::gpx());
+        $this->assertSame([], $report['issues'], json_encode($report['issues']));
+        $nodes = array_column($report['payload']['tables']['Node'], null, 'Description');
+        $this->assertSame($nodes['001']['X'], $nodes['999']['X']);
+        $this->assertSame($nodes['001']['Y'], $nodes['999']['Y']);
+        $this->assertNotSame($nodes['001']['NodeId'], $nodes['999']['NodeId']);
+        $this->assertSame(0.0, $report['payload']['tables']['InstSection'][2]['SectionLength_MUL']);
+        $this->assertSame($before, $package);
+    }
+
     public function test_missing_coordinates_unapproved_settings_and_unmapped_pv_block_generation(): void
     {
         $snapshot = SynergeeSnapshot::make();
@@ -265,6 +298,7 @@ class SynergeeOfflineTest extends TestCase
         unset($row);
         $snapshot['transformers'][0]['entry_rows'] = $rows;
         $snapshot['transformers'][0]['header'] += ['division' => 'D', 'subdivision' => 'SD', 'subdivision_code' => '01', 'service_category' => 'General Duty'];
+        $snapshot['configuration']['settings']['mapping']['networks']['T-SYNTHETIC']['source_sections'][1]['to'] = 'wp:2';
         $transfer = app(SynergeeTransfer::class);
         $report = $transfer->inspect(SynergeeSnapshot::package($snapshot));
         $this->assertSame([], $report['issues'], json_encode($report['issues']));

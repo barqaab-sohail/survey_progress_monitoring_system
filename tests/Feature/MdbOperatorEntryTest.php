@@ -1195,7 +1195,8 @@ class MdbOperatorEntryTest extends TestCase
         $snapshot = app(SnapshotService::class)->snapshot($this->batch->fresh());
         $points = array_column($snapshot['waypoints'], null, 'id');
         $network = app(SurveyWaypoint::class)->network($snapshot['transformers'][0], $points);
-        $this->assertSame('survey:01131222001', $network['sections'][0]['start_waypoint_id']);
+        $this->assertSame('first-s:'.$this->transformer->id.':'.$start->section_id, $network['sections'][0]['start_waypoint_id']);
+        $this->assertSame('01131222001', $network['points'][$network['sections'][0]['start_waypoint_id']]['survey_identifier']);
         $this->assertSame('survey:01081026001', $network['sections'][0]['end_waypoint_id']);
         $projection = $this->mock(ProjectionService::class);
         $projection->shouldReceive('projectMany')->andReturnUsing(fn ($points) => array_map(fn ($p) => ['x' => $p['longitude'] * 1000, 'y' => $p['latitude'] * 1000], $points));
@@ -1305,7 +1306,7 @@ class MdbOperatorEntryTest extends TestCase
         $this->getJson(route('mdb-workflow.entry.data', $this->batch))->assertOk()->assertJsonPath('transformers.0.rows.0.waypoint_reference', '0001')->assertJsonPath('transformers.0.rows.0.conductors.Y', null);
         $codes = array_column(app(EntryService::class)->issues($this->batch->fresh()), 'code');
         $this->assertContains('incomplete_entry_pair', $codes);
-        $this->assertContains('entry_missing_waypoint', $codes);
+        $this->assertNotContains('entry_missing_waypoint', $codes); // First S needs its first E, not an S GPX match.
         $this->assertContains('missing_operator_root', $codes);
         $this->assertContains('incomplete_entry_conductors', $codes);
         $this->postJson($url, array_replace($payload, ['waypoint_reference' => '010']))->assertUnprocessable()->assertJsonValidationErrors('client_uuid');
@@ -1417,13 +1418,13 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertSame([], app(EntryService::class)->issues($this->batch->fresh()));
     }
 
-    public function test_first_e_supplies_transformer_location_while_first_s_keeps_its_kmz_reference(): void
+    public function test_first_e_supplies_both_first_pair_coordinates_while_first_s_keeps_its_text_reference(): void
     {
         $this->get(route('mdb-workflow.show', $this->batch))->assertOk()
             ->assertDontSee('name="source_waypoint_id"', false)->assertDontSee('name="header[source_survey_identifier]"', false);
         $start = $this->save(['waypoint_reference' => '001', 'gpx_source_id' => null]);
         $this->assertNull($this->transformer->fresh()->source_waypoint_id);
-        $this->assertSame('kmz', $start->fresh()->section->original_entry['start_coordinate_source']);
+        $this->assertSame('first_e_gpx', $start->fresh()->section->original_entry['start_coordinate_source']);
         $end = $this->save(['designation' => 'E', 'waypoint_reference' => '010']);
         $expected = $this->batch->waypoints()->where('name', '010')->firstOrFail();
         $this->assertSame($expected->id, $this->transformer->fresh()->source_waypoint_id);
@@ -1432,8 +1433,9 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertSame('001', $start->fresh()->waypoint_reference);
         $this->assertNull($start->fresh()->gpx_source_id);
         $snapshot = app(SnapshotService::class)->snapshot($this->batch->fresh());
-        $this->assertNull($snapshot['transformers'][0]['sections'][0]['start_waypoint_id']);
-        $this->get(route('mdb-workflow.review', $this->batch))->assertOk()->assertSee('KMZ reference (first S)')->assertSee('GPS 010 from GPX');
+        $this->assertSame($expected->id, $snapshot['transformers'][0]['sections'][0]['start_waypoint_id']);
+        $this->assertSame($expected->id, $snapshot['transformers'][0]['sections'][0]['end_waypoint_id']);
+        $this->get(route('mdb-workflow.review', $this->batch))->assertOk()->assertSee('Same coordinates as first E')->assertSee('GPS 010 from GPX');
         $this->post(route('mdb-workflow.entry.review', $this->batch), ['revision' => $this->batch->fresh()->revision,
             'transformer_id' => $this->transformer->id, 'confirmed' => 1])->assertSessionHasNoErrors()->assertRedirect();
         $payload = $this->payload(['client_uuid' => $end->client_uuid, 'designation' => 'E', 'waypoint_reference' => '002']);
@@ -1449,6 +1451,29 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertContains('missing_operator_root', array_column(app(EntryService::class)->issues($this->batch->fresh()), 'code'));
         $this->save(['pair_number' => 2, 'designation' => 'S', 'waypoint_reference' => '998']);
         $this->assertContains('entry_missing_waypoint', array_column(app(EntryService::class)->issues($this->batch->fresh()), 'code'));
+    }
+
+    public function test_first_pair_coordinate_rule_is_isolated_from_later_pairs_in_the_export_snapshot(): void
+    {
+        $this->save(['waypoint_reference' => '998', 'gpx_source_id' => null]);
+        $this->save(['designation' => 'E', 'waypoint_reference' => '010']);
+        $this->save(['pair_number' => 2, 'designation' => 'S', 'waypoint_reference' => '001']);
+        $this->save(['pair_number' => 2, 'designation' => 'E', 'waypoint_reference' => '002']);
+        $original = $this->batch->waypoints()->get()->toArray();
+        $snapshot = app(SnapshotService::class)->snapshot($this->batch->fresh());
+        $sections = $snapshot['transformers'][0]['sections'];
+        $this->assertSame($sections[0]['end_waypoint_id'], $sections[0]['start_waypoint_id']);
+        $this->assertNotSame($sections[0]['end_waypoint_id'], $sections[1]['start_waypoint_id']);
+        $this->assertNotSame($sections[0]['end_waypoint_id'], $sections[1]['end_waypoint_id']);
+        $this->assertNotSame($sections[1]['start_waypoint_id'], $sections[1]['end_waypoint_id']);
+        $this->assertSame($original, $this->batch->waypoints()->get()->toArray());
+        $this->mock(ProjectionService::class)->shouldReceive('projectMany')->andReturnUsing(fn ($points) => array_map(fn ($p) => ['x' => $p['longitude'] * 1000, 'y' => $p['latitude'] * 1000], $points));
+        $this->assertNotContains('missing_kmz_coordinates', array_column(app(NetworkValidator::class)->validate($snapshot)['errors'], 'code'));
+        $this->gpx->waypoints()->where('name', '010')->update(['latitude' => 91]);
+        $codes = array_column(app(EntryService::class)->issues($this->batch->fresh()), 'code');
+        $this->assertContains('invalid_first_e_coordinates', $codes);
+        $this->gpx->waypoints()->where('name', '010')->update(['name' => '997']);
+        $this->assertContains('missing_first_e_coordinates', array_column(app(EntryService::class)->issues($this->batch->fresh()), 'code'));
     }
 
     public function test_confirmation_and_complete_pairs_are_required_for_review_but_not_draft_entry(): void

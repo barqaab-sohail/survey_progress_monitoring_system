@@ -149,8 +149,8 @@ class EntryService
             }
         }
         $firstPair = $transformer->entryRows()->min('pair_number');
-        if ($pairNumber == $firstPair && $start && empty($start->gpx_source_id)) {
-            $original['start_coordinate_source'] = 'kmz';
+        if ($pairNumber == $firstPair && $start) {
+            $original['start_coordinate_source'] = SurveyWaypoint::FIRST_PAIR_COORDINATE_SOURCE;
         } else {
             unset($original['start_coordinate_source']);
         }
@@ -229,7 +229,7 @@ class EntryService
                     $headerIssue('missing_operator_capacity', 'Transformer header: enter positive capacity in kVA.');
                 }
                 if (empty($transformerData['source_waypoint_id'])) {
-                    $headerIssue('missing_operator_root', 'The first S/E pair needs an E row with one matching GPX point and valid coordinates for the transformer location.');
+                    $headerIssue('missing_operator_root', 'The first S/E pair needs its first E row with one matching GPX point and valid latitude, longitude and any recorded elevation. Both first S and first E use this point; upload or select its GPX file.');
                 }
                 if (empty($transformerData['entry_rows']) && ($transformerData['section_count'] ?? count($transformerData['sections'] ?? [])) === 0) {
                     $headerIssue('missing_operator_rows', 'Enter at least one complete S/E pair for this transformer.');
@@ -276,14 +276,21 @@ class EntryService
                             $add('invalid_survey_identifier', $label.implode(' ', array_merge(...array_values($exception->errors()))), $row);
                         }
                     }
-                    $kmzStart = $number == $firstPair && $row->designation === 'S' && empty($row->gpx_source_id);
-                    if ($matches->count() !== 1 && ! $kmzStart) {
+                    $firstStart = $number == $firstPair && $row->designation === 'S';
+                    $firstEnd = $number == $firstPair && $row->designation === 'E';
+                    if ($matches->count() !== 1 && $firstEnd) {
+                        $add('missing_first_e_coordinates', $label.'the required first E GPX point is missing or ambiguous. Upload or select the matching GPX file; its coordinates are required for both points of this first pair.', $row);
+                    }
+                    if ($matches->count() !== 1 && ! $firstStart) {
                         $namedPoints = collect($data['waypoints'] ?? [])->filter(fn ($point) => (string) $point['name'] === (string) $row->waypoint_reference);
                         if ($matches->isEmpty() && $namedPoints->isNotEmpty()) {
                             $add('entry_waypoint_source_mismatch', $label.'GPS '.$row->waypoint_reference.' exists in another GPX source. Select the correct GPX file in the row editor.', $row);
                         } else {
                             $add($matches->isEmpty() ? 'entry_missing_waypoint' : 'entry_ambiguous_waypoint', $label.($matches->isEmpty() ? 'GPS '.$row->waypoint_reference.' is missing from the uploaded GPX files.' : 'GPS '.$row->waypoint_reference.' has multiple matches; choose its GPX source.'), $row);
                         }
+                    }
+                    if (! $firstStart && $matches->count() === 1 && ! app(SurveyWaypoint::class)->validCoordinates($matches->first())) {
+                        $add($firstEnd ? 'invalid_first_e_coordinates' : 'invalid_entry_coordinates', $label.($firstEnd ? 'the required first E GPX point' : 'the selected GPX point').' has invalid latitude, longitude or recorded elevation. Correct the GPX source before verification or generation.', $row);
                     }
                     $phase = EntryLookups::phase($row->conductors);
                     if (! $simple && (! $phase['complete'] || ($row->conductors['N'] ?? null) === null)) {

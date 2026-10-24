@@ -468,20 +468,20 @@ function initialize(boot) {
         try{set(rowForm,'composite_identifier',completeWaypoint(payload.group_number,payload.row_date,payload.waypoint_reference,data.entry_settings?.two_digit_year_start ?? 2000));}catch(e){set(rowForm,'composite_identifier','');identityError=e.message;}
         const matches=waypointMatches(payload,data.waypoints);
         const firstPair=Math.min(Number(payload.pair_number),...(active()?.rows || []).map(row=>Number(row.pair_number)));
-        const kmzStart=payload.designation==='S' && Number(payload.pair_number)===firstPair && !payload.gpx_source_id;
+        const firstStart=payload.designation==='S' && Number(payload.pair_number)===firstPair;
 
         const namedPoints=data.waypoints.filter(point=>point.name===payload.waypoint_reference);
         const automaticMatches=waypointMatches({...payload,gpx_source_id:null},data.waypoints);
         const sourceConfirmation=namedPoints.length>0 && automaticMatches.length!==1;
-        $('entry-gpx-ambiguity').hidden=kmzStart || !(sourceConfirmation || matches.length>1 || (payload.gpx_source_id && matches.length===0));
+        $('entry-gpx-ambiguity').hidden=firstStart || !(sourceConfirmation || matches.length>1 || (payload.gpx_source_id && matches.length===0));
         if($('entry-gpx-help'))$('entry-gpx-help').textContent=sourceConfirmation
             ? 'This GPS number has more than one possible GPX match. Select the file containing the surveyed point. The PDF date stays unchanged.'
             : 'Choose the GPX file containing this surveyed GPS point.';
         $('entry-waypoint-status').textContent=!payload.waypoint_reference ? 'Text references keep leading zeros.' : matches.length===1 ? 'Matched to GPX.' : matches.length===0 ? 'Missing from GPX — draft can still be saved.' : 'Multiple GPX matches — choose source.';
-        if(kmzStart && payload.waypoint_reference)$('entry-waypoint-status').textContent='First S point: KMZ reference. Transformer coordinates come from the first E point in GPX.';
+        if(firstStart && payload.waypoint_reference)$('entry-waypoint-status').textContent='First pair only: S uses the first E point’s GPX coordinates and elevation. Save the first E row to resolve both points.';
         if(identityError)$('entry-waypoint-status').textContent=identityError;
-        else if(!kmzStart && matches.length===0 && namedPoints.length)$('entry-waypoint-status').textContent='GPS number exists in another GPX source. Select the correct GPX file below.';
-        else if(!kmzStart && matches.length===1){
+        else if(!firstStart && matches.length===0 && namedPoints.length)$('entry-waypoint-status').textContent='GPS number exists in another GPX source. Select the correct GPX file below.';
+        else if(!firstStart && matches.length===1){
             const point=matches[0];
             const recordedDate=point.recorded_at ? new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Karachi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(point.recorded_at)) : null;
             if(recordedDate && payload.row_date && recordedDate!==payload.row_date)$('entry-waypoint-status').textContent='Matched to GPX by GPS number. Recording date differs from the PDF date; the PDF date stays unchanged.';
@@ -509,8 +509,8 @@ function initialize(boot) {
         const t=active(), rows=t?.rows || [];
         const point=data.waypoints.find(point=>point.id===t?.source_waypoint_id);
         if($('entry-transformer-location'))$('entry-transformer-location').textContent=point
-            ? `Transformer location: GPS ${point.name}, selected automatically from the first E row. The first S point is a KMZ reference.`
-            : 'Transformer location will be taken from the first E row with a unique GPX match. The first S point is a KMZ reference.';
+            ? `Transformer location: GPS ${point.name}, selected from the first E row. Only the first S/E pair shares these coordinates and elevation.`
+            : 'The first S/E pair uses the first E row’s GPX coordinates and elevation for both points. All later pairs use their own GPX points.';
 
         $('entry-saved-count').textContent=`${rows.length} rows`;
         $('entry-row-panel')?.classList.toggle('entry-row-panel-disabled',!t);

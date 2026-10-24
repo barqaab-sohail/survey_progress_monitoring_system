@@ -68,6 +68,7 @@ class ExportPayloadBuilder
         $provenance = [];
         $rawWaypoints = $waypoints;
         foreach ($transformers as $transformer) {
+            $transformer = app(SurveyWaypoint::class)->firstPairCoordinates($transformer, $rawWaypoints);
             $this->require(! empty($transformer['id']) && ! empty(trim((string) ($transformer['code'] ?? ''))) && ! isset($transformerIds[$transformer['id']]) && ! isset($transformerCodes[$transformer['code']]), 'Transformer identifiers and codes must be present and unique.');
             $transformerIds[$transformer['id']] = $transformerCodes[$transformer['code']] = true;
             $this->require(! empty($transformer['sections']), 'A transformer must have a connected survey network.');

@@ -40,6 +40,45 @@ class MdbExportPayloadTest extends TestCase
         return new ExportPayloadBuilder($projection);
     }
 
+    public function test_generated_mdb_coordinates_share_only_the_first_pairs_e_evidence(): void
+    {
+        [$revision, $template] = $this->fixture();
+        $snapshot = $revision->snapshot;
+        foreach ($snapshot['waypoints'] as &$point) {
+            $point['source_file_id'] = 1;
+            $point['elevation'] = 100 + $point['id'];
+        }
+        unset($point);
+        $first = $snapshot['transformers'][0]['sections'][0];
+        $first = array_replace($first, ['id' => 99, 'start_reference' => '999', 'end_reference' => '001', 'start_waypoint_id' => null, 'end_waypoint_id' => 1]);
+        array_unshift($snapshot['transformers'][0]['sections'], $first);
+        $snapshot['transformers'][0]['entry_rows'] = [
+            ['id' => 11, 'pair_number' => 1, 'section_id' => 99, 'designation' => 'S', 'waypoint_reference' => '999', 'gpx_source_id' => null],
+            ['id' => 12, 'pair_number' => 1, 'section_id' => 99, 'designation' => 'E', 'waypoint_reference' => '001', 'gpx_source_id' => 1],
+        ];
+        $revision->snapshot = $snapshot;
+        $projection = new class extends ProjectionService
+        {
+            public function projectMany(array $points, int $epsg): array
+            {
+                return array_map(fn ($p) => ['x' => $p['longitude'] * 100000, 'y' => $p['latitude'] * 100000], $points);
+            }
+        };
+        $payload = (new ExportPayloadBuilder($projection))->build($revision, $template, 1, str_repeat('c', 64));
+        $nodes = array_column($payload['tables']['Node'], null, 'Description');
+        $this->assertNotSame($nodes['999']['NodeId'], $nodes['001']['NodeId']);
+        foreach (['X', 'Y'] as $axis) {
+            $this->assertSame($nodes['001'][$axis], $nodes['999'][$axis]);
+        }
+        $this->assertNotSame($nodes['001']['Y'], $nodes['002']['Y']);
+        $this->assertNotSame($nodes['002']['Y'], $nodes['003']['Y']);
+        $this->assertSame(0.0, $payload['tables']['InstSection'][2]['SectionLength_MUL']);
+        $this->assertGreaterThan(0, $payload['tables']['InstSection'][3]['SectionLength_MUL']);
+        $this->assertGreaterThan(0, $payload['tables']['InstSection'][4]['SectionLength_MUL']);
+        $this->assertCount(3, $payload['provenance']);
+        $this->assertSame($snapshot, $revision->snapshot);
+    }
+
     public function test_export_uses_elevation_adjusted_lengths_with_flagged_fallback_and_measured_override(): void
     {
         [$revision, $template] = $this->fixture();

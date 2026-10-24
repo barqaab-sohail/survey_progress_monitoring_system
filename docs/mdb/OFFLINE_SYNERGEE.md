@@ -16,7 +16,7 @@ Originals in `One Data for A0808` were read through DAO without running saved qu
 | survey.gpx | `ed0055525e5a7aaa3fa66dc7266e9b1169099dbb48183dfea6b56d17cea9dbb0` | GPX 1.1; 62 waypoints named `001`–`062`, WGS84 lat/lon, metre elevations and UTC timestamps. These are names, not electrical connections. |
 | valid_synergee.mdb | `1065f140ba2c964c1fb30d4e0e73aa581db03913b5e0ca90f3b1bae5c731bf3a` | 50 user tables, 41 relationships; the existing approved-schema DAO assertion passed. Populated: Node 33, InstSection 31, Loads 30, and one each of InstFeeders, InstPrimaryTransformers, SAI_Control, InstMeterPoints, InstDGens, InstMymDGens. |
 
-The two MDBs identify the same feeder/substation/transformer. GPX timestamps correspond to the 8 August 2025 observations, but the first data-entry observation is from 16 April 2021 and refers to waypoint `145`, absent from this GPX. The historical root cannot be filled by choosing `001`, copying a reference coordinate, or assuming file order. Resolve its identity and coordinate through the normal production verification process before generating that example from survey data.
+The two MDBs identify the same feeder/substation/transformer. GPX timestamps correspond to the 8 August 2025 observations, but the first data-entry observation is from 16 April 2021 and refers to waypoint `145`, absent from this GPX. For PDF-entered S/E rows, the requested first-pair rule below now supplies the first S coordinate from its explicitly paired first E observation. No waypoint is selected by GPX file order or copied from a reference MDB.
 
 The target has genuine node/section/feeder/transformer/load relationships and optional meter/generator tables. It identifies `SynerGEE Electric 5.0.0.324`, metric units and WGS 1984 UTM Zone 43N. Its 60 Hz setting, 4.16 transformer voltage setting, 1 m supply connectors, phase conductor strings (including whitespace), equipment names, demand allocation and PV phase values describe that model. They are not copied into a different survey or installed as project defaults. The file has no equipment-library tables establishing external conductor/transformer physical parameters.
 
@@ -65,6 +65,26 @@ Sign in locally, choose **JSON to SynerGEE**, or open `http://127.0.0.1:8000/mdb
 4. Open the MDB in the matching SynerGEE installation with the reviewed equipment libraries and perform connectivity/load-flow checks. Record engineering acceptance through the existing analysis workflow as applicable. Local downloads do not automatically create a production ExportJob or acceptance record.
 
 ## GPX and engineering mapping
+
+### First S/E coordinate pair of each transformer
+
+The first explicitly entered pair (lowest pair number within that transformer) uses its E row's unique GPX match for **both S and E latitude, longitude and recorded elevation**. S keeps its original handwritten reference, group and survey date; it does not need a KMZ coordinate or its own GPX match. A similarly named GPX waypoint cannot replace this rule. A missing or invalid first E, an ambiguous GPX match, or a missing first E row blocks verification/generation with a specific error. A later E row is never substituted.
+
+This applies in the production snapshot/JSON, network validation and local/server SynerGEE mapper. The two observations retain separate logical node IDs at the same coordinates, so the first pair can have a zero calculated span without becoming a self-loop or dropping a record. All remaining pairs retain their own GPX matches and coordinates. GPX source records are never overwritten. The preview explains this coordinate rule; the separate data-entry MDB retains its existing original-observation schema and coordinate policy.
+
+After updating production and the local Windows application, reopen/resave the survey as needed, obtain approval of the current revision and download a fresh JSON. Existing approved snapshots remain immutable; a change in derived mapping requires renewed approval for production exports.
+
+Files changed for the first-pair coordinate rule:
+
+| Area | Files |
+| --- | --- |
+| Survey mapping and snapshot | `app/Services/Mdb/SurveyWaypoint.php`, `app/Services/Mdb/EntryService.php`, `app/Services/Mdb/SnapshotService.php` |
+| Validation and SynerGEE output | `app/Services/Mdb/NetworkValidator.php`, `app/Services/Mdb/ExportPayloadBuilder.php`, `app/Services/Mdb/SynergeeTransfer.php` |
+| Entry and review | `app/Http/Controllers/MdbOperatorEntryController.php`, `app/Services/Mdb/ReviewService.php`, `public/js/mdb-entry.js`, `resources/views/mdb-workflow/show.blade.php`, `resources/views/mdb-workflow/review.blade.php` |
+| Regression coverage | `tests/Unit/MdbSurveyIdentityTest.php`, `tests/Unit/MdbExportPayloadTest.php`, `tests/Feature/MdbOperatorEntryTest.php`, `tests/Feature/SynergeeOfflineTest.php`, `tests/JavaScript/mdb-entry.test.mjs` |
+| Instructions | `docs/mdb/OFFLINE_SYNERGEE.md` |
+
+Checks: 81 focused PHP tests (582 assertions) and 4 targeted JavaScript tests pass, including JSON import, equal first-pair coordinates with distinct node IDs, independent transformers, later-pair preservation, invalid/missing/ambiguous first E, and the unchanged data-entry MDB path. The broader pre-existing suites have separate header/fixture/UI failures; the unrelated failing PHP cases were also reproduced against the prior implementation.
 
 | Frozen input | Output |
 | --- | --- |

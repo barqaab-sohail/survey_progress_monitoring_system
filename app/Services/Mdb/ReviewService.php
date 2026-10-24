@@ -43,8 +43,10 @@ class ReviewService
                     $field('waypoint_reference','GPS number',$row->waypoint_reference),
                     $field('source_pdf_id','Source PDF',$row->source_pdf_id,'select',$pdfs), $field('source_page','PDF page',$row->source_page,'number'),
                     $field('gpx_source_id','GPX source',$row->gpx_source_id,'select',$gpx)];
-                if ($row->designation === 'S' && $row->pair_number == $transformer->entryRows->min('pair_number') && empty($row->gpx_source_id)) {
-                    $fields[5]['empty_label'] = 'KMZ reference (first S)';
+                if ($row->designation === 'S' && $row->pair_number == $transformer->entryRows->min('pair_number')) {
+                    $fields[5]['label'] = 'Coordinate source (same as first E)';
+                    $fields[5]['value'] = $point?->source_file_id;
+                    $fields[5]['empty_label'] = 'Awaiting first E GPX coordinates';
                     $fields[5]['editable'] = false;
                 }
                 foreach (['R','Y','B','N'] as $phase) {

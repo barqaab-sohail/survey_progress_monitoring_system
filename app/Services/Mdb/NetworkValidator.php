@@ -14,6 +14,9 @@ class NetworkValidator
     public function validate(SurveyBatch|array $input): array
     {
         $data = $input instanceof SurveyBatch ? $this->snapshots->snapshot($input) : $input;
+        foreach ($data['transformers'] ?? [] as $index => $transformer) {
+            $data['transformers'][$index] = app(SurveyWaypoint::class)->firstPairCoordinates($transformer, $data['waypoints'] ?? []);
+        }
         $errors = [];
         $warnings = [];
         $errors = app(EntryService::class)->issues($data);
@@ -341,7 +344,8 @@ class NetworkValidator
                     $issue('unapproved_measured_length', 'Measured length overrides require positive metres, provenance/reason and verifier approval.', $sc, $simple && is_numeric($measured) && $measured > 0);
                 }
                 $length = $measured !== null ? (float) $measured : $estimate;
-                if ($length !== null && ($length < 0.5 || $length > (float) ($settings['review_length_above_m'] ?? 2000))) {
+                $sharedFirstPair = ($points[$start]['coordinate_source'] ?? null) === SurveyWaypoint::FIRST_PAIR_COORDINATE_SOURCE;
+                if ($length !== null && ! ($sharedFirstPair && $length === 0.0) && ($length < 0.5 || $length > (float) ($settings['review_length_above_m'] ?? 2000))) {
                     $issue('suspicious_length', 'Section length is unusual and requires engineering review.', $sc, true);
                 }
                 $edges[] = ['section_id' => $sid, 'id' => $this->stableId('S', $data, $tid, $sid), 'from' => $this->stableId('N', $data, $tid, $start), 'to' => $this->stableId('N', $data, $tid, $end), 'start_waypoint_id' => $points[$start]['id'], 'end_waypoint_id' => $points[$end]['id'], 'estimated_length_m' => $estimate, 'horizontal_length_m' => $horizontalLength, 'elevation_status' => $elevationStatus, 'span_length_m' => $sag['span_length_m'], 'sag_allowance_percent' => $sag['sag_allowance_percent'], 'sag_addition_m' => $sag['sag_addition_m'], 'sag_status' => $sagStatus, 'length_m' => $length, 'length_kind' => $measured !== null ? 'approved_measured' : (! empty($section['geometry']) ? 'geometry_estimate' : 'endpoint_estimate')];

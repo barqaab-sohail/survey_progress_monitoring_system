@@ -122,6 +122,7 @@ class SnapshotService
                 }
             }
             unset($section);
+            $transformer = app(SurveyWaypoint::class)->firstPairCoordinates($transformer, $data['waypoints']);
         }
         unset($transformer);
 

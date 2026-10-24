@@ -127,8 +127,8 @@ class MdbOperatorEntryController extends Controller
             $validated['source_pdf_id'] = $batch->sources()->where('kind', 'pdf')->where('status', 'ready')->count() === 1 ? $batch->sources()->where('kind', 'pdf')->where('status', 'ready')->value('id') : null;
         }
         $firstPair = min((int) $validated['pair_number'], (int) ($transformer->entryRows()->min('pair_number') ?? $validated['pair_number']));
-        $kmzStart = $validated['designation'] === 'S' && (int) $validated['pair_number'] === $firstPair && empty($validated['gpx_source_id']);
-        if (empty($validated['gpx_source_id']) && ! $kmzStart) {
+        $firstStart = $validated['designation'] === 'S' && (int) $validated['pair_number'] === $firstPair;
+        if (empty($validated['gpx_source_id']) && ! $firstStart) {
             $matches = $identity->matches($validated, $batch->waypoints->toArray());
             if (count($matches) === 1) {
                 $validated['gpx_source_id'] = $matches[0]['source_file_id'];
