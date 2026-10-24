@@ -113,6 +113,7 @@
         </article>@empty<p class="empty">No export jobs created. MDB output counts appear separately from transformer record counts.</p>@endforelse
     </section>
 </div>
+@include('mdb-workflow.partials.synergee-transfer')
 @endsection
 @push('styles')<link rel="stylesheet" href="{{ asset('css/mdb-workflow.css') }}">@endpush
 @push('scripts')

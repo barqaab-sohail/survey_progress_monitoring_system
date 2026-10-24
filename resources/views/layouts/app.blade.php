@@ -46,6 +46,9 @@
             @if(PHP_OS_FAMILY === 'Windows' && config('data_entry_mdb.offline_conversion_enabled'))
                 @can('mdb-workflow.export')<a class="nav-link {{ request()->routeIs('mdb-workflow.offline-mdb.*') ? 'active' : '' }}" href="{{ route('mdb-workflow.offline-mdb.index') }}">JSON to MDB</a>@endcan
             @endif
+            @if(PHP_OS_FAMILY === 'Windows' && config('mdb_workflow.offline_enabled'))
+                @can('mdb-workflow.export')<a class="nav-link {{ request()->routeIs('mdb-workflow.offline-synergee.*') ? 'active' : '' }}" href="{{ route('mdb-workflow.offline-synergee.index') }}">JSON to SynerGEE</a>@endcan
+            @endif
             @if(auth()->user()->hasAnyRole(['survey_team_leader','super_admin','project_manager','management_viewer']))
                 <a class="nav-link {{ request()->routeIs('survey-progress.*') ? 'active' : '' }}" href="{{ route('survey-progress.index') }}">Automatic Survey Progress</a>
                 <a class="nav-link {{ request()->routeIs('field-surveys.*') ? 'active' : '' }}" href="{{ route('field-surveys.index') }}">Mobile Field Surveys</a>

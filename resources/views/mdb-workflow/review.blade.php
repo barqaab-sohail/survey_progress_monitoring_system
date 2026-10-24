@@ -58,6 +58,7 @@
     @endif
     </div></div>
     @include('mdb-workflow.workflow-actions')
+    @include('mdb-workflow.partials.synergee-transfer')
     @if($canCreateMdb)<section class="card"><h2>MDB creation</h2><p class="mdb-note">{{ str($batch->status)->replace('_',' ')->title() }}. Saved draft rows remain available when you return to entry.</p>
         @if(!$workerConfigured)<p class="mdb-worker-note">MDB export worker not configured.</p>@endif
         @include('mdb-workflow.generation-inputs')
