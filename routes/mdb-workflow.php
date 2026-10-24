@@ -35,6 +35,7 @@ Route::middleware(['auth', 'active'])->prefix('mdb-workflow')->name('mdb-workflo
     Route::get('/configuration/{project}', 'configuration')->name('config');
     Route::put('/configuration/{project}', 'saveConfiguration')->name('config.update');
     Route::post('/templates', 'storeTemplate')->name('templates.store');
+    Route::post('/templates/{template}/versions', 'reviseTemplate')->name('templates.versions.store');
     Route::get('/exports/{export}/download', 'download')->name('exports.download');
     Route::post('/exports/{export}/retry', 'retryExport')->middleware('throttle:10,1')->name('exports.retry');
     Route::post('/exports/{export}/analysis', 'analyze')->name('analysis.store');

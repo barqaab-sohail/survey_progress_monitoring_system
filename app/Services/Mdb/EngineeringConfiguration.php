@@ -177,7 +177,7 @@ class EngineeringConfiguration
         $libraries = $template->metadata['equipment_references'] ?? [];
         foreach (['conductors', 'transformers', 'configurations'] as $library) {
             if (empty($libraries[$library]) || ! is_array($libraries[$library])) {
-                throw ValidationException::withMessages(['template_id' => 'The template needs reviewed '.$library.' library references.']);
+                throw ValidationException::withMessages(['template_id' => 'Selected template '.$template->code.' v'.$template->version.' has no reviewed '.$library.' library IDs saved. Open MDB configuration → Clean SynerGEE MDB templates, create a reviewed version with its exact equipment_references JSON, then select that new version here.']);
             }
         }
         if (! in_array($data['configuration_id'], $libraries['configurations'], true)) {

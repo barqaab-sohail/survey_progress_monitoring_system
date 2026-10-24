@@ -335,6 +335,55 @@ class EngineeringConfigurationTest extends TestCase
         $this->assertNull(app(SnapshotService::class)->snapshot($this->batch->fresh())['template']);
     }
 
+    public function test_admin_can_create_reviewed_template_version_with_required_library_references(): void
+    {
+        $sourceBytes = 'approved clean MDB fixture';
+        Storage::disk('local')->put($this->template->path, $sourceBytes);
+        $this->template->update(['sha256' => hash('sha256', $sourceBytes)]);
+        $metadata = [
+            'equipment_references' => [
+                'conductors' => ['ANT', ' DOG'],
+                'transformers' => ['100 KVA'],
+                'configurations' => ['12.5/7.2 kV cross arm C2-2'],
+            ],
+            'permitted_static_tables' => [],
+        ];
+
+        $this->post(route('mdb-workflow.templates.versions.store', $this->template), [
+            'version' => '2',
+            'metadata_json' => json_encode($metadata),
+            'reason' => 'Reviewed IDs against the approved SynerGEE library',
+            'approved' => '1',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $version = Template::where('code', $this->template->code)->where('version', '2')->firstOrFail();
+        $this->assertTrue($version->active);
+        $this->assertSame($metadata, $version->metadata);
+        $this->assertSame($this->template->sha256, $version->sha256);
+        $this->assertNotSame($this->template->path, $version->path);
+        Storage::disk('local')->assertExists($version->path);
+        $this->assertSame($sourceBytes, Storage::disk('local')->get($version->path));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'mdb.template_version_registered']);
+    }
+
+    public function test_template_version_rejects_missing_conductor_references(): void
+    {
+        Storage::disk('local')->put($this->template->path, 'approved clean MDB fixture');
+        $this->template->update(['sha256' => hash('sha256', 'approved clean MDB fixture')]);
+
+        $this->from(route('mdb-workflow.config', $this->project))->post(route('mdb-workflow.templates.versions.store', $this->template), [
+            'version' => '2',
+            'metadata_json' => json_encode(['equipment_references' => [
+                'conductors' => [], 'transformers' => ['100 KVA'], 'configurations' => ['approved-line'],
+            ]]),
+            'reason' => 'Reviewed template references',
+            'approved' => '1',
+        ])->assertRedirect(route('mdb-workflow.config', $this->project))
+            ->assertSessionHasErrors('metadata_json');
+
+        $this->assertDatabaseCount('mdb_workflow_templates', 1);
+    }
+
     public function test_approved_rates_apply_without_overwriting_original_counts_or_explicitly_assuming_blanks(): void
     {
         $configuration = $this->saveConfiguration()->toArray();

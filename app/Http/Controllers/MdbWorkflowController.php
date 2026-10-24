@@ -860,6 +860,7 @@ class MdbWorkflowController extends Controller
             throw ValidationException::withMessages(['template_file' => 'An actual Microsoft Access Jet MDB template is required.']);
         }
         $metadata = $this->jsonObject($data['metadata_json'], 'metadata_json');
+        $metadata = $this->validatedTemplateMetadata($metadata, 'metadata_json');
         if (Template::where('code', $data['code'])->where('version', $data['version'])->exists()) {
             throw ValidationException::withMessages(['version' => 'This template code/version already exists. Register a new version.']);
         }
@@ -873,6 +874,87 @@ class MdbWorkflowController extends Controller
         });
 
         return back()->with('success', 'Template registered. Worker will verify cleanliness, schema and hash before export.');
+    }
+
+    public function reviseTemplate(Request $request, Template $template)
+    {
+        Gate::authorize('mdb-workflow.configure');
+        $data = $request->validate([
+            'version' => 'required|string|max:60',
+            'metadata_json' => 'required|json|max:262144',
+            'reason' => 'required|string|min:5|max:4000',
+            'approved' => 'required|accepted',
+        ]);
+        abort_unless($template->active && $template->approved_by && $template->approved_at, 422,
+            'Only an active, approved clean template can be used as the source for a reviewed version.');
+        if (Template::where('code', $template->code)->where('version', $data['version'])->exists()) {
+            throw ValidationException::withMessages(['version' => 'This template code/version already exists. Choose a new version label.']);
+        }
+        $metadata = $this->validatedTemplateMetadata($this->jsonObject($data['metadata_json'], 'metadata_json'), 'metadata_json');
+        $disk = Storage::disk($template->disk);
+        if (! $disk->exists($template->path)) {
+            throw ValidationException::withMessages(['template' => 'The source MDB template file is missing. Register a retrievable clean MDB before creating a reviewed version.']);
+        }
+        $bytes = $disk->get($template->path);
+        if (! hash_equals((string) $template->sha256, hash('sha256', $bytes))) {
+            throw ValidationException::withMessages(['template' => 'The source MDB no longer matches its registered SHA-256. Register a verified clean MDB before creating a reviewed version.']);
+        }
+
+        $path = 'mdb-workflow/templates/'.Str::uuid().'.mdb';
+        $newDisk = Storage::disk($template->disk);
+        if (! $newDisk->put($path, $bytes)) {
+            throw ValidationException::withMessages(['template' => 'The source MDB could not be copied to create a new template version.']);
+        }
+        try {
+            DB::transaction(function () use ($request, $template, $data, $metadata, $path) {
+                $newTemplate = Template::create([
+                    'code' => $template->code,
+                    'version' => $data['version'],
+                    'disk' => $template->disk,
+                    'path' => $path,
+                    'sha256' => $template->sha256,
+                    'synergee_version' => $template->synergee_version,
+                    'metadata' => $metadata,
+                    'active' => true,
+                    'approved_by' => $request->user()->id,
+                    'approved_at' => now('UTC'),
+                ]);
+                $this->audit->record($request->user(), 'mdb.template_version_registered', $newTemplate,
+                    ['source_template_id' => $template->id], $newTemplate->toArray(), $data['reason']);
+            });
+        } catch (\Throwable $exception) {
+            $newDisk->delete($path);
+            throw $exception;
+        }
+
+        return back()->with('success', 'Reviewed template version created from the unchanged MDB file. Select the new version in Engineering Configuration, save the project configuration, then reapprove affected surveys.');
+    }
+
+    private function validatedTemplateMetadata(array $metadata, string $field): array
+    {
+        $references = $metadata['equipment_references'] ?? null;
+        if (! is_array($references)) {
+            throw ValidationException::withMessages([$field => 'Add equipment_references with conductor, transformer and configuration ID lists.']);
+        }
+        foreach (['conductors', 'transformers', 'configurations'] as $library) {
+            $values = $references[$library] ?? null;
+            if (! is_array($values) || ! array_is_list($values) || $values === []) {
+                throw ValidationException::withMessages([$field => 'The equipment_references.'.$library.' list must contain the exact reviewed IDs from the SynerGEE template.']);
+            }
+            foreach ($values as $value) {
+                if (! is_string($value) || trim($value) === '' || strlen($value) > 200) {
+                    throw ValidationException::withMessages([$field => 'Every equipment reference must be a nonempty text ID of at most 200 characters.']);
+                }
+            }
+            if (count(array_unique($values, SORT_STRING)) !== count($values)) {
+                throw ValidationException::withMessages([$field => 'Remove duplicate IDs from the equipment_references.'.$library.' list.']);
+            }
+        }
+        if (isset($metadata['permitted_static_tables']) && ! is_array($metadata['permitted_static_tables'])) {
+            throw ValidationException::withMessages([$field => 'permitted_static_tables must be a JSON array.']);
+        }
+
+        return $metadata;
     }
 
     private function mutate(Request $request, SurveyBatch $batch, callable $operation, ?string $reason = null): void
