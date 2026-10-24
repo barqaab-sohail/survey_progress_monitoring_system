@@ -64,7 +64,7 @@
 .entry-line-toolbar{gap:6px;padding-top:5px;min-height:32px}
 .entry-line-toolbar>small{font-size:11px;color:var(--muted)}
 .entry-line-toolbar #entry-page-association{min-width:0;font-size:11px}
-.entry-line-toolbar #entry-pdf-draw[aria-pressed=true]{background:#fff1f1;border-color:#dc2626;color:#b91c1c}
+.entry-line-toolbar #entry-pdf-draw[aria-pressed=true],.entry-line-toolbar #review-pdf-draw[aria-pressed=true]{background:#fff1f1;border-color:#dc2626;color:#b91c1c}
 .entry-line-toolbar details{position:relative}
 .entry-line-toolbar details[open]>.entry-progress-controls{position:absolute;top:100%;left:0;z-index:30;width:360px;max-width:80vw;background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 18px #18334d25;padding:8px}
 .entry-pdf-stage[data-drawing=true]{cursor:crosshair;touch-action:none}
