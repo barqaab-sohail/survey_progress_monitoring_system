@@ -53,7 +53,7 @@ class SynergeeTransfer
             'template_base64' => base64_encode($bytes),
         ];
 
-        return $content + ['sha256' => $this->snapshots->hash($content)];
+        return $content + ['sha256' => $this->transferHash($content)];
     }
 
     public function read(string $json): array
@@ -112,8 +112,8 @@ class SynergeeTransfer
         $this->require(! $validation->fails(), 'Invalid SynerGEE package: '.$validation->errors()->first());
         $content = $package;
         unset($content['sha256']);
-        $this->require(hash_equals($package['sha256'], $this->snapshots->hash($content)), 'Package checksum failed. Download the original JSON again without editing it.');
-        $this->require(hash_equals($package['source']['revision_sha256'], $this->snapshots->hash($package['snapshot'])), 'Frozen survey revision checksum failed. Re-export from production.');
+        $this->require($this->matchesTransferHash($package['sha256'], $content), 'Package checksum failed. Download the original JSON again without editing it.');
+        $this->require($this->matchesTransferHash($package['source']['revision_sha256'], $package['snapshot']), 'Frozen survey revision checksum failed. Re-export from production.');
         $this->require($package['source']['batch_id'] === $package['snapshot']['batch']['id'], 'The package batch identity differs from its frozen survey.');
         $this->require($package['source']['revision_number'] === ($package['snapshot']['batch']['revision'] ?? null), 'The package revision number differs from its frozen survey.');
         $this->require(hash_equals(ApprovedSchema::fingerprint(), $package['schema_sha256']), 'The package uses a different MDB schema. Update the local application from Git.');
@@ -250,6 +250,31 @@ class SynergeeTransfer
     {
         if (! $condition) {
             throw ValidationException::withMessages(['file' => $message]);
+        }
+    }
+
+    /**
+     * PHP serializes floating point JSON numbers according to serialize_precision,
+     * which can differ between cPanel and the local Windows PHP installation.
+     * Pin transfer-package hashes to one value and still accept packages created
+     * by the earlier runtime-dependent implementation.
+     */
+    private function matchesTransferHash(string $expected, array $value): bool
+    {
+        return hash_equals($expected, $this->transferHash($value))
+            || hash_equals($expected, $this->snapshots->hash($value));
+    }
+
+    private function transferHash(array $value): string
+    {
+        $previousPrecision = ini_get('serialize_precision');
+        ini_set('serialize_precision', '100');
+        try {
+            return $this->snapshots->hash($value);
+        } finally {
+            if ($previousPrecision !== false) {
+                ini_set('serialize_precision', $previousPrecision);
+            }
         }
     }
 }
