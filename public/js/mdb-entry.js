@@ -457,6 +457,25 @@ function initialize(boot) {
         if (!previous.designation) { const open=rows.find(r=>r.designation==='S' && !rows.some(e=>e.pair_number===r.pair_number && e.designation==='E')); if(open){draft.pair_number=open.pair_number;draft.designation='E';} }
         fillRow(draft); persist();
     }
+    function topologyWarnings(payload) {
+        const rows=(active()?.rows || []).filter(row=>String(row.id)!==String(rowId));
+        rows.push({...payload,id:rowId});
+        const pairs=new Map();
+        for(const row of rows){const n=Number(row.pair_number);if(!pairs.has(n))pairs.set(n,{});pairs.get(n)[row.designation]=row;}
+        const numbers=[...pairs.keys()].sort((a,b)=>a-b), first=pairs.get(numbers[0]);
+        const key=row=>{if(!row)return null;try{return completeWaypoint(row.group_number,row.row_date,row.waypoint_reference,data.entry_settings?.two_digit_year_start ?? 2000) || null;}catch{return null;}};
+        const root=key(first?.E), reachable=new Set(root ? [root] : []);
+        let changed;
+        do {changed=false;for(const n of numbers.slice(1)){const pair=pairs.get(n),a=key(pair.S),b=key(pair.E);if(a && b && (reachable.has(a)||reachable.has(b))){for(const id of [a,b])if(!reachable.has(id)){reachable.add(id);changed=true;}}}}while(changed);
+        const n=Number(payload.pair_number),pair=pairs.get(n),index=numbers.indexOf(n);
+        if(index<=0)return [];
+        const previous=pairs.get(numbers[index-1])?.E;
+        const hint=previous ? ` Previous pair ends at ${previous.waypoint_reference}. Check the PDF before correcting the start.` : '';
+        const warnings=[],a=key(pair.S),b=key(pair.E);
+        if(a && a===b)warnings.push(`Pair ${n}: S and E are the same waypoint ${pair.S.waypoint_reference}, creating a zero-length span.${hint}`);
+        if(root && a && !reachable.has(a))warnings.push(`Pair ${n}: starting waypoint ${pair.S.waypoint_reference} has no entered connection to the transformer.${hint} A branch may start at any point already connected to the transformer.`);
+        return warnings;
+    }
     function updateRowHints() {
         if (!rowForm) return;
         const payload=rowPayload(), phase=derivePhase(payload.conductors);
@@ -466,6 +485,8 @@ function initialize(boot) {
         $('entry-phase-note').hidden=phase.complete;
         let identityError='';
         try{set(rowForm,'composite_identifier',completeWaypoint(payload.group_number,payload.row_date,payload.waypoint_reference,data.entry_settings?.two_digit_year_start ?? 2000));}catch(e){set(rowForm,'composite_identifier','');identityError=e.message;}
+        const topology=topologyWarnings(payload), warning=$('entry-topology-warning');
+        if(warning){warning.hidden=topology.length===0;warning.textContent=topology.join(' ');}
         const matches=waypointMatches(payload,data.waypoints);
         const firstPair=Math.min(Number(payload.pair_number),...(active()?.rows || []).map(row=>Number(row.pair_number)));
         const firstStart=payload.designation==='S' && Number(payload.pair_number)===firstPair;
@@ -515,7 +536,7 @@ function initialize(boot) {
         $('entry-saved-count').textContent=`${rows.length} rows`;
         $('entry-row-panel')?.classList.toggle('entry-row-panel-disabled',!t);
         $('entry-review-link').href=`${boot.base_url}/review${t ? '?transformer_id='+t.id : ''}`;
-        $('entry-saved-rows').innerHTML=rows.length ? '<div class="table-wrap"><table class="table entry-saved-table"><thead><tr><th>Pair / S/E</th><th>Page / entry</th><th>Waypoint</th><th>Phase / conductors</th><th>Equipment</th><th>Entered counts</th><th>Int</th><th></th></tr></thead><tbody>'+rows.map(row=>`<tr class="${row.designation==='S' ? 'entry-pair-start' : ''}"><td>${row.pair_number} / <strong>${row.designation}</strong>${rows.filter(r=>r.pair_number===row.pair_number).length===1 ? '<small class="entry-pair-incomplete">Incomplete pair</small>' : ''}</td><td>${row.source_page ?? '—'} / ${esc(row.source_row || '—')}</td><td>${esc(row.composite_identifier || 'Legacy identity')}<small>GPS ${esc(row.waypoint_reference || '')} ? ${esc(row.group_number)} ? ${esc(displayDate(row.row_date))} ? source #${esc(row.gpx_source_id || 'unresolved')}</small></td><td>${derivePhase(row.conductors).display || '—'}<small>${['R','Y','B','N'].map(k=>`${k}: ${esc(row.conductors[k] ?? '')}`).join(' · ')}</small></td><td>${esc(row.equipment_type || '—')} / ${esc(row.pole_class || '—')}<small>${row.pole_height ?? '—'} ${esc(row.pole_height_unit || '(unit unconfirmed)')}</small></td><td>${esc(consumerSummary(row))}<small>Total: ${consumerTotal(row.consumers)}</small></td><td>${row.intersection ? '✓' : '—'}</td><td>${editable() ? `<button type="button" class="btn btn-sm btn-light" data-entry-edit="${row.id}">Edit</button> <button type="button" class="btn btn-sm btn-light" data-entry-delete="${row.id}">Delete</button>` : ''}</td></tr>`).join('')+'</tbody></table></div>' : '<p class="entry-empty">Save the transformer header, then enter its first S row.</p>';
+        $('entry-saved-rows').innerHTML=rows.length ? '<div class="table-wrap"><table class="table entry-saved-table"><thead><tr><th>Pair / S/E</th><th>Page / entry</th><th>Waypoint</th><th>Phase / conductors</th><th>Equipment</th><th>Entered counts</th><th>Int</th><th></th></tr></thead><tbody>'+rows.map(row=>`<tr class="${row.designation==='S' ? 'entry-pair-start' : ''}"><td>${row.pair_number} / <strong>${row.designation}</strong>${(data.issues || []).filter(issue=>issue.entry_row_id===row.id && ['entry_same_waypoint','entry_disconnected_start'].includes(issue.code)).map(issue=>`<small class="entry-pair-incomplete">${esc(issue.message)}</small>`).join('')}${rows.filter(r=>r.pair_number===row.pair_number).length===1 ? '<small class="entry-pair-incomplete">Incomplete pair</small>' : ''}</td><td>${row.source_page ?? '—'} / ${esc(row.source_row || '—')}</td><td>${esc(row.composite_identifier || 'Legacy identity')}<small>GPS ${esc(row.waypoint_reference || '')} ? ${esc(row.group_number)} ? ${esc(displayDate(row.row_date))} ? source #${esc(row.gpx_source_id || 'unresolved')}</small></td><td>${derivePhase(row.conductors).display || '—'}<small>${['R','Y','B','N'].map(k=>`${k}: ${esc(row.conductors[k] ?? '')}`).join(' · ')}</small></td><td>${esc(row.equipment_type || '—')} / ${esc(row.pole_class || '—')}<small>${row.pole_height ?? '—'} ${esc(row.pole_height_unit || '(unit unconfirmed)')}</small></td><td>${esc(consumerSummary(row))}<small>Total: ${consumerTotal(row.consumers)}</small></td><td>${row.intersection ? '✓' : '—'}</td><td>${editable() ? `<button type="button" class="btn btn-sm btn-light" data-entry-edit="${row.id}">Edit</button> <button type="button" class="btn btn-sm btn-light" data-entry-delete="${row.id}">Delete</button>` : ''}</td></tr>`).join('')+'</tbody></table></div>' : '<p class="entry-empty">Save the transformer header, then enter its first S row.</p>';
         rows.forEach((row,index)=>{
             const height=$('entry-saved-rows').querySelector(`tbody tr:nth-child(${index+1}) td:nth-child(5) small`);
             if(height)height.textContent=`${heightInFeet(row.pole_height,row.pole_height_unit) ?? '—'} ft`;

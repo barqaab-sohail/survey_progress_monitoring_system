@@ -316,6 +316,66 @@ class _SurveyHomeState extends State<SurveyHome> {
     }
   }
 
+  Future<void> deleteSurvey(SurveyRecord record) async {
+    if (controller.syncing || controller.busy) {
+      notice('Wait for sync to finish before deleting a survey.');
+      return;
+    }
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete this survey from this phone?'),
+        content: const Text(
+          'This permanently removes the unsynced survey and its attached photos from this phone. A synced survey cannot be deleted here.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep survey'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete survey'),
+          ),
+        ],
+      ),
+    );
+    if (accepted != true || !mounted) return;
+    try {
+      await controller.deleteUnsentSurvey(record);
+      notice('Survey and its local photos were deleted.');
+    } catch (error) {
+      notice(error.toString());
+    }
+  }
+
+  Future<void> editSurvey(SurveyRecord record) async {
+    if (record.revision > 0 || record.state == 'synced') {
+      notice('Synced surveys cannot be edited on this phone.');
+      return;
+    }
+    if (record.state == 'conflict') {
+      notice(
+        'This survey conflicts with a newer server revision. Ask the administrator to reconcile it before editing.',
+      );
+      return;
+    }
+    if (record.state == 'queued' || record.outbound != null) {
+      if (controller.syncing || controller.busy) {
+        notice('Wait for sync to finish before editing this survey.');
+        return;
+      }
+      try {
+        await controller.editWaitingSurvey(record);
+      } catch (error) {
+        notice(error.toString());
+        return;
+      }
+    }
+    final current = await controller.store.survey(record.scope, record.id);
+    if (current != null && mounted) await open(current);
+  }
+
   Future<void> create() async {
     if (opening || controller.busy) return;
     final eligible = controller.teams
@@ -646,7 +706,30 @@ class _SurveyHomeState extends State<SurveyHome> {
                       ],
                     ),
                   ),
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: record.revision == 0 && record.state != 'synced'
+                      ? PopupMenuButton<String>(
+                          tooltip: 'Survey actions',
+                          enabled: !controller.syncing && !controller.busy,
+                          onSelected: (value) {
+                            if (value == 'edit') {
+                              unawaited(editSurvey(record));
+                            } else {
+                              unawaited(deleteSurvey(record));
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            if (record.state != 'conflict')
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: Text('Edit survey'),
+                              ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Delete survey'),
+                            ),
+                          ],
+                        )
+                      : const Icon(Icons.chevron_right),
                 ),
               ),
             ),

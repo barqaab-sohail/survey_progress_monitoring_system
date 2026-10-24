@@ -166,6 +166,38 @@ class FieldController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> deleteUnsentSurvey(SurveyRecord record) async {
+    if (syncing || busy) {
+      throw StateError('Wait for sync to finish before changing this survey.');
+    }
+    busy = true;
+    notifyListeners();
+    try {
+      final paths = await store.deleteUnsentSurvey(record);
+      for (final path in paths) {
+        final file = File(path);
+        if (await file.exists()) await file.delete();
+      }
+    } finally {
+      busy = false;
+      await reload();
+    }
+  }
+
+  Future<void> editWaitingSurvey(SurveyRecord record) async {
+    if (syncing || busy) {
+      throw StateError('Wait for sync to finish before changing this survey.');
+    }
+    busy = true;
+    notifyListeners();
+    try {
+      await store.reopenWaitingSurvey(record);
+    } finally {
+      busy = false;
+      await reload();
+    }
+  }
+
   Future<void> refreshReference() async {
     final current = session;
     if (current == null) return;

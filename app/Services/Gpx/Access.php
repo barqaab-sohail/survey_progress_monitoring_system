@@ -38,6 +38,16 @@ class Access
             : app(FieldSurveyAccess::class)->feeders($user);
     }
 
+    public function verifiedBatches(User $user): Builder
+    {
+        Gate::authorize('gpx-calculator.use');
+
+        return \App\Models\Mdb\SurveyBatch::query()->where('status', 'approved')->whereNotNull('approved_revision_id')
+            ->where(fn (Builder $q) => $q->where('staged_workflow', false)->orWhere('survey_status', 'approved'))
+            ->whereIn('project_id', $this->projects($user)->select('id'))
+            ->whereIn('feeder_id', $this->feeders($user)->select('feeders.id'));
+    }
+
     public function visible(User $user): Builder
     {
         Gate::authorize('gpx-calculator.use');

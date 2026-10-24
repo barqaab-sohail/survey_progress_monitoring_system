@@ -91,3 +91,10 @@ All state-changing requests use the existing web/CSRF stack and rate limits. Inp
 - Applied the new migration to the application database and refreshed the route/config caches. No existing migrations or feeder length/progress records were changed. The temporary browser server/database and baseline worktree were removed after verification.
 
 Deployment elsewhere: apply the new migration and clear/rebuild Laravel route/config caches using the site's normal deployment workflow. PHP DOM and ZIP must be available. Enable SQLite for test commands if it is not enabled in the CLI configuration; the test suite refuses to reset a non-memory database.
+
+
+## Verified transformer calculations
+
+The calculator index offers an approved survey selector (project, feeder, batch and revision) and its transformer selector. No upload is needed. The server checks access to the active project and feeder, current approval, revision number, snapshot checksum, complete S/E pairs, matching stored GPX coordinates and connectivity. The first S/E pair locates the transformer at the first E point and contributes no line length. Remaining S/E pairs define spans and branches; unrelated points are excluded.
+
+A saved calculation retains its approved revision and checksum. Its connections are fixed in previews and exports, including when a client submits altered sequence fields. Elevation and sag default to off and can be enabled independently using the existing calculation options. Sag requires a value in metres; missing elevations require an explicit fallback or exclusion choice. KMZ includes survey provenance and the calculation settings. A later approval requires a new calculation; previous calculations remain labelled with their original revision.

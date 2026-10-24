@@ -1,0 +1,28 @@
+{
+  "inputs": [
+    "C:\\Users\\sohai\\Downloads\\transformer_11140223003_batch-17_r63.json",
+    "C:\\Users\\sohai\\Downloads\\H_081026_07 (1).gpx"
+  ],
+  "transformer": "11140223003",
+  "gpx_waypoints": 101,
+  "used_waypoints": 12,
+  "method": "Haversine, mean Earth radius 6371008.8 m; horizontal straight spans, no sag. Pair 1 excluded because transformer is located at first E waypoint 027 per JSON header.",
+  "issue": "Pair 6 (section 48) is S032/E032; likely S031/E032, unconfirmed. PDF source 33, page 3, Entry 11.",
+  "results": {
+    "as_recorded": {
+      "total_m": 413.493,
+      "source_connected_m": 341.398,
+      "disconnected": [
+        "032",
+        "033"
+      ],
+      "spans": 11
+    },
+    "candidate_031_to_032": {
+      "total_m": 463.916,
+      "source_connected_m": 463.916,
+      "disconnected": [],
+      "spans": 11
+    }
+  }
+}

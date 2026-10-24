@@ -108,7 +108,9 @@ class LocalStore {
     );
     if (rows.isEmpty) return;
     final stored = decode(rows.first);
-    if (stored.outbound != null ||
+    if (stored.revision > 0 ||
+        stored.state == 'synced' ||
+        stored.outbound != null ||
         stored.state == 'conflict' ||
         stored.revision != record.revision) {
       throw StateError(
@@ -245,20 +247,62 @@ class LocalStore {
     });
   }
 
-  Future<void> deleteDraft(SurveyRecord record) async {
-    if (record.revision != 0 || record.outbound != null) {
-      throw StateError('Only an unsubmitted local draft can be deleted.');
-    }
-    await database.delete(
-      'surveys',
-      where: 'scope = ? AND uuid = ?',
-      whereArgs: [record.scope, record.id],
-    );
-    await database.delete(
-      'attachments',
-      where: 'scope = ? AND survey_uuid = ?',
-      whereArgs: [record.scope, record.id],
-    );
+  Future<List<String>> deleteUnsentSurvey(SurveyRecord record) async {
+    return database.transaction((transaction) async {
+      final rows = await transaction.query(
+        'surveys',
+        where: 'scope = ? AND uuid = ?',
+        whereArgs: [record.scope, record.id],
+      );
+      if (rows.isEmpty) return <String>[];
+      final latest = decode(rows.first);
+      if (latest.revision > 0 || latest.state == 'synced') {
+        throw StateError('A synced survey cannot be deleted.');
+      }
+      final attachments = await transaction.query(
+        'attachments',
+        columns: ['path'],
+        where: 'scope = ? AND survey_uuid = ?',
+        whereArgs: [record.scope, record.id],
+      );
+      await transaction.delete(
+        'surveys',
+        where: 'scope = ? AND uuid = ?',
+        whereArgs: [record.scope, record.id],
+      );
+      await transaction.delete(
+        'attachments',
+        where: 'scope = ? AND survey_uuid = ?',
+        whereArgs: [record.scope, record.id],
+      );
+      return attachments.map((row) => row['path'] as String).toList();
+    });
+  }
+
+  Future<void> reopenWaitingSurvey(SurveyRecord record) async {
+    await database.transaction((transaction) async {
+      final rows = await transaction.query(
+        'surveys',
+        where: 'scope = ? AND uuid = ?',
+        whereArgs: [record.scope, record.id],
+      );
+      if (rows.isEmpty) throw StateError('The waiting survey is missing.');
+      final latest = decode(rows.first);
+      if (latest.revision > 0 || latest.state == 'synced') {
+        throw StateError('A synced survey cannot be edited.');
+      }
+      if (!['queued', 'error'].contains(latest.state) ||
+          latest.outbound == null) {
+        throw StateError(
+          'This survey has no pending submission to edit. Reload it.',
+        );
+      }
+      latest.outbound = null;
+      latest.state = 'draft';
+      latest.error = '';
+      latest.data['status'] = 'draft';
+      await put(transaction, latest);
+    });
   }
 
   Future<List<Json>> attachments(String scope, String surveyId) async =>

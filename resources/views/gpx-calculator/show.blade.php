@@ -4,6 +4,9 @@
 @section('content')
 @php($settings = array_replace($calculation->settings, old()))
 <div class="page-head"><div><h1>GPX Length Calculator &amp; KMZ Export</h1><p>{{ $calculation->file_name }} &middot; {{ count($calculation->source_data['points']) }} points &middot; {{ count($calculation->source_data['groups']) }} source groups</p></div><a class="btn btn-light" href="{{ route('gpx-calculator.index') }}">All calculations / upload</a></div>
+@if(!empty($calculation->source_data['survey']['verified']))
+<div class="card gpx-panel"><strong>Verified transformer {{ $calculation->source_data['survey']['transformer_code'] }}</strong><p>Batch {{ $calculation->source_data['survey']['batch_id'] }} ? Approved revision {{ $calculation->source_data['survey']['revision'] }}. This calculation retains that revision's coordinates and connections. Create a new calculation to use a later approval.</p></div>
+@endif
 <form id="gpx-calculator" method="POST" action="{{ route('gpx-calculator.update', $calculation) }}" data-preview-url="{{ route('gpx-calculator.preview', $calculation) }}">
     @csrf
     @foreach(['include_elevation', 'include_sag', 'connections_confirmed', 'supports_confirmed'] as $booleanField)
@@ -11,11 +14,14 @@
     @endforeach
     <section class="card gpx-panel">
         <h2>1. Review connectivity and span endpoints</h2>
+        @if(!empty($calculation->source_data['survey']['verified']))
+        <p>Connections below come from the approved S/E records and are fixed for this calculation. Elevation and sag remain optional. To change a connection, correct and reverify the survey, then create a new calculation.</p>
+        @endif
         <p>Each line below defines one separate chain or branch using point IDs, for example <code>p1, p2, p3</code>. Consecutive IDs define spans. A branch can start at a shared support: <code>p2, p4</code> on a new line. Define shared spans once.</p>
         <p>Without explicit sequences, only adjacent points within the same GPX route or track segment are connected. Standalone waypoints remain unconnected. Custom route/track sequences must stay in the same segment and original order; omitted intermediate samples do not create spans.</p>
         <label for="span-sequences">Span sequences (one chain or branch per line)</label>
-        <textarea id="span-sequences" name="span_sequences" rows="5" maxlength="150000" spellcheck="false" placeholder="p1, p2, p3&#10;p2, p4">{{ $settings['span_sequences'] ?? '' }}</textarea>
-        <div class="actions"><button class="btn btn-light" type="button" id="gpx-copy-segments">Copy route/track sequences for review</button><small>Standalone waypoints are never auto-sequenced.</small></div>
+        <textarea id="span-sequences" name="span_sequences" rows="5" maxlength="150000" spellcheck="false" @readonly(!empty($calculation->source_data['survey']['verified'])) placeholder="p1, p2, p3&#10;p2, p4">{{ $settings['span_sequences'] ?? '' }}</textarea>
+        <div class="actions"><button class="btn btn-light" type="button" id="gpx-copy-segments" @disabled(!empty($calculation->source_data['survey']['verified']))>Copy route/track sequences for review</button><small>Standalone waypoints are never auto-sequenced.</small></div>
         <label class="gpx-check"><input type="checkbox" name="connections_confirmed" value="1" @checked($settings['connections_confirmed'] ?? false)> I have checked these sequences, including branch connections and separate segments.</label>
         <label class="gpx-check"><input type="checkbox" name="supports_confirmed" value="1" @checked($settings['supports_confirmed'] ?? false)> Every consecutive pair is an actual support-to-support span; intermediate GPS samples have been removed from these sequences.</label>
         <p class="muted">Sag is available only after both confirmations. Editing sequences clears the confirmations and turns sag off.</p>

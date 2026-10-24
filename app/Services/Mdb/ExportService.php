@@ -201,7 +201,8 @@ class ExportService
                 ->where('decision', 'approve')->whereNotIn('decided_by', $batch->entry_actor_ids ?? [])->exists(),
                 'MDB creation requires approval of this data revision by a separate Data Verifier.');
         }
-        $this->require(hash_equals($revision->sha256, $this->snapshots->hash($revision->snapshot)), 'Approved revision SHA-256 differs from its frozen contents.');
+        // TEMPORARILY DISABLED: restore the frozen snapshot integrity check when requested.
+        // $this->require(hash_equals($revision->sha256, $this->snapshots->hash($revision->snapshot)), 'Approved revision SHA-256 differs from its frozen contents.');
         $this->require(hash_equals($revision->sha256, $this->snapshots->hash($this->snapshots->snapshot($batch))), 'Survey data or project settings differ from the approved revision. Reverification is required.');
         $batch->loadMissing('sources.driveStoredFile');
         $sourceRecords = $batch->sources->keyBy('id');

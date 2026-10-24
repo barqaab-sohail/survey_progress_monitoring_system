@@ -235,6 +235,9 @@ class EntryService
                     $headerIssue('missing_operator_rows', 'Enter at least one complete S/E pair for this transformer.');
                 }
             }
+            foreach (app(EntryTopology::class)->issues($transformerData['entry_rows'] ?? []) as $topologyIssue) {
+                $add($topologyIssue['code'], $topologyIssue['message'], (object) $topologyIssue['row']);
+            }
             $firstPair = collect($transformerData['entry_rows'] ?? [])->min('pair_number');
             foreach (collect($transformerData['entry_rows'] ?? [])->map(fn ($row) => (object) $row)->groupBy('pair_number') as $number => $rows) {
                 if ($rows->count() !== 2 || $rows->pluck('designation')->sort()->values()->all() !== ['E', 'S']) {

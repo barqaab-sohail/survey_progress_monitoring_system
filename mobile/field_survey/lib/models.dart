@@ -139,7 +139,11 @@ class SurveyRecord {
   List<Json> get rows => (data['rows'] as List).cast<Json>();
   List<Json> get solar => (data['solar'] as List).cast<Json>();
   Json get header => data['header'] as Json;
-  bool get locked => outbound != null || state == 'conflict';
+  bool get locked =>
+      outbound != null ||
+      state == 'conflict' ||
+      state == 'synced' ||
+      revision > 0;
   SurveyRecord clone() => SurveyRecord(
     scope: scope,
     data: copyJson(data),

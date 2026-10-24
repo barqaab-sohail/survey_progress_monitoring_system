@@ -48,7 +48,7 @@ class KmzExporter
             $add($line, 'width', '3');
         }
         $data = $add($document, 'ExtendedData');
-        foreach (['settings' => $settings, 'totals' => array_diff_key($result, array_flip(['spans', 'warnings', 'details'])), 'warnings' => $result['warnings']] as $key => $value) {
+        foreach (['survey' => $source['survey'] ?? null, 'settings' => $settings, 'totals' => array_diff_key($result, array_flip(['spans', 'warnings', 'details'])), 'warnings' => $result['warnings']] as $key => $value) {
             $field = $add($data, 'Data');
             $field->setAttribute('name', $key);
             $add($field, 'value', json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE));
