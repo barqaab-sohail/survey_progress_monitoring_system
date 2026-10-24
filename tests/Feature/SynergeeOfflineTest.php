@@ -8,6 +8,7 @@ use App\Models\Division;
 use App\Models\Feeder;
 use App\Models\GridStation;
 use App\Models\Mdb\Revision;
+use App\Models\Mdb\SourceFile;
 use App\Models\Mdb\SurveyBatch;
 use App\Models\Mdb\Template;
 use App\Models\Mdb\VerificationDecision;
@@ -56,7 +57,11 @@ class SynergeeOfflineTest extends TestCase
         foreach ($snapshot['sources'] as &$source) {
             $source['disk'] = 'local';
             $source['path'] = 'fixture/'.$source['original_name'];
-            Storage::disk('local')->put($source['path'], $source['kind'] === 'gpx' ? SynergeeSnapshot::gpx() : '%PDF fixture');
+            $bytes = $source['kind'] === 'gpx' ? SynergeeSnapshot::gpx() : '%PDF fixture';
+            Storage::disk('local')->put($source['path'], $bytes);
+            $source += ['bytes' => strlen($bytes), 'mime' => $source['kind'] === 'gpx' ? 'application/gpx+xml' : 'application/pdf',
+                'version' => 1, 'parent_source_id' => null, 'uploaded_by' => $admin->id, 'metadata' => $source['metadata'] ?? []];
+            SourceFile::create($source + ['batch_id' => $batch->id]);
         }
         unset($source);
         $revision = Revision::create(['batch_id' => $batch->id, 'number' => 1, 'snapshot' => $snapshot,

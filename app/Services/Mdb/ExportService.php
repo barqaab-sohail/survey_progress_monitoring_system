@@ -5,10 +5,12 @@ namespace App\Services\Mdb;
 use App\Jobs\Mdb\GenerateMdbExport;
 use App\Models\Mdb\ExportJob;
 use App\Models\Mdb\Revision;
+use App\Models\Mdb\SourceFile;
 use App\Models\Mdb\SurveyBatch;
 use App\Models\Mdb\Template;
 use App\Models\User;
 use App\Services\AuditService;
+use App\Services\DriveStorage\FileStorage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
@@ -201,19 +203,28 @@ class ExportService
         }
         $this->require(hash_equals($revision->sha256, $this->snapshots->hash($revision->snapshot)), 'Approved revision SHA-256 differs from its frozen contents.');
         $this->require(hash_equals($revision->sha256, $this->snapshots->hash($this->snapshots->snapshot($batch))), 'Survey data or project settings differ from the approved revision. Reverification is required.');
+        $batch->loadMissing('sources.driveStoredFile');
+        $sourceRecords = $batch->sources->keyBy('id');
         foreach ($revision->snapshot['sources'] ?? [] as $source) {
-            $disk = Storage::disk($source['disk']);
-            $this->require($disk->exists($source['path']), 'An approved original source file is no longer retrievable.');
-            $stream = $disk->readStream($source['path']);
-            $this->require(is_resource($stream), 'An approved original source file could not be read.');
+            $record = $sourceRecords->get($source['id'] ?? null);
+            $this->require($record instanceof SourceFile && $record->batch_id === $batch->id
+                && $record->disk === $source['disk'] && $record->path === $source['path']
+                && $record->sha256 === $source['sha256'],
+                'An approved original source record is missing or differs from the frozen revision. Reverify the survey.');
             try {
-                $context = hash_init('sha256');
-                hash_update_stream($context, $stream);
-                $actual = hash_final($context);
-            } finally {
-                fclose($stream);
+                app(FileStorage::class)->withPath(
+                    $record->driveStoredFile, $source['disk'], $source['path'],
+                    function (string $path) use ($source): void {
+                        $this->require(is_file($path), 'An approved original source file is no longer retrievable.');
+                        $actual = hash_file('sha256', $path);
+                        $this->require(is_string($actual) && hash_equals($source['sha256'], $actual),
+                            'Approved original source SHA-256 differs: '.$source['original_name'].'.');
+                    });
+            } catch (ValidationException $exception) {
+                throw $exception;
+            } catch (Throwable) {
+                $this->require(false, 'An approved original source file could not be retrieved from private storage. Check its Google Drive connection and retry.');
             }
-            $this->require(hash_equals($source['sha256'], $actual), 'Approved original source SHA-256 differs: '.$source['original_name'].'.');
         }
 
         return $revision;

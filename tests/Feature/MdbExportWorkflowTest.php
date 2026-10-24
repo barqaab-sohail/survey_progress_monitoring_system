@@ -6,6 +6,8 @@ use App\Enums\UserRole;
 use App\Jobs\Mdb\GenerateMdbExport;
 use App\Models\Circle;
 use App\Models\Division;
+use App\Models\DriveStorageConnection;
+use App\Models\DriveStoredFile;
 use App\Models\Feeder;
 use App\Models\GridStation;
 use App\Models\Mdb\SourceFile;
@@ -15,6 +17,7 @@ use App\Models\Project;
 use App\Models\SubDivision;
 use App\Models\SurveyTeam;
 use App\Models\User;
+use App\Services\DriveStorage\DriveClient;
 use App\Services\Mdb\DisabledExporter;
 use App\Services\Mdb\Exporter;
 use App\Services\Mdb\ExportPayloadBuilder;
@@ -183,6 +186,29 @@ class MdbExportWorkflowTest extends TestCase
         Storage::disk('local')->put('fixture/source.gpx', '<gpx altered="true" />');
         $this->expectException(ValidationException::class);
         app(ExportService::class)->request($this->batch, $this->actor);
+    }
+
+    public function test_approved_source_archived_to_drive_is_verified_after_local_staging_cleanup(): void
+    {
+        $source = $this->batch->sources()->firstOrFail();
+        $bytes = Storage::disk('local')->get($source->path);
+        DriveStorageConnection::create(['token' => ['access_token' => 'fixture'], 'account_id' => 'drive-account',
+            'account_email' => 'storage@example.test', 'connected_by' => $this->actor->id]);
+        $archive = DriveStoredFile::create(['uuid' => (string) Str::uuid(), 'drive_file_id' => 'drive-id-12345',
+            'original_name' => $source->original_name, 'mime' => $source->mime, 'bytes' => strlen($bytes),
+            'sha256' => hash('sha256', $bytes), 'md5' => md5($bytes), 'local_disk' => 'local',
+            'local_path' => 'drive-staging/source.gpx', 'account_id' => 'drive-account', 'status' => 'uploaded',
+            'context' => []]);
+        $source->update(['drive_stored_file_id' => $archive->id]);
+        Storage::disk('local')->delete($source->path);
+        Storage::disk('local')->delete($archive->local_path);
+
+        $this->mock(DriveClient::class)->shouldReceive('download')->once()->with(\Mockery::on(fn ($file) => $file->id === $archive->id), \Mockery::type('string'))
+            ->andReturnUsing(fn ($file, $path) => file_put_contents($path, $bytes));
+
+        $this->batch->forceFill(['revision' => $this->batch->approvedRevision->number])->save();
+        $this->batch->refresh();
+        $this->assertSame($this->batch->approved_revision_id, app(ExportService::class)->assertApproved($this->batch)->id);
     }
 
     public function test_source_tampering_after_queueing_marks_failure_before_worker_execution(): void
