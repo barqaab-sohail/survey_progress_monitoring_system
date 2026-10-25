@@ -5,6 +5,15 @@ export function transformerCodeKey(code) {
     return String(code ?? '').toLowerCase().replace(/[\u2010-\u2014\u2212]/g,'-').replace(/\s+/gu,'');
 }
 
+export function registeredStartingPole(transformer) {
+    const point = transformer?.header?.starting_pole_coordinates;
+    if (point?.version !== 1 || point.source !== 'registered_transformer'
+        || !point.registered_transformer_id || point.registered_transformer_id !== transformer.header.registered_transformer_id) return null;
+    const latitude = point.latitude, longitude = point.longitude;
+    return typeof latitude === 'number' && typeof longitude === 'number' && Number.isFinite(latitude) && Number.isFinite(longitude)
+        && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180 && (latitude !== 0 || longitude !== 0) ? point : null;
+}
+
 export function isoDate(value, yearStart = null) {
     yearStart ??= 2000;
     const compact = /^(\d{2})(\d{2})(\d{2})$/.exec(value || '');
@@ -499,7 +508,12 @@ function initialize(boot) {
             ? 'This GPS number has more than one possible GPX match. Select the file containing the surveyed point. The PDF date stays unchanged.'
             : 'Choose the GPX file containing this surveyed GPS point.';
         $('entry-waypoint-status').textContent=!payload.waypoint_reference ? 'Text references keep leading zeros.' : matches.length===1 ? 'Matched to GPX.' : matches.length===0 ? 'Missing from GPX — draft can still be saved.' : 'Multiple GPX matches — choose source.';
-        if(firstStart && payload.waypoint_reference)$('entry-waypoint-status').textContent='First pair only: S uses the first E point’s GPX coordinates and elevation. Save the first E row to resolve both points.';
+        if(firstStart && payload.waypoint_reference){
+            const registered=registeredStartingPole(active());
+            $('entry-waypoint-status').textContent=registered
+                ? `First S uses registered transformer coordinates: latitude ${registered.latitude}, longitude ${registered.longitude}. First E keeps its own GPX point.`
+                : 'First pair only: S uses the first E point’s GPX coordinates and elevation. Save the first E row to resolve both points.';
+        }
         if(identityError)$('entry-waypoint-status').textContent=identityError;
         else if(!firstStart && matches.length===0 && namedPoints.length)$('entry-waypoint-status').textContent='GPS number exists in another GPX source. Select the correct GPX file below.';
         else if(!firstStart && matches.length===1){
@@ -529,7 +543,10 @@ function initialize(boot) {
     function renderSaved() {
         const t=active(), rows=t?.rows || [];
         const point=data.waypoints.find(point=>point.id===t?.source_waypoint_id);
-        if($('entry-transformer-location'))$('entry-transformer-location').textContent=point
+        const registered=registeredStartingPole(t);
+        if($('entry-transformer-location'))$('entry-transformer-location').textContent=registered
+            ? `First S: registered transformer latitude ${registered.latitude}, longitude ${registered.longitude}. First E and all later poles use their own GPX points.`
+            : point
             ? `Transformer location: GPS ${point.name}, selected from the first E row. Only the first S/E pair shares these coordinates and elevation.`
             : 'The first S/E pair uses the first E row’s GPX coordinates and elevation for both points. All later pairs use their own GPX points.';
 

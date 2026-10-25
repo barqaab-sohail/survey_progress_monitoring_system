@@ -18,7 +18,7 @@ export function paperHeader(fields, cell) {
             ${entry('code','Transformer code',5)}${entry('header.inspector','Inspectors',3)}${entry('header.location','Location',4)}
             ${entry('header.feeder_identifier','Feeder code',2)}${entry('header.division','Division',4)}${entry('header.subdivision','Sub-Division',4)}${entry('header.subdivision_code','Sub Division Code',2)}
         </div><div class="paper-header-pv-label">PV Solar / Net-Metering Data</div></div>
-        <div class="paper-reference-fields">${['header.team_group','header.client_transformer_information','source_pdf_id','source_page','transformer_gps'].map(path=>{
+        <div class="paper-reference-fields">${['header.team_group','header.client_transformer_information','source_pdf_id','source_page','transformer_gps','header.starting_pole_coordinates.latitude','header.starting_pole_coordinates.longitude'].map(path=>{
             const field=byPath.get(path);return field ? `<div><span class="paper-label">${escapeHtml(field.label)}</span>${cell(field)}</div>` : '';
         }).join('')}</div>`;
 }

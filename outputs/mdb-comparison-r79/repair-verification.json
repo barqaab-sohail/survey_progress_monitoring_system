@@ -1,0 +1,19 @@
+{
+  "source": "r79 JSON unchanged",
+  "output_sha256": "a1af768bae5206b0e9c1bb17acc44fbd0428ec64016ebfee6a4a686eea56aeb9",
+  "coordinates": {
+    "populated": 14,
+    "total": 14
+  },
+  "lengths": {
+    "populated": 13,
+    "total": 13,
+    "minimum": 0,
+    "maximum": 74.6700362654095
+  },
+  "configurations": {
+    "populated": 13,
+    "total": 13
+  },
+  "remaining": "Department-confirmed transformer type and demand rates/power factors. Native SynerGEE acceptance pending."
+}

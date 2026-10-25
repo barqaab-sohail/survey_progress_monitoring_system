@@ -63,6 +63,37 @@ class MdbSurveyIdentityTest extends TestCase
         $this->assertNotSame($network['sections'][0]['start_waypoint_id'], $second['sections'][0]['start_waypoint_id']);
     }
 
+    public function test_registered_coordinates_apply_only_to_first_s_and_keep_all_gpx_evidence_intact(): void
+    {
+        [$transformer, $points] = $this->firstPairFixture();
+        $transformer['header'] = ['registered_transformer_id' => 72, 'starting_pole_coordinates' => ['version' => 1,
+            'source' => 'registered_transformer', 'registered_transformer_id' => 72, 'latitude' => 34.05, 'longitude' => 73.15, 'elevation' => null]];
+        $before = $points;
+        $identity = new SurveyWaypoint;
+        $network = $identity->network($transformer, $points);
+        $start = $network['points'][$network['sections'][0]['start_waypoint_id']];
+        $end = $network['points'][$network['sections'][0]['end_waypoint_id']];
+        $this->assertSame(34.05, $start['latitude']);
+        $this->assertSame(73.15, $start['longitude']);
+        $this->assertNull($start['elevation']);
+        $this->assertNull($start['source_file_id']);
+        $this->assertArrayNotHasKey('gpx_waypoint_id', $start);
+        $this->assertSame($start['id'], $network['root']);
+        $this->assertSame(34.1, $end['latitude']);
+        $this->assertSame(1192.2, $end['elevation']);
+        $this->assertSame($transformer['sections'][1], $network['sections'][1]);
+        $this->assertSame($before, array_intersect_key($network['points'], $before));
+        $this->assertSame($before, $points);
+        // Calling again on modelling copies is deterministic and does not need a live database.
+        $this->assertSame($network, $identity->network($transformer, $points));
+        $other = $transformer;
+        $other['id'] = 6;
+        $other['header']['starting_pole_coordinates']['latitude'] = 34.06;
+        $second = $identity->network($other, $network['points']);
+        $this->assertSame(34.06, $second['points'][$second['sections'][0]['start_waypoint_id']]['latitude']);
+        $this->assertNotSame($network['root'], $second['root']);
+    }
+
     public function test_first_e_must_exist_be_unambiguous_and_have_valid_coordinates_without_using_a_later_e(): void
     {
         [$transformer, $points] = $this->firstPairFixture();

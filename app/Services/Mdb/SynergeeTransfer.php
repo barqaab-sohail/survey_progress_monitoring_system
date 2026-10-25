@@ -146,7 +146,9 @@ class SynergeeTransfer
         foreach ($snapshot['transformers'] as &$transformer) {
             $transformer = app(SurveyWaypoint::class)->firstPairCoordinates($transformer, $snapshot['waypoints']);
             if (app(SurveyWaypoint::class)->firstPair($transformer)['start'] && ! empty($transformer['source_waypoint_id'])) {
-                $coordinateWarnings[] = ['message' => $transformer['code'].': only the first S/E pair shares the first E point\'s GPX coordinates and recorded elevation. Later pairs use their own GPX points.'];
+                $coordinateWarnings[] = ['message' => $transformer['code'].(app(StartingPoleCoordinates::class)->registered($transformer)
+                    ? ': the first S uses the captured registered transformer coordinates; the first E and later pairs retain their own GPX coordinates.'
+                    : ': only the first S/E pair shares the first E point\'s GPX coordinates and recorded elevation. Later pairs use their own GPX points.')];
             }
             foreach ($transformer['sections'] as &$section) {
                 foreach ($section['consumers'] as &$consumer) {
@@ -214,7 +216,8 @@ class SynergeeTransfer
             }
         }
 
-        return ['package' => $package, 'payload' => $payload ?? null, 'issues' => $errors, 'warnings' => $warnings];
+        return ['package' => $package, 'payload' => $payload ?? null, 'issues' => $errors, 'warnings' => $warnings,
+            'modelReadiness' => $payload ? app(ModelReadiness::class)->inspect($payload) : null];
     }
 
     public function generate(array $package): string

@@ -1476,6 +1476,108 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertContains('missing_first_e_coordinates', array_column(app(EntryService::class)->issues($this->batch->fresh()), 'code'));
     }
 
+    private function selectTransformerForStartingCoordinates(Transformer $registered): void
+    {
+        $this->postJson(route('mdb-workflow.entry.headers.store', $this->batch), $this->headerPayload([
+            'registered_transformer_id' => $registered->id, 'header' => $this->transformer->header,
+        ]))->assertOk();
+        $this->transformer = $this->batch->transformers()->where('code', $registered->transformer_code)->firstOrFail();
+    }
+
+    public function test_new_registered_selection_uses_its_coordinates_for_first_s_and_freezes_the_choice(): void
+    {
+        $this->registeredTransformer->update(['latitude' => 30.0009876, 'longitude' => 71.0008765, 'altitude' => 123.45]);
+        $historical = $this->transformer->fresh()->getRawOriginal();
+        $originalTransformer = $this->transformer;
+        $this->selectTransformerForStartingCoordinates($this->registeredTransformer);
+        $choice = $this->transformer->header['starting_pole_coordinates'];
+        $this->assertSame('registered_transformer', $choice['source']);
+        $this->assertSame(30.0009876, $choice['latitude']);
+        $this->assertSame(71.0008765, $choice['longitude']);
+        $this->assertSame($historical, $originalTransformer->fresh()->getRawOriginal());
+        $start = $this->save(['waypoint_reference' => '998', 'gpx_source_id' => null]);
+        $this->assertSame('registered_transformer', $start->fresh()->section->original_entry['start_coordinate_source']);
+        $this->save(['designation' => 'E', 'waypoint_reference' => '010']);
+        $this->save(['pair_number' => 2, 'designation' => 'S', 'waypoint_reference' => '010']);
+        $this->save(['pair_number' => 2, 'designation' => 'E', 'waypoint_reference' => '002']);
+        $pointsBefore = $this->batch->waypoints()->get()->toArray();
+        $snapshot = app(SnapshotService::class)->snapshot($this->batch->fresh());
+        $transformer = collect($snapshot['transformers'])->firstWhere('id', $this->transformer->id);
+        $network = app(SurveyWaypoint::class)->network($transformer, array_column($snapshot['waypoints'], null, 'id'));
+        $point = $network['points'][$network['sections'][0]['start_waypoint_id']];
+        $this->assertSame(30.0009876, $point['latitude']);
+        $this->assertSame(71.0008765, $point['longitude']);
+        $this->assertSame(123.45, $point['elevation']);
+        $this->assertSame($this->batch->waypoints()->where('name', '010')->value('latitude'), $network['points'][$network['sections'][0]['end_waypoint_id']]['latitude']);
+        $this->assertNotSame($network['sections'][0]['start_waypoint_id'], $network['sections'][1]['start_waypoint_id']);
+        $this->assertSame($pointsBefore, $this->batch->waypoints()->get()->toArray());
+        $frozen = app(SnapshotService::class)->capture($this->batch->fresh(), $this->admin->id);
+        $frozenBefore = $frozen->fresh()->getRawOriginal();
+        $this->registeredTransformer->update(['latitude' => 31, 'longitude' => 72]);
+        $this->getJson(route('mdb-workflow.entry.data', $this->batch))->assertOk();
+        $review = $this->get(route('mdb-workflow.review', [$this->batch, 'transformer_id' => $this->transformer->id]))->assertOk()->assertSee('Registered transformer: latitude 30.0009876, longitude 71.0008765');
+        if (getenv('MDB_ENTRY_QA_ARTIFACTS')) {
+            if (! is_dir(base_path('tmp/mdb-entry-qa'))) {
+                mkdir(base_path('tmp/mdb-entry-qa'), 0777, true);
+            }
+            file_put_contents(base_path('tmp/mdb-entry-qa/registered-start-review.html'), $review->getContent());
+            file_put_contents(base_path('tmp/mdb-entry-qa/registered-start.html'), $this->get(route('mdb-workflow.show', [$this->batch, 'transformer_id' => $this->transformer->id]))->assertOk()->getContent());
+        }
+        $this->assertSame($choice, $this->transformer->fresh()->header['starting_pole_coordinates']);
+        $this->assertSame($frozenBefore, $frozen->fresh()->getRawOriginal());
+        $this->assertSame($snapshot, app(SnapshotService::class)->snapshot($this->batch->fresh()));
+        $reviewState = app(\App\Services\Mdb\ReviewService::class)->state($this->batch->fresh(), $this->transformer->fresh(), $this->admin->id);
+        $fields = collect($reviewState['header']['fields'])->keyBy('path');
+        $this->assertSame(30.0009876, $fields['header.starting_pole_coordinates.latitude']['value']);
+        $this->assertSame(71.0008765, $fields['header.starting_pole_coordinates.longitude']['value']);
+        $this->assertFalse($fields['header.starting_pole_coordinates.latitude']['editable']);
+        $this->assertSame('text', $reviewState['pairs'][0]['rows']['S']['fields'][5]['type']);
+    }
+
+    public function test_invalid_registered_coordinates_fall_back_to_first_e_without_overwriting_the_registry(): void
+    {
+        $this->registeredTransformer->update(['latitude' => 95, 'longitude' => 71]);
+        $before = $this->registeredTransformer->fresh()->getRawOriginal();
+        $this->selectTransformerForStartingCoordinates($this->registeredTransformer);
+        $this->assertSame('first_e_gpx', $this->transformer->header['starting_pole_coordinates']['source']);
+        $this->save(['waypoint_reference' => '998', 'gpx_source_id' => null]);
+        $this->save(['designation' => 'E', 'waypoint_reference' => '010']);
+        $snapshot = app(SnapshotService::class)->snapshot($this->batch->fresh());
+        $transformer = collect($snapshot['transformers'])->firstWhere('id', $this->transformer->id);
+        $this->assertSame($transformer['sections'][0]['end_waypoint_id'], $transformer['sections'][0]['start_waypoint_id']);
+        $this->assertSame($before, $this->registeredTransformer->fresh()->getRawOriginal());
+    }
+
+    public function test_existing_headers_do_not_opt_in_and_clients_cannot_replace_the_captured_choice(): void
+    {
+        $legacyBefore = $this->transformer->header;
+        $this->putJson(route('mdb-workflow.entry.headers.update', [$this->batch, $this->transformer]), $this->headerPayload([
+            'header' => $legacyBefore + ['starting_pole_coordinates' => ['version' => 1, 'source' => 'registered_transformer', 'latitude' => 1, 'longitude' => 2]],
+        ]))->assertOk();
+        $this->assertArrayNotHasKey('starting_pole_coordinates', $this->transformer->fresh()->header);
+        $this->selectTransformerForStartingCoordinates($this->registeredTransformer);
+        $choice = $this->transformer->header['starting_pole_coordinates'];
+        $this->putJson(route('mdb-workflow.entry.headers.update', [$this->batch, $this->transformer]), $this->headerPayload([
+            'header' => array_replace($this->transformer->header, ['starting_pole_coordinates' => ['version' => 1, 'source' => 'registered_transformer', 'latitude' => 1, 'longitude' => 2]]),
+        ]))->assertOk();
+        $this->assertSame($choice, $this->transformer->fresh()->header['starting_pole_coordinates']);
+    }
+
+    public function test_new_manual_transformer_without_a_registry_record_uses_first_e_fallback(): void
+    {
+        $this->postJson(route('mdb-workflow.entry.headers.store', $this->batch), $this->headerPayload([
+            'manual_transformer' => true, 'registered_transformer_id' => null, 'code' => 'Manual starting pole',
+            'header' => $this->transformer->header,
+        ]))->assertOk();
+        $this->transformer = $this->batch->transformers()->where('code', 'Manual starting pole')->firstOrFail();
+        $this->assertSame('first_e_gpx', $this->transformer->header['starting_pole_coordinates']['source']);
+        $this->save(['waypoint_reference' => '998', 'gpx_source_id' => null]);
+        $this->save(['designation' => 'E', 'waypoint_reference' => '010']);
+        $snapshot = app(SnapshotService::class)->snapshot($this->batch->fresh());
+        $transformer = collect($snapshot['transformers'])->firstWhere('id', $this->transformer->id);
+        $this->assertSame($transformer['sections'][0]['end_waypoint_id'], $transformer['sections'][0]['start_waypoint_id']);
+    }
+
     public function test_confirmation_and_complete_pairs_are_required_for_review_but_not_draft_entry(): void
     {
         $this->save();

@@ -92,7 +92,9 @@ class SimpleMdbGenerationSettingsTest extends TestCase
         $this->assertSame(50, $configuration->settings['frequency_hz']);
         $this->assertSame(2, $configuration->revision);
         Storage::disk('local')->assertExists($template->path);
-        $this->get(route('engineering.edit', $this->project))->assertOk()->assertSee('Use the built-in clean MDB template');
+        $response = $this->get(route('engineering.edit', $this->project))->assertOk()
+            ->assertSee('Use the built-in clean MDB template')->assertSee('MDB schema template');
+        $this->assertMatchesRegularExpression('/<option value="'.$template->id.'" selected/', $response->getContent());
     }
 
     public function test_clean_system_schema_selection_requires_simple_mode(): void

@@ -1,11 +1,36 @@
 @extends('layouts.app')
 @section('title', 'Automatic Survey Progress')
+@push('styles')
+<style>
+.survey-sync-panel{margin:16px 0}.survey-sync-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.survey-sync-spinner{display:inline-block;width:18px;height:18px;border:3px solid #d7e4f1;border-top-color:#1358a2;border-radius:50%;animation:survey-sync-spin .8s linear infinite}.survey-sync-spinner[hidden]{display:none}.survey-sync-metrics{display:flex;gap:14px 28px;flex-wrap:wrap;margin:14px 0}.survey-sync-metrics strong{display:block;font-size:1.4rem}.survey-sync-panel progress{width:100%;height:18px}.survey-sync-panel [data-sync-issues]{max-height:240px;overflow:auto}.survey-sync-error{color:#b42318}.survey-sync-success{color:#087443}@keyframes survey-sync-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.survey-sync-spinner{animation:none}}
+</style>
+@endpush
 @section('content')
 <div class="page-head"><div><h1>HAZECO Survey Progress</h1><p>Matched survey PDF and GPX files from Google Drive. Historical manual entries are retained separately.</p></div>
-@if(auth()->user()->hasRole('super_admin') && $ready)<div class="actions"><form method="POST" action="{{ route('survey-progress.drive.connect') }}">@csrf<button class="btn btn-light" @disabled(!$configured)>{{ $connected ? 'Reconnect' : 'Connect' }} survey Drive</button></form><form method="POST" action="{{ route('survey-progress.sync') }}">@csrf<button class="btn btn-primary" @disabled(!$connected)>Synchronize now</button></form></div>@endif</div>
+@if(auth()->user()->hasRole('super_admin') && $ready)<div class="actions"><form method="POST" action="{{ route('survey-progress.drive.connect') }}">@csrf<button class="btn btn-light" @disabled(!$configured)>{{ $connected ? 'Reconnect' : 'Connect' }} survey Drive</button></form><form method="POST" action="{{ route('survey-progress.sync') }}" data-survey-sync-form>@csrf<button class="btn btn-primary" data-sync-button @disabled(!$connected)>Synchronize now</button></form></div>@endif</div>
 @unless($configured)<div class="alert alert-danger">Google OAuth client credentials are not configured for survey progress. An administrator must configure the client and callback before connecting Drive.</div>@endunless
 @unless($ready)<div class="alert alert-danger">Survey progress tables are not installed. Apply the separate survey progress migration before synchronization.</div>@endunless
 @unless($connected)<div class="card">Daily synchronization needs a separate read-only Google Drive connection with access to the parent survey folder.</div>@endunless
+<p>Last successful sync: <strong data-sync-last-success>{{ $lastSuccessfulSync?->timezone('Asia/Karachi')->format('d M Y H:i:s') ?? 'Not yet recorded' }}</strong> (Asia/Karachi).</p>
+@if($syncStatus)
+<section class="card survey-sync-panel" data-survey-sync data-status-url="{{ route('survey-progress.sync-status') }}" aria-busy="false">
+    <div class="survey-sync-head"><span class="survey-sync-spinner" data-sync-spinner hidden aria-hidden="true"></span><h2 style="margin:0" data-sync-title>Synchronization status</h2></div>
+    <p data-sync-message role="status" aria-live="polite">{{ $syncStatus['run'] ? 'Task #'.$syncStatus['run']['id'].' · '.str_replace('_',' ', $syncStatus['run']['status']) : 'Ready to synchronize.' }}</p>
+    <p data-sync-health class="muted"></p>
+    <progress data-sync-progress max="100" value="0" aria-label="Survey folder scan progress"></progress>
+    <div class="survey-sync-metrics">
+        <span><strong data-sync-metric="files_scanned">{{ $syncStatus['run']['metrics']['files_scanned'] ?? 0 }}</strong>Files scanned</span>
+        <span><strong data-sync-metric="reported_transformers">{{ $syncStatus['run']['metrics']['reported_transformers'] ?? 0 }}</strong>Reported transformers</span>
+        <span><strong data-sync-metric="feeders_updated">{{ $syncStatus['run']['metrics']['feeders_updated'] ?? 0 }}</strong>Feeder records updated</span>
+        <span><strong data-sync-metric="folders_processed">{{ $syncStatus['run']['metrics']['folders_processed'] ?? 0 }}</strong>Folders checked</span>
+    </div>
+    <p class="muted">Transformer quantities follow the existing matched PDF/GPX filename rules. These are reported quantities; unique physical transformer identities are not inferred.</p>
+    <ul data-sync-issues></ul>
+    <a href="{{ route('survey-progress.index') }}" class="btn btn-light">Refresh dashboard</a>
+    <noscript><p>Tasks run through the hosting cron without this page open. JavaScript enables live progress; refresh this page to see the latest saved results.</p></noscript>
+</section>
+<script type="application/json" id="survey-sync-boot">{!! json_encode($syncStatus, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) !!}</script>
+@endif
 <div class="form-grid">
     <article class="card"><h3>Reported Surveyed Transformers</h3><strong>{{ $summary['surveyed'] }}</strong><p>Filename quantities; unique physical transformers are not independently verified. {{ $states->whereNotNull('synced_at')->count() }} of {{ $feeders->count() }} feeders have a successful scan.</p></article>
     <article class="card"><h3>Remaining transformers</h3><strong>{{ $summary['remaining'] }}</strong><p>Known baseline: {{ $summary['baseline'] }}. Overall progress: {{ $summary['percentage'] === null ? 'Baseline unavailable' : $summary['percentage'].'%' }}.</p></article>
@@ -44,3 +69,4 @@
 </details>@endif</td></tr>@endforeach
 </tbody></table></div></section>
 @endsection
+@push('scripts')<script type="module" src="{{ asset('js/survey-progress-sync.js').'?v='.filemtime(public_path('js/survey-progress-sync.js')) }}"></script>@endpush

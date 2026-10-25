@@ -91,6 +91,7 @@
                 <div class="nav-label">Administration</div>
                 <a class="nav-link {{ request()->routeIs('engineering.*') ? 'active' : '' }}" href="{{ route('engineering.index') }}">Engineering Configuration</a>
                 <a class="nav-link {{ request()->routeIs('admin.master.*') ? 'active' : '' }}" href="{{ route('admin.master.index') }}">Master Data & Import</a>
+                <a class="nav-link {{ request()->routeIs('admin.assignments.*') ? 'active' : '' }}" href="{{ route('admin.assignments.index') }}">User Assignments</a>
                 <a class="nav-link {{ request()->routeIs('admin.teams.*') ? 'active' : '' }}" href="{{ route('admin.teams.index') }}">Teams & Assignments</a>
                 <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">Users</a>
                 <a class="nav-link {{ request()->routeIs('admin.organizations.*') ? 'active' : '' }}" href="{{ route('admin.organizations.index') }}">Organizations</a>

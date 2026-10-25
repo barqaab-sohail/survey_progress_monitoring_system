@@ -3,6 +3,8 @@
 namespace App\Services\SurveyProgress;
 
 use App\Models\SurveyProgress\Connection;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -26,6 +28,9 @@ class DriveClient
                 if (empty($token['refresh_token'])) {
                     throw new RuntimeException('Reconnect Google Drive to enable unattended daily synchronization.');
                 }
+                if (! config('survey_progress.client_id') || ! config('survey_progress.client_secret')) {
+                    throw new RuntimeException('Survey progress OAuth client credentials are missing. Check the production configuration cache.');
+                }
                 $response = Http::asForm()->timeout(30)->post('https://oauth2.googleapis.com/token', [
                     'client_id' => config('survey_progress.client_id'), 'client_secret' => config('survey_progress.client_secret'),
                     'refresh_token' => $token['refresh_token'], 'grant_type' => 'refresh_token',
@@ -45,10 +50,13 @@ class DriveClient
     public function children(string $folder): array
     {
         $this->assertId($folder);
+        // A listing query can return an empty array for an inaccessible folder. Verify access
+        // first so that lost permissions never replace a previous successful count with zero.
+        $this->folder($folder);
         $files = [];
         $page = null;
         do {
-            $response = Http::withToken($this->token())->timeout(60)->retry(3, 500)->get('https://www.googleapis.com/drive/v3/files', array_filter([
+            $response = $this->get('files', array_filter([
                 'q' => "'{$folder}' in parents and trashed = false", 'pageSize' => 1000,
                 'fields' => 'nextPageToken,incompleteSearch,files(id,name,mimeType,modifiedTime,md5Checksum,size,version)',
                 'supportsAllDrives' => 'true', 'includeItemsFromAllDrives' => 'true', 'pageToken' => $page,
@@ -64,6 +72,42 @@ class DriveClient
         } while ($page);
 
         return $files;
+    }
+
+    public function folder(string $id): array
+    {
+        $this->assertId($id);
+        $response = $this->get('files/'.$id, ['supportsAllDrives' => 'true', 'fields' => 'id,name,mimeType,trashed,capabilities(canListChildren)']);
+        $folder = $response->json();
+        if (($folder['mimeType'] ?? null) !== 'application/vnd.google-apps.folder' || ! empty($folder['trashed']) || ($folder['capabilities']['canListChildren'] ?? true) === false) {
+            throw new RuntimeException('The configured Drive folder cannot be listed. Check its folder ID and share it with the connected Google account.');
+        }
+
+        return $folder;
+    }
+
+    private function get(string $path, array $query): Response
+    {
+        try {
+            $response = Http::withToken($this->token())->connectTimeout(15)->timeout(60)->retry(3, 500, throw: false)
+                ->get('https://www.googleapis.com/drive/v3/'.$path, $query);
+        } catch (ConnectionException) {
+            throw new RuntimeException('Google Drive could not be reached. Check outbound HTTPS, server CA certificates and network timeouts.');
+        }
+        if (! $response->successful()) {
+            $reason = $response->json('error.errors.0.reason');
+            $message = match (true) {
+                in_array($reason, ['accessNotConfigured', 'serviceDisabled'], true) => 'Enable Google Drive API for the OAuth client project.',
+                $response->status() === 401 => 'Google Drive authorization expired or was revoked. Reconnect the survey Drive account.',
+                $response->status() === 404 => 'Drive folder was not found or is not shared with the connected Google account. Check the folder ID and sharing.',
+                $response->status() === 403 => 'Google Drive denied folder access. Check read-only authorization, folder sharing and whether Drive API is enabled.',
+                $response->status() === 429 => 'Google Drive rate limit reached. The previous successful progress is retained; retry later.',
+                default => 'Google Drive returned HTTP '.$response->status().'. Previous successful progress is retained.',
+            };
+            throw new RuntimeException($message);
+        }
+
+        return $response;
     }
 
     public function inventory(string $folder): array

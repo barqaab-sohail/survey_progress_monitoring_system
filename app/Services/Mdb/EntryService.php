@@ -150,7 +150,8 @@ class EntryService
         }
         $firstPair = $transformer->entryRows()->min('pair_number');
         if ($pairNumber == $firstPair && $start) {
-            $original['start_coordinate_source'] = SurveyWaypoint::FIRST_PAIR_COORDINATE_SOURCE;
+            $original['start_coordinate_source'] = app(StartingPoleCoordinates::class)->registered(['header' => $transformer->header])
+                ? StartingPoleCoordinates::REGISTERED : SurveyWaypoint::FIRST_PAIR_COORDINATE_SOURCE;
         } else {
             unset($original['start_coordinate_source']);
         }
@@ -229,7 +230,7 @@ class EntryService
                     $headerIssue('missing_operator_capacity', 'Transformer header: enter positive capacity in kVA.');
                 }
                 if (empty($transformerData['source_waypoint_id'])) {
-                    $headerIssue('missing_operator_root', 'The first S/E pair needs its first E row with one matching GPX point and valid latitude, longitude and any recorded elevation. Both first S and first E use this point; upload or select its GPX file.');
+                    $headerIssue('missing_operator_root', 'The first S/E pair needs its first E row with one matching GPX point and valid latitude, longitude and any recorded elevation. Upload or select its GPX file. First S uses captured transformer coordinates when available, otherwise this E point.');
                 }
                 if (empty($transformerData['entry_rows']) && ($transformerData['section_count'] ?? count($transformerData['sections'] ?? [])) === 0) {
                     $headerIssue('missing_operator_rows', 'Enter at least one complete S/E pair for this transformer.');
@@ -282,7 +283,7 @@ class EntryService
                     $firstStart = $number == $firstPair && $row->designation === 'S';
                     $firstEnd = $number == $firstPair && $row->designation === 'E';
                     if ($matches->count() !== 1 && $firstEnd) {
-                        $add('missing_first_e_coordinates', $label.'the required first E GPX point is missing or ambiguous. Upload or select the matching GPX file; its coordinates are required for both points of this first pair.', $row);
+                        $add('missing_first_e_coordinates', $label.'the required first E GPX point is missing or ambiguous. Upload or select the matching GPX file; first E must always have its own coordinate evidence.', $row);
                     }
                     if ($matches->count() !== 1 && ! $firstStart) {
                         $namedPoints = collect($data['waypoints'] ?? [])->filter(fn ($point) => (string) $point['name'] === (string) $row->waypoint_reference);

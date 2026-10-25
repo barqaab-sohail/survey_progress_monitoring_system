@@ -51,7 +51,7 @@ class SurveyWaypoint
             : ! empty($section['original_entry']['entry_rows_managed']) && ($section['original_entry']['entry_pair_number'] ?? null) == $pair['number'];
     }
 
-    /** Share coordinate evidence only within the first explicitly entered S/E pair. */
+    /** Apply the frozen starting-coordinate choice only within the first entered S/E pair. */
     public function firstPairCoordinates(array $transformer, array $points): array
     {
         $pair = $this->firstPair($transformer);
@@ -63,16 +63,18 @@ class SurveyWaypoint
             return $transformer;
         }
         $point = collect($points)->firstWhere('id', $transformer['source_waypoint_id']);
+        $registered = app(StartingPoleCoordinates::class)->registered($transformer);
         foreach ($transformer['sections'] ?? [] as $index => $section) {
             if (! $this->isFirstPairSection($section, $pair)) {
                 continue;
             }
-            $section['start_waypoint_id'] = $section['end_waypoint_id'] = $point['id'] ?? null;
+            $section['start_waypoint_id'] = $registered ? null : ($point['id'] ?? null);
+            $section['end_waypoint_id'] = $point['id'] ?? null;
             // S has no original GPX observation; retain its handwritten reference.
             $section['start_source_file_id'] = null;
             $section['end_source_file_id'] = $point['source_file_id'] ?? $pair['end']['gpx_source_id'] ?? null;
-            $section['original_entry']['start_coordinate_source'] = self::FIRST_PAIR_COORDINATE_SOURCE;
-            $section['original_entry']['coordinate_entry_row_id'] = $pair['end']['id'] ?? null;
+            $section['original_entry']['start_coordinate_source'] = $registered ? StartingPoleCoordinates::REGISTERED : self::FIRST_PAIR_COORDINATE_SOURCE;
+            $section['original_entry']['coordinate_entry_row_id'] = $registered ? ($pair['start']['id'] ?? null) : ($pair['end']['id'] ?? null);
             $transformer['sections'][$index] = $section;
         }
 
@@ -185,17 +187,27 @@ class SurveyWaypoint
         $aliases = [];
         $rootCandidates = [];
         $sections = $transformer['sections'] ?? [];
+        $registered = app(StartingPoleCoordinates::class)->registered($transformer);
+        $registeredRoot = null;
         foreach ($sections as &$section) {
             foreach (['start', 'end'] as $end) {
                 $identity = $section['original_entry'][$end.'_survey_identifier'] ?? null;
                 $raw = (string) ($section[$end.'_waypoint_id'] ?? '');
-                if ($end === 'start' && $this->isFirstPairSection($section, $firstPair) && isset($points[$raw])) {
+                if ($end === 'start' && $this->isFirstPairSection($section, $firstPair) && ($registered || isset($points[$raw]))) {
                     // Coordinate equality must not collapse the two S/E observations into a self-loop
                     // or overwrite a later pole that happens to have the same short name.
                     $key = 'first-s:'.$transformer['id'].':'.$section['id'];
-                    $points[$key] = array_replace($points[$raw], ['id' => $key, 'name' => $section['start_reference'],
-                        'gpx_waypoint_id' => $points[$raw]['id'], 'survey_identifier' => $identity ?? $section['start_reference'],
-                        'coordinate_source' => self::FIRST_PAIR_COORDINATE_SOURCE]);
+                    $points[$key] = $registered
+                        ? ['id' => $key, 'name' => $section['start_reference'], 'source_file_id' => null,
+                            'latitude' => $registered['latitude'], 'longitude' => $registered['longitude'], 'elevation' => $registered['elevation'] ?? null,
+                            'registered_transformer_id' => $registered['registered_transformer_id'],
+                            'survey_identifier' => $identity ?? $section['start_reference'], 'coordinate_source' => StartingPoleCoordinates::REGISTERED]
+                        : array_replace($points[$raw], ['id' => $key, 'name' => $section['start_reference'],
+                            'gpx_waypoint_id' => $points[$raw]['id'], 'survey_identifier' => $identity ?? $section['start_reference'],
+                            'coordinate_source' => self::FIRST_PAIR_COORDINATE_SOURCE]);
+                    if ($registered) {
+                        $registeredRoot = $key;
+                    }
                     $section['start_waypoint_id'] = $key;
 
                     continue;
@@ -229,6 +241,8 @@ class SurveyWaypoint
             $aliases[$root] = $selected;
             $root = $selected;
         }
+        // Model the transformer connection at S. Keep the E GPX evidence and all later poles intact.
+        $root = $registeredRoot ?? $root;
 
         return ['points' => $points, 'sections' => $sections, 'root' => $root, 'aliases' => $aliases];
     }

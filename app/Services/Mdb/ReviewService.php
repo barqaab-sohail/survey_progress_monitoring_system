@@ -32,7 +32,12 @@ class ReviewService
         $fields[] = $field('source_page', 'Starting PDF page', $transformer->header['pdf_start_page'] ?? $page['page'] ?? null, 'number', [], 'Header');
         $location = app(SurveyWaypoint::class)->transformerLocation(['header'=>$transformer->header, 'entry_rows'=>$transformer->entryRows->map->surveyData()->all()], $batch->waypoints->toArray());
         $point = $batch->waypoints->firstWhere('id', $location['source_waypoint_id'] ?? null);
-        $fields[] = $field('transformer_gps', 'Transformer GPS (first E)', $point?->name, 'text', [], 'Header', false);
+        $registeredStart = app(StartingPoleCoordinates::class)->registered(['header' => $transformer->header]);
+        $fields[] = $field('transformer_gps', $registeredStart ? 'First E GPS' : 'Transformer GPS (first E)', $point?->name, 'text', [], 'Header', false);
+        if ($registeredStart) {
+            $fields[] = $field('header.starting_pole_coordinates.latitude', 'First S latitude (registered transformer)', $registeredStart['latitude'], 'text', [], 'Header', false);
+            $fields[] = $field('header.starting_pole_coordinates.longitude', 'First S longitude (registered transformer)', $registeredStart['longitude'], 'text', [], 'Header', false);
+        }
         $header = ['title'=>$transformer->code.' — transformer header', 'fields'=>$this->identify('header', $fields)];
         $pairs = [];
         foreach ($transformer->entryRows->groupBy('pair_number') as $number => $rows) {
@@ -48,6 +53,11 @@ class ReviewService
                     $fields[5]['value'] = $point?->source_file_id;
                     $fields[5]['empty_label'] = 'Awaiting first E GPX coordinates';
                     $fields[5]['editable'] = false;
+                    if ($registeredStart) {
+                        $fields[5]['label'] = 'Coordinate source (registered transformer)';
+                        $fields[5]['type'] = 'text';
+                        $fields[5]['value'] = 'Latitude '.$registeredStart['latitude'].', longitude '.$registeredStart['longitude'];
+                    }
                 }
                 foreach (['R','Y','B','N'] as $phase) {
                     $value = $row->conductors[$phase] ?? null;

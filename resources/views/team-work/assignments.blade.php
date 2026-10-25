@@ -6,6 +6,7 @@
 </style>
 @endpush
 @section('content')
+@if(auth()->user()->hasRole('super_admin'))<p><a class="btn btn-light" href="{{ route('admin.assignments.index') }}">User Assignments</a></p>@endif
 <div class="page-head"><div><h1>Survey Team Leader - Task Assignments</h1><p>Assign feeders to surveyors in teams you lead. The mobile app receives these tasks after the surveyor signs in or synchronizes.</p></div></div>
 
 <section class="grid assignment-summary" aria-label="Survey task progress">

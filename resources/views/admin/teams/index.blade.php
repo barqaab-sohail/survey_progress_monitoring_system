@@ -11,6 +11,7 @@
         <h1>Teams & Assignments</h1>
         <p>Maintain delivery teams, membership, and survey feeder allocation.</p>
     </div>
+    <a class="btn" href="{{ route('admin.assignments.index') }}">User Assignments</a>
 </div>
 
 <section class="grid period-grid">

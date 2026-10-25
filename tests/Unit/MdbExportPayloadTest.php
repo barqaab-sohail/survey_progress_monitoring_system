@@ -40,6 +40,29 @@ class MdbExportPayloadTest extends TestCase
         return new ExportPayloadBuilder($projection);
     }
 
+    public function test_simple_export_keeps_configured_type_and_construction_and_positions_logical_terminal(): void
+    {
+        [$revision, $template] = $this->fixture();
+        $snapshot = $revision->snapshot;
+        $snapshot['configuration']['settings']['simple_mdb_generation'] = true;
+        $snapshot['configuration']['settings']['engineering'] = ['configuration_id' => 'reviewed-default', 'transformer_types' => ['100' => 'reviewed-100']];
+        $snapshot['configuration']['settings']['mapping']['networks'] = [];
+        $snapshot['configuration']['settings']['mapping']['table_values']['InstPrimaryTransformers']['ConnectedPhases'] = 'RYB';
+        $snapshot['transformers'][0]['capacity_kva'] = 100;
+        $snapshot['transformers'][0]['sections'][0]['equipment_ref'] = null;
+        $revision->snapshot = $snapshot;
+        $payload = $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
+        foreach ($payload['tables']['Node'] as $node) {
+            $this->assertIsNumeric($node['X']);
+            $this->assertIsNumeric($node['Y']);
+        }
+        $this->assertSame(0.0, $payload['tables']['InstSection'][0]['SectionLength_MUL']);
+        $this->assertSame('RYB', $payload['tables']['InstSection'][0]['SectionPhases']);
+        $this->assertSame('reviewed-default', $payload['tables']['InstSection'][1]['ConfigurationId']);
+        $this->assertSame('reviewed-config', $payload['tables']['InstSection'][2]['ConfigurationId']);
+        $this->assertSame('reviewed-100', $payload['tables']['InstPrimaryTransformers'][0]['TransformerType']);
+    }
+
     public function test_generated_mdb_coordinates_share_only_the_first_pairs_e_evidence(): void
     {
         [$revision, $template] = $this->fixture();

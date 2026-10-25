@@ -8,7 +8,7 @@ use Symfony\Component\Process\Process;
 
 class ProjectionService
 {
-    public const LENGTH_METHOD = 'gpx-elevation-sag-allowance-v1';
+    public const LENGTH_METHOD = 'gpx-elevation-sag-allowance-v2';
 
     public function project(float $latitude, float $longitude, int $epsg): array
     {
@@ -27,6 +27,13 @@ class ProjectionService
                 || $lat < -90 || $lat > 90 || $lon < -180 || $lon > 180) {
                 throw new InvalidArgumentException('WGS84 coordinates are outside valid ranges.');
             }
+        }
+        // The project's WGS84 UTM projection is available without an external Python runtime.
+        if (Wgs84Utm::supports($epsg)) {
+            return Wgs84Utm::project($points, $epsg);
+        }
+        if ($epsg === 4326) {
+            throw new RuntimeException('Projection failed: Target CRS must be projected with metre units.');
         }
         $worker = new Process([(string) config('mdb_workflow.projection.python', 'python'), base_path('scripts/mdb/project_coordinates.py')]);
         $worker->setTimeout((float) config('mdb_workflow.projection.timeout', 30));
@@ -58,6 +65,7 @@ class ProjectionService
         if (count($points) < 2) {
             throw new InvalidArgumentException('Length requires at least two geometry points.');
         }
+
         return self::lengthFromProjected($points, $this->projectMany($points, $epsg));
     }
 

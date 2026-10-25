@@ -1,0 +1,18 @@
+﻿[
+    {
+        "file":  "synergee_11140223003_batch-17_r79.mdb",
+        "fingerprint":  "a2659f32f858dbc0dc25ab75756e7f6d117cd9216a4a8839d938cb014c5bc4cf",
+        "tables":  50,
+        "fields":  1065,
+        "indexes":  133,
+        "relationships":  41
+    },
+    {
+        "file":  "Noor PurT-4221215879.mdb",
+        "fingerprint":  "a2659f32f858dbc0dc25ab75756e7f6d117cd9216a4a8839d938cb014c5bc4cf",
+        "tables":  50,
+        "fields":  1065,
+        "indexes":  133,
+        "relationships":  41
+    }
+]

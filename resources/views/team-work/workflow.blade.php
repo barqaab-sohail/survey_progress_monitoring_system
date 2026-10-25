@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'PDF Entry, Verification & MDB Assignments')
 @section('content')
+@if(auth()->user()->hasRole('super_admin'))<p><a class="btn btn-light" href="{{ route('admin.assignments.index') }}">User Assignments</a></p>@endif
 <div class="page-head"><div><h1>PDF Entry, Verification &amp; MDB Assignments</h1><p>Assign a batch to its next responsible operator. Verified approval is required before MDB assignment.</p></div></div>
 <div class="card table-wrap"><table class="table"><thead><tr><th>Batch / Feeder</th><th>Workflow stage</th><th>Current assignees</th><th>Assign next task</th></tr></thead><tbody>
 @forelse($batches as $batch)<tr><td><strong>Batch #{{ $batch->id }}</strong><small>{{ $batch->project?->name }} · {{ $batch->feeder?->feeder_code }} | {{ $batch->feeder?->feeder_name }}</small></td><td>{{ $batch->workflow_label }}</td><td>Entry: {{ $batch->entryAssignee?->name ?? 'Unassigned' }}<br>Verification: {{ $batch->verificationAssignee?->name ?? 'Unassigned' }}<br>MDB: {{ $batch->mdbAssignee?->name ?? 'Unassigned' }}</td><td>

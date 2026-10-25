@@ -10,6 +10,7 @@ use App\Services\AuditService;
 use App\Services\Mdb\EntryLookups;
 use App\Services\Mdb\EntryService;
 use App\Services\Mdb\SnapshotService;
+use App\Services\Mdb\StartingPoleCoordinates;
 use App\Services\Mdb\SurveyWaypoint;
 use App\Services\Mdb\TransformerIdentity;
 use App\Services\Mdb\WorkflowAccess;
@@ -371,6 +372,7 @@ class MdbOperatorEntryController extends Controller
             $this->invalidateEntry($request, $locked);
             $header = array_replace($transformer?->header ?? [], array_intersect_key($data['header'], array_flip($fields)), ['manually_verified' => false, 'operator_entry' => true]);
             app(TransformerIdentity::class)->assertAvailable($locked, $data['code'], $transformer);
+            $registered = null;
             if (! $transformer && $request->boolean('manual_transformer')) {
                 if ($locked->feeder->transformers()->whereRaw('LOWER(TRIM(transformer_code)) = ?', [mb_strtolower($data['code'])])->exists()) {
                     throw ValidationException::withMessages(['code' => 'This transformer is registered with this feeder. Choose it in Active transformer to add its survey header.']);
@@ -382,6 +384,10 @@ class MdbOperatorEntryController extends Controller
                     throw ValidationException::withMessages(['registered_transformer_id' => 'The selected feeder registration changed. Refresh saved records and select the transformer again.']);
                 }
                 $header['registered_transformer_id'] = $registered->id;
+            }
+            if (! $transformer) {
+                // New selections opt in. Existing records and approved snapshots are never backfilled.
+                $header['starting_pole_coordinates'] = app(StartingPoleCoordinates::class)->capture($registered);
             }
             $header['pdf_source_id'] = (int) $data['source_pdf_id'];
             $header['pdf_start_page'] = (int) $data['source_page'];

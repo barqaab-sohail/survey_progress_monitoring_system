@@ -215,6 +215,16 @@ class NetworkValidator
                 $transformer['sections'] = $identityNetwork['sections'];
                 $root = $identityNetwork['root'];
                 foreach ($points as $key => $point) {
+                    if (($point['coordinate_source'] ?? null) === StartingPoleCoordinates::REGISTERED) {
+                        $effective[$key] = array_intersect_key($point, array_flip(['latitude', 'longitude', 'elevation']));
+                        if (is_numeric($epsg) && (int) $epsg > 0) {
+                            try {
+                                $projected[$key] = $this->projection->projectMany([$effective[$key]], (int) $epsg)[0];
+                            } catch (\Throwable $exception) {
+                                $issue('projection_failed', $exception->getMessage(), $tc);
+                            }
+                        }
+                    }
                     if (isset($point['gpx_waypoint_id'])) {
                         $raw = (string) $point['gpx_waypoint_id'];
                         if (isset($effective[$raw])) {

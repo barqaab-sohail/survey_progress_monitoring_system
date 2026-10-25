@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\SurveyProgress\RunSurveyProgress;
 use App\Models\Feeder;
 use App\Models\SurveyProgress\Connection;
 use App\Models\SurveyProgress\ProgressFeeder;
@@ -12,9 +11,10 @@ use App\Models\SurveyProgress\Transcription;
 use App\Services\SurveyProgress\DriveClient;
 use App\Services\SurveyProgress\SurveyInventory;
 use App\Services\SurveyProgress\Synchronizer;
+use App\Services\SurveyProgress\SyncStatus;
+use App\Services\SurveyProgress\TaskQueue;
 use App\Services\SurveyProgress\TranscriptionService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -52,12 +52,21 @@ class AutomaticSurveyProgressController extends Controller
         ksort($summary['by_date']);
         $runs = $ready ? Run::with('requester')->where(fn ($q) => $q->whereIn('progress_feeder_id', $states->pluck('id'))->orWhereNull('progress_feeder_id'))->latest()->limit(20)->get() : collect();
 
-        return view('survey-progress.index', ['feeders' => $feeders, 'states' => $states, 'summary' => $summary, 'runs' => $runs, 'ready' => $ready, 'connected' => $ready && Connection::whereKey(1)->exists(), 'configured' => (bool) (config('survey_progress.client_id') && config('survey_progress.client_secret'))]);
+        return view('survey-progress.index', ['feeders' => $feeders, 'states' => $states, 'summary' => $summary, 'runs' => $runs, 'ready' => $ready, 'connected' => $ready && Connection::whereKey(1)->exists(), 'configured' => (bool) (config('survey_progress.client_id') && config('survey_progress.client_secret')),
+            'syncStatus' => $request->user()->hasRole('super_admin') ? app(SyncStatus::class)->snapshot() : null,
+            'lastSuccessfulSync' => $states->max('synced_at')]);
     }
 
     public function sync(Request $request)
     {
         return $this->enqueue($request, 'sync');
+    }
+
+    public function syncStatus(Request $request, SyncStatus $status)
+    {
+        $data = $request->validate(['run_id' => 'nullable|integer|min:1']);
+
+        return response()->json($status->snapshot($data['run_id'] ?? null))->header('Cache-Control', 'no-store, private');
     }
 
     public function transcriptions(Request $request, Feeder $feeder, SurveyInventory $inventory)
@@ -108,16 +117,12 @@ class AutomaticSurveyProgressController extends Controller
     {
         abort_unless($request->user()->hasRole('super_admin'), 403);
         abort_unless(Schema::hasTable('survey_progress_runs') && Connection::whereKey(1)->exists(), 422, 'Install the survey progress tables and connect its Drive account first.');
-        $run = Cache::lock('survey-progress:enqueue', 15)->block(5, function () use ($request, $type, $state) {
-            // A single progress worker keeps per-feeder inventories and calculation snapshots consistent.
-            $existing = Run::whereIn('status', ['queued', 'running'])->first();
-            abort_if($existing, 409, 'A survey progress task is already queued or running.');
+        $run = app(TaskQueue::class)->enqueue($type, $request->user()->id, $state?->id);
+        if ($request->expectsJson()) {
+            return response()->json(app(SyncStatus::class)->snapshot($run->id), 202);
+        }
 
-            return Run::create(['type' => $type, 'progress_feeder_id' => $state?->id, 'requested_by' => $request->user()->id]);
-        });
-        RunSurveyProgress::dispatch($run->id)->onConnection(config('survey_progress.queue_connection'))->onQueue('survey-progress');
-
-        return back()->with('success', 'Survey progress task queued. Refresh to see the result.');
+        return back()->with('success', 'Survey progress task #'.$run->id.' is queued. Its status will update automatically.');
     }
 
     public function mapping(Request $request, Feeder $feeder, DriveClient $drive)

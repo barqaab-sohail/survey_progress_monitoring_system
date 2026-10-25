@@ -25,6 +25,13 @@
             @foreach($issues as $issue)<li>{{ $issue['message'] }} @if(isset($issue['transformer_id']))(Transformer #{{ $issue['transformer_id'] }})@endif @if(isset($issue['source_page']))(PDF page {{ $issue['source_page'] }})@endif @if(isset($issue['section_id']))(Section #{{ $issue['section_id'] }})@endif</li>@endforeach
         </ul></div>
         @else
+            @if($modelReadiness)
+                <h3>Model completeness: {{ $modelReadiness['complete'] ? 'listed inputs populated' : 'draft — model inputs still missing' }}</h3>
+                <div class="table-wrap"><table class="table"><thead><tr><th>Model input</th><th>Populated records</th><th>Missing records</th></tr></thead><tbody>
+                @foreach($modelReadiness['checks'] as $check)<tr><td>{{ $check['label'] }}</td><td>{{ $check['complete'] }} / {{ $check['total'] }}</td><td>{{ $check['missing'] }}</td></tr>@endforeach
+                </tbody></table></div>
+                <p>{{ $modelReadiness['acceptance'] }} @unless($modelReadiness['complete'])Simple mode can download this draft, but missing inputs must be completed before using it for electrical analysis.@endunless</p>
+            @endif
             <ul>@foreach($payload['tables'] as $table=>$rows)<li>{{ $table }}: {{ count($rows) }} records</li>@endforeach</ul>
             <form method="POST" action="{{ route('mdb-workflow.offline-synergee.download') }}">@csrf
                 <input type="hidden" name="package" value="{{ $packageJson }}">

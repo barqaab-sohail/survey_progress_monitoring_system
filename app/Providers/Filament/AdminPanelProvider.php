@@ -49,6 +49,12 @@ class AdminPanelProvider extends PanelProvider
                     ->url(fn (): string => route('admin.master.index'))
                     ->visible(fn (): bool => auth()->user()?->hasRole('super_admin') ?? false)
                     ->sort(1),
+                NavigationItem::make('User Assignments')
+                    ->group('Administration')
+                    ->icon('heroicon-o-clipboard-document-list')
+                    ->url(fn (): string => route('admin.assignments.index'))
+                    ->visible(fn (): bool => auth()->user()?->hasRole('super_admin') ?? false)
+                    ->sort(2),
                 NavigationItem::make('Teams & Assignments')
                     ->group('Administration')
                     ->icon('heroicon-o-user-group')

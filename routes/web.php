@@ -102,6 +102,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('role:survey_team_leader,super_admin,project_manager,management_viewer')->prefix('survey-progress')->name('survey-progress.')->controller(\App\Http\Controllers\AutomaticSurveyProgressController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::middleware('role:super_admin')->group(function () {
+            Route::get('/sync-status', [\App\Http\Controllers\AutomaticSurveyProgressController::class, 'syncStatus'])->name('sync-status');
             Route::post('/sync', 'sync')->middleware('throttle:5,1')->name('sync');
             Route::post('/feeders/{feeder}/length', 'calculate')->middleware('throttle:10,1')->name('length');
             Route::put('/feeders/{feeder}/mapping', 'mapping')->name('mapping');
@@ -142,6 +143,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::middleware('role:super_admin')->prefix('legacy-admin')->name('admin.')->group(function () {
+        Route::get('/assignments', [\App\Http\Controllers\Admin\UserAssignmentController::class, 'index'])->name('assignments.index');
+        Route::get('/assignments/options', [\App\Http\Controllers\Admin\UserAssignmentController::class, 'options'])->name('assignments.options');
+        Route::get('/assignments/survey/{assignment}/candidates', [\App\Http\Controllers\Admin\UserAssignmentController::class, 'candidates'])->name('assignments.candidates');
+        Route::post('/assignments', [\App\Http\Controllers\Admin\UserAssignmentController::class, 'store'])->name('assignments.store');
         Route::get('/master-data', [MasterDataController::class, 'index'])->name('master.index');
         Route::get('/master-data/hierarchy', [HierarchyController::class, 'index'])->name('hierarchy.index');
         Route::post('/master-data/hierarchy/projects', [HierarchyController::class, 'project'])->name('hierarchy.projects.store');

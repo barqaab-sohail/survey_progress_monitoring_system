@@ -1,5 +1,5 @@
 import {displayDate, isoDate} from './mdb-entry.js';
-import {paperHeader, paperRows} from './mdb-verification-sheet.js?v=1';
+import {paperHeader, paperRows} from './mdb-verification-sheet.js?v=2';
 
 export function initializeVerification(boot, root = document) {
     const $ = id => root.getElementById('verification-' + id);

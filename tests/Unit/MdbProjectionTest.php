@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Services\Mdb\GpxParser;
 use App\Services\Mdb\ProjectionService;
 use InvalidArgumentException;
 use RuntimeException;
@@ -9,6 +10,22 @@ use Tests\TestCase;
 
 class MdbProjectionTest extends TestCase
 {
+    public function test_utm_projection_does_not_depend_on_a_python_installation_and_handles_both_hemispheres(): void
+    {
+        config(['mdb_workflow.projection.python' => 'missing-python-for-test']);
+        $service = new ProjectionService;
+        $north = $service->project(56, 12, 32632);
+        self::assertEqualsWithDelta(687071.44, $north['x'], 0.01);
+        self::assertEqualsWithDelta(6210141.33, $north['y'], 0.01);
+        $south = $service->project(-44, 174, 32759);
+        self::assertEqualsWithDelta(740526.32, $south['x'], 0.01);
+        self::assertEqualsWithDelta(5123750.87, $south['y'], 0.01);
+        self::assertSame([], $service->projectMany([], 32643));
+        $equator = $service->project(0, 75, 32643);
+        self::assertEqualsWithDelta(500000, $equator['x'], 1e-8);
+        self::assertEqualsWithDelta(0, $equator['y'], 1e-8);
+    }
+
     public function test_proj_matches_known_utm_and_length_with_intermediate_geometry(): void
     {
         $service = new ProjectionService;
@@ -72,7 +89,7 @@ class MdbProjectionTest extends TestCase
 
     public function test_real_projection_uses_gpx_elevations_in_metres(): void
     {
-        $parsed = (new \App\Services\Mdb\GpxParser)->parse('<gpx xmlns="http://www.topografix.com/GPX/1/1"><wpt lat="31.7" lon="73.5"><ele>0</ele><name>001</name></wpt><wpt lat="31.7" lon="73.501"><ele>10</ele><name>002</name></wpt></gpx>');
+        $parsed = (new GpxParser)->parse('<gpx xmlns="http://www.topografix.com/GPX/1/1"><wpt lat="31.7" lon="73.5"><ele>0</ele><name>001</name></wpt><wpt lat="31.7" lon="73.501"><ele>10</ele><name>002</name></wpt></gpx>');
         $service = new ProjectionService;
         $details = $service->lengthDetails($parsed['waypoints'], 32643);
         self::assertEqualsWithDelta(94.785206, $details['horizontal_length_m'], 0.01);

@@ -79,6 +79,9 @@ class ExportPayloadBuilder
             $identityNetwork = app(SurveyWaypoint::class)->network($transformer, $rawWaypoints);
             $waypoints = $identityNetwork['points'];
             $transformer['sections'] = $identityNetwork['sections'];
+            if (app(StartingPoleCoordinates::class)->registered($transformer)) {
+                $transformer['source_waypoint_id'] = $identityNetwork['root'];
+            }
             $identityAliases = $identityNetwork['aliases'];
             foreach ($version === self::VERSION ? ($transformer['pv_records'] ?? []) : [] as $pv) {
                 if ((float) ($pv['installed_capacity_kw'] ?? 0) > 0) {
@@ -109,8 +112,13 @@ class ExportPayloadBuilder
             if ($this->simple && empty($network['source_nodes']) && empty($network['source_sections'])) {
                 // A logical transformer terminal joins the surveyed root; it has no invented physical location or electrical values.
                 $key = 'transformer-terminal-'.$transformer['id'];
+                $linkFields = ['SectionLength_MUL' => 0.0];
+                $connected = $network['transformer_fields']['ConnectedPhases'] ?? $base['InstPrimaryTransformers']['ConnectedPhases'] ?? null;
+                if (is_string($connected) && preg_match('/^[R ][Y ][B ]$/D', $connected) && trim($connected) !== '') {
+                    $linkFields['SectionPhases'] = $connected;
+                }
                 $network = array_replace($network, ['source_nodes' => [['key' => $key, 'waypoint_id' => $transformer['source_waypoint_id'] ?? null, 'logical_terminal' => true]],
-                    'source_sections' => [['key' => 'transformer-link', 'from' => $key, 'to' => 'wp:'.($transformer['source_waypoint_id'] ?? ''), 'fields' => []]],
+                    'source_sections' => [['key' => 'transformer-link', 'from' => $key, 'to' => 'wp:'.($transformer['source_waypoint_id'] ?? ''), 'fields' => $linkFields]],
                     'feeder_node' => $key, 'transformer_section' => 'transformer-link']);
             }
             $this->require(! empty($network['source_nodes']) && ! empty($network['source_sections']), 'Approved source and transformer supply topology is required for '.$transformer['code'].'.');
@@ -121,7 +129,8 @@ class ExportPayloadBuilder
                 $point = $this->point($waypoints, $sourceNode['waypoint_id'] ?? null);
                 $id = $this->id('n', $revision->batch_id.':source:'.$key);
                 $aliases[$key] = $id;
-                $xy = ! empty($sourceNode['logical_terminal']) ? ['x' => null, 'y' => null] : $this->project($point, $epsg);
+                // Logical terminals share the surveyed transformer position; do not invent a physical offset.
+                $xy = $this->project($point, $epsg);
                 $node = array_replace($base['Node'], ['NodeId' => $id, 'X' => $xy['x'], 'Y' => $xy['y'], 'Description' => $key]);
                 $this->require(! isset($nodes[$id]) || $nodes[$id] === $node, 'Consolidated source node alias has conflicting data.');
                 $nodes[$id] = $node;
@@ -221,7 +230,7 @@ class ExportPayloadBuilder
                     'SectionPhases' => $sectionPhases, 'SectionLength_MUL' => $length,
                     'PhaseConductorId' => $conductors['R'] ?? $conductors['r'] ?? null, 'PhaseConductor2Id' => $conductors['Y'] ?? $conductors['y'] ?? null,
                     'PhaseConductor3Id' => $conductors['B'] ?? $conductors['b'] ?? null, 'NeutralConductorId' => $conductors['N'] ?? $conductors['neutral'] ?? null,
-                    'ConfigurationId' => $section['equipment_ref'] ?? null,
+                    'ConfigurationId' => ($section['equipment_ref'] ?? '') ?: (($engineering['configuration_id'] ?? '') ?: ($base['InstSection']['ConfigurationId'] ?? null)),
                 ]);
                 $this->validateSection($row, $template);
                 $tables['InstSection'][] = $row;

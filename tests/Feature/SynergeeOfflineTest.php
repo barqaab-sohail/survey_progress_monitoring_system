@@ -18,6 +18,7 @@ use App\Models\SurveyTeam;
 use App\Models\User;
 use App\Services\Mdb\AccessPowerShell;
 use App\Services\Mdb\ExportService;
+use App\Services\Mdb\ProjectionService;
 use App\Services\Mdb\SnapshotService;
 use App\Services\Mdb\SynergeeTransfer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -172,6 +173,58 @@ class SynergeeOfflineTest extends TestCase
         $this->assertNotSame($nodes['001']['NodeId'], $nodes['999']['NodeId']);
         $this->assertSame(0.0, $report['payload']['tables']['InstSection'][2]['SectionLength_MUL']);
         $this->assertSame($before, $package);
+    }
+
+    public function test_local_json_generation_uses_frozen_registered_coordinates_only_for_first_s(): void
+    {
+        $snapshot = SynergeeSnapshot::make();
+        $transformer = &$snapshot['transformers'][0];
+        $transformer['header'] += ['division' => 'Division', 'subdivision' => 'Subdivision', 'subdivision_code' => 'SD', 'service_category' => 'General Duty',
+            'registered_transformer_id' => 77, 'starting_pole_coordinates' => ['version' => 1, 'source' => 'registered_transformer',
+                'registered_transformer_id' => 77, 'latitude' => 31.6999, 'longitude' => 73.4999, 'elevation' => 5]];
+        $row = ['transformer_id' => 1, 'section_id' => 1, 'pair_number' => 1, 'manually_verified' => true,
+            'group_number' => '01', 'row_date' => '2026-10-09', 'source_pdf_id' => 2, 'source_page' => 1, 'source_row' => '1',
+            'conductors' => ['R' => 'DOG', 'Y' => '', 'B' => '', 'N' => 'DOG'], 'equipment_type' => 'pole',
+            'pole_class' => 'concrete', 'pole_height' => 36, 'pole_height_unit' => 'ft', 'consumers' => [], 'pv_details' => []];
+        $transformer['entry_rows'] = [
+            $row + ['id' => 11, 'designation' => 'S', 'waypoint_reference' => '999', 'gpx_source_id' => null],
+            $row + ['id' => 12, 'designation' => 'E', 'waypoint_reference' => '001', 'gpx_source_id' => 1],
+        ];
+        $transformer['sections'][0]['start_reference'] = '999';
+        $transformer['sections'][0]['start_waypoint_id'] = null;
+        $transformer['sections'][0]['start_source_file_id'] = null;
+        $transformer['sections'][0]['end_reference'] = '001';
+        $transformer['sections'][0]['end_waypoint_id'] = 1;
+        $registered = $transformer['header']['starting_pole_coordinates'];
+        unset($transformer);
+        $transfer = app(SynergeeTransfer::class);
+        $package = $transfer->read(json_encode(SynergeeSnapshot::package($snapshot), JSON_PRESERVE_ZERO_FRACTION));
+        $before = $package;
+        $report = $transfer->inspect($package, SynergeeSnapshot::gpx());
+        $this->assertSame([], $report['issues'], json_encode($report['issues']));
+        $nodes = array_column($report['payload']['tables']['Node'], null, 'Description');
+        $projected = app(ProjectionService::class)->projectMany([$registered], 32643)[0];
+        $this->assertEqualsWithDelta($projected['x'], $nodes['999']['X'], 0.001);
+        $this->assertEqualsWithDelta($projected['y'], $nodes['999']['Y'], 0.001);
+        $this->assertNotSame($nodes['001']['X'], $nodes['999']['X']);
+        $this->assertNotSame($nodes['001']['Y'], $nodes['999']['Y']);
+        $this->assertGreaterThan(0, $report['payload']['tables']['InstSection'][2]['SectionLength_MUL']);
+        $this->assertStringContainsString('captured registered transformer coordinates', json_encode($report['warnings']));
+        $this->assertSame($before, $package);
+        $this->assertSame($report['payload'], $transfer->inspect($package, SynergeeSnapshot::gpx())['payload']);
+        foreach ($snapshot['transformers'][0]['entry_rows'] as &$entry) {
+            $entry['identity_version'] = 2;
+            $entry['composite_identifier'] = '01091026'.$entry['waypoint_reference'];
+        }
+        unset($entry);
+        $snapshot['transformers'][0]['sections'][0]['original_entry']['start_survey_identifier'] = '01091026999';
+        $snapshot['transformers'][0]['sections'][0]['original_entry']['end_survey_identifier'] = '01091026001';
+        $identified = $transfer->read(json_encode(SynergeeSnapshot::package($snapshot), JSON_PRESERVE_ZERO_FRACTION));
+        $identifiedReport = $transfer->inspect($identified, SynergeeSnapshot::gpx());
+        $this->assertSame([], $identifiedReport['issues'], json_encode($identifiedReport['issues']));
+        $identifiedNodes = array_column($identifiedReport['payload']['tables']['Node'], null, 'Description');
+        $this->assertEqualsWithDelta($projected['x'], $identifiedNodes['01091026999']['X'], 0.001);
+        $this->assertNotSame($identifiedNodes['01091026001']['X'], $identifiedNodes['01091026999']['X']);
     }
 
     public function test_missing_coordinates_unapproved_settings_and_unmapped_pv_block_generation(): void

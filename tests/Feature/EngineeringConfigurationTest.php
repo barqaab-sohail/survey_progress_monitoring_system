@@ -77,6 +77,45 @@ class EngineeringConfigurationTest extends TestCase
             'transformer_types_json' => '{"100":"approved-100"}', 'reason' => 'Approved fixture engineering standard', 'approved' => 1];
     }
 
+    public function test_confirmed_simple_model_rates_apply_without_full_engineering_approval(): void
+    {
+        Configuration::create(['project_id' => $this->project->id, 'revision' => 1, 'settings' => ['simple_mdb_generation' => true]]);
+        $payload = $this->payload();
+        $payload['revision'] = 1;
+        $payload['save_action'] = 'draft';
+        $payload['confirm_simple_model'] = 1;
+        $payload['conductor_library_revision'] = null;
+        $payload['transformer_library_revision'] = null;
+        $payload['secondary_voltage_kv'] = null;
+        $this->put(route('engineering.update', $this->project), $payload)->assertSessionHasNoErrors();
+        $configuration = Configuration::firstOrFail();
+        $this->assertNull($configuration->approved_by);
+        $this->assertSame($this->admin->id, $configuration->settings['simple_model_review']['reviewed_by']);
+        $snapshot = ['configuration' => $configuration->toArray(), 'transformers' => [['sections' => [[
+            'equipment_ref' => null, 'phases' => ['R', 'B'], 'consumers' => [['category' => 'rs', 'count' => 5]],
+        ]]]]];
+        $effective = app(EngineeringConfiguration::class)->apply($snapshot);
+        $section = $effective['transformers'][0]['sections'][0];
+        $this->assertSame('approved-line', $section['equipment_ref']);
+        $this->assertSame($this->admin->id, $section['consumers'][0]['demand']['approved_by']);
+        $this->assertEqualsWithDelta(7.2, $section['consumers'][0]['demand']['phase_values']['R']['kw'], 1e-8);
+        $this->assertArrayNotHasKey('demand', $snapshot['transformers'][0]['sections'][0]['consumers'][0]);
+        $this->put(route('engineering.update', $this->project), ['save_action' => 'draft', 'revision' => 2, 'reason' => 'Edit requires another review'])->assertSessionHasNoErrors();
+        $this->assertArrayNotHasKey('simple_model_review', $configuration->fresh()->settings);
+    }
+
+    public function test_simple_model_confirmation_rejects_missing_power_factor_instead_of_inventing_demand(): void
+    {
+        Configuration::create(['project_id' => $this->project->id, 'revision' => 1, 'settings' => ['simple_mdb_generation' => true]]);
+        $payload = $this->payload();
+        $payload['revision'] = 1;
+        $payload['save_action'] = 'draft';
+        $payload['confirm_simple_model'] = 1;
+        $payload['rates']['rs']['power_factor'] = null;
+        $this->put(route('engineering.update', $this->project), $payload)->assertSessionHasErrors('rates.rs.power_factor');
+        $this->assertSame(1, Configuration::firstOrFail()->revision);
+    }
+
     private function saveConfiguration(): Configuration
     {
         $this->put(route('engineering.update', $this->project), $this->payload())->assertRedirect()->assertSessionHasNoErrors();
@@ -172,7 +211,7 @@ class EngineeringConfigurationTest extends TestCase
             ->assertSee('Draft revision 2')->assertSee('approved-reference.mdb')->assertSee('Conflicting observations')
             ->assertSee('secondary_voltage_kv')->assertSee('WASP')->assertSee('Save draft');
         $this->assertMatchesRegularExpression('/name="load_mode"[^>]*><option value="" selected/', $response->getContent());
-        $this->assertMatchesRegularExpression('/name="blank_consumers_zero"[^>]*><option value="" selected/', $response->getContent());
+        $this->assertMatchesRegularExpression('/name="blank_consumers_zero"[^>]*>.*?<option value="1" selected/s', $response->getContent());
         $this->post(route('mdb-builder.export', $this->workspace()), ['revision' => 1])->assertSessionHasErrors('engineering');
     }
 

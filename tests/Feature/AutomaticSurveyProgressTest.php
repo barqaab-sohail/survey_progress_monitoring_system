@@ -15,11 +15,21 @@ use App\Models\SurveyProgress\ProgressFeeder;
 use App\Models\SurveyProgress\Run;
 use App\Models\SurveyProgress\Transcription;
 use App\Models\User;
+use App\Services\SurveyProgress\BackgroundRunner;
 use App\Services\SurveyProgress\DriveClient;
 use App\Services\SurveyProgress\LengthService;
 use App\Services\SurveyProgress\SourceParser;
+use App\Services\SurveyProgress\SurveyInventory;
 use App\Services\SurveyProgress\Synchronizer;
+use App\Services\SurveyProgress\SyncStatus;
+use App\Services\SurveyProgress\TaskQueue;
+use Carbon\Carbon;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -38,7 +48,8 @@ class AutomaticSurveyProgressTest extends TestCase
         parent::setUp();
         Storage::fake('local');
         Http::preventStrayRequests();
-        config(['survey_progress.project_code' => 'HAZECO-TDL', 'survey_progress.expected_folders' => 1, 'survey_progress.automatic' => true]);
+        config(['survey_progress.project_code' => 'HAZECO-TDL', 'survey_progress.expected_folders' => 1, 'survey_progress.automatic' => true,
+            'survey_progress.client_id' => 'test-client', 'survey_progress.client_secret' => 'test-secret']);
         $this->admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         $project = Project::create(['code' => 'HAZECO-TDL', 'name' => 'HAZECO', 'status' => 'active', 'timezone' => 'Asia/Karachi']);
         $circle = Circle::create(['project_id' => $project->id, 'code' => 'C', 'name' => 'Circle']);
@@ -149,6 +160,9 @@ class AutomaticSurveyProgressTest extends TestCase
             if (str_contains($request->url(), 'oauth2.googleapis.com')) {
                 return Http::response(['access_token' => 'new-progress-token', 'expires_in' => 3600]);
             }
+            if (str_contains($request->url(), '/files/folder-407')) {
+                return Http::response(['id' => 'folder-407', 'name' => '407-NAWAN', 'mimeType' => 'application/vnd.google-apps.folder', 'capabilities' => ['canListChildren' => true]]);
+            }
 
             return ($request->data()['pageToken'] ?? null) === 'page-2' ? Http::response(['files' => [['id' => 'second', 'name' => 'second.gpx', 'mimeType' => 'application/gpx+xml']]]) : Http::response(['nextPageToken' => 'page-2', 'files' => [['id' => 'first', 'name' => 'first.pdf', 'mimeType' => 'application/pdf']]]);
         });
@@ -182,6 +196,9 @@ class AutomaticSurveyProgressTest extends TestCase
         ProgressFeeder::create(['feeder_id' => $this->feeder->id, 'surveyed_count' => 5, 'synced_at' => now(), 'length_status' => 'stale', 'confirmed_km' => 123]);
         $response = $this->get(route('survey-progress.index'))->assertOk()->assertSee('Reported Surveyed Transformers')->assertSee('Calculate LT Length');
         $response->assertViewHas('summary', fn ($s) => $s['surveyed'] === 5 && (float) $s['confirmed_km'] === 0.0 && $s['remaining'] === 5);
+        if (getenv('SURVEY_SYNC_QA_ARTIFACTS')) {
+            file_put_contents(base_path('tmp/assignment-qa/survey-sync.html'), $response->getContent());
+        }
     }
 
     public function test_missing_reviewed_transcription_excludes_scanned_pdf_from_confirmed_calculation(): void
@@ -227,5 +244,232 @@ class AutomaticSurveyProgressTest extends TestCase
         $this->assertDatabaseCount('mdb_workflow_batches', 0);
         $this->assertDatabaseCount('mdb_workflow_exports', 0);
         $this->assertDatabaseCount('survey_daily_entries', 0);
+    }
+
+    public function test_manual_sync_returns_pollable_status_and_repeated_clicks_reuse_one_job(): void
+    {
+        Queue::fake();
+        $response = $this->postJson(route('survey-progress.sync'))->assertStatus(202)->assertJsonPath('run.status', 'queued');
+        $this->postJson(route('survey-progress.sync'))->assertStatus(202)->assertJsonPath('run.id', $response->json('run.id'));
+        Queue::assertPushed(RunSurveyProgress::class, 1);
+        Queue::assertPushed(RunSurveyProgress::class, fn ($job) => $job->timeout === 300 && $job->connection === 'survey-progress' && $job->queue === 'survey-progress');
+        $this->assertDatabaseCount('survey_progress_runs', 1);
+        $this->assertDatabaseCount('mdb_workflow_batches', 0);
+    }
+
+    public function test_different_task_is_rejected_without_overwriting_existing_work(): void
+    {
+        Queue::fake();
+        $state = ProgressFeeder::create(['feeder_id' => $this->feeder->id, 'synced_at' => now()]);
+        $existing = app(TaskQueue::class)->enqueue('length', $this->admin->id, $state->id);
+        $this->postJson(route('survey-progress.sync'))->assertUnprocessable()->assertJsonValidationErrors('sync');
+        $this->assertSame('queued', $existing->fresh()->status);
+        $this->assertDatabaseCount('survey_progress_runs', 1);
+        Queue::assertPushed(RunSurveyProgress::class, 1);
+    }
+
+    public function test_dispatch_failure_does_not_leave_a_queued_run_blocking_future_sync(): void
+    {
+        Bus::shouldReceive('dispatch')->once()->andThrow(new \RuntimeException('Private queue detail must not reach the browser'));
+        $response = $this->postJson(route('survey-progress.sync'))->assertUnprocessable()->assertJsonValidationErrors('sync');
+        $this->assertStringNotContainsString('Private queue detail', $response->getContent());
+        $this->assertFalse(Run::whereIn('status', ['queued', 'running'])->exists());
+        $this->assertDatabaseCount('mdb_workflow_exports', 0);
+    }
+
+    public function test_sync_checkpoint_survives_a_new_service_and_exposes_progress_without_duplicate_counts(): void
+    {
+        $this->mockDrive($this->files());
+        $run = Run::create(['type' => 'sync']);
+        $this->assertTrue(app(Synchronizer::class)->advance($run));
+        $this->getJson(route('survey-progress.sync-status', ['run_id' => $run->id]))->assertOk()
+            ->assertJsonPath('run.status', 'running')->assertJsonPath('run.metrics.folders_total', 1)->assertJsonPath('run.metrics.files_scanned', 0);
+        $sync = new Synchronizer(app(DriveClient::class), app(SurveyInventory::class));
+        $this->assertFalse($sync->advance($run));
+        $this->getJson(route('survey-progress.sync-status', ['run_id' => $run->id]))->assertOk()
+            ->assertJsonPath('run.active', false)->assertJsonPath('run.metrics.files_scanned', 2)
+            ->assertJsonPath('run.metrics.feeders_updated', 1)->assertJsonPath('run.metrics.reported_transformers', 5);
+        $finished = $run->fresh()->getAttributes();
+        $this->assertFalse($sync->advance($run));
+        $this->assertSame($finished, $run->fresh()->getAttributes());
+        $this->assertSame(5, ProgressFeeder::first()->surveyed_count);
+        $this->assertDatabaseCount('survey_progress_files', 2);
+    }
+
+    public function test_isolated_cron_runner_processes_manual_queue_without_visiting_dashboard_or_other_queues(): void
+    {
+        config(['survey_progress.automatic' => false, 'queue.connections.survey-progress.after_commit' => false]);
+        $this->mockDrive($this->files());
+        DB::table('jobs')->insert(['queue' => 'default', 'payload' => '{}', 'attempts' => 0, 'reserved_at' => null, 'available_at' => now()->timestamp, 'created_at' => now()->timestamp]);
+        $run = app(TaskQueue::class)->enqueue('sync', $this->admin->id);
+        $this->assertDatabaseCount('survey_progress_jobs', 1);
+        $this->artisan('survey-progress:work', ['--max-time' => 10])->assertExitCode(0);
+        $this->assertContains($run->fresh()->status, ['completed', 'partial']);
+        $this->assertSame(5, ProgressFeeder::first()->surveyed_count);
+        $this->assertDatabaseCount('survey_progress_jobs', 0);
+        $this->assertDatabaseCount('jobs', 1);
+        $this->assertDatabaseCount('mdb_workflow_exports', 0);
+        $this->assertTrue((bool) app(SyncStatus::class)->health()['runner_recent']);
+    }
+
+    public function test_daily_runner_catches_up_without_a_page_visit_and_deduplicates_today(): void
+    {
+        Queue::fake();
+        config(['survey_progress.sync_time' => '02:00', 'survey_progress.timezone' => 'Asia/Karachi']);
+        $this->travelTo(Carbon::parse('2026-10-25 01:59:00', 'Asia/Karachi'));
+        $this->assertNull(app(BackgroundRunner::class)->scheduleIfDue());
+        $this->travelTo(Carbon::parse('2026-10-25 09:00:00', 'Asia/Karachi'));
+        $run = app(BackgroundRunner::class)->scheduleIfDue();
+        $this->assertNotNull($run);
+        $this->assertNull(app(BackgroundRunner::class)->scheduleIfDue());
+        $run->update(['status' => 'partial', 'finished_at' => now(), 'result' => ['metrics' => ['folders_failed' => 0], 'issues' => [['code' => 'kmz_missing']]]]);
+        $this->travel(30)->minutes();
+        $this->assertNull(app(BackgroundRunner::class)->scheduleIfDue());
+        $this->travel(1)->days();
+        $this->assertNotNull(app(BackgroundRunner::class)->scheduleIfDue());
+        Queue::assertPushed(RunSurveyProgress::class, 2);
+        $this->travelBack();
+    }
+
+    public function test_daily_runner_retries_failed_folder_scans_after_fifteen_minutes(): void
+    {
+        Queue::fake();
+        $this->travelTo(Carbon::parse('2026-10-25 12:00:00', 'Asia/Karachi'));
+        $run = Run::create(['type' => 'sync', 'status' => 'partial', 'finished_at' => now(), 'result' => ['metrics' => ['folders_failed' => 1]]]);
+        $this->assertNull(app(BackgroundRunner::class)->scheduleIfDue());
+        $this->travel(16)->minutes();
+        $this->assertNotNull(app(BackgroundRunner::class)->scheduleIfDue());
+        $this->assertSame('partial', $run->fresh()->status);
+        Queue::assertPushed(RunSurveyProgress::class, 1);
+        $this->travelBack();
+    }
+
+    public function test_sync_lock_contention_requeues_without_marking_work_failed(): void
+    {
+        Queue::fake();
+        $lock = Cache::lock('survey-progress:work', 60);
+        $this->assertTrue($lock->get());
+        try {
+            $run = Run::create(['type' => 'sync']);
+            app()->call([new RunSurveyProgress($run->id), 'handle']);
+            $this->assertSame('queued', $run->fresh()->status);
+            Queue::assertPushed(RunSurveyProgress::class, fn ($job) => $job->runId === $run->id && $job->delay === 30);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    public function test_status_is_admin_only_read_only_and_does_not_expose_tokens_or_full_inventory(): void
+    {
+        $run = Run::create(['type' => 'sync', 'result' => ['checkpoint' => [['private' => 'checkpoint-secret']], 'folders' => [['files' => [['id' => 'private-file-metadata']]]]]]);
+        $before = $run->fresh()->getAttributes();
+        $response = $this->getJson(route('survey-progress.sync-status', ['run_id' => $run->id]))->assertOk()->assertHeader('Cache-Control', 'no-store, private');
+        foreach (['test-only', 'test-refresh', 'test-secret', 'checkpoint-secret', 'private-file-metadata'] as $secret) {
+            $this->assertStringNotContainsString($secret, $response->getContent());
+        }
+        $this->assertSame($before, $run->fresh()->getAttributes());
+        $this->actingAs(User::factory()->create(['role' => UserRole::ProjectManager]))->getJson(route('survey-progress.sync-status'))->assertForbidden();
+    }
+
+    public function test_lost_folder_access_never_turns_an_empty_drive_listing_into_zero_progress(): void
+    {
+        $state = ProgressFeeder::create(['feeder_id' => $this->feeder->id, 'folder_id' => 'folder-407', 'surveyed_count' => 7, 'synced_at' => now()]);
+        $parent = config('survey_progress.parent_folder');
+        Http::fake(function ($request) use ($parent) {
+            if (str_contains($request->url(), '/files/'.$parent)) {
+                return Http::response(['id' => $parent, 'mimeType' => 'application/vnd.google-apps.folder']);
+            }
+            if (str_contains($request->url(), '/files/folder-407')) {
+                return Http::response(['error' => ['message' => 'Private API content']], 404);
+            }
+
+            return Http::response(['files' => [['id' => 'folder-407', 'name' => '407-NAWAN', 'mimeType' => 'application/vnd.google-apps.folder']]]);
+        });
+        app(Synchronizer::class)->sync($run = Run::create(['type' => 'sync']));
+        $this->assertSame(7, $state->fresh()->surveyed_count);
+        $this->assertSame('failed', $state->fresh()->sync_status);
+        $this->assertSame(1, $run->fresh()->result['metrics']['folders_failed']);
+        $this->assertStringContainsString('not shared', $run->fresh()->result['issues'][0]['message']);
+        $this->assertStringNotContainsString('Private API content', json_encode($run->fresh()->result));
+    }
+
+    public function test_incomplete_listing_preserves_existing_count_and_source_evidence(): void
+    {
+        $this->mockDrive($this->files());
+        app(Synchronizer::class)->sync(Run::create(['type' => 'sync']));
+        $this->app->forgetInstance(DriveClient::class);
+        Http::fake(function ($request) {
+            if (str_contains($request->url(), '/files/')) {
+                return Http::response(['mimeType' => 'application/vnd.google-apps.folder']);
+            }
+            if (str_contains($request->data()['q'] ?? '', 'folder-407')) {
+                return Http::response(['files' => [], 'incompleteSearch' => true]);
+            }
+
+            return Http::response(['files' => [['id' => 'folder-407', 'name' => '407-NAWAN', 'mimeType' => 'application/vnd.google-apps.folder']]]);
+        });
+        app(Synchronizer::class)->sync($run = Run::create(['type' => 'sync']));
+        $this->assertSame(5, ProgressFeeder::first()->surveyed_count);
+        $this->assertSame(2, ProgressFeeder::first()->files()->where('active', true)->count());
+        $this->assertSame(1, $run->fresh()->result['metrics']['folders_failed']);
+    }
+
+    public function test_revoked_refresh_token_reports_clear_failure_and_preserves_counts(): void
+    {
+        $state = ProgressFeeder::create(['feeder_id' => $this->feeder->id, 'surveyed_count' => 7, 'synced_at' => now()]);
+        $connection = Connection::first();
+        $connection->update(['token' => array_replace($connection->token, ['expires_at' => 0])]);
+        Http::fake(['oauth2.googleapis.com/*' => Http::response(['error' => 'invalid_grant', 'error_description' => 'Private provider detail'], 400)]);
+        app(Synchronizer::class)->sync($run = Run::create(['type' => 'sync']));
+        $this->assertSame('failed', $run->fresh()->status);
+        $this->assertStringContainsString('Reconnect', $run->fresh()->error);
+        $this->assertSame(7, $state->fresh()->surveyed_count);
+        $this->assertStringNotContainsString('Private provider detail', $run->fresh()->error);
+        Http::assertSentCount(1);
+    }
+
+    public function test_diagnostic_reads_drive_naming_without_writing_surveys_or_disclosing_tokens(): void
+    {
+        $this->mockDrive([...$this->files(), ['id' => 'bad-name', 'name' => 'unrecognized.pdf', 'mimeType' => 'application/pdf']]);
+        $before = Connection::first()->getAttributes();
+        $exit = Artisan::call('survey-progress:diagnose', ['--check-drive' => true, '--feeder' => '000407']);
+        $output = Artisan::output();
+        $report = json_decode($output, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(0, $exit);
+        $this->assertSame('ok', $report['drive']['parent_access']);
+        $this->assertSame(5, $report['drive']['sample']['reported_transformers']);
+        $this->assertContains('invalid_filename', array_column($report['drive']['sample']['issues'], 'code'));
+        foreach (['test-only', 'test-refresh', 'test-secret'] as $secret) {
+            $this->assertStringNotContainsString($secret, $output);
+        }
+        $this->assertSame($before, Connection::first()->getAttributes());
+        $this->assertDatabaseCount('survey_progress_runs', 0);
+        $this->assertDatabaseCount('survey_progress_feeders', 0);
+        $this->assertDatabaseCount('survey_progress_files', 0);
+    }
+
+    public function test_laravel_schedule_contains_minute_runner_and_preserves_existing_drive_retry(): void
+    {
+        $events = app(Schedule::class)->events();
+        $runner = collect($events)->first(fn ($event) => str_contains($event->command ?? '', 'survey-progress:work'));
+        $this->assertNotNull($runner);
+        $this->assertSame('* * * * *', $runner->expression);
+        $this->assertTrue($runner->withoutOverlapping);
+        $this->assertNotNull(collect($events)->first(fn ($event) => str_contains($event->command ?? '', 'drive-storage:retry')));
+    }
+
+    public function test_diagnostic_distinguishes_accessible_parent_from_a_failed_feeder_inventory(): void
+    {
+        $drive = $this->mock(DriveClient::class);
+        $drive->shouldReceive('children')->andReturn([['id' => 'folder-407', 'name' => '407-NAWAN', 'mimeType' => 'application/vnd.google-apps.folder']]);
+        $drive->shouldReceive('inventory')->andThrow(new \RuntimeException('Feeder folder is not shared.'));
+        $exit = Artisan::call('survey-progress:diagnose', ['--feeder' => '407']);
+        $report = json_decode(Artisan::output(), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(1, $exit);
+        $this->assertSame('ok', $report['drive']['parent_access']);
+        $this->assertSame('failed', $report['drive']['sample_access']);
+        $this->assertSame('Feeder folder is not shared.', $report['drive']['error']);
+        $this->assertDatabaseCount('survey_progress_runs', 0);
+        $this->assertDatabaseCount('survey_progress_feeders', 0);
     }
 }

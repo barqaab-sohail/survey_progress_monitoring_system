@@ -40,6 +40,7 @@ class EngineeringConfiguration
             'mapping_json' => 'nullable|json|max:262144', 'transformer_types_json' => 'nullable|json|max:65536',
             'equipment_references_json' => 'nullable|json|max:262144',
             'reason' => 'required|string|min:5|max:4000',
+            'confirm_simple_model' => 'sometimes|boolean',
         ];
         foreach (self::CATEGORIES as $category) {
             $rules['rates.'.$category.'.kva'] = 'nullable|numeric|min:0|max:1000000';
@@ -120,6 +121,27 @@ class EngineeringConfiguration
                 }
             }
             unset($loads['method']);
+            unset($settings['simple_model_review']);
+            if (! empty($data['confirm_simple_model'])) {
+                if (! GenerationMode::simple(['settings' => $settings])) {
+                    throw ValidationException::withMessages(['confirm_simple_model' => 'This confirmation is available only when Simple MDB Generation is ON.']);
+                }
+                validator(['configuration_id' => $settings['engineering']['configuration_id'] ?? null,
+                    'transformer_types' => $settings['engineering']['transformer_types'] ?? null], [
+                        'configuration_id' => 'required|string', 'transformer_types' => 'required|array|min:1',
+                    ])->validate();
+                if (($loads['mode'] ?? null) === 'category_rates') {
+                    $loadRules = ['evidence' => 'required|string'];
+                    foreach (self::CATEGORIES as $category) {
+                        $loadRules['rates.'.$category.'.kva'] = 'required|numeric|min:0|max:1000000';
+                        $loadRules['rates.'.$category.'.power_factor'] = 'required|numeric|gt:0|max:1';
+                    }
+                    validator($loads, $loadRules)->validate();
+                    $loads['method'] = 'Department-confirmed category kVA and power factor; integer customers balanced R/Y/B in order';
+                }
+                $settings['simple_model_review'] = ['reviewed_by' => $request->user()->id,
+                    'reviewed_at' => now('UTC')->toIso8601String(), 'reason' => $data['reason']];
+            }
             $configuration->fill(['settings' => $settings, 'load_assumptions' => $loads,
                 'revision' => ($configuration->revision ?? 0) + 1, 'approved_by' => null, 'approved_at' => null]);
             if (array_key_exists('epsg', $data)) {
@@ -296,12 +318,14 @@ class EngineeringConfiguration
         $configuration = $snapshot['configuration'] ?? [];
         $settings = $configuration['settings'] ?? [];
         $engineering = $settings['engineering'] ?? null;
-        if (! $engineering || empty($configuration['approved_by']) || empty($configuration['approved_at'])) {
+        $simpleReview = $settings['simple_model_review'] ?? [];
+        $reviewedSimple = GenerationMode::simple($configuration) && ! empty($simpleReview['reviewed_by']) && ! empty($simpleReview['reviewed_at']);
+        if (! $engineering || (! $reviewedSimple && (empty($configuration['approved_by']) || empty($configuration['approved_at'])))) {
             return $snapshot;
         }
         foreach ($snapshot['transformers'] as &$transformer) {
             foreach ($transformer['sections'] as &$section) {
-                $section['equipment_ref'] = $engineering['configuration_id'];
+                $section['equipment_ref'] = ($section['equipment_ref'] ?? '') ?: ($engineering['configuration_id'] ?? null);
                 $phases = $section['phases'] ?? [];
                 $hasLivePhase = is_array($phases) ? count(array_intersect(['R', 'Y', 'B'], $phases)) > 0 : preg_match('/[RYB]/', $phases) === 1;
                 foreach ($section['consumers'] as &$consumer) {
@@ -340,7 +364,9 @@ class EngineeringConfiguration
             $values[$phase] = ['customers' => $customers, 'kw' => $kw, 'kvar' => sqrt(max(0, $kva * $kva - $kw * $kw)), 'kva' => $kva];
         }
 
-        return ['method' => $method['method'], 'evidence' => $method['evidence'], 'approved_by' => $configuration['approved_by'],
+        $reviewer = $configuration['approved_by'] ?? (GenerationMode::simple($configuration) ? ($configuration['settings']['simple_model_review']['reviewed_by'] ?? null) : null);
+
+        return ['method' => $method['method'], 'evidence' => $method['evidence'], 'approved_by' => $reviewer,
             'configuration_revision' => $configuration['revision'], 'phase_values' => $values];
     }
 

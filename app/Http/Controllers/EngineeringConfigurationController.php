@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Services\AuditService;
 use App\Services\Mdb\EngineeringConfiguration;
 use App\Services\Mdb\EngineeringDefaults;
+use App\Services\Mdb\GenerationMode;
 use App\Services\Mdb\SchemaTemplate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,10 +29,17 @@ class EngineeringConfigurationController extends Controller
     public function edit(Project $project)
     {
         Gate::authorize('mdb-workflow.configure');
+        $configuration = app(EngineeringDefaults::class)->preview($project);
+        $schemaId = GenerationMode::simple($configuration) ? app(SchemaTemplate::class)->current()?->id : null;
 
         return view('engineering.edit', ['project' => $project,
-            'configuration' => app(EngineeringDefaults::class)->preview($project),
-            'templates' => Template::where('active', true)->whereNotNull('approved_by')->whereNotNull('approved_at')->get()]);
+            'configuration' => $configuration,
+            'templates' => Template::where('active', true)->where(function ($query) use ($schemaId) {
+                $query->where(fn ($approved) => $approved->whereNotNull('approved_by')->whereNotNull('approved_at'));
+                if ($schemaId) {
+                    $query->orWhere('id', $schemaId);
+                }
+            })->get()]);
     }
 
     public function update(Request $request, Project $project, EngineeringConfiguration $engineering)
