@@ -15,6 +15,15 @@ class EngineeringDefaults
 {
     public const CODE = 'reference-mdb-design-v1';
 
+    public static function withSurveyDefaults(array $settings): array
+    {
+        $settings['entry']['pole_height_unit'] ??= 'ft';
+        $settings['entry']['two_digit_year_start'] ??= 2000;
+        $settings['engineering']['blank_consumers_zero'] ??= true;
+
+        return $settings;
+    }
+
     public function library(): ?EngineeringPreset
     {
         return EngineeringPreset::where('code', self::CODE)->first();
@@ -56,7 +65,7 @@ class EngineeringDefaults
     private function attributes(Project $project, EngineeringPreset $preset, int $revision): array
     {
         $payload = $preset->configuration;
-        $settings = $payload['settings'];
+        $settings = self::withSurveyDefaults($payload['settings']);
         $settings['reference_import'] = $preset->evidence;
         $settings['reference_import']['equipment_references'] = $payload['equipment_references'];
         $settings['reference_import']['status'] = 'needs_review';

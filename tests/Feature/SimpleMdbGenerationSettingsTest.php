@@ -77,6 +77,31 @@ class SimpleMdbGenerationSettingsTest extends TestCase
         $this->assertFalse($audit->new_values['settings']['simple_mdb_generation']);
     }
 
+    public function test_admin_can_replace_an_existing_template_with_clean_schema_while_simple_mode_is_already_on(): void
+    {
+        Storage::fake('local');
+        $configuration = Configuration::create(['project_id' => $this->project->id, 'revision' => 1,
+            'settings' => ['simple_mdb_generation' => true, 'template_id' => 999, 'frequency_hz' => 50]]);
+        $this->put(route('engineering.mode.update', $this->project), ['revision' => 1, 'simple_mdb_generation' => 1, 'use_system_schema' => 1])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $configuration->refresh();
+        $template = Template::findOrFail($configuration->settings['template_id']);
+        $this->assertSame('HAZECO-REFERENCE-SCHEMA', $template->code);
+        $this->assertTrue($template->metadata['system_reference_schema']);
+        $this->assertNull($template->approved_by);
+        $this->assertSame(50, $configuration->settings['frequency_hz']);
+        $this->assertSame(2, $configuration->revision);
+        Storage::disk('local')->assertExists($template->path);
+        $this->get(route('engineering.edit', $this->project))->assertOk()->assertSee('Use the built-in clean MDB template');
+    }
+
+    public function test_clean_system_schema_selection_requires_simple_mode(): void
+    {
+        $this->put(route('engineering.mode.update', $this->project), ['revision' => 0, 'simple_mdb_generation' => 0, 'use_system_schema' => 1])
+            ->assertSessionHasErrors('use_system_schema');
+        $this->assertDatabaseCount('mdb_workflow_configurations', 0);
+    }
+
     public function test_non_admin_with_direct_configuration_permission_cannot_change_mode(): void
     {
         foreach ([UserRole::ProjectManager, UserRole::MdbGenerator, UserRole::ManagementViewer] as $role) {

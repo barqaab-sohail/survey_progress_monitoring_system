@@ -34,8 +34,10 @@ class SynergeeTransfer
         }
         $templateData = $revision->snapshot['template'] ?? [];
         $template = Template::find($templateData['id'] ?? null);
-        $this->require($template && $template->active && $template->approved_by && $template->approved_at,
-            'Select an engineering-approved clean SynerGEE template and reapprove this survey.');
+        $simpleSchema = GenerationMode::simple($revision->snapshot['configuration'] ?? null)
+            && ($template?->metadata['system_reference_schema'] ?? false) === true;
+        $this->require($template && $template->active && ($simpleSchema || ($template->approved_by && $template->approved_at)),
+            'Select an available clean SynerGEE template and reapprove this survey. Full engineering mode requires an engineering-approved template.');
         $this->require($template->sha256 === ($templateData['sha256'] ?? null) && $template->version === ($templateData['version'] ?? null), 'The template differs from the approved revision. Reapproval is required.');
         $bytes = Storage::disk($template->disk)->get($template->path);
         $this->require(is_string($bytes) && strlen($bytes) <= 15 * 1024 * 1024 && hash_equals($template->sha256, hash('sha256', $bytes)),
@@ -180,11 +182,6 @@ class SynergeeTransfer
                 }
             }
         }
-        if (GenerationMode::simple($snapshot['configuration'] ?? null)) {
-            $errors[] = ['code' => 'engineering_mode', 'message' => 'Simple MDB generation permits missing engineering values. Configure and approve full engineering settings, disable Simple MDB generation, and reapprove/export this survey.'];
-            // Show all missing engineering inputs, without changing the frozen package or approving anything.
-            $snapshot['configuration']['settings']['simple_mdb_generation'] = false;
-        }
         try {
             $validation = app(NetworkValidator::class)->validate($snapshot);
             $errors = [...$errors, ...$validation['errors']];
@@ -242,6 +239,9 @@ class SynergeeTransfer
             return $output;
         } catch (Throwable $exception) {
             $disk->delete($directory.'/synergee.mdb');
+            if (str_contains($exception->getMessage(), 'Template contains network or project data:')) {
+                throw ValidationException::withMessages(['file' => 'The MDB template embedded in this JSON contains an existing network. Select a clean MDB template in the source project, reverify and approve the survey, then download a new SynerGEE JSON. Existing sample networks cannot be used as templates.']);
+            }
             throw ValidationException::withMessages(['file' => 'SynerGEE MDB generation failed: '.$exception->getMessage()]);
         } finally {
             $disk->delete([$directory.'/template.mdb', $directory.'/payload.json']);

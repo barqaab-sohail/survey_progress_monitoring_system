@@ -241,10 +241,7 @@ class ReferenceEngineeringImport
             'transformer_types' => 'The reference type label alone does not independently verify a capacity-to-library mapping for HAZECO.',
             'supply_conductor_id' => 'A single ID for all supply phases cannot resolve whitespace-distinct library references without an approved alias policy.',
             'secondary_conductor_id' => 'Secondary-link neutral is marked present in phases but its conductor ID is blank.',
-            'pole_height_unit' => 'The handwritten survey pole-height unit is not recorded by this electrical model.',
-            'two_digit_year_start' => 'A survey date interpretation policy cannot be derived from historical model-year labels.',
             'load_mode' => 'Consumer categories and an approved category demand/power-factor method are absent.',
-            'blank_consumers_zero' => 'No policy for interpreting blank survey consumer cells is recorded.',
             'mapping.networks' => 'Historical network wiring belongs to different transformers and must not be applied to HAZECO surveys.',
         ] as $field => $reason) {
             $missing[] = compact('field', 'reason');
@@ -253,7 +250,7 @@ class ReferenceEngineeringImport
         return ['epsg' => $epsg, 'settings' => ['frequency_hz' => $control['Frequency'] ?? null,
             'nominal_voltage_kv' => $tableValues['InstFeeders']['NominalKvll'] ?? null, 'secondary_voltage_kv' => null,
             'conductor_library_revision' => null, 'transformer_library_revision' => null,
-            'entry' => ['pole_height_unit' => null, 'two_digit_year_start' => null], 'engineering' => $engineering,
+            'entry' => ['pole_height_unit' => 'ft', 'two_digit_year_start' => 2000], 'engineering' => array_replace($engineering, ['blank_consumers_zero' => true]),
             'mapping' => ['version' => ExportPayloadBuilder::EXTENDED_VERSION, 'table_values' => $tableValues, 'networks' => []],
             'reference_import' => ['status' => 'needs_review', 'sources' => array_values($sources), 'schema_sha256' => $schema,
                 'consistent_parameter_count' => $constantCount, 'conditional_parameter_count' => array_sum(array_map('count', $conditionalValues)),

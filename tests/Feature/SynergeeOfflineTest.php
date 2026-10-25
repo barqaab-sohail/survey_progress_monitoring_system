@@ -33,7 +33,7 @@ class SynergeeOfflineTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function productionBatch(): SurveyBatch
+    private function productionBatch(bool $simple = false): SurveyBatch
     {
         Storage::fake('local');
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
@@ -48,6 +48,12 @@ class SynergeeOfflineTest extends TestCase
             'grid_station_id' => $grid->id, 'feeder_code' => 'F1', 'feeder_name' => 'Synthetic feeder', 'total_transformers' => 0, 'status' => 'active']);
         $team = SurveyTeam::create(['project_id' => $project->id, 'code' => '01', 'name' => 'Team', 'status' => 'active']);
         $snapshot = SynergeeSnapshot::make();
+        if ($simple) {
+            $snapshot['configuration']['settings']['simple_mdb_generation'] = true;
+            $snapshot['template']['approved_by'] = null;
+            $snapshot['template']['approved_at'] = null;
+            $snapshot['template']['metadata']['system_reference_schema'] = true;
+        }
         Storage::disk('local')->put('fixture/template.mdb', file_get_contents(resource_path('mdb/synergee-empty.mdb')));
         $template = Template::create($snapshot['template'] + ['disk' => 'local', 'path' => 'fixture/template.mdb', 'active' => true]);
         $batch = SurveyBatch::create(['project_id' => $project->id, 'feeder_id' => $feeder->id, 'survey_team_id' => $team->id,
@@ -89,6 +95,17 @@ class SynergeeOfflineTest extends TestCase
         $this->get($url)->assertForbidden();
         $batch->update(['survey_status' => 'approved']);
         $this->actingAs(User::factory()->create(['role' => UserRole::Surveyor]))->get($url)->assertForbidden();
+    }
+
+    public function test_simple_production_export_accepts_the_active_system_schema_template(): void
+    {
+        $batch = $this->productionBatch(true);
+        $transfer = app(SynergeeTransfer::class);
+        $package = $transfer->export($batch, 1);
+        $read = $transfer->read(json_encode($package, JSON_THROW_ON_ERROR));
+        $this->assertTrue($read['snapshot']['configuration']['settings']['simple_mdb_generation']);
+        $this->assertNull($read['snapshot']['template']['approved_by']);
+        $this->assertTrue($read['snapshot']['template']['metadata']['system_reference_schema']);
     }
 
     public function test_production_enforces_its_own_frozen_integrity_check(): void
@@ -172,14 +189,25 @@ class SynergeeOfflineTest extends TestCase
         $this->assertNull($report['payload']);
     }
 
-    public function test_simple_mode_does_not_bypass_engineering_requirements(): void
+    public function test_simple_mode_keeps_missing_engineering_as_warnings_in_offline_conversion(): void
     {
         $snapshot = SynergeeSnapshot::make();
         $snapshot['configuration']['settings']['simple_mdb_generation'] = true;
         $snapshot['configuration']['settings']['frequency_hz'] = null;
+        $snapshot['configuration']['settings']['conductor_library_revision'] = null;
+        $snapshot['configuration']['settings']['transformer_library_revision'] = null;
+        $snapshot['configuration']['approved_by'] = null;
+        $snapshot['configuration']['approved_at'] = null;
+        $snapshot['template']['approved_by'] = null;
+        $snapshot['template']['approved_at'] = null;
+        $snapshot['template']['metadata']['system_reference_schema'] = true;
         $report = app(SynergeeTransfer::class)->inspect(SynergeeSnapshot::package($snapshot));
-        $this->assertContains('engineering_mode', array_column($report['issues'], 'code'));
-        $this->assertContains('missing_electrical_setting', array_column($report['issues'], 'code'));
+        $this->assertSame([], $report['issues']);
+        $this->assertContains('missing_electrical_setting', array_column($report['warnings'], 'code'));
+        $this->assertTrue($report['payload']['settings']['simple_mdb_generation']);
+        $snapshot['transformers'][0]['source_waypoint_id'] = null;
+        $report = app(SynergeeTransfer::class)->inspect(SynergeeSnapshot::package($snapshot));
+        $this->assertContains('missing_transformer_source', array_column($report['issues'], 'code'));
         $this->assertNull($report['payload']);
     }
 
@@ -249,6 +277,14 @@ class SynergeeOfflineTest extends TestCase
         $snapshot['configuration']['approved_by'] = null;
         $file = UploadedFile::fake()->createWithContent('synergee.json', json_encode(SynergeeSnapshot::package($snapshot)));
         $this->post(route('mdb-workflow.offline-synergee.preview'), ['file' => $file])->assertOk()->assertSee('require engineering approval')->assertDontSee('Generate and download SynerGEE MDB');
+        $snapshot['configuration']['settings']['simple_mdb_generation'] = true;
+        $snapshot['configuration']['settings']['conductor_library_revision'] = null;
+        $file = UploadedFile::fake()->createWithContent('simple-synergee.json', json_encode(SynergeeSnapshot::package($snapshot)));
+        $this->post(route('mdb-workflow.offline-synergee.preview'), ['file' => $file])->assertOk()
+            ->assertSee('ON — Simple MDB Generation')
+            ->assertSee('Non-blocking review notes')
+            ->assertSee('Generate and download SynerGEE MDB')
+            ->assertDontSee('Mandatory corrections — resolve');
         $this->actingAs(User::factory()->create(['role' => UserRole::Surveyor]));
         $this->get(route('mdb-workflow.offline-synergee.index'))->assertForbidden();
         $this->post(route('mdb-workflow.offline-synergee.download'))->assertForbidden();
@@ -282,6 +318,25 @@ class SynergeeOfflineTest extends TestCase
         $package['snapshot']['transformers'][0]['capacity_kva'] = 200;
         $this->expectException(ValidationException::class);
         app(SynergeeTransfer::class)->generate($package);
+    }
+
+    public function test_failed_download_does_not_flash_embedded_mdb_package_into_session(): void
+    {
+        if (PHP_OS_FAMILY !== 'Windows') {
+            $this->markTestSkipped('Windows-only local UI');
+        }
+        config(['mdb_workflow.offline_enabled' => true]);
+        $this->actingAs(User::factory()->create(['role' => UserRole::SuperAdmin]));
+        $package = json_encode(SynergeeSnapshot::package(), JSON_THROW_ON_ERROR);
+        $this->mock(SynergeeTransfer::class, function ($mock) {
+            $mock->shouldReceive('read')->once()->andReturn([]);
+            $mock->shouldReceive('generate')->once()->andThrow(ValidationException::withMessages(['file' => 'MDB writer test failure.']));
+        });
+        $this->post(route('mdb-workflow.offline-synergee.download'), ['package' => $package])
+            ->assertRedirect(route('mdb-workflow.offline-synergee.index'))
+            ->assertSessionHasErrors('file')
+            ->assertSessionMissing('_old_input.package');
+        $this->assertLessThan(10000, strlen(serialize(session()->all())));
     }
 
     public function test_pdf_pairs_and_pv_cannot_be_silently_left_out_of_the_engineering_network(): void

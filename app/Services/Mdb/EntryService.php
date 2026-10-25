@@ -196,7 +196,7 @@ class EntryService
     {
         if ($input instanceof SurveyBatch) {
             $input->loadMissing(['transformers.entryRows', 'waypoints', 'sources']);
-            $data = ['transformers' => $input->transformers->map(fn ($t) => ['id' => $t->id, 'header' => $t->header, 'capacity_kva' => $t->capacity_kva,
+            $data = ['transformers' => $input->transformers->map(fn ($t) => ['id' => $t->id, 'code' => $t->code, 'header' => $t->header, 'capacity_kva' => $t->capacity_kva,
                 'source_waypoint_id' => $t->source_waypoint_id, 'section_count' => $t->sections()->count(), 'entry_rows' => $t->entryRows->map->surveyData()->all()])->all(),
                 'waypoints' => $input->waypoints->toArray(), 'sources' => $input->sources->toArray(), 'entry_settings' => app(SurveyWaypoint::class)->settings($input->project_id),
                 'configuration' => Configuration::where('project_id', $input->project_id)->first()?->toArray()];
@@ -225,7 +225,7 @@ class EntryService
                         $headerIssue('incomplete_operator_header', 'Transformer header: enter '.str_replace('_', ' ', $key).'.');
                     }
                 }
-                if (($transformerData['capacity_kva'] ?? 0) <= 0) {
+                if ((! $simple || ($transformerData['capacity_kva'] ?? null) !== null) && (! is_numeric($transformerData['capacity_kva'] ?? null) || $transformerData['capacity_kva'] <= 0)) {
                     $headerIssue('missing_operator_capacity', 'Transformer header: enter positive capacity in kVA.');
                 }
                 if (empty($transformerData['source_waypoint_id'])) {
@@ -308,14 +308,15 @@ class EntryService
                     if (! $simple && ! $row->pole_class) {
                         $missingEquipment[] = 'pole class';
                     }
-                    if (! is_numeric($row->pole_height) || $row->pole_height <= 0) {
+                    $hasHeight = $row->pole_height !== null && $row->pole_height !== '';
+                    if ((! $simple || $hasHeight) && (! is_numeric($row->pole_height) || $row->pole_height <= 0)) {
                         $missingEquipment[] = 'positive pole/tower height';
                     }
                     if ($missingEquipment) {
                         $add('incomplete_entry_equipment', $label.'enter '.implode(', ', $missingEquipment).'.', $row);
                     }
-                    if (! in_array($row->pole_height_unit, ['m', 'ft'], true)) {
-                        $add('missing_entry_height_unit', $label.'pole/tower height must be saved in feet (ft).', $row);
+                    if ((! $simple || $hasHeight || ! empty($row->pole_height_unit)) && ! in_array($row->pole_height_unit, ['m', 'ft'], true)) {
+                        $add('missing_entry_height_unit', $label.'pole/tower height needs an explicit feet (ft) or metres (m) unit.', $row);
                     }
                     if (! $row->group_number || ! $row->row_date) {
                         $add('incomplete_entry_date_group', $label.'group/team and date need entry.', $row);
@@ -323,6 +324,12 @@ class EntryService
                     $pdf = collect($data['sources'] ?? [])->firstWhere('id', $row->source_pdf_id);
                     if (! $pdf || $pdf['kind'] !== 'pdf' || ! $row->source_page || $row->source_page < 1 || ! $row->source_row || $row->source_page > ($pdf['metadata']['page_count'] ?? 0)) {
                         $add('invalid_entry_pdf_source', $label.'select a valid source PDF, page and survey row.', $row);
+                    } elseif (! collect($transformerData['header']['pages'] ?? [])->contains(fn ($page) =>
+                        (string) ($page['source_pdf_id'] ?? '') === (string) $row->source_pdf_id
+                        && (int) ($page['page'] ?? 0) === (int) $row->source_page
+                        && in_array($page['confirmed'] ?? false, [true, 1, '1'], true)
+                        && in_array($page['role'] ?? '', ['header', 'continuation'], true))) {
+                        $add('unassociated_entry_page', $label.'PDF page '.$row->source_page.' is not confirmed as belonging to transformer '.($transformerData['code'] ?? $transformer->id).'. Open this PDF page and click Continue Current Transformer, or select the correct transformer before submitting.', $row);
                     }
                     if (($row->consumers['pv'] ?? 0) > 0 && empty($row->pv_details)) {
                         $add('missing_entry_pv_details', $label.'enter details for the recorded PV consumers.', $row);

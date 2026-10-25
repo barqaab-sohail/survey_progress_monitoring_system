@@ -55,7 +55,9 @@ class ReferenceEngineeringImportTest extends TestCase
         $this->assertSame(60, $result['settings']['frequency_hz']);
         $this->assertSame(11, $result['settings']['nominal_voltage_kv']);
         $this->assertNull($result['settings']['secondary_voltage_kv']);
-        $this->assertNull($result['settings']['engineering']['blank_consumers_zero']);
+        $this->assertTrue($result['settings']['engineering']['blank_consumers_zero']);
+        $this->assertSame('ft', $result['settings']['entry']['pole_height_unit']);
+        $this->assertSame(2000, $result['settings']['entry']['two_digit_year_start']);
         $this->assertNull($result['settings']['engineering']['supply_conductor_id']);
         $this->assertNull($result['load_assumptions']['mode']);
         $this->assertSame([], $result['load_assumptions']['rates']);

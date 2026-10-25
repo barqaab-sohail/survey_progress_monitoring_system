@@ -30,6 +30,22 @@ class SimpleMdbEntryValidationTest extends TestCase
         $this->assertSame($original, $data);
     }
 
+    public function test_pdf_pages_must_be_confirmed_for_the_selected_transformer_in_both_modes(): void
+    {
+        foreach ([true, false] as $simple) {
+            $data = $this->fixture();
+            $data['configuration']['settings']['simple_mdb_generation'] = $simple;
+            $data['transformers'][0]['header']['pages'] = [];
+            $this->assertContains('unassociated_entry_page', $this->codes($data));
+            foreach ([false, true] as $confirmed) {
+                $data['transformers'][0]['header']['pages'] = [['source_pdf_id' => 2, 'page' => 1, 'role' => 'continuation', 'confirmed' => $confirmed]];
+                $this->assertSame(! $confirmed, in_array('unassociated_entry_page', $this->codes($data), true));
+            }
+            $data['transformers'][0]['header']['pages'][0]['source_pdf_id'] = 99;
+            $this->assertContains('unassociated_entry_page', $this->codes($data));
+        }
+    }
+
     public function test_full_mode_keeps_existing_header_and_row_engineering_requirements(): void
     {
         $data = $this->fixture();
@@ -41,6 +57,18 @@ class SimpleMdbEntryValidationTest extends TestCase
         }
         $data['configuration'] = ['settings' => ['simple_mdb_generation' => false]];
         $this->assertSame($codes, $this->codes($data));
+    }
+
+    public function test_simple_mode_rejects_invalid_provided_capacity_height_and_units(): void
+    {
+        $data = $this->fixture();
+        $data['transformers'][0]['capacity_kva'] = -1;
+        $data['transformers'][0]['entry_rows'][0]['pole_height'] = -1;
+        $data['transformers'][0]['entry_rows'][0]['pole_height_unit'] = 'invalid';
+        $codes = $this->codes($data);
+        $this->assertContains('missing_operator_capacity', $codes);
+        $this->assertContains('incomplete_entry_equipment', $codes);
+        $this->assertContains('missing_entry_height_unit', $codes);
     }
 
     public function test_simple_mode_tolerates_unrecorded_conductors_but_preserves_conflicting_observations(): void
@@ -179,6 +207,7 @@ class SimpleMdbEntryValidationTest extends TestCase
             'waypoints' => [['id' => 1, 'source_file_id' => 1, 'name' => '001', 'latitude' => 30.1, 'longitude' => 71.1],
                 ['id' => 2, 'source_file_id' => 1, 'name' => '002', 'latitude' => 30.101, 'longitude' => 71.101]],
             'transformers' => [['id' => 1, 'code' => 'T-1', 'capacity_kva' => null, 'header' => ['operator_entry' => true,
+                'pages' => [['source_pdf_id' => 2, 'page' => 1, 'role' => 'header', 'confirmed' => true]],
                 'substation_name' => 'Substation', 'feeder_name' => 'Feeder', 'feeder_identifier' => 'F', 'division' => 'Division',
                 'subdivision' => 'Subdivision', 'subdivision_code' => 'SD', 'inspector' => 'Inspector', 'location' => 'Location', 'survey_date' => '2026-10-17'],
                 'entry_rows' => [array_replace($row, ['id' => 1, 'designation' => 'S', 'waypoint_reference' => '001', 'composite_identifier' => '01171026001']),

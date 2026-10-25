@@ -23,5 +23,6 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Transfer packages embed MDB bytes and must never be copied into sessions on validation failure.
+        $exceptions->dontFlash(['package']);
     })->create();

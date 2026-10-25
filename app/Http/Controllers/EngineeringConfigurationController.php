@@ -80,7 +80,11 @@ class EngineeringConfigurationController extends Controller
         $data = $request->validate([
             'revision' => 'required|integer|min:0',
             'simple_mdb_generation' => 'required|boolean',
+            'use_system_schema' => 'sometimes|boolean',
         ]);
+        if (! empty($data['use_system_schema']) && ! $data['simple_mdb_generation']) {
+            throw ValidationException::withMessages(['use_system_schema' => 'Enable Simple MDB Generation to select the built-in clean schema.']);
+        }
 
         DB::transaction(function () use ($request, $project, $audit, $data) {
             Project::whereKey($project->id)->lockForUpdate()->firstOrFail();
@@ -92,7 +96,14 @@ class EngineeringConfigurationController extends Controller
             $before = $configuration?->toArray() ?? [];
             $configuration ??= new Configuration(['project_id' => $project->id]);
             $settings = $configuration->settings ?? [];
-            if (array_key_exists('simple_mdb_generation', $settings) && $settings['simple_mdb_generation'] === (bool) $data['simple_mdb_generation']) {
+            if (! empty($data['use_system_schema'])) {
+                $schema = app(SchemaTemplate::class)->ensure($request->user());
+                if (! $schema->active) {
+                    throw ValidationException::withMessages(['use_system_schema' => 'The built-in clean schema is inactive. Restore its active status before selecting it.']);
+                }
+                $settings['template_id'] = $schema->id;
+            }
+            if ($configuration->exists && $configuration->settings === array_replace($settings, ['simple_mdb_generation' => (bool) $data['simple_mdb_generation']])) {
                 return;
             }
             $settings['simple_mdb_generation'] = (bool) $data['simple_mdb_generation'];
@@ -101,7 +112,7 @@ class EngineeringConfigurationController extends Controller
             }
             $configuration->fill(['settings' => $settings, 'revision' => ($configuration->revision ?? 0) + 1])->save();
             $audit->record($request->user(), 'mdb.generation_mode_changed', $configuration, $before, $configuration->toArray(),
-                $settings['simple_mdb_generation'] ? 'Admin enabled Simple MDB Generation.' : 'Admin disabled Simple MDB Generation.');
+                ! empty($data['use_system_schema']) ? 'Admin selected the built-in clean MDB schema for Simple generation.' : ($settings['simple_mdb_generation'] ? 'Admin enabled Simple MDB Generation.' : 'Admin disabled Simple MDB Generation.'));
         });
 
         return back()->with('success', 'Simple MDB Generation setting saved. Affected survey approvals must be renewed.');
