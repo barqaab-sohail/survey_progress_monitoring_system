@@ -32,6 +32,32 @@ class SurveyProgressInventoryTest extends TestCase
         $this->assertContains('duplicate_files_deduplicated', array_column($result['issues'], 'code'));
     }
 
+    public function test_drive_six_digit_dates_count_filename_quantities_once_per_pair(): void
+    {
+        $result = (new SurveyInventory)->analyze(array_merge(
+            $this->pair('A_081026_05'), $this->pair('A_091026_13'),
+            $this->pair('B_081026_5'), $this->pair('C_081026_08'),
+            $this->pair('C_091026_09'),
+        ));
+
+        $this->assertSame(40, $result['count']);
+        $this->assertCount(5, $result['pairs']);
+        $this->assertSame(['A' => 18, 'B' => 5, 'C' => 17], $result['by_group']);
+        $this->assertSame(['2026-10-08' => 18, '2026-10-09' => 22], $result['by_date']);
+        $this->assertSame(['missing_kmz'], array_column($result['issues'], 'code'));
+    }
+
+    public function test_short_and_long_date_formats_match_and_share_conflict_checks(): void
+    {
+        $inventory = new SurveyInventory;
+        $files = [$this->pair('A_081026_05')[0], $this->pair('a_08102026_5')[1]];
+        $this->assertSame(5, $inventory->analyze($files)['count']);
+        $this->assertSame('A_08102026_5', $inventory->key('A_081026_05.pdf'));
+        $this->assertNull($inventory->key('A_310226_05.pdf'));
+        $this->assertNull($inventory->key('A_081026_00.pdf'));
+        $this->assertSame(0, $inventory->analyze(array_merge($files, $this->pair('A_081026_06')))['count']);
+    }
+
     public function test_incomplete_pairs_conflicting_quantities_and_conflicting_copies_are_excluded(): void
     {
         $files = array_merge($this->pair('A_10102026_05'), $this->pair('A_10102026_06'), [$this->pair('B_11102026_07')[0]]);

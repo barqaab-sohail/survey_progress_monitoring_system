@@ -6,14 +6,16 @@ class SurveyInventory
 {
     public function key(string $name): ?string
     {
-        if (! preg_match('/^([A-Za-z]+)_(\d{2})(\d{2})(\d{4})_(\d+)\.(pdf|gpx)$/iD', $name, $m)) {
+        if (! preg_match('/^([A-Za-z]+)_(\d{2})(\d{2})(\d{4}|\d{2})_(\d+)\.(pdf|gpx)$/iD', $name, $m)) {
             return null;
         }
-        if (! checkdate((int) $m[3], (int) $m[2], (int) $m[4]) || (int) $m[5] < 1 || (int) $m[5] > 1000000) {
+        // Field submissions use DDMMYY; retain DDMMYYYY and one canonical key.
+        $year = strlen($m[4]) === 2 ? '20'.$m[4] : $m[4];
+        if (! checkdate((int) $m[3], (int) $m[2], (int) $year) || (int) $m[5] < 1 || (int) $m[5] > 1000000) {
             return null;
         }
 
-        return strtoupper($m[1]).'_'.$m[2].$m[3].$m[4].'_'.(int) $m[5];
+        return strtoupper($m[1]).'_'.$m[2].$m[3].$year.'_'.(int) $m[5];
     }
 
     public function analyze(array $files): array

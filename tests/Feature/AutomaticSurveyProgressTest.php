@@ -90,6 +90,28 @@ class AutomaticSurveyProgressTest extends TestCase
         $this->assertDatabaseCount('mdb_workflow_batches', 0);
     }
 
+    public function test_resync_replaces_zero_count_for_six_digit_drive_dates(): void
+    {
+        ProgressFeeder::create(['feeder_id' => $this->feeder->id, 'folder_id' => 'folder-407', 'surveyed_count' => 0, 'synced_at' => now()]);
+        $files = $this->files();
+        $files[0]['name'] = 'A_081026_05.pdf';
+        $files[1]['name'] = 'A_081026_05.gpx';
+        $this->mockDrive($files);
+
+        foreach (range(1, 2) as $i) {
+            app(Synchronizer::class)->sync($run = Run::create(['type' => 'sync']));
+        }
+
+        $state = ProgressFeeder::firstOrFail();
+        $this->assertSame(5, $state->surveyed_count);
+        $this->assertSame(['2026-10-08' => 5], $state->aggregates['by_date']);
+        $this->assertSame(5, $run->fresh()->result['metrics']['reported_transformers']);
+        $this->assertSame(['A_08102026_5'], $state->files()->pluck('survey_key')->unique()->values()->all());
+        $this->assertDatabaseCount('survey_progress_files', 2);
+        $this->getJson(route('survey-progress.sync-status', ['run_id' => $run->id]))
+            ->assertOk()->assertJsonPath('run.metrics.reported_transformers', 5);
+    }
+
     public function test_failed_listing_retains_last_successful_count_and_marks_length_stale(): void
     {
         ProgressFeeder::create(['feeder_id' => $this->feeder->id, 'folder_id' => 'folder-407', 'surveyed_count' => 7, 'synced_at' => now(), 'length_status' => 'completed', 'calculated_at' => now(), 'confirmed_km' => 3]);
