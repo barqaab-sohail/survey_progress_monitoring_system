@@ -140,6 +140,32 @@ class SimpleMdbExportWorkflowTest extends TestCase
         Bus::assertDispatchedTimes(GenerateMdbExport::class, 1);
     }
 
+    public function test_confirmed_simple_settings_populate_transformer_loads_and_section_connection(): void
+    {
+        $settings = $this->configuration->settings;
+        $settings['engineering'] = ['configuration_id' => 'line-type', 'transformer_types' => ['100' => 'transformer-100']];
+        $settings['mapping']['table_values']['InstSection']['LoadConnectionPhaseGnd'] = 1;
+        $settings['simple_model_review'] = ['reviewed_by' => $this->actor->id, 'reviewed_at' => now()->toIso8601String()];
+        $this->configuration->update(['settings' => $settings, 'load_assumptions' => [
+            'mode' => 'category_rates', 'rates' => ['rs' => ['kva' => 3, 'power_factor' => 0.8]],
+            'method' => 'Department category rates', 'evidence' => 'Verified department standard',
+        ]]);
+        $this->section->transformer()->update(['capacity_kva' => 100]);
+        $this->section->update(['phases' => ['R', 'Y', 'B']]);
+        $this->batch->increment('revision');
+        $this->approve();
+        $revision = $this->batch->approvedRevision;
+        $payload = app(\App\Services\Mdb\ExportPayloadBuilder::class)->build($revision, $this->template, null, 'confirmed-simple');
+        $this->assertSame('transformer-100', $payload['tables']['InstPrimaryTransformers'][0]['TransformerType']);
+        foreach ($payload['tables']['InstSection'] as $section) {
+            $this->assertSame(1, $section['LoadConnectionPhaseGnd']);
+        }
+        $load = $payload['tables']['Loads'][0];
+        $this->assertEqualsWithDelta(3, $load['Phase1Kva'], 1e-8);
+        $this->assertEqualsWithDelta(2.4, $load['Phase1Kw'], 1e-8);
+        $this->assertEquals(1, $load['Phase1Customers']);
+    }
+
     public function test_simple_request_keeps_essential_connectivity_validation(): void
     {
         $this->section->update(['end_waypoint_id' => $this->section->start_waypoint_id, 'end_reference' => '001']);

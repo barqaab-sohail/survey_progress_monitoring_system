@@ -104,6 +104,23 @@ class EngineeringConfigurationTest extends TestCase
         $this->assertArrayNotHasKey('simple_model_review', $configuration->fresh()->settings);
     }
 
+    public function test_simple_apply_button_confirms_types_loads_and_section_connection(): void
+    {
+        Configuration::create(['project_id' => $this->project->id, 'revision' => 1, 'settings' => ['simple_mdb_generation' => true]]);
+        $payload = $this->payload();
+        $payload['revision'] = 1;
+        $payload['save_action'] = 'simple';
+        $payload['section_load_connection'] = '0';
+        $this->put(route('engineering.update', $this->project), $payload)->assertSessionHasNoErrors();
+        $settings = Configuration::firstOrFail()->settings;
+        $this->assertSame(0, $settings['mapping']['table_values']['InstSection']['LoadConnectionPhaseGnd']);
+        $this->assertSame('approved-100', $settings['engineering']['transformer_types']['100']);
+        $this->assertSame($this->admin->id, $settings['simple_model_review']['reviewed_by']);
+        $payload['revision'] = 2;
+        $payload['section_load_connection'] = '2';
+        $this->put(route('engineering.update', $this->project), $payload)->assertSessionHasErrors('section_load_connection');
+    }
+
     public function test_simple_model_confirmation_rejects_missing_power_factor_instead_of_inventing_demand(): void
     {
         Configuration::create(['project_id' => $this->project->id, 'revision' => 1, 'settings' => ['simple_mdb_generation' => true]]);

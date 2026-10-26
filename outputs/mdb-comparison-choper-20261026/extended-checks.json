@@ -1,0 +1,1859 @@
+{
+  "generated": {
+    "length_total": 466.25410318586233,
+    "zero_lengths": [
+      {
+        "id": "sac3694570168772e1b2264107f0999",
+        "length": 0,
+        "endpoint_distance_m": 0.0,
+        "shorter_than_chord": false
+      },
+      {
+        "id": "s51f353d9d3292bf0998cb8d95af3e8",
+        "length": 0,
+        "endpoint_distance_m": 0.0,
+        "shorter_than_chord": false
+      }
+    ],
+    "shorter_than_chord": [],
+    "length_min": 0,
+    "length_max": 74.6700362654095,
+    "configurations": {
+      "12.5/7.2 kV cross arm C2-2": 13
+    },
+    "phases": {
+      "RYB": 1,
+      "RYBN": 12
+    },
+    "conductors": [
+      "ANT",
+      "GNAT",
+      "None"
+    ],
+    "field_profiles": {
+      "InstFeeders": {
+        "FeederId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SubstationId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "DefaultSelect": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ConnectionType": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "NominalKvll": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "BusVoltageLevel": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PosSequenceResistance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PosSequenceReactance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ZeroSequenceResistance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ZeroSequenceReactance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LineToGroundFaultResistance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "FeederMultiplier": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase1KvaDemand": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase2KvaDemand": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase3KvaDemand": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase1PercentPF": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase2PercentPF": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase3PercentPF": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "FeederRGBColor": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UseByPhVoltLevel": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ByPhVoltLevelPh1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ByPhVoltDegPh1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ByPhVoltLevelPh2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ByPhVoltDegPh2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ByPhVoltLevelPh3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ByPhVoltDegPh3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SustFailuresPrYear": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "TempFailuresPrYear": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SustFailRepairTime_Hr": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "AvgCrewOperResetTime_Hr": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LockedBy": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "AmpRating": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Note_": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "LocationLink": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "UseGrowthCurve": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "GrowthCurveId": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "EmerAmpRating": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LastSavedDate": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "LastSavedBy": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "BuiltDate": {
+          "null": 1,
+          "blank_string": 0
+        }
+      },
+      "InstPrimaryTransformers": {
+        "SectionId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UniqueDeviceId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ConnectedPhases": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "TransformerType": {
+          "null": 0,
+          "blank_string": 1
+        },
+        "TapSetting": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "NearFromNode": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "HighSideNearFromNode": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "HighSideGroundingResistance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LowSideGroundingResistance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "HighSideGroundingReactance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LowSideGroundingReactance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "HighSideConnectionCode": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LowSideConnectionCode": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SustFailuresPrYear": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "TempFailuresPrYear": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SustFailRepairTime_Hr": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SustFailRepairCost_MU": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCIsGangOperated": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "GangOperatingPhase": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCInManualMode": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCTapPosPh1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCTapPosPh2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCTapPosPh3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdVoltSettingPh1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdVoltSettingPh2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdVoltSettingPh3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdBWSettingPh1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdBWSettingPh2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdBWSettingPh3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdRDialPhase1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdXDialPhase1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdRDialPhase2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdXDialPhase2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdRDialPhase3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdXDialPhase3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCTapLimActive": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCTapLimHigh": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCTapLimLow": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "TertIncidentSectId1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "TertIncidentSectId2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "TertIncidentSectId3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "TertConnectCode": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "EnergizeYear": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "RetireYear": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "FirstHouseActive": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "FirstHouseHighVoltage": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "FirstHouseLowVoltage": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LocationLink": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "NetProtEnabled": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "NetProtIsAuto": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "NetProtIsOpen": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Note_": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "AMSLink": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "UseInstanceImpedance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PercentImpedance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PercentResistance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "NomKvMode": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SpecNomKv": {
+          "null": 0,
+          "blank_string": 0
+        }
+      },
+      "InstSection": {
+        "SectionId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "FeederId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "FromNodeId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ToNodeId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SectionPhases": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Description": {
+          "null": 13,
+          "blank_string": 0
+        },
+        "PhaseConductorId": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "NeutralConductorId": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "PhaseToPhaseSpacing_MUL": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PhaseToNeutralSpacing_MUL": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "AveHeightAboveGround_MUL": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PercentDistLoadConstImpedance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PercentDistLoadConstCurrent": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PercentSpotLoadConstImpedance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PercentSpotLoadConstCurrent": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SectionLength_MUL": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PercentLoadGrowthRate": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "MappingLink": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LoadConnectionPhaseGnd": {
+          "null": 13,
+          "blank_string": 0
+        },
+        "UseEquivSpacing": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "IdenticalPhaseConductors": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PhaseConductor2Id": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "PhaseConductor3Id": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "PositionCode": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ConfigurationId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "IsContingency": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UseSectAmpRating": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "AmpRating": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "DistLoadCustZone": {
+          "null": 13,
+          "blank_string": 0
+        },
+        "SpotLoadCustZone": {
+          "null": 13,
+          "blank_string": 0
+        },
+        "UseDistCustZone": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UseSpotCustZone": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UseCustClassDistLoadIzpq": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UseCustClassSpotLoadIzpq": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ExposureZone": {
+          "null": 13,
+          "blank_string": 0
+        },
+        "MitiZone": {
+          "null": 13,
+          "blank_string": 0
+        },
+        "GrowthZone": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "FromElbowOrBayStatus": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ToElbowOrBayStatus": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ElbowOrBayAmpRating": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "DuctBankId": {
+          "null": 13,
+          "blank_string": 0
+        },
+        "DuctBankInst": {
+          "null": 13,
+          "blank_string": 0
+        },
+        "DuctBankCircuit": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UseDuctBankAmpRating": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UseDuctBankConfiguration": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SpotLoadIsOff": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "EnergizeYear": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "RetireYear": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LoadCategory": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "NeutIsGrounded": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "HideMapResults": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Note_": {
+          "null": 13,
+          "blank_string": 0
+        },
+        "LocationLink": {
+          "null": 13,
+          "blank_string": 0
+        },
+        "AMSLink": {
+          "null": 13,
+          "blank_string": 0
+        },
+        "Monitor": {
+          "null": 13,
+          "blank_string": 0
+        },
+        "ExpFactPermFail": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ExpFactTempFail": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ExpFactRepair": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "CostZone": {
+          "null": 13,
+          "blank_string": 0
+        }
+      },
+      "Loads": {
+        "SectionId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "IsSpotLoad": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase1Customers": {
+          "null": 10,
+          "blank_string": 0
+        },
+        "Phase2Customers": {
+          "null": 10,
+          "blank_string": 0
+        },
+        "Phase3Customers": {
+          "null": 10,
+          "blank_string": 0
+        },
+        "Phase1Kw": {
+          "null": 10,
+          "blank_string": 0
+        },
+        "Phase2Kw": {
+          "null": 10,
+          "blank_string": 0
+        },
+        "Phase3Kw": {
+          "null": 10,
+          "blank_string": 0
+        },
+        "Phase1Kvar": {
+          "null": 10,
+          "blank_string": 0
+        },
+        "Phase2Kvar": {
+          "null": 10,
+          "blank_string": 0
+        },
+        "Phase3Kvar": {
+          "null": 10,
+          "blank_string": 0
+        },
+        "Phase1Kva": {
+          "null": 10,
+          "blank_string": 0
+        },
+        "Phase2Kva": {
+          "null": 10,
+          "blank_string": 0
+        },
+        "Phase3Kva": {
+          "null": 10,
+          "blank_string": 0
+        },
+        "Phase1Kwh": {
+          "null": 10,
+          "blank_string": 0
+        },
+        "Phase2Kwh": {
+          "null": 10,
+          "blank_string": 0
+        },
+        "Phase3Kwh": {
+          "null": 10,
+          "blank_string": 0
+        },
+        "LocationToModelSpotLoads": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "CapacityFactor": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Description": {
+          "null": 0,
+          "blank_string": 0
+        }
+      },
+      "Node": {
+        "NodeId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "X": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Y": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Description": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "IsPadMountGear": {
+          "null": 0,
+          "blank_string": 0
+        }
+      },
+      "SAI_Control": {
+        "VoltageFactor": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Frequency": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LengthUnits": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Product": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "VoltageInPercent": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_B": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_1": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_2": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_3": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_4": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_5": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_6": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_7": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_8": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_9": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "MYM_YearDesc10": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "ProjectionFile": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ProjectionWKT": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "PTSecondary": {
+          "null": 0,
+          "blank_string": 0
+        }
+      }
+    }
+  },
+  "reference": {
+    "length_total": 882.1846041656545,
+    "zero_lengths": [],
+    "shorter_than_chord": [],
+    "length_min": 1,
+    "length_max": 65.94694837519019,
+    "configurations": {
+      "12.5/7.2 kV cross arm C2-2": 24
+    },
+    "phases": {
+      "RYBN": 16,
+      "R  N": 4,
+      "  BN": 1,
+      " Y N": 2,
+      "RYB": 1
+    },
+    "conductors": [
+      "",
+      " ",
+      " ANT",
+      " DOG",
+      " WASP",
+      "ANT",
+      "DOG",
+      "WASP"
+    ],
+    "field_profiles": {
+      "InstFeeders": {
+        "FeederId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SubstationId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "DefaultSelect": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ConnectionType": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "NominalKvll": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "BusVoltageLevel": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PosSequenceResistance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PosSequenceReactance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ZeroSequenceResistance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ZeroSequenceReactance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LineToGroundFaultResistance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "FeederMultiplier": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase1KvaDemand": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase2KvaDemand": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase3KvaDemand": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase1PercentPF": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase2PercentPF": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase3PercentPF": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "FeederRGBColor": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UseByPhVoltLevel": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ByPhVoltLevelPh1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ByPhVoltDegPh1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ByPhVoltLevelPh2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ByPhVoltDegPh2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ByPhVoltLevelPh3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ByPhVoltDegPh3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SustFailuresPrYear": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "TempFailuresPrYear": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SustFailRepairTime_Hr": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "AvgCrewOperResetTime_Hr": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LockedBy": {
+          "null": 0,
+          "blank_string": 1
+        },
+        "AmpRating": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Note_": {
+          "null": 0,
+          "blank_string": 1
+        },
+        "LocationLink": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UseGrowthCurve": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "GrowthCurveId": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "EmerAmpRating": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LastSavedDate": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "LastSavedBy": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "BuiltDate": {
+          "null": 1,
+          "blank_string": 0
+        }
+      },
+      "InstMeterPoints": {
+        "SectionId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase1Value": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "Phase2Value": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "Phase3Value": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "Phase1Value2": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "Phase2Value2": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "Phase3Value2": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "CalibSAIFI": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "CalibSAIDI_Hr": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "CalibMAIFI": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "ContinuousCurrentRating": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "EmergencyCurrentRating": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "MeterIsOpen": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "UseDemandAsLoad": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "Description": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "Enabled": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "EnableReliCalibration": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "NearFromNode": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "Type": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "OverriddenUpstream": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "EnergizeYear": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "RetireYear": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "Note_": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "UseGrowthCurve": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "GrowthCurveId": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "UseDefDistCustZone": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "DefDistCustZone": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "UseDefSpotCustZone": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "DefSpotCustZone": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "IsColorBy": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "RGBColor": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "LocationLink": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "AMSLink": {
+          "null": 1,
+          "blank_string": 0
+        },
+        "LockFedLoad": {
+          "null": 1,
+          "blank_string": 0
+        }
+      },
+      "InstPrimaryTransformers": {
+        "SectionId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UniqueDeviceId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ConnectedPhases": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "TransformerType": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "TapSetting": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "NearFromNode": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "HighSideNearFromNode": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "HighSideGroundingResistance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LowSideGroundingResistance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "HighSideGroundingReactance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LowSideGroundingReactance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "HighSideConnectionCode": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LowSideConnectionCode": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SustFailuresPrYear": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "TempFailuresPrYear": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SustFailRepairTime_Hr": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SustFailRepairCost_MU": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCIsGangOperated": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "GangOperatingPhase": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCInManualMode": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCTapPosPh1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCTapPosPh2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCTapPosPh3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdVoltSettingPh1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdVoltSettingPh2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdVoltSettingPh3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdBWSettingPh1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdBWSettingPh2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdBWSettingPh3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdRDialPhase1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdXDialPhase1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdRDialPhase2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdXDialPhase2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdRDialPhase3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCFwdXDialPhase3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCTapLimActive": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCTapLimHigh": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LTCTapLimLow": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "TertIncidentSectId1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "TertIncidentSectId2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "TertIncidentSectId3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "TertConnectCode": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "EnergizeYear": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "RetireYear": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "FirstHouseActive": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "FirstHouseHighVoltage": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "FirstHouseLowVoltage": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LocationLink": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "NetProtEnabled": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "NetProtIsAuto": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "NetProtIsOpen": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Note_": {
+          "null": 0,
+          "blank_string": 1
+        },
+        "AMSLink": {
+          "null": 0,
+          "blank_string": 1
+        },
+        "UseInstanceImpedance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PercentImpedance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PercentResistance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "NomKvMode": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SpecNomKv": {
+          "null": 0,
+          "blank_string": 0
+        }
+      },
+      "InstSection": {
+        "SectionId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "FeederId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "FromNodeId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ToNodeId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SectionPhases": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Description": {
+          "null": 0,
+          "blank_string": 1
+        },
+        "PhaseConductorId": {
+          "null": 0,
+          "blank_string": 3
+        },
+        "NeutralConductorId": {
+          "null": 0,
+          "blank_string": 2
+        },
+        "PhaseToPhaseSpacing_MUL": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PhaseToNeutralSpacing_MUL": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "AveHeightAboveGround_MUL": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PercentDistLoadConstImpedance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PercentDistLoadConstCurrent": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PercentSpotLoadConstImpedance": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PercentSpotLoadConstCurrent": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SectionLength_MUL": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PercentLoadGrowthRate": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "MappingLink": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LoadConnectionPhaseGnd": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UseEquivSpacing": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "IdenticalPhaseConductors": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PhaseConductor2Id": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "PhaseConductor3Id": {
+          "null": 0,
+          "blank_string": 6
+        },
+        "PositionCode": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ConfigurationId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "IsContingency": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UseSectAmpRating": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "AmpRating": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "DistLoadCustZone": {
+          "null": 0,
+          "blank_string": 24
+        },
+        "SpotLoadCustZone": {
+          "null": 0,
+          "blank_string": 24
+        },
+        "UseDistCustZone": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UseSpotCustZone": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UseCustClassDistLoadIzpq": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UseCustClassSpotLoadIzpq": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ExposureZone": {
+          "null": 0,
+          "blank_string": 24
+        },
+        "MitiZone": {
+          "null": 0,
+          "blank_string": 24
+        },
+        "GrowthZone": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "FromElbowOrBayStatus": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ToElbowOrBayStatus": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ElbowOrBayAmpRating": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "DuctBankId": {
+          "null": 0,
+          "blank_string": 24
+        },
+        "DuctBankInst": {
+          "null": 0,
+          "blank_string": 24
+        },
+        "DuctBankCircuit": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UseDuctBankAmpRating": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "UseDuctBankConfiguration": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "SpotLoadIsOff": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "EnergizeYear": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "RetireYear": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LoadCategory": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "NeutIsGrounded": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "HideMapResults": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Note_": {
+          "null": 0,
+          "blank_string": 24
+        },
+        "LocationLink": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "AMSLink": {
+          "null": 0,
+          "blank_string": 24
+        },
+        "Monitor": {
+          "null": 0,
+          "blank_string": 24
+        },
+        "ExpFactPermFail": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ExpFactTempFail": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ExpFactRepair": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "CostZone": {
+          "null": 0,
+          "blank_string": 24
+        }
+      },
+      "Loads": {
+        "SectionId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "IsSpotLoad": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase1Customers": {
+          "null": 3,
+          "blank_string": 0
+        },
+        "Phase2Customers": {
+          "null": 5,
+          "blank_string": 0
+        },
+        "Phase3Customers": {
+          "null": 6,
+          "blank_string": 0
+        },
+        "Phase1Kw": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase2Kw": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase3Kw": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase1Kvar": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase2Kvar": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase3Kvar": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase1Kva": {
+          "null": 3,
+          "blank_string": 0
+        },
+        "Phase2Kva": {
+          "null": 5,
+          "blank_string": 0
+        },
+        "Phase3Kva": {
+          "null": 6,
+          "blank_string": 0
+        },
+        "Phase1Kwh": {
+          "null": 23,
+          "blank_string": 0
+        },
+        "Phase2Kwh": {
+          "null": 23,
+          "blank_string": 0
+        },
+        "Phase3Kwh": {
+          "null": 23,
+          "blank_string": 0
+        },
+        "LocationToModelSpotLoads": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "CapacityFactor": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Description": {
+          "null": 23,
+          "blank_string": 0
+        }
+      },
+      "Node": {
+        "NodeId": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "X": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Y": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Description": {
+          "null": 0,
+          "blank_string": 26
+        },
+        "IsPadMountGear": {
+          "null": 0,
+          "blank_string": 0
+        }
+      },
+      "SAI_Control": {
+        "VoltageFactor": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Frequency": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "LengthUnits": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Phase3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "Product": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "VoltageInPercent": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_B": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_1": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_2": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_3": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_4": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_5": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_6": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_7": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_8": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "MYM_YearDesc_9": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "MYM_YearDesc10": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ProjectionFile": {
+          "null": 0,
+          "blank_string": 0
+        },
+        "ProjectionWKT": {
+          "null": 0,
+          "blank_string": 1
+        },
+        "PTSecondary": {
+          "null": 0,
+          "blank_string": 0
+        }
+      }
+    }
+  }
+}

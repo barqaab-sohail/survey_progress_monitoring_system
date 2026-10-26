@@ -151,28 +151,45 @@ class TransformerKmzImportTest extends TestCase
         $this->assertDatabaseHas('transformers', ['transformer_code' => 'EXISTING']);
     }
 
-    public function test_invalid_kmz_is_rejected_without_changing_existing_transformers(): void
+    public function test_duplicate_transformer_numbers_save_count_without_changing_existing_details(): void
     {
         Transformer::create($this->databaseTransformer('EXISTING-1'));
         $invalid = $this->kmz([
             $this->point('bad-1', $this->transformerFields('DUPLICATE', '25', '73.1000', '34.2000'), '73.1000,34.2000,0'),
-            $this->point('bad-2', $this->transformerFields('DUPLICATE', '50', '73.2000', '34.3000'), '73.2000,34.3000,0'),
+            $this->point('bad-2', $this->transformerFields('duplicate', '50', '73.2000', '34.3000'), '73.2000,34.3000,0'),
         ]);
         $import = TransformerKmzImport::create([
             'feeder_id' => $this->feeder->id, 'imported_by' => $this->admin->id,
             'file_name' => 'invalid.kmz', 'stored_path' => 'invalid.kmz', 'status' => 'pending',
         ]);
 
-        try {
-            app(TransformerKmzImportService::class)->import($import, $invalid);
-            $this->fail('Duplicate transformer codes should reject the KMZ.');
-        } catch (RuntimeException $exception) {
-            $this->assertStringContainsString('Duplicate transformer number', $exception->getMessage());
-        }
+        $result = app(TransformerKmzImportService::class)->import($import, $invalid);
 
-        $this->assertSame('failed', $import->fresh()->status);
+        $this->assertSame('completed', $result->status);
+        $this->assertSame(2, $result->transformer_count);
+        $this->assertSame(0, $result->created_rows);
+        $this->assertSame(0, $result->updated_rows);
+        $this->assertSame(0, $result->removed_rows);
+        $this->assertStringContainsString('count imported only', $result->errors[0]['message']);
+        $this->assertStringContainsString("Duplicate transformer number 'duplicate'", $result->errors[1]['message']);
+        $this->assertSame(2, $this->feeder->fresh()->total_transformers);
+        $this->assertFalse($this->feeder->fresh()->baseline_pending);
         $this->assertDatabaseCount('transformers', 1);
         $this->assertDatabaseHas('transformers', ['transformer_code' => 'EXISTING-1']);
+    }
+
+    public function test_duplicate_numbers_do_not_bypass_source_feeder_validation(): void
+    {
+        $fields = $this->transformerFields('DUPLICATE', '25', '73.1', '34.2');
+        $otherFields = array_replace($fields, ['Feeder' => 'SOURCE_B']);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('exactly one source feeder');
+
+        app(TransformerKmzImportService::class)->inspect($this->kmz([
+            $this->point('tx-1', $fields, '73.1,34.2,0'),
+            $this->point('tx-2', $otherFields, '73.1,34.2,0'),
+        ]));
     }
 
     public function test_survey_scope_and_mdb_access_are_enforced_for_transformer_reference(): void

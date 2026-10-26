@@ -1,0 +1,30 @@
+{
+    "source":  {
+                   "batch_id":  17,
+                   "project_id":  1,
+                   "feeder_id":  62,
+                   "feeder_code":  "407",
+                   "feeder_name":  "NAWAN SHEHR",
+                   "revision_id":  21,
+                   "revision_number":  79,
+                   "revision_sha256":  "c4c05ba51b1eb5135ddf6e933ab38010a097f112d3f5351573d229f737d1546d",
+                   "exported_at":  "2026-10-26T03:55:44+00:00"
+               },
+    "transformer":  [
+                        {
+                            "code":  "11140223003",
+                            "capacity_kva":  100
+                        }
+                    ],
+    "simple_mode":  true,
+    "capacity_mapping":  [
+
+                         ],
+    "base_type":  null,
+    "reference_type_names":  [
+                                 "100 KVA",
+                                 "200 KVA",
+                                 "50 KVA"
+                             ],
+    "template_type_names":  null
+}

@@ -37,6 +37,7 @@ class EngineeringConfiguration
             'pole_height_unit' => 'nullable|in:ft,m', 'two_digit_year_start' => 'nullable|integer|between:1800,9900',
             'load_mode' => 'nullable|in:manual,category_rates', 'load_evidence' => 'nullable|string|max:4000',
             'blank_consumers_zero' => 'nullable|boolean',
+            'section_load_connection' => 'nullable|integer|in:0,1',
             'mapping_json' => 'nullable|json|max:262144', 'transformer_types_json' => 'nullable|json|max:65536',
             'equipment_references_json' => 'nullable|json|max:262144',
             'reason' => 'required|string|min:5|max:4000',
@@ -107,6 +108,9 @@ class EngineeringConfiguration
                     }
                 }
             }
+            if (array_key_exists('section_load_connection', $data)) {
+                $settings['mapping']['table_values']['InstSection']['LoadConnectionPhaseGnd'] = $data['section_load_connection'] === null ? null : (int) $data['section_load_connection'];
+            }
             unset($settings['mapping']['reviewed_by'], $settings['mapping']['reviewed_at']);
             if (array_key_exists('equipment_references_json', $data)) {
                 $settings['reference_import']['equipment_references'] = $objects['equipment_references_json'] ?? null;
@@ -174,6 +178,7 @@ class EngineeringConfiguration
             'pole_height_unit' => 'required|in:ft,m', 'two_digit_year_start' => 'required|integer|between:1800,9900',
             'load_mode' => 'required|in:manual,category_rates', 'load_evidence' => 'required|string|max:4000',
             'blank_consumers_zero' => 'required|boolean',
+            'section_load_connection' => 'nullable|integer|in:0,1',
             'mapping_json' => 'required|json|max:262144', 'transformer_types_json' => 'required|json|max:65536',
             'equipment_references_json' => 'nullable|json|max:262144',
             'reason' => 'required|string|min:5|max:4000', 'approved' => 'required|accepted',
@@ -188,6 +193,9 @@ class EngineeringConfiguration
             $data['sag_allowance_percent'] = SagAllowance::percent($data['sag_allowance_percent']);
         }
         $mapping = $this->object($data['mapping_json'], 'mapping_json');
+        if (array_key_exists('section_load_connection', $data)) {
+            $mapping['table_values']['InstSection']['LoadConnectionPhaseGnd'] = $data['section_load_connection'] === null ? null : (int) $data['section_load_connection'];
+        }
         $types = $this->object($data['transformer_types_json'], 'transformer_types_json');
         $references = isset($data['equipment_references_json'])
             ? $this->equipmentReferences($this->object($data['equipment_references_json'], 'equipment_references_json'))

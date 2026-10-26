@@ -147,7 +147,7 @@ class TransformerKmzImportService
             $codeKey = $code === null ? null : mb_strtoupper($code);
 
             if (isset($seenCodes[$codeKey])) {
-                throw new RuntimeException("Duplicate transformer number '{$code}' in the KMZ.");
+                $warnings[] = ['message' => "Duplicate transformer number '{$code}' in the KMZ; transformer point records were counted separately."];
             }
             if ($codeKey !== null) {
                 $seenCodes[$codeKey] = true;

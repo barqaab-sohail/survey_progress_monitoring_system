@@ -1,0 +1,2543 @@
+{
+  "schema_validation": [
+    {
+      "role": "generated",
+      "path": "C:\\Users\\sohai\\Downloads\\synergee_11140223003_batch-17_r79 (1).mdb",
+      "sha256": "35a50ad34d49c8a87e738876edff522d90cb230ddfd8328acb01bbb3945d0df3",
+      "bytes": 1331200,
+      "version": "4.0",
+      "fingerprint": "a2659f32f858dbc0dc25ab75756e7f6d117cd9216a4a8839d938cb014c5bc4cf",
+      "tables": 50,
+      "fields": 1065,
+      "indexes": 133,
+      "relationships": 41,
+      "table_objects": [
+        {
+          "name": "Gnodes",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstAreaOfInt",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstAreaOfIntPts",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstBkrRelays",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstBreakers",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstCapacitors",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstDGens",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstDTrans",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstFaultEvents",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstFeeders",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstFeederSet",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstFeederSetItem",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstFuses",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstGenerators",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstLargeCust",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMeterPoints",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMotors",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymAreaOfInt",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymDGens",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymLargeCust",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymLoads",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymMeter",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymProjLoads",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymSections",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymSwDevPos",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstPrimaryTransformers",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstProjLoads",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstProtectiveDevices",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstReclosers",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstRecRelays",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstRegulators",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSchematic",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSchematicItem",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSection",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSectionalizers",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSubstationTransformers",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSwitches",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSwPlan",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSwPlanItem",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTccItem",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTccSet",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTextLabels",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTranBus",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTranLine",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTranVertices",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstViews",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstWhatIf",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "Loads",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "MSysAccessObjects",
+          "attributes": 2,
+          "connect": ""
+        },
+        {
+          "name": "MSysACEs",
+          "attributes": -2147483648,
+          "connect": ""
+        },
+        {
+          "name": "MSysNavPaneGroupCategories",
+          "attributes": 2,
+          "connect": ""
+        },
+        {
+          "name": "MSysNavPaneGroups",
+          "attributes": 2,
+          "connect": ""
+        },
+        {
+          "name": "MSysNavPaneGroupToObjects",
+          "attributes": 2,
+          "connect": ""
+        },
+        {
+          "name": "MSysNavPaneObjectIDs",
+          "attributes": 2,
+          "connect": ""
+        },
+        {
+          "name": "MSysObjects",
+          "attributes": -2147483648,
+          "connect": ""
+        },
+        {
+          "name": "MSysQueries",
+          "attributes": -2147483648,
+          "connect": ""
+        },
+        {
+          "name": "MSysRelationships",
+          "attributes": -2147483648,
+          "connect": ""
+        },
+        {
+          "name": "Node",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "SAI_Control",
+          "attributes": 0,
+          "connect": ""
+        }
+      ],
+      "queries": [],
+      "compacted_bytes": 1343488,
+      "reclaimed_bytes": -12288,
+      "compacted_schema_fingerprint": "a2659f32f858dbc0dc25ab75756e7f6d117cd9216a4a8839d938cb014c5bc4cf",
+      "source_unchanged": true
+    },
+    {
+      "role": "reference",
+      "path": "C:\\Users\\sohai\\OneDrive\\Desktop\\HAZECO\\Choper HattaT-3030216724.mdb",
+      "sha256": "a13f0d2599a7c998ff9554bee70b67aed7c5140d86604631b4b82901851c486b",
+      "bytes": 3973120,
+      "version": "4.0",
+      "fingerprint": "a2659f32f858dbc0dc25ab75756e7f6d117cd9216a4a8839d938cb014c5bc4cf",
+      "tables": 50,
+      "fields": 1065,
+      "indexes": 133,
+      "relationships": 41,
+      "table_objects": [
+        {
+          "name": "Gnodes",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstAreaOfInt",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstAreaOfIntPts",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstBkrRelays",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstBreakers",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstCapacitors",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstDGens",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstDTrans",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstFaultEvents",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstFeeders",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstFeederSet",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstFeederSetItem",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstFuses",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstGenerators",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstLargeCust",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMeterPoints",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMotors",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymAreaOfInt",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymDGens",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymLargeCust",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymLoads",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymMeter",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymProjLoads",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymSections",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymSwDevPos",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstPrimaryTransformers",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstProjLoads",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstProtectiveDevices",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstReclosers",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstRecRelays",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstRegulators",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSchematic",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSchematicItem",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSection",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSectionalizers",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSubstationTransformers",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSwitches",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSwPlan",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSwPlanItem",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTccItem",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTccSet",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTextLabels",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTranBus",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTranLine",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTranVertices",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstViews",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstWhatIf",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "Loads",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "MSysAccessObjects",
+          "attributes": 2,
+          "connect": ""
+        },
+        {
+          "name": "MSysACEs",
+          "attributes": -2147483648,
+          "connect": ""
+        },
+        {
+          "name": "MSysNavPaneGroupCategories",
+          "attributes": 2,
+          "connect": ""
+        },
+        {
+          "name": "MSysNavPaneGroups",
+          "attributes": 2,
+          "connect": ""
+        },
+        {
+          "name": "MSysNavPaneGroupToObjects",
+          "attributes": 2,
+          "connect": ""
+        },
+        {
+          "name": "MSysNavPaneObjectIDs",
+          "attributes": 2,
+          "connect": ""
+        },
+        {
+          "name": "MSysObjects",
+          "attributes": -2147483648,
+          "connect": ""
+        },
+        {
+          "name": "MSysQueries",
+          "attributes": -2147483648,
+          "connect": ""
+        },
+        {
+          "name": "MSysRelationships",
+          "attributes": -2147483648,
+          "connect": ""
+        },
+        {
+          "name": "Node",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "SAI_Control",
+          "attributes": 0,
+          "connect": ""
+        }
+      ],
+      "queries": [],
+      "compacted_bytes": 1343488,
+      "reclaimed_bytes": 2629632,
+      "compacted_schema_fingerprint": "a2659f32f858dbc0dc25ab75756e7f6d117cd9216a4a8839d938cb014c5bc4cf",
+      "source_unchanged": true
+    },
+    {
+      "role": "template",
+      "path": "E:\\xampp\\htdocs\\survey_progress_monitoring_system\\resources\\mdb\\synergee-empty.mdb",
+      "sha256": "5d4ebf8d307e1a9adf130d56c36706a4e63406ee628131f472850cb2897f6a39",
+      "bytes": 1310720,
+      "version": "4.0",
+      "fingerprint": "a2659f32f858dbc0dc25ab75756e7f6d117cd9216a4a8839d938cb014c5bc4cf",
+      "tables": 50,
+      "fields": 1065,
+      "indexes": 133,
+      "relationships": 41,
+      "table_objects": [
+        {
+          "name": "Gnodes",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstAreaOfInt",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstAreaOfIntPts",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstBkrRelays",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstBreakers",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstCapacitors",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstDGens",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstDTrans",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstFaultEvents",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstFeeders",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstFeederSet",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstFeederSetItem",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstFuses",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstGenerators",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstLargeCust",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMeterPoints",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMotors",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymAreaOfInt",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymDGens",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymLargeCust",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymLoads",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymMeter",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymProjLoads",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymSections",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstMymSwDevPos",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstPrimaryTransformers",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstProjLoads",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstProtectiveDevices",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstReclosers",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstRecRelays",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstRegulators",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSchematic",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSchematicItem",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSection",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSectionalizers",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSubstationTransformers",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSwitches",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSwPlan",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstSwPlanItem",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTccItem",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTccSet",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTextLabels",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTranBus",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTranLine",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstTranVertices",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstViews",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "InstWhatIf",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "Loads",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "MSysAccessObjects",
+          "attributes": 2,
+          "connect": ""
+        },
+        {
+          "name": "MSysACEs",
+          "attributes": -2147483648,
+          "connect": ""
+        },
+        {
+          "name": "MSysNavPaneGroupCategories",
+          "attributes": 2,
+          "connect": ""
+        },
+        {
+          "name": "MSysNavPaneGroups",
+          "attributes": 2,
+          "connect": ""
+        },
+        {
+          "name": "MSysNavPaneGroupToObjects",
+          "attributes": 2,
+          "connect": ""
+        },
+        {
+          "name": "MSysNavPaneObjectIDs",
+          "attributes": 2,
+          "connect": ""
+        },
+        {
+          "name": "MSysObjects",
+          "attributes": -2147483648,
+          "connect": ""
+        },
+        {
+          "name": "MSysQueries",
+          "attributes": -2147483648,
+          "connect": ""
+        },
+        {
+          "name": "MSysRelationships",
+          "attributes": -2147483648,
+          "connect": ""
+        },
+        {
+          "name": "Node",
+          "attributes": 0,
+          "connect": ""
+        },
+        {
+          "name": "SAI_Control",
+          "attributes": 0,
+          "connect": ""
+        }
+      ],
+      "queries": [],
+      "compacted_bytes": 1310720,
+      "reclaimed_bytes": 0,
+      "compacted_schema_fingerprint": "a2659f32f858dbc0dc25ab75756e7f6d117cd9216a4a8839d938cb014c5bc4cf",
+      "source_unchanged": true
+    }
+  ],
+  "generated": {
+    "file": "synergee_11140223003_batch-17_r79 (1).mdb",
+    "sha256": "35a50ad34d49c8a87e738876edff522d90cb230ddfd8328acb01bbb3945d0df3",
+    "row_counts": {
+      "Gnodes": 0,
+      "InstAreaOfInt": 0,
+      "InstAreaOfIntPts": 0,
+      "InstBkrRelays": 0,
+      "InstBreakers": 0,
+      "InstCapacitors": 0,
+      "InstDGens": 0,
+      "InstDTrans": 0,
+      "InstFaultEvents": 0,
+      "InstFeeders": 1,
+      "InstFeederSet": 0,
+      "InstFeederSetItem": 0,
+      "InstFuses": 0,
+      "InstGenerators": 0,
+      "InstLargeCust": 0,
+      "InstMeterPoints": 0,
+      "InstMotors": 0,
+      "InstMymAreaOfInt": 0,
+      "InstMymDGens": 0,
+      "InstMymLargeCust": 0,
+      "InstMymLoads": 0,
+      "InstMymMeter": 0,
+      "InstMymProjLoads": 0,
+      "InstMymSections": 0,
+      "InstMymSwDevPos": 0,
+      "InstPrimaryTransformers": 1,
+      "InstProjLoads": 0,
+      "InstProtectiveDevices": 0,
+      "InstReclosers": 0,
+      "InstRecRelays": 0,
+      "InstRegulators": 0,
+      "InstSchematic": 0,
+      "InstSchematicItem": 0,
+      "InstSection": 13,
+      "InstSectionalizers": 0,
+      "InstSubstationTransformers": 0,
+      "InstSwitches": 0,
+      "InstSwPlan": 0,
+      "InstSwPlanItem": 0,
+      "InstTccItem": 0,
+      "InstTccSet": 0,
+      "InstTextLabels": 0,
+      "InstTranBus": 0,
+      "InstTranLine": 0,
+      "InstTranVertices": 0,
+      "InstViews": 0,
+      "InstWhatIf": 0,
+      "Loads": 10,
+      "Node": 14,
+      "SAI_Control": 1
+    },
+    "controls": [
+      {
+        "VoltageFactor": 11,
+        "Frequency": 60,
+        "LengthUnits": "Metric",
+        "Phase1": "R",
+        "Phase2": "Y",
+        "Phase3": "B",
+        "Product": "SynerGEE Electric 5.0.0.324",
+        "VoltageInPercent": 0,
+        "MYM_YearDesc_B": null,
+        "MYM_YearDesc_1": null,
+        "MYM_YearDesc_2": null,
+        "MYM_YearDesc_3": null,
+        "MYM_YearDesc_4": null,
+        "MYM_YearDesc_5": null,
+        "MYM_YearDesc_6": null,
+        "MYM_YearDesc_7": null,
+        "MYM_YearDesc_8": null,
+        "MYM_YearDesc_9": null,
+        "MYM_YearDesc10": null,
+        "ProjectionFile": "WGS 1984 UTM Zone 43N",
+        "ProjectionWKT": null,
+        "PTSecondary": 120
+      }
+    ],
+    "transformer_types": [
+      {
+        "id": "11140223003",
+        "type": "",
+        "use_instance_impedance": 0
+      }
+    ],
+    "coordinates": {
+      "nodes": 14,
+      "missing_x": 0,
+      "missing_y": 0,
+      "x_range": {
+        "min": 339387.7681806441,
+        "max": 339548.84369778563
+      },
+      "y_range": {
+        "min": 3782362.344317415,
+        "max": 3782646.17249438
+      }
+    },
+    "sections": {
+      "total": 13,
+      "missing_length": 0,
+      "missing_phases": 0,
+      "missing_configuration": 0,
+      "missing_load_connection": 13,
+      "active_phase_missing_conductor": [
+        {
+          "section": "sac3694570168772e1b2264107f0999",
+          "phase": "R"
+        },
+        {
+          "section": "sac3694570168772e1b2264107f0999",
+          "phase": "Y"
+        },
+        {
+          "section": "sac3694570168772e1b2264107f0999",
+          "phase": "B"
+        }
+      ]
+    },
+    "demand": {
+      "Kw": {
+        "rows_with_no_phase_values": 10,
+        "nonempty_phase_cells": 0,
+        "numeric_total": 0
+      },
+      "Kvar": {
+        "rows_with_no_phase_values": 10,
+        "nonempty_phase_cells": 0,
+        "numeric_total": 0
+      },
+      "Kva": {
+        "rows_with_no_phase_values": 10,
+        "nonempty_phase_cells": 0,
+        "numeric_total": 0
+      },
+      "Customers": {
+        "rows_with_no_phase_values": 10,
+        "nonempty_phase_cells": 0,
+        "numeric_total": 0
+      }
+    },
+    "network": {
+      "nodes": 14,
+      "sections": 13,
+      "reachable_nodes": 14,
+      "unused_isolated_nodes": 0,
+      "sections_unreachable_from_any_feeder": 0,
+      "sections_with_unknown_endpoint": 0,
+      "sections_with_unknown_feeder": 0,
+      "self_loops": 0,
+      "duplicate_undirected_edges": 0,
+      "orphan_loads": 0
+    },
+    "relationship_checks": [
+      {
+        "name": "_CSCDE_AOP",
+        "parent": "InstAreaOfInt",
+        "child": "InstAreaOfIntPts",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_ARB",
+        "parent": "InstSection",
+        "child": "InstAreaOfInt",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_ARM",
+        "parent": "InstAreaOfInt",
+        "child": "InstMymAreaOfInt",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_CPD",
+        "parent": "InstSection",
+        "child": "InstProtectiveDevices",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IBK",
+        "parent": "InstSection",
+        "child": "InstBreakers",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IBR",
+        "parent": "InstBreakers",
+        "child": "InstBkrRelays",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_ICP",
+        "parent": "InstSection",
+        "child": "InstCapacitors",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IDFND1",
+        "parent": "Node",
+        "child": "InstFeeders",
+        "checked": 1,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IDFND2",
+        "parent": "Node",
+        "child": "InstSubstationTransformers",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IDFND3",
+        "parent": "Node",
+        "child": "InstSection",
+        "checked": 13,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IDFND4",
+        "parent": "Node",
+        "child": "InstSection",
+        "checked": 13,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IDFND5",
+        "parent": "InstFeeders",
+        "child": "InstSchematic",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IDFND6",
+        "parent": "InstSchematic",
+        "child": "InstSchematicItem",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IDG",
+        "parent": "InstSection",
+        "child": "InstDGens",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IDT",
+        "parent": "InstSection",
+        "child": "InstDTrans",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IFE",
+        "parent": "InstSection",
+        "child": "InstFaultEvents",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IFU",
+        "parent": "InstSection",
+        "child": "InstFuses",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IGN",
+        "parent": "InstSection",
+        "child": "InstGenerators",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IMB",
+        "parent": "InstSection",
+        "child": "InstMeterPoints",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IMI",
+        "parent": "InstSection",
+        "child": "InstMymSwDevPos",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IMM",
+        "parent": "InstMeterPoints",
+        "child": "InstMymMeter",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IMR",
+        "parent": "InstSection",
+        "child": "InstMotors",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IRC",
+        "parent": "InstSection",
+        "child": "InstReclosers",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IRG",
+        "parent": "InstSection",
+        "child": "InstRegulators",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_ISW",
+        "parent": "InstSection",
+        "child": "InstSwitches",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_ISZ",
+        "parent": "InstSection",
+        "child": "InstSectionalizers",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_ITL",
+        "parent": "InstSection",
+        "child": "InstTextLabels",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_ITR",
+        "parent": "InstSection",
+        "child": "InstPrimaryTransformers",
+        "checked": 1,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IWI",
+        "parent": "InstSection",
+        "child": "InstWhatIf",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_LCB",
+        "parent": "InstSection",
+        "child": "InstLargeCust",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_LCM",
+        "parent": "InstLargeCust",
+        "child": "InstMymLargeCust",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_LDB",
+        "parent": "InstSection",
+        "child": "Loads",
+        "checked": 10,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_LDM",
+        "parent": "InstSection",
+        "child": "InstMymLoads",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_MYL",
+        "parent": "InstSection",
+        "child": "InstMymSections",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_PRB",
+        "parent": "InstSection",
+        "child": "InstProjLoads",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_RRY",
+        "parent": "InstReclosers",
+        "child": "InstRecRelays",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_TL3",
+        "parent": "InstTranBus",
+        "child": "InstTranLine",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_TL4",
+        "parent": "InstTranBus",
+        "child": "InstTranLine",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_TV3",
+        "parent": "InstTranLine",
+        "child": "InstTranVertices",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_VRT",
+        "parent": "InstSection",
+        "child": "Gnodes",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_MYPROJC_5",
+        "parent": "InstProjLoads",
+        "child": "InstMymProjLoads",
+        "checked": 0,
+        "orphans": 0
+      }
+    ],
+    "unique_index_checks": [
+      {
+        "table": "Gnodes",
+        "index": "_IDXGN2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "Gnodes",
+        "index": "Index_044133C8_2474_4916",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstAreaOfInt",
+        "index": "Index_0721C744_100A_44E0",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstAreaOfIntPts",
+        "index": "Index_F5CD097A_29D4_418B",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstBkrRelays",
+        "index": "Index_859700F3_ACAC_4357",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstBreakers",
+        "index": "Index_F4984B25_E961_4305",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstCapacitors",
+        "index": "Index_890D3C75_6D75_44E9",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstDGens",
+        "index": "Index_6B61E372_0225_46D1",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstDTrans",
+        "index": "Index_0D318E76_9A92_491E",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstFaultEvents",
+        "index": "Index_F31F2A84_4EAC_42F7",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstFeeders",
+        "index": "Index_2E30E830_D5EF_4480",
+        "checked": 1,
+        "duplicates": 0
+      },
+      {
+        "table": "InstFeederSet",
+        "index": "_IDXSFDS2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstFeederSet",
+        "index": "Index_6FBA3D03_2499_43DA",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstFeederSetItem",
+        "index": "_IDXSFDI2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstFeederSetItem",
+        "index": "Index_32F67FF2_5045_4819",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstFuses",
+        "index": "Index_F27F39FC_2CDA_45F9",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstGenerators",
+        "index": "Index_477345DA_5302_4E39",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstLargeCust",
+        "index": "Index_2D53A852_3518_494B",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMeterPoints",
+        "index": "Index_F5B53BB2_94C8_4D20",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMotors",
+        "index": "Index_9CA2B833_6A1C_45AE",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymAreaOfInt",
+        "index": "_IDXAOIM2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymAreaOfInt",
+        "index": "Index_080C4CCF_59FD_401C",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymDGens",
+        "index": "Index_E493C2EC_7DEC_4E13",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymLargeCust",
+        "index": "Index_9E97AF08_AC08_4E71",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymLoads",
+        "index": "Index_50A6B80F_8680_477A",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymMeter",
+        "index": "Index_7880DCBA_15D6_4033",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymProjLoads",
+        "index": "Index_A3106D57_2BAC_4D46",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymSections",
+        "index": "Index_D9E4AAE6_2B2B_4340",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymSwDevPos",
+        "index": "Index_0AD45B09_F3A7_4A49",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstPrimaryTransformers",
+        "index": "Index_EE4E4178_8526_4088",
+        "checked": 1,
+        "duplicates": 0
+      },
+      {
+        "table": "InstProjLoads",
+        "index": "Index_844B4607_929E_467D",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstProtectiveDevices",
+        "index": "Index_FE6EAF4C_CA0D_4AD3",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstReclosers",
+        "index": "Index_80C20C6B_046A_429E",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstRecRelays",
+        "index": "Index_9D1B7EB2_33AB_452C",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstRegulators",
+        "index": "Index_83E5652A_B5EA_41A7",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSchematic",
+        "index": "_IDXSCHS2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSchematic",
+        "index": "Index_7D128A95_062B_4436",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSchematicItem",
+        "index": "_IDXSCHI2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSchematicItem",
+        "index": "Index_77DB6DCB_9EA3_4E5B",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSection",
+        "index": "Index_4484D09C_4D6D_4768",
+        "checked": 13,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSectionalizers",
+        "index": "Index_3F86DD86_0269_435B",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSubstationTransformers",
+        "index": "Index_EA87BBC0_CA0C_4C33",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSwitches",
+        "index": "Index_2C5BA730_29E8_4BDB",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSwPlan",
+        "index": "_IDXSPLA2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSwPlan",
+        "index": "Index_05FA4824_FF28_4C6F",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSwPlanItem",
+        "index": "_IDXSPIT2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSwPlanItem",
+        "index": "Index_C84A8600_E2E6_472C",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTccItem",
+        "index": "_IDXSTCI2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTccItem",
+        "index": "Index_E80E2882_F94F_41D5",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTccSet",
+        "index": "_IDXSTCS2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTccSet",
+        "index": "Index_34D2177C_C706_4EDA",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTextLabels",
+        "index": "Index_7895DA48_598B_484D",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTranBus",
+        "index": "Index_091063EC_EB9A_4707",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTranLine",
+        "index": "Index_BD8403D6_7002_47C8",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTranVertices",
+        "index": "_TIDXGN2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTranVertices",
+        "index": "Index_2E89778E_4DF0_4578",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstViews",
+        "index": "Index_E10F6F2B_0740_430B",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstWhatIf",
+        "index": "Index_8BC8681B_0B4E_4D3D",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "Node",
+        "index": "Index_D7765B08_7279_40AF",
+        "checked": 14,
+        "duplicates": 0
+      }
+    ]
+  },
+  "reference": {
+    "file": "Choper HattaT-3030216724.mdb",
+    "sha256": "a13f0d2599a7c998ff9554bee70b67aed7c5140d86604631b4b82901851c486b",
+    "row_counts": {
+      "Gnodes": 0,
+      "InstAreaOfInt": 0,
+      "InstAreaOfIntPts": 0,
+      "InstBkrRelays": 0,
+      "InstBreakers": 0,
+      "InstCapacitors": 0,
+      "InstDGens": 0,
+      "InstDTrans": 0,
+      "InstFaultEvents": 0,
+      "InstFeeders": 1,
+      "InstFeederSet": 0,
+      "InstFeederSetItem": 0,
+      "InstFuses": 0,
+      "InstGenerators": 0,
+      "InstLargeCust": 0,
+      "InstMeterPoints": 1,
+      "InstMotors": 0,
+      "InstMymAreaOfInt": 0,
+      "InstMymDGens": 0,
+      "InstMymLargeCust": 0,
+      "InstMymLoads": 0,
+      "InstMymMeter": 0,
+      "InstMymProjLoads": 0,
+      "InstMymSections": 0,
+      "InstMymSwDevPos": 0,
+      "InstPrimaryTransformers": 1,
+      "InstProjLoads": 0,
+      "InstProtectiveDevices": 0,
+      "InstReclosers": 0,
+      "InstRecRelays": 0,
+      "InstRegulators": 0,
+      "InstSchematic": 0,
+      "InstSchematicItem": 0,
+      "InstSection": 24,
+      "InstSectionalizers": 0,
+      "InstSubstationTransformers": 0,
+      "InstSwitches": 0,
+      "InstSwPlan": 0,
+      "InstSwPlanItem": 0,
+      "InstTccItem": 0,
+      "InstTccSet": 0,
+      "InstTextLabels": 0,
+      "InstTranBus": 0,
+      "InstTranLine": 0,
+      "InstTranVertices": 0,
+      "InstViews": 0,
+      "InstWhatIf": 0,
+      "Loads": 23,
+      "Node": 26,
+      "SAI_Control": 1
+    },
+    "controls": [
+      {
+        "VoltageFactor": 11,
+        "Frequency": 60,
+        "LengthUnits": "Metric",
+        "Phase1": "R",
+        "Phase2": "Y",
+        "Phase3": "B",
+        "Product": "SynerGEE Electric 5.0.0.324",
+        "VoltageInPercent": 0,
+        "MYM_YearDesc_B": "2015",
+        "MYM_YearDesc_1": "2016",
+        "MYM_YearDesc_2": "2017",
+        "MYM_YearDesc_3": "2018",
+        "MYM_YearDesc_4": "2019",
+        "MYM_YearDesc_5": "2020",
+        "MYM_YearDesc_6": "2021",
+        "MYM_YearDesc_7": "2022",
+        "MYM_YearDesc_8": "2023",
+        "MYM_YearDesc_9": "2024",
+        "MYM_YearDesc10": "2025",
+        "ProjectionFile": "WGS 1984 UTM Zone 43N",
+        "ProjectionWKT": "",
+        "PTSecondary": 120
+      }
+    ],
+    "transformer_types": [
+      {
+        "id": "T-3030216724",
+        "type": "200 KVA",
+        "use_instance_impedance": 0
+      }
+    ],
+    "coordinates": {
+      "nodes": 26,
+      "missing_x": 0,
+      "missing_y": 0,
+      "x_range": {
+        "min": 783524,
+        "max": 783849
+      },
+      "y_range": {
+        "min": 3380959,
+        "max": 3381257
+      }
+    },
+    "sections": {
+      "total": 24,
+      "missing_length": 0,
+      "missing_phases": 0,
+      "missing_configuration": 0,
+      "missing_load_connection": 0,
+      "active_phase_missing_conductor": [
+        {
+          "section": "1059043030216724.2",
+          "phase": "N"
+        }
+      ]
+    },
+    "demand": {
+      "Kw": {
+        "rows_with_no_phase_values": 0,
+        "nonempty_phase_cells": 69,
+        "numeric_total": 0
+      },
+      "Kvar": {
+        "rows_with_no_phase_values": 0,
+        "nonempty_phase_cells": 69,
+        "numeric_total": 0
+      },
+      "Kva": {
+        "rows_with_no_phase_values": 0,
+        "nonempty_phase_cells": 55,
+        "numeric_total": 518
+      },
+      "Customers": {
+        "rows_with_no_phase_values": 0,
+        "nonempty_phase_cells": 55,
+        "numeric_total": 173.00000000000003
+      }
+    },
+    "network": {
+      "nodes": 26,
+      "sections": 24,
+      "reachable_nodes": 25,
+      "unused_isolated_nodes": 1,
+      "sections_unreachable_from_any_feeder": 0,
+      "sections_with_unknown_endpoint": 0,
+      "sections_with_unknown_feeder": 0,
+      "self_loops": 0,
+      "duplicate_undirected_edges": 0,
+      "orphan_loads": 0
+    },
+    "relationship_checks": [
+      {
+        "name": "_CSCDE_AOP",
+        "parent": "InstAreaOfInt",
+        "child": "InstAreaOfIntPts",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_ARB",
+        "parent": "InstSection",
+        "child": "InstAreaOfInt",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_ARM",
+        "parent": "InstAreaOfInt",
+        "child": "InstMymAreaOfInt",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_CPD",
+        "parent": "InstSection",
+        "child": "InstProtectiveDevices",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IBK",
+        "parent": "InstSection",
+        "child": "InstBreakers",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IBR",
+        "parent": "InstBreakers",
+        "child": "InstBkrRelays",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_ICP",
+        "parent": "InstSection",
+        "child": "InstCapacitors",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IDFND1",
+        "parent": "Node",
+        "child": "InstFeeders",
+        "checked": 1,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IDFND2",
+        "parent": "Node",
+        "child": "InstSubstationTransformers",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IDFND3",
+        "parent": "Node",
+        "child": "InstSection",
+        "checked": 24,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IDFND4",
+        "parent": "Node",
+        "child": "InstSection",
+        "checked": 24,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IDFND5",
+        "parent": "InstFeeders",
+        "child": "InstSchematic",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IDFND6",
+        "parent": "InstSchematic",
+        "child": "InstSchematicItem",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IDG",
+        "parent": "InstSection",
+        "child": "InstDGens",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IDT",
+        "parent": "InstSection",
+        "child": "InstDTrans",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IFE",
+        "parent": "InstSection",
+        "child": "InstFaultEvents",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IFU",
+        "parent": "InstSection",
+        "child": "InstFuses",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IGN",
+        "parent": "InstSection",
+        "child": "InstGenerators",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IMB",
+        "parent": "InstSection",
+        "child": "InstMeterPoints",
+        "checked": 1,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IMI",
+        "parent": "InstSection",
+        "child": "InstMymSwDevPos",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IMM",
+        "parent": "InstMeterPoints",
+        "child": "InstMymMeter",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IMR",
+        "parent": "InstSection",
+        "child": "InstMotors",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IRC",
+        "parent": "InstSection",
+        "child": "InstReclosers",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IRG",
+        "parent": "InstSection",
+        "child": "InstRegulators",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_ISW",
+        "parent": "InstSection",
+        "child": "InstSwitches",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_ISZ",
+        "parent": "InstSection",
+        "child": "InstSectionalizers",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_ITL",
+        "parent": "InstSection",
+        "child": "InstTextLabels",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_ITR",
+        "parent": "InstSection",
+        "child": "InstPrimaryTransformers",
+        "checked": 1,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_IWI",
+        "parent": "InstSection",
+        "child": "InstWhatIf",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_LCB",
+        "parent": "InstSection",
+        "child": "InstLargeCust",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_LCM",
+        "parent": "InstLargeCust",
+        "child": "InstMymLargeCust",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_LDB",
+        "parent": "InstSection",
+        "child": "Loads",
+        "checked": 23,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_LDM",
+        "parent": "InstSection",
+        "child": "InstMymLoads",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_MYL",
+        "parent": "InstSection",
+        "child": "InstMymSections",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_PRB",
+        "parent": "InstSection",
+        "child": "InstProjLoads",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_RRY",
+        "parent": "InstReclosers",
+        "child": "InstRecRelays",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_TL3",
+        "parent": "InstTranBus",
+        "child": "InstTranLine",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_TL4",
+        "parent": "InstTranBus",
+        "child": "InstTranLine",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_TV3",
+        "parent": "InstTranLine",
+        "child": "InstTranVertices",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_CSCDE_VRT",
+        "parent": "InstSection",
+        "child": "Gnodes",
+        "checked": 0,
+        "orphans": 0
+      },
+      {
+        "name": "_MYPROJC_5",
+        "parent": "InstProjLoads",
+        "child": "InstMymProjLoads",
+        "checked": 0,
+        "orphans": 0
+      }
+    ],
+    "unique_index_checks": [
+      {
+        "table": "Gnodes",
+        "index": "_IDXGN2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "Gnodes",
+        "index": "Index_044133C8_2474_4916",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstAreaOfInt",
+        "index": "Index_0721C744_100A_44E0",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstAreaOfIntPts",
+        "index": "Index_F5CD097A_29D4_418B",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstBkrRelays",
+        "index": "Index_859700F3_ACAC_4357",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstBreakers",
+        "index": "Index_F4984B25_E961_4305",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstCapacitors",
+        "index": "Index_890D3C75_6D75_44E9",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstDGens",
+        "index": "Index_6B61E372_0225_46D1",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstDTrans",
+        "index": "Index_0D318E76_9A92_491E",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstFaultEvents",
+        "index": "Index_F31F2A84_4EAC_42F7",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstFeeders",
+        "index": "Index_2E30E830_D5EF_4480",
+        "checked": 1,
+        "duplicates": 0
+      },
+      {
+        "table": "InstFeederSet",
+        "index": "_IDXSFDS2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstFeederSet",
+        "index": "Index_6FBA3D03_2499_43DA",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstFeederSetItem",
+        "index": "_IDXSFDI2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstFeederSetItem",
+        "index": "Index_32F67FF2_5045_4819",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstFuses",
+        "index": "Index_F27F39FC_2CDA_45F9",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstGenerators",
+        "index": "Index_477345DA_5302_4E39",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstLargeCust",
+        "index": "Index_2D53A852_3518_494B",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMeterPoints",
+        "index": "Index_F5B53BB2_94C8_4D20",
+        "checked": 1,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMotors",
+        "index": "Index_9CA2B833_6A1C_45AE",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymAreaOfInt",
+        "index": "_IDXAOIM2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymAreaOfInt",
+        "index": "Index_080C4CCF_59FD_401C",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymDGens",
+        "index": "Index_E493C2EC_7DEC_4E13",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymLargeCust",
+        "index": "Index_9E97AF08_AC08_4E71",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymLoads",
+        "index": "Index_50A6B80F_8680_477A",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymMeter",
+        "index": "Index_7880DCBA_15D6_4033",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymProjLoads",
+        "index": "Index_A3106D57_2BAC_4D46",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymSections",
+        "index": "Index_D9E4AAE6_2B2B_4340",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstMymSwDevPos",
+        "index": "Index_0AD45B09_F3A7_4A49",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstPrimaryTransformers",
+        "index": "Index_EE4E4178_8526_4088",
+        "checked": 1,
+        "duplicates": 0
+      },
+      {
+        "table": "InstProjLoads",
+        "index": "Index_844B4607_929E_467D",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstProtectiveDevices",
+        "index": "Index_FE6EAF4C_CA0D_4AD3",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstReclosers",
+        "index": "Index_80C20C6B_046A_429E",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstRecRelays",
+        "index": "Index_9D1B7EB2_33AB_452C",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstRegulators",
+        "index": "Index_83E5652A_B5EA_41A7",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSchematic",
+        "index": "_IDXSCHS2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSchematic",
+        "index": "Index_7D128A95_062B_4436",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSchematicItem",
+        "index": "_IDXSCHI2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSchematicItem",
+        "index": "Index_77DB6DCB_9EA3_4E5B",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSection",
+        "index": "Index_4484D09C_4D6D_4768",
+        "checked": 24,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSectionalizers",
+        "index": "Index_3F86DD86_0269_435B",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSubstationTransformers",
+        "index": "Index_EA87BBC0_CA0C_4C33",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSwitches",
+        "index": "Index_2C5BA730_29E8_4BDB",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSwPlan",
+        "index": "_IDXSPLA2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSwPlan",
+        "index": "Index_05FA4824_FF28_4C6F",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSwPlanItem",
+        "index": "_IDXSPIT2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstSwPlanItem",
+        "index": "Index_C84A8600_E2E6_472C",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTccItem",
+        "index": "_IDXSTCI2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTccItem",
+        "index": "Index_E80E2882_F94F_41D5",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTccSet",
+        "index": "_IDXSTCS2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTccSet",
+        "index": "Index_34D2177C_C706_4EDA",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTextLabels",
+        "index": "Index_7895DA48_598B_484D",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTranBus",
+        "index": "Index_091063EC_EB9A_4707",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTranLine",
+        "index": "Index_BD8403D6_7002_47C8",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTranVertices",
+        "index": "_TIDXGN2",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstTranVertices",
+        "index": "Index_2E89778E_4DF0_4578",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstViews",
+        "index": "Index_E10F6F2B_0740_430B",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "InstWhatIf",
+        "index": "Index_8BC8681B_0B4E_4D3D",
+        "checked": 0,
+        "duplicates": 0
+      },
+      {
+        "table": "Node",
+        "index": "Index_D7765B08_7279_40AF",
+        "checked": 26,
+        "duplicates": 0
+      }
+    ]
+  },
+  "conclusion": "The generated MDB has the same Access schema as the approved reference, but is incomplete for a validated electrical model. Native SynerGEE opening and load-flow tests have not been performed. These are different transformer networks; differing row counts are not themselves errors."
+}

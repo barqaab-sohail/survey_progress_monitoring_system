@@ -157,7 +157,7 @@ Survey headers are `SUBMITTED`, `PARTIALLY_VERIFIED`, `VERIFIED`, or `RETURNED` 
 8. Critical writes run in transactions and lock the feeder or assignment row with `SELECT ... FOR UPDATE`, preventing simultaneous oversubscription.
 9. Dates cannot be unreasonably future-dated; display and reporting use the project timezone.
 10. Verified/created/processed rows are never deleted by ordinary users.
-11. A KMZ must have one source feeder, unique transformer numbers, valid capacity/GPS data, and consistent coordinate fields; each feeder file imports in one transaction.
+11. A KMZ must have one source feeder; each feeder file imports in one transaction. Unique transformer numbers, valid capacity/GPS data, and consistent coordinate fields are required to synchronize GIS details. Duplicate numbers or incomplete/invalid details save only the transformer point count with warnings and preserve existing GIS rows.
 12. Re-import synchronizes a feeder's transformer set but cannot lower its baseline below survey or MDB quantities already recorded.
 
 ## 9. Dashboard calculations

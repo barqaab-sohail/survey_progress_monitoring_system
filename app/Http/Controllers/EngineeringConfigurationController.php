@@ -45,7 +45,10 @@ class EngineeringConfigurationController extends Controller
     public function update(Request $request, Project $project, EngineeringConfiguration $engineering)
     {
         Gate::authorize('mdb-workflow.configure');
-        if ($request->input('save_action') === 'draft') {
+        if ($request->input('save_action') === 'simple') {
+            $request->merge(['confirm_simple_model' => 1]);
+        }
+        if (in_array($request->input('save_action'), ['draft', 'simple'], true)) {
             $engineering->saveDraft($project, $request);
 
             return back()->with('success', 'Engineering draft saved. Unresolved settings remain blank; Admin approval is required for full engineering validation mode. Affected survey approvals must be renewed.');
