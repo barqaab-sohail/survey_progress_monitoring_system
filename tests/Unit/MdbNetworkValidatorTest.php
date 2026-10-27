@@ -270,6 +270,24 @@ class MdbNetworkValidatorTest extends TestCase
         self::assertContains('inconsistent_demand', array_column($this->validator()->validate($data)['errors'], 'code'));
     }
 
+    public function test_fractional_model_allocations_preserve_integer_survey_counts_and_still_detect_mismatches(): void
+    {
+        $data = $this->fixture();
+        $section = &$data['transformers'][0]['sections'][0];
+        $section['phases'] = ['R', 'Y', 'B', 'N'];
+        $section['conductors'] = ['R' => 'DOG', 'Y' => 'DOG', 'B' => 'DOG', 'N' => 'DOG'];
+        $consumer = &$section['consumers'][0];
+        $consumer['count'] = 10;
+        $consumer['demand'] = ['method' => 'Approved equal allocation', 'evidence' => 'Paired reference allocation; user 2 kVA rate',
+            'approved_by' => 1, 'quantity' => 'kva',
+            'phase_values' => array_fill_keys(['R', 'Y', 'B'], ['customers' => 10 / 3, 'kva' => 20 / 3, 'kw' => null, 'kvar' => null])];
+        self::assertTrue($this->validator()->validate($data)['valid']);
+        $consumer['demand']['phase_values']['R']['customers'] += 0.5;
+        self::assertContains('customer_allocation_mismatch', array_column($this->validator()->validate($data)['errors'], 'code'));
+        $consumer['count'] = 10.5;
+        self::assertContains('unverified_consumer_count', array_column($this->validator()->validate($data)['errors'], 'code'));
+    }
+
     public function test_headers_and_continuation_pages_require_verified_source_associations(): void
     {
         $data = $this->fixture();

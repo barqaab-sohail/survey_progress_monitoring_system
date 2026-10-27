@@ -1,0 +1,42 @@
+{
+    "complete": true,
+    "checks": [
+        {
+            "label": "Map coordinates",
+            "complete": 15,
+            "total": 15,
+            "missing": 0
+        },
+        {
+            "label": "Section lengths",
+            "complete": 14,
+            "total": 14,
+            "missing": 0
+        },
+        {
+            "label": "Transformer equipment type",
+            "complete": 1,
+            "total": 1,
+            "missing": 0
+        },
+        {
+            "label": "Line configuration ID",
+            "complete": 14,
+            "total": 14,
+            "missing": 0
+        },
+        {
+            "label": "Section phases",
+            "complete": 14,
+            "total": 14,
+            "missing": 0
+        },
+        {
+            "label": "Load demand and customer allocation",
+            "complete": 13,
+            "total": 13,
+            "missing": 0
+        }
+    ],
+    "acceptance": "Native SynerGEE equipment-library checks and load-flow acceptance remain pending."
+}

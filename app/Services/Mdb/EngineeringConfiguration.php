@@ -16,7 +16,14 @@ class EngineeringConfiguration
 {
     public const CATEGORIES = ['rs', 'rl', 'sc', 'lc', 'si', 'li', 'pb', 'ag', 'st'];
 
-    public const LOAD_METHOD = '2 kVA per single-phase consumer; 5 kVA per three-phase consumer; no power-factor conversion';
+    public const LOAD_METHOD = '2 kVA per single-phase consumer; 5 kVA per three-phase consumer; equal allocation across connected phases; no power-factor conversion';
+
+    public static function loadMethod(array $assumptions): string
+    {
+        return ($assumptions['single_phase_allocation'] ?? 'equal') === 'recorded_or_equal'
+            ? '2 kVA per single-phase consumer; 5 kVA per three-phase consumer; recorded single-phase counts take priority; total-only counts shared equally across connected phases; no power-factor conversion'
+            : self::LOAD_METHOD;
+    }
 
     public static function consumerKva(string $category): float
     {
@@ -52,6 +59,7 @@ class EngineeringConfiguration
             'sag_allowance_percent' => 'nullable|numeric|min:0|max:100',
             'pole_height_unit' => 'nullable|in:ft,m', 'two_digit_year_start' => 'nullable|integer|between:1800,9900',
             'load_mode' => 'nullable|in:manual,category_rates', 'load_evidence' => 'nullable|string|max:4000',
+            'single_phase_allocation' => 'sometimes|in:recorded_or_equal,equal',
             'blank_consumers_zero' => 'nullable|boolean',
             'section_load_connection' => 'nullable|integer|in:0,1',
             'mapping_json' => 'nullable|json|max:262144', 'transformer_types_json' => 'nullable|json|max:65536',
@@ -135,7 +143,7 @@ class EngineeringConfiguration
                 $settings['reference_import']['status'] = 'needs_review';
             }
             $loads = $configuration->load_assumptions ?? [];
-            foreach (['load_mode' => 'mode', 'load_evidence' => 'evidence', 'rates' => 'rates'] as $field => $key) {
+            foreach (['load_mode' => 'mode', 'load_evidence' => 'evidence', 'rates' => 'rates', 'single_phase_allocation' => 'single_phase_allocation'] as $field => $key) {
                 if (array_key_exists($field, $data)) {
                     $loads[$key] = $data[$field];
                 }
@@ -157,7 +165,7 @@ class EngineeringConfiguration
                         $loadRules['rates.'.$category.'.kva'] = 'required|numeric|min:0|max:1000000';
                     }
                     validator($loads, $loadRules)->validate();
-                    $loads['method'] = self::LOAD_METHOD;
+                    $loads['method'] = self::loadMethod($loads);
                 }
                 $settings['simple_model_review'] = ['reviewed_by' => $request->user()->id,
                     'reviewed_at' => now('UTC')->toIso8601String(), 'reason' => $data['reason']];
@@ -193,6 +201,7 @@ class EngineeringConfiguration
             'sag_allowance_percent' => 'nullable|numeric|min:0|max:100',
             'pole_height_unit' => 'required|in:ft,m', 'two_digit_year_start' => 'required|integer|between:1800,9900',
             'load_mode' => 'required|in:manual,category_rates', 'load_evidence' => 'required|string|max:4000',
+            'single_phase_allocation' => 'sometimes|in:recorded_or_equal,equal',
             'blank_consumers_zero' => 'required|boolean',
             'section_load_connection' => 'nullable|integer|in:0,1',
             'mapping_json' => 'required|json|max:262144', 'transformer_types_json' => 'required|json|max:65536',
@@ -300,9 +309,10 @@ class EngineeringConfiguration
                 'PhaseToNeutralSpacing_MUL' => (float) $data['neutral_spacing_cm'], 'AveHeightAboveGround_MUL' => (float) $data['conductor_height_m'],
             ]);
             $settings['mapping'] = $mapping;
+            $allocation = $data['single_phase_allocation'] ?? $configuration->load_assumptions['single_phase_allocation'] ?? 'equal';
             $configuration->fill(['epsg' => $data['epsg'], 'settings' => $settings,
-                'load_assumptions' => ['mode' => $data['load_mode'], 'method' => $data['load_mode'] === 'category_rates' ? self::LOAD_METHOD : 'Explicit verified phase demand',
-                    'evidence' => $data['load_evidence'], 'rates' => self::consumerRates()],
+                'load_assumptions' => ['mode' => $data['load_mode'], 'method' => $data['load_mode'] === 'category_rates' ? self::loadMethod(['single_phase_allocation' => $allocation]) : 'Explicit verified phase demand',
+                    'evidence' => $data['load_evidence'], 'rates' => self::consumerRates(), 'single_phase_allocation' => $allocation],
                 'revision' => ($configuration->revision ?? 0) + 1, 'approved_by' => $request->user()->id, 'approved_at' => now('UTC')])->save();
             app(AuditService::class)->record($request->user(), 'mdb.configuration_changed', $configuration, $before, $configuration->toArray(), $data['reason']);
 
@@ -341,7 +351,7 @@ class EngineeringConfiguration
         $configuration = $snapshot['configuration'] ?? [];
         if (($configuration['load_assumptions']['mode'] ?? null) === 'category_rates') {
             $configuration['load_assumptions']['rates'] = self::consumerRates();
-            $configuration['load_assumptions']['method'] = self::LOAD_METHOD;
+            $configuration['load_assumptions']['method'] = self::loadMethod($configuration['load_assumptions']);
             $snapshot['configuration'] = $configuration;
         }
         $settings = $configuration['settings'] ?? [];
@@ -356,12 +366,18 @@ class EngineeringConfiguration
                 $section['equipment_ref'] = ($section['equipment_ref'] ?? '') ?: ($engineering['configuration_id'] ?? null);
                 $phases = $section['phases'] ?? [];
                 $hasLivePhase = is_array($phases) ? count(array_intersect(['R', 'Y', 'B'], $phases)) > 0 : preg_match('/[RYB]/', $phases) === 1;
+                $entryRows = array_values(array_filter($transformer['entry_rows'] ?? [], fn ($row) => isset($row['section_id']) && (string) $row['section_id'] === (string) ($section['id'] ?? '')));
+                if ($entryRows === []) {
+                    $entryRows = $section['original_entry']['entry_rows'] ?? [];
+                }
                 foreach ($section['consumers'] as &$consumer) {
                     if ($consumer['count'] === null && ! empty($engineering['blank_consumers_zero'])) {
                         $consumer['count'] = 0;
                     }
                     if (($configuration['load_assumptions']['mode'] ?? '') === 'category_rates' && $consumer['count'] !== null && $consumer['count'] >= 0 && $hasLivePhase) {
-                        $consumer['demand'] = $this->demand((int) $consumer['count'], $consumer['category'], $phases, $configuration);
+                        $recorded = ($configuration['load_assumptions']['single_phase_allocation'] ?? 'equal') === 'recorded_or_equal'
+                            ? app(RecordedConsumerPhases::class)->fromRows($entryRows, $consumer['category']) : null;
+                        $consumer['demand'] = $this->demand((int) $consumer['count'], $consumer['category'], $phases, $configuration, $recorded);
                     }
                 }
                 unset($consumer);
@@ -373,7 +389,7 @@ class EngineeringConfiguration
         return $snapshot;
     }
 
-    public function demand(int $count, string $category, array|string $phases, array $configuration): array
+    public function demand(int $count, string $category, array|string $phases, array $configuration, ?array $recordedCounts = null): array
     {
         $method = $configuration['load_assumptions'];
         $rate = self::consumerKva($category);
@@ -381,19 +397,36 @@ class EngineeringConfiguration
         if ($connected === []) {
             throw ValidationException::withMessages(['engineering' => 'Demand requires at least one connected live phase.']);
         }
+        $actual = ($method['single_phase_allocation'] ?? 'equal') === 'recorded_or_equal'
+            && in_array($category, EntryLookups::SINGLE_PHASE_CONSUMERS, true) ? $recordedCounts : null;
+        $recordedTotal = 0;
+        if ($actual !== null) {
+            foreach ($actual as $phase => $customers) {
+                if (! in_array($phase, ['R', 'Y', 'B'], true) || filter_var($customers, FILTER_VALIDATE_INT) === false || $customers < 0) {
+                    throw ValidationException::withMessages(['engineering' => 'Recorded phase customer counts must be nonnegative integers on R, Y or B.']);
+                }
+                if ($customers > 0 && ! in_array($phase, $connected, true)) {
+                    throw ValidationException::withMessages(['engineering' => strtoupper($category).' customers are recorded on disconnected '.$phase.' phase. Correct the phase or customer entry before export.']);
+                }
+                $recordedTotal += (int) $customers;
+            }
+            if ($recordedTotal > $count) {
+                throw ValidationException::withMessages(['engineering' => 'Recorded phase customer counts exceed the section survey total. Correct and reverify the survey.']);
+            }
+        }
+        $unallocated = $count - $recordedTotal;
         $values = [];
-        foreach ($connected as $index => $phase) {
-            $customers = intdiv($count, count($connected)) + ($index < $count % count($connected) ? 1 : 0);
-            // Three-phase consumer kVA is a total, shared across the connected phases once.
-            // Customer columns retain integer allocation for the survey-count audit.
-            $kva = in_array($category, EntryLookups::SINGLE_PHASE_CONSUMERS, true)
-                ? $customers * $rate : $count * $rate / count($connected);
+        foreach ($connected as $phase) {
+            // These are model allocations, not edits to the integer survey count.
+            $customers = ($actual[$phase] ?? 0) + $unallocated / count($connected);
+            $kva = $customers * $rate;
             $values[$phase] = ['customers' => $customers, 'kw' => null, 'kvar' => null, 'kva' => $kva];
         }
 
         $reviewer = $configuration['approved_by'] ?? (GenerationMode::simple($configuration) ? ($configuration['settings']['simple_model_review']['reviewed_by'] ?? null) : null);
 
-        return ['method' => self::LOAD_METHOD, 'quantity' => 'kva', 'evidence' => $method['evidence'] ?? null, 'approved_by' => $reviewer,
+        return ['method' => self::loadMethod($method), 'quantity' => 'kva', 'evidence' => $method['evidence'] ?? null, 'approved_by' => $reviewer,
+            'allocation_basis' => $actual === null ? 'equal' : ($unallocated > 0 ? 'recorded_plus_equal' : 'recorded'),
             'configuration_revision' => $configuration['revision'], 'phase_values' => $values];
     }
 

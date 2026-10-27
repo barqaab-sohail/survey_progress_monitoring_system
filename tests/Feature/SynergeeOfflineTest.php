@@ -17,6 +17,7 @@ use App\Models\SubDivision;
 use App\Models\SurveyTeam;
 use App\Models\User;
 use App\Services\Mdb\AccessPowerShell;
+use App\Services\Mdb\EngineeringConfiguration;
 use App\Services\Mdb\ExportService;
 use App\Services\Mdb\ProjectionService;
 use App\Services\Mdb\SnapshotService;
@@ -388,6 +389,39 @@ class SynergeeOfflineTest extends TestCase
             $this->assertDatabaseCount('mdb_workflow_batches', 0);
             $this->assertDatabaseCount('mdb_workflow_revisions', 0);
             $this->assertCount(1, Storage::disk('local')->allFiles('synergee-offline'));
+        } finally {
+            unlink($path);
+        }
+    }
+
+    public function test_recorded_phase_counts_export_to_a_genuine_mdb_with_verified_values(): void
+    {
+        if (PHP_OS_FAMILY !== 'Windows' || ! is_file(AccessPowerShell::defaultPath())) {
+            $this->markTestSkipped('Requires Windows DAO');
+        }
+        Storage::fake('local');
+        config(['mdb_workflow.export.powershell' => AccessPowerShell::defaultPath()]);
+        $snapshot = SynergeeSnapshot::make();
+        $snapshot['configuration']['revision'] = 1;
+        $snapshot['configuration']['settings']['engineering'] = ['configuration_id' => 'POLE', 'transformer_types' => ['100' => '100KVA']];
+        $snapshot['configuration']['load_assumptions'] = ['mode' => 'category_rates', 'single_phase_allocation' => 'recorded_or_equal', 'evidence' => 'Synthetic verified R/Y/B counts'];
+        $section = &$snapshot['transformers'][0]['sections'][0];
+        $section['phases'] = ['R', 'Y', 'B', 'N'];
+        $section['conductors'] = ['R' => 'DOG', 'Y' => 'DOG', 'B' => 'DOG', 'N' => 'DOG'];
+        $section['consumers'][0]['count'] = 10;
+        $section['consumers'][0]['demand'] = null;
+        $section['original_entry']['entry_rows'] = [['consumers' => ['rs' => 10], 'consumer_phases' => ['rs' => ['R' => 8, 'Y' => 1, 'B' => 1]]]];
+        unset($section);
+        $snapshot = app(EngineeringConfiguration::class)->apply($snapshot);
+        $package = SynergeeSnapshot::package($snapshot);
+        $transfer = app(SynergeeTransfer::class);
+        $inspection = $transfer->inspect($package);
+        $this->assertSame([], $inspection['issues']);
+        $this->assertSame(16.0, $inspection['payload']['tables']['Loads'][0]['Phase1Kva']);
+        $path = $transfer->generate($package);
+        try {
+            $this->assertFileExists($path);
+            $this->assertGreaterThan(4096, filesize($path));
         } finally {
             unlink($path);
         }

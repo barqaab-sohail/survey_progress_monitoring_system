@@ -560,15 +560,12 @@ class NetworkValidator
                         $issue('incomplete_demand', 'Approved per-phase '.$key.' is required; no load values are inferred.', $context);
                     }
                 }
-                if ((! $simple || isset($values['customers'])) && filter_var($values['customers'] ?? null, FILTER_VALIDATE_INT) === false) {
-                    $issue('invalid_phase_customers', 'Per-phase customer counts must be integers.', $context);
-                }
                 $total += (float) ($values['customers'] ?? 0);
                 if (is_numeric($values['kw'] ?? null) && is_numeric($values['kvar'] ?? null) && is_numeric($values['kva'] ?? null) && abs(hypot((float) $values['kw'], (float) $values['kvar']) - (float) $values['kva']) > max(0.01, (float) $values['kva'] * 0.01)) {
                     $issue('inconsistent_demand', 'Approved kW, kvar and kVA are inconsistent and require engineering review.', $context);
                 }
             }
-            if ($total !== (float) $count) {
+            if (abs($total - (float) $count) > 1e-8) {
                 $issue('customer_allocation_mismatch', 'Per-phase customer allocation must equal the separately recorded consumer count.', $context);
             }
         }

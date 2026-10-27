@@ -17,6 +17,8 @@ class ExportPayloadBuilder
 
     public const EXTENDED_VERSION = 'synergee-reviewed-v2';
 
+    public const EXPORT_REVISION = 'section-loads-secondary-meter-v1';
+
     public const TABLES = ['SAI_Control', 'Node', 'InstFeeders', 'InstSection', 'InstPrimaryTransformers', 'Loads'];
 
     public function __construct(private readonly ProjectionService $projection) {}
@@ -65,7 +67,7 @@ class ExportPayloadBuilder
         }
         $nodes = $feeders = [];
         $transformerIds = $transformerCodes = $sectionIds = [];
-        $provenance = [];
+        $provenance = $loadProvenance = [];
         $rawWaypoints = $waypoints;
         foreach ($transformers as $transformer) {
             $transformer = app(SurveyWaypoint::class)->firstPairCoordinates($transformer, $rawWaypoints);
@@ -109,10 +111,13 @@ class ExportPayloadBuilder
                     $network['feeder_fields']['NominalKvll'] = (float) $settings['nominal_voltage_kv'];
                 }
             }
+            $automaticSecondary = $this->simple && $version === self::EXTENDED_VERSION
+                && empty($network['source_nodes']) && empty($network['source_sections']);
+            $automaticMeter = false;
             if ($this->simple && empty($network['source_nodes']) && empty($network['source_sections'])) {
                 // A logical transformer terminal joins the surveyed root; it has no invented physical location or electrical values.
                 $key = 'transformer-terminal-'.$transformer['id'];
-                $linkFields = ['SectionLength_MUL' => 0.0];
+                $linkFields = ['SectionLength_MUL' => 0.0, 'SectionPhases' => null];
                 $connected = $network['transformer_fields']['ConnectedPhases'] ?? $base['InstPrimaryTransformers']['ConnectedPhases'] ?? null;
                 if (is_string($connected) && preg_match('/^[R ][Y ][B ]$/D', $connected) && trim($connected) !== '') {
                     $linkFields['SectionPhases'] = $connected;
@@ -120,6 +125,29 @@ class ExportPayloadBuilder
                 $network = array_replace($network, ['source_nodes' => [['key' => $key, 'waypoint_id' => $transformer['source_waypoint_id'] ?? null, 'logical_terminal' => true]],
                     'source_sections' => [['key' => 'transformer-link', 'from' => $key, 'to' => 'wp:'.($transformer['source_waypoint_id'] ?? ''), 'fields' => $linkFields]],
                     'feeder_node' => $key, 'transformer_section' => 'transformer-link']);
+                if ($automaticSecondary) {
+                    // Reference pairs associate the meter with a separate secondary
+                    // link. Logical links share the verified root and have no invented span.
+                    $secondary = 'transformer-secondary-'.$transformer['id'];
+                    $network['source_nodes'][] = ['key' => $secondary, 'waypoint_id' => $transformer['source_waypoint_id'] ?? null, 'logical_terminal' => true];
+                    $network['source_sections'][0]['to'] = $secondary;
+                    $secondaryFields = ['SectionLength_MUL' => 0.0, 'SectionPhases' => null];
+                    if (isset($linkFields['SectionPhases'])) {
+                        $hasNeutral = collect($transformer['sections'])->contains(function ($section) {
+                            $phases = $section['phases'] ?? [];
+
+                            return is_array($phases) ? in_array('N', $phases, true) : str_contains($phases, 'N');
+                        });
+                        $secondaryFields['SectionPhases'] = $linkFields['SectionPhases'].($hasNeutral ? 'N' : '');
+                    }
+                    $network['source_sections'][] = ['key' => 'secondary-meter-link', 'from' => $secondary,
+                        'to' => 'wp:'.($transformer['source_waypoint_id'] ?? ''), 'fields' => $secondaryFields];
+                    // Do not fabricate readings, meter type, or calibration settings.
+                    if (empty($network['meter_points'])) {
+                        $network['meter_points'] = [['source_section' => 'secondary-meter-link', 'fields' => []]];
+                        $automaticMeter = true;
+                    }
+                }
             }
             $this->require(! empty($network['source_nodes']) && ! empty($network['source_sections']), 'Approved source and transformer supply topology is required for '.$transformer['code'].'.');
             $aliases = [];
@@ -235,25 +263,42 @@ class ExportPayloadBuilder
                 $this->validateSection($row, $template);
                 $tables['InstSection'][] = $row;
                 $edges[] = [$from, $to];
+                $sectionLoads = [];
                 foreach ($section['consumers'] ?? [] as $consumer) {
                     // A manually verified zero count carries no modeled demand. Preserve its source revision only.
                     if ($consumer['count'] !== null && (int) $consumer['count'] === 0 && empty($consumer['demand'])) {
                         continue;
                     }
-                    $tables['Loads'][] = $this->load($consumer, $id, $base['Loads'], $sectionPhases);
+                    $sectionLoads[] = $this->load($consumer, $id, $base['Loads'], $sectionPhases);
+                    $loadProvenance[] = ['section_id' => $id, 'category' => $consumer['category'],
+                        'survey_count' => $consumer['count'], 'demand' => $consumer['demand'] ?? null];
+                }
+                if ($sectionLoads !== []) {
+                    $tables['Loads'][] = $this->combinedLoad($sectionLoads);
                 }
                 $provenance[] = ['section_id' => $id, 'survey_section_id' => $section['id'], 'pdf_id' => $section['source_pdf_id'] ?? null, 'page' => $section['source_page'] ?? null, 'row' => $section['source_row'] ?? null, 'length_source' => $lengthSource, 'elevation_status' => $length === null ? null : ($lengthSource === 'approved_measured' ? 'measured_override' : $elevationStatus), 'span_length_m' => $sag['span_length_m'], 'sag_allowance_percent' => $sag['sag_allowance_percent'], 'sag_addition_m' => $sag['sag_addition_m'], 'sag_status' => $sagStatus];
             }
             if ($version === self::EXTENDED_VERSION) {
-                $extra = app(SupplementalMapping::class)->build($transformer, $configuration);
+                $deviceConfiguration = $configuration;
+                $deviceConfiguration['settings']['mapping']['networks'][$transformer['code']] = $network;
+                $extra = app(SupplementalMapping::class)->build($transformer, $deviceConfiguration);
                 foreach ($extra as $table => $rows) {
                     foreach ($rows as $row) {
                         $reference = $row['SectionId'];
                         $row['SectionId'] = str_starts_with($reference, 'source:')
                             ? $sourceSectionIds[substr($reference, 7)]
                             : $this->id('s', $revision->batch_id.':section:'.substr($reference, 7));
+                        if ($automaticMeter && $table === 'InstMeterPoints' && $reference === 'source:secondary-meter-link') {
+                            // Association only, irrespective of inherited default meter readings.
+                            $row = ['SectionId' => $row['SectionId']];
+                        }
                         $tables[$table][] = $row;
                     }
+                }
+                if ($automaticSecondary) {
+                    $secondaryId = $sourceSectionIds['secondary-meter-link'];
+                    $secondarySection = collect($tables['InstSection'])->firstWhere('SectionId', $secondaryId);
+                    $tables['Loads'][] = $this->zeroLoad($secondaryId, $base['Loads'], $secondarySection['SectionPhases'] ?? '');
                 }
             }
             $reachable = [$feederId => true];
@@ -306,14 +351,42 @@ class ExportPayloadBuilder
             'payload_version' => 1, 'mapping_version' => $version, 'idempotency_key' => $idempotencyKey,
             'revision' => ['id' => $revision->id, 'number' => $revision->number, 'sha256' => $revision->sha256],
             'template' => ['code' => $template->code, 'version' => $template->version, 'sha256' => $template->sha256, 'synergee_version' => $template->synergee_version, 'permitted_static_tables' => $template->metadata['permitted_static_tables'] ?? []],
-            'settings' => ['epsg' => $epsg ?: null, 'configuration_revision' => $configuration['revision'] ?? null, 'electrical' => $settings, 'simple_mdb_generation' => $this->simple, 'length_calculation' => ProjectionService::LENGTH_METHOD],
-            'tables' => $tables, 'provenance' => $provenance,
+            'settings' => ['epsg' => $epsg ?: null, 'configuration_revision' => $configuration['revision'] ?? null, 'electrical' => $settings, 'simple_mdb_generation' => $this->simple, 'length_calculation' => ProjectionService::LENGTH_METHOD, 'export_revision' => self::EXPORT_REVISION],
+            'tables' => $tables, 'provenance' => $provenance, 'load_provenance' => $loadProvenance,
             'sources' => array_map(fn ($source) => array_intersect_key($source, array_flip(['id', 'kind', 'original_name', 'sha256', 'bytes', 'version', 'uploaded_by'])), $snapshot['sources'] ?? []),
             'pv_records' => array_merge(...array_map(fn ($t) => $t['pv_records'] ?? [], $transformers)),
             'entry_rows' => array_merge(...array_map(fn ($t) => $t['entry_rows'] ?? [], $transformers)),
             'engineering_acceptance' => 'pending_synergee_analysis',
             'engineering_omissions' => array_values(array_unique($this->omissions)),
         ];
+    }
+
+    /** Combine categories without turning an unrecorded quantity into zero. */
+    private function combinedLoad(array $rows): array
+    {
+        $combined = $rows[0];
+        $combined['Description'] = implode(', ', array_unique(array_column($rows, 'Description')));
+        foreach ([1, 2, 3] as $phase) {
+            foreach (['Customers', 'Kw', 'Kvar', 'Kva', 'Kwh'] as $quantity) {
+                $field = 'Phase'.$phase.$quantity;
+                $values = array_map(fn ($row) => $row[$field] ?? null, $rows);
+                $combined[$field] = in_array(null, $values, true) ? null : (float) array_sum($values);
+            }
+        }
+
+        return $combined;
+    }
+
+    private function zeroLoad(string $sectionId, array $base, string $phases): array
+    {
+        $row = array_replace($base, ['SectionId' => $sectionId, 'Description' => 'Transformer secondary link']);
+        foreach (['R', 'Y', 'B'] as $i => $phase) {
+            foreach (['Customers', 'Kva', 'Kw', 'Kvar', 'Kwh'] as $quantity) {
+                $row['Phase'.($i + 1).$quantity] = str_contains($phases, $phase) && in_array($quantity, ['Customers', 'Kva'], true) ? 0.0 : null;
+            }
+        }
+
+        return $row;
     }
 
     private function load(array $consumer, string $sectionId, array $base, ?string $phases): array

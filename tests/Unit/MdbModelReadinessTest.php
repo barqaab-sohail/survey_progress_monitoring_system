@@ -27,6 +27,21 @@ class MdbModelReadinessTest extends TestCase
         $this->assertSame(1, $service->inspect($payload)['checks'][5]['missing']);
     }
 
+    public function test_recorded_pv_is_incomplete_until_its_section_and_base_year_output_are_mapped(): void
+    {
+        $payload = ['tables' => ['Node' => [], 'InstPrimaryTransformers' => [], 'Loads' => [],
+            'InstSection' => [['SectionId' => 's', 'SectionPhases' => 'R  N']]],
+            'pv_records' => [['id' => 1, 'section_id' => 10, 'installed_capacity_kw' => 5]],
+            'provenance' => [['survey_section_id' => 10, 'section_id' => 's']]];
+        $service = new ModelReadiness;
+        $this->assertSame(1, $service->inspect($payload)['checks'][6]['missing']);
+        $payload['tables']['InstDGens'] = [['SectionId' => 's']];
+        $payload['tables']['InstMymDGens'] = [['SectionId' => 's', 'YearNumber' => 0, 'Phase1Kw' => 5]];
+        $this->assertSame(1, $service->inspect($payload)['checks'][6]['complete']);
+        $payload['tables']['InstMymDGens'][0]['Phase1Kw'] = null;
+        $this->assertSame(1, $service->inspect($payload)['checks'][6]['missing']);
+    }
+
     public function test_completeness_requires_coordinates_lengths_type_configuration_and_active_phase_demand(): void
     {
         $payload = ['tables' => [

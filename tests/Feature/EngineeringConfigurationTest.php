@@ -24,6 +24,7 @@ use App\Services\TransformerMdbWriter;
 use Database\Seeders\MdbWorkflowPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class EngineeringConfigurationTest extends TestCase
@@ -98,11 +99,77 @@ class EngineeringConfigurationTest extends TestCase
         $section = $effective['transformers'][0]['sections'][0];
         $this->assertSame('approved-line', $section['equipment_ref']);
         $this->assertSame($this->admin->id, $section['consumers'][0]['demand']['approved_by']);
-        $this->assertEquals(6, $section['consumers'][0]['demand']['phase_values']['R']['kva']);
+        $this->assertEquals(5, $section['consumers'][0]['demand']['phase_values']['R']['kva']);
         $this->assertNull($section['consumers'][0]['demand']['phase_values']['R']['kw']);
         $this->assertArrayNotHasKey('demand', $snapshot['transformers'][0]['sections'][0]['consumers'][0]);
         $this->put(route('engineering.update', $this->project), ['save_action' => 'draft', 'revision' => 2, 'reason' => 'Edit requires another review'])->assertSessionHasNoErrors();
         $this->assertArrayNotHasKey('simple_model_review', $configuration->fresh()->settings);
+    }
+
+    public function test_single_phase_allocation_setting_saves_in_approved_and_draft_configurations(): void
+    {
+        $this->put(route('engineering.update', $this->project), $this->payload() + ['single_phase_allocation' => 'recorded_or_equal'])
+            ->assertSessionHasNoErrors();
+        $configuration = Configuration::firstOrFail();
+        $this->assertSame('recorded_or_equal', $configuration->load_assumptions['single_phase_allocation']);
+        $this->get(route('engineering.edit', $this->project))->assertOk()->assertSee('Single-phase customer allocation')
+            ->assertSee('Use recorded R/Y/B counts');
+        $this->put(route('engineering.update', $this->project), ['save_action' => 'draft', 'revision' => $configuration->revision,
+            'single_phase_allocation' => 'equal', 'reason' => 'Reviewed allocation policy change'])->assertSessionHasNoErrors();
+        $this->assertSame('equal', $configuration->fresh()->load_assumptions['single_phase_allocation']);
+        $this->put(route('engineering.update', $this->project), ['save_action' => 'draft', 'revision' => $configuration->fresh()->revision,
+            'single_phase_allocation' => 'invalid', 'reason' => 'Invalid policy must be rejected'])->assertSessionHasErrors('single_phase_allocation');
+    }
+
+    public function test_recorded_single_phase_counts_take_priority_and_total_only_categories_still_share_equally(): void
+    {
+        $configuration = $this->saveConfiguration()->toArray();
+        $configuration['load_assumptions']['single_phase_allocation'] = 'recorded_or_equal';
+        $rows = [['section_id' => 10, 'consumers' => ['rs' => 10, 'sc' => 3],
+            'consumer_phases' => ['rs' => ['R' => 8, 'Y' => 1, 'B' => 1], 'sc' => ['R' => null, 'Y' => null, 'B' => null]]]];
+        $snapshot = ['configuration' => $configuration, 'transformers' => [['entry_rows' => $rows, 'sections' => [[
+            'id' => 10, 'phases' => ['R', 'Y', 'B', 'N'], 'consumers' => [
+                ['category' => 'rs', 'count' => 10], ['category' => 'sc', 'count' => 3], ['category' => 'rl', 'count' => 1],
+            ],
+        ]]]]];
+        $effective = app(EngineeringConfiguration::class)->apply($snapshot);
+        $consumers = $effective['transformers'][0]['sections'][0]['consumers'];
+        $this->assertEquals([16, 2, 2], array_column($consumers[0]['demand']['phase_values'], 'kva'));
+        $this->assertSame('recorded', $consumers[0]['demand']['allocation_basis']);
+        $this->assertEquals([2, 2, 2], array_column($consumers[1]['demand']['phase_values'], 'kva'));
+        $this->assertSame('equal', $consumers[1]['demand']['allocation_basis']);
+        $this->assertEqualsWithDelta(5, array_sum(array_column($consumers[2]['demand']['phase_values'], 'kva')), 1e-8);
+        $this->assertSame($rows, $effective['transformers'][0]['entry_rows']);
+        $this->assertSame(10, $consumers[0]['count']);
+        $snapshot['configuration']['load_assumptions']['single_phase_allocation'] = 'equal';
+        $equal = app(EngineeringConfiguration::class)->apply($snapshot)['transformers'][0]['sections'][0]['consumers'][0]['demand'];
+        $this->assertEqualsWithDelta(20 / 3, $equal['phase_values']['R']['kva'], 1e-8);
+    }
+
+    public function test_mixed_phase_and_total_only_rows_allocate_only_the_remaining_customers_equally(): void
+    {
+        $configuration = $this->saveConfiguration()->toArray();
+        $configuration['load_assumptions']['single_phase_allocation'] = 'recorded_or_equal';
+        $rows = [
+            ['consumers' => ['rs' => 7], 'consumer_phases' => ['rs' => ['R' => 5, 'Y' => 2, 'B' => 0]]],
+            ['consumers' => ['rs' => 3], 'consumer_phases' => ['rs' => ['R' => null, 'Y' => null, 'B' => null]]],
+        ];
+        $snapshot = ['configuration' => $configuration, 'transformers' => [['sections' => [[
+            'phases' => ['R', 'Y', 'B'], 'original_entry' => ['entry_rows' => $rows],
+            'consumers' => [['category' => 'rs', 'count' => 10]],
+        ]]]]];
+        $demand = app(EngineeringConfiguration::class)->apply($snapshot)['transformers'][0]['sections'][0]['consumers'][0]['demand'];
+        $this->assertEquals([6, 3, 1], array_column($demand['phase_values'], 'customers'));
+        $this->assertEquals([12, 6, 2], array_column($demand['phase_values'], 'kva'));
+        $this->assertSame('recorded_plus_equal', $demand['allocation_basis']);
+    }
+
+    public function test_recorded_counts_cannot_be_moved_off_their_disconnected_phase(): void
+    {
+        $configuration = $this->saveConfiguration()->toArray();
+        $configuration['load_assumptions']['single_phase_allocation'] = 'recorded_or_equal';
+        $this->expectException(ValidationException::class);
+        app(EngineeringConfiguration::class)->demand(2, 'rs', ['R', 'N'], $configuration, ['R' => 0, 'Y' => 0, 'B' => 2]);
     }
 
     public function test_simple_apply_button_confirms_types_loads_and_section_connection(): void
@@ -471,9 +538,9 @@ class EngineeringConfigurationTest extends TestCase
         $section = $effective['transformers'][0]['sections'][0];
         $this->assertSame('approved-line', $section['equipment_ref']);
         $phases = $section['consumers'][0]['demand']['phase_values'];
-        $this->assertSame(3, $phases['R']['customers']);
-        $this->assertSame(2, $phases['B']['customers']);
-        $this->assertEquals(6, $phases['R']['kva']);
+        $this->assertSame(2.5, $phases['R']['customers']);
+        $this->assertSame(2.5, $phases['B']['customers']);
+        $this->assertEquals(5, $phases['R']['kva']);
         $this->assertNull($phases['R']['kw']);
         $this->assertNull($phases['R']['kvar']);
         $this->assertArrayNotHasKey('Y', $phases);
@@ -531,8 +598,8 @@ class EngineeringConfigurationTest extends TestCase
         $this->assertSame(11.0, $network['tables']['InstFeeders'][0]['NominalKvll']);
         $this->assertSame('approved-100', $network['tables']['InstPrimaryTransformers'][0]['TransformerType']);
         $load = $network['tables']['Loads'][0];
-        $this->assertSame(9, $load['Phase1Customers']);
-        $this->assertEqualsWithDelta(16, $load['Phase1Kva'], 1e-8);
+        $this->assertEqualsWithDelta(3, $load['Phase1Customers'], 1e-8);
+        $this->assertEqualsWithDelta(12, $load['Phase1Kva'], 1e-8);
         $this->assertNull($load['Phase1Kw']);
         $this->assertNull($load['Phase1Kvar']);
         $this->assertSame($this->template->id, $network['engineering_template_id']);

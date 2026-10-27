@@ -295,7 +295,7 @@ class TransformerMdbBuilderTest extends TestCase
         $network = app(TransformerMdbNetworkService::class)->build($project, $configuration);
         $this->assertSame(60, $network['tables']['SAI_Control'][0]['Frequency']);
         $this->assertSame(11.0, $network['tables']['InstFeeders'][0]['NominalKvll']);
-        $this->assertSame(2, $network['tables']['Loads'][0]['Phase1Customers']);
+        $this->assertEqualsWithDelta(4 / 3, $network['tables']['Loads'][0]['Phase1Customers'], 1e-8);
         $this->assertEqualsWithDelta(11 / 3, $network['tables']['Loads'][0]['Phase1Kva'], 1e-8);
         $this->assertNull($network['tables']['Loads'][0]['Phase1Kvar']);
         $this->assertNull($configuration->fresh()->approved_by);

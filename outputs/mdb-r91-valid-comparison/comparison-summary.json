@@ -1,0 +1,59 @@
+{
+  "schema_equal": true,
+  "relationships_equal": true,
+  "generated": {
+    "customers": 74,
+    "kva": 148,
+    "phase_customers": [
+      29,
+      24,
+      21
+    ],
+    "phase_kva": [
+      58,
+      48,
+      42
+    ],
+    "length_m": 466.25410318586233,
+    "zero_sections": 2,
+    "zero_loads": 98,
+    "bad_endpoints": 0,
+    "orphan_loads": 0,
+    "orphan_pv": 0,
+    "reachable_undirected": 14,
+    "reachable_directed": 13,
+    "phase_patterns": {
+      "RYB": 1,
+      "RYBN": 12
+    }
+  },
+  "approved": {
+    "customers": 242.00000000000003,
+    "kva": 728.6,
+    "phase_customers": [
+      69.33333333333333,
+      104.33333333333334,
+      68.33333333333333
+    ],
+    "phase_kva": [
+      208.86666666666667,
+      313.8666666666667,
+      205.86666666666667
+    ],
+    "length_m": 1142.8688387383027,
+    "zero_sections": 0,
+    "zero_loads": 3,
+    "bad_endpoints": 0,
+    "orphan_loads": 0,
+    "orphan_pv": 0,
+    "reachable_undirected": 32,
+    "reachable_directed": 32,
+    "phase_patterns": {
+      "RYBN": 19,
+      "  BN": 2,
+      "RY N": 5,
+      " Y N": 4,
+      "RYB": 1
+    }
+  }
+}

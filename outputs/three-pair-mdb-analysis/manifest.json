@@ -1,0 +1,26 @@
+﻿[
+    {
+        "source":  "C:\\Users\\sohai\\OneDrive\\Desktop\\HAZECO\\Sample data\\Other data\\data_entry_database_2211117034.mdb",
+        "extract":  "E:\\xampp\\htdocs\\survey_progress_monitoring_system\\outputs\\three-pair-mdb-analysis\\file-01.json"
+    },
+    {
+        "source":  "C:\\Users\\sohai\\OneDrive\\Desktop\\HAZECO\\Sample data\\Other data\\data_entry_database_2301017107.mdb",
+        "extract":  "E:\\xampp\\htdocs\\survey_progress_monitoring_system\\outputs\\three-pair-mdb-analysis\\file-02.json"
+    },
+    {
+        "source":  "C:\\Users\\sohai\\OneDrive\\Desktop\\HAZECO\\Sample data\\Other data\\data_entry_database_8160421110.mdb",
+        "extract":  "E:\\xampp\\htdocs\\survey_progress_monitoring_system\\outputs\\three-pair-mdb-analysis\\file-03.json"
+    },
+    {
+        "source":  "C:\\Users\\sohai\\OneDrive\\Desktop\\HAZECO\\Sample data\\Other data\\Valid Synergee Kot MadinaT-8160421110.mdb",
+        "extract":  "E:\\xampp\\htdocs\\survey_progress_monitoring_system\\outputs\\three-pair-mdb-analysis\\file-04.json"
+    },
+    {
+        "source":  "C:\\Users\\sohai\\OneDrive\\Desktop\\HAZECO\\Sample data\\Other data\\valid Synergee New BosanT-2211117034.mdb",
+        "extract":  "E:\\xampp\\htdocs\\survey_progress_monitoring_system\\outputs\\three-pair-mdb-analysis\\file-05.json"
+    },
+    {
+        "source":  "C:\\Users\\sohai\\OneDrive\\Desktop\\HAZECO\\Sample data\\Other data\\valid Synergee Z TownT-2301017107.mdb",
+        "extract":  "E:\\xampp\\htdocs\\survey_progress_monitoring_system\\outputs\\three-pair-mdb-analysis\\file-06.json"
+    }
+]

@@ -41,6 +41,29 @@ class ModelReadiness
             return true;
         });
 
+        if (! empty($payload['pv_records'])) {
+            $generators = array_column($tables['InstDGens'] ?? [], null, 'SectionId');
+            $sectionIds = array_column($payload['provenance'] ?? [], 'section_id', 'survey_section_id');
+            $years = $tables['InstMymDGens'] ?? [];
+            $add('PV generation mapping', $payload['pv_records'], function ($pv) use ($generators, $sectionIds, $years, $sections, $number) {
+                $id = $sectionIds[$pv['section_id'] ?? ''] ?? null;
+                if ($id === null || ! isset($generators[$id])) {
+                    return false;
+                }
+                $base = collect($years)->first(fn ($row) => $row['SectionId'] === $id && ($row['YearNumber'] ?? null) === 0);
+                if (! $base || ! preg_match('/[RYB]/', $sections[$id]['SectionPhases'] ?? '')) {
+                    return false;
+                }
+                foreach (['R', 'Y', 'B'] as $i => $phase) {
+                    if (str_contains($sections[$id]['SectionPhases'], $phase) && ! $number($base['Phase'.($i + 1).'Kw'] ?? null)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+        }
+
         return ['complete' => array_sum(array_column($checks, 'missing')) === 0, 'checks' => $checks,
             'acceptance' => 'Native SynerGEE equipment-library checks and load-flow acceptance remain pending.'];
     }

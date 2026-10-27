@@ -6,6 +6,7 @@ use App\Models\Mdb\Revision;
 use App\Models\Mdb\Template;
 use App\Services\Mdb\EngineeringConfiguration;
 use App\Services\Mdb\ExportPayloadBuilder;
+use App\Services\Mdb\ModelReadiness;
 use App\Services\Mdb\ProjectionService;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -168,6 +169,121 @@ class MdbExportPayloadTest extends TestCase
         $this->assertSame($payload['tables'], $this->builder()->build($revision, $template, 1, str_repeat('d', 64))['tables']);
     }
 
+    public function test_approved_pair_sections_combine_categories_and_preserve_user_rates(): void
+    {
+        $pairs = json_decode(file_get_contents(__DIR__.'/../Fixtures/approved-section-load-pairs.json'), true, 512, JSON_THROW_ON_ERROR);
+        foreach ($pairs as $pair) {
+            [$revision, $template] = $this->fixture();
+            $snapshot = $revision->snapshot;
+            $snapshot['configuration']['revision'] = 1;
+            $snapshot['configuration']['load_assumptions'] = ['mode' => 'category_rates', 'evidence' => 'Approved paired MDB phase allocation; user rates 2/5 kVA'];
+            $snapshot['configuration']['settings']['engineering'] = ['configuration_id' => 'reviewed-config', 'transformer_types' => ['100' => 'reviewed-100']];
+            $snapshot['transformers'][0]['capacity_kva'] = 100;
+            $snapshot['waypoints'] = [$snapshot['waypoints'][0]];
+            $sectionBase = $snapshot['transformers'][0]['sections'][0];
+            $snapshot['transformers'][0]['sections'] = [];
+            foreach ($pair['records'] as $i => $record) {
+                $snapshot['waypoints'][] = ['id' => $i + 2, 'name' => (string) ($i + 2), 'latitude' => 30 + ($i + 2) / 10000, 'longitude' => 71];
+                $snapshot['transformers'][0]['sections'][] = array_replace($sectionBase, [
+                    'id' => $i + 1, 'end_waypoint_id' => $i + 2,
+                    'phases' => str_split(str_replace(' ', '', $record['phases'])),
+                    'conductors' => array_intersect_key($sectionBase['conductors'], array_flip(str_split($record['phases']))),
+                    'consumers' => [['category' => 'rs', 'count' => $record['single_phase']], ['category' => 'rl', 'count' => $record['three_phase']]],
+                ]);
+            }
+            $revision->snapshot = app(EngineeringConfiguration::class)->apply($snapshot);
+            $payload = $this->builder()->build($revision, $template, 1, str_repeat('f', 64));
+            $this->assertCount(count($pair['records']), $payload['tables']['Loads']);
+            $totalKva = $totalCustomers = 0;
+            foreach ($payload['tables']['Loads'] as $i => $load) {
+                $record = $pair['records'][$i];
+                $active = count(array_filter(str_split($record['phases']), fn ($phase) => in_array($phase, ['R', 'Y', 'B'], true)));
+                foreach (['R', 'Y', 'B'] as $j => $phase) {
+                    if (! str_contains($record['phases'], $phase)) {
+                        $this->assertNull($load['Phase'.($j + 1).'Customers']);
+                        $this->assertNull($load['Phase'.($j + 1).'Kva']);
+
+                        continue;
+                    }
+                    $customers = $load['Phase'.($j + 1).'Customers'];
+                    $kva = $load['Phase'.($j + 1).'Kva'];
+                    $this->assertEqualsWithDelta($record['approved_phase_customers'][$j], $customers, 1e-8);
+                    $this->assertEqualsWithDelta(($record['single_phase'] * 2 + $record['three_phase'] * 5) / $active, $kva, 1e-8);
+                    $this->assertNull($load['Phase'.($j + 1).'Kw']);
+                    $totalCustomers += $customers;
+                    $totalKva += $kva;
+                }
+            }
+            $this->assertEqualsWithDelta($pair['single_phase'] + $pair['three_phase'], $totalCustomers, 1e-8);
+            $this->assertEqualsWithDelta($pair['single_phase'] * 2 + $pair['three_phase'] * 5, $totalKva, 1e-8);
+        }
+    }
+
+    public function test_recorded_allocations_reach_combined_load_rows_in_full_and_simple_modes(): void
+    {
+        foreach ([false, true] as $simple) {
+            [$revision, $template] = $this->fixture();
+            $snapshot = $revision->snapshot;
+            $snapshot['configuration']['revision'] = 1;
+            $snapshot['configuration']['settings']['simple_mdb_generation'] = $simple;
+            $snapshot['configuration']['settings']['engineering'] = ['configuration_id' => 'reviewed-config', 'transformer_types' => ['100' => 'reviewed-100']];
+            $snapshot['configuration']['load_assumptions'] = ['mode' => 'category_rates', 'single_phase_allocation' => 'recorded_or_equal', 'evidence' => 'Verified PDF phases'];
+            $snapshot['transformers'][0]['capacity_kva'] = 100;
+            $snapshot['transformers'][0]['sections'][0]['consumers'] = [['category' => 'rs', 'count' => 10]];
+            $snapshot['transformers'][0]['sections'][0]['original_entry']['entry_rows'] = [
+                ['consumers' => ['rs' => 10], 'consumer_phases' => ['rs' => ['R' => 8, 'Y' => 1, 'B' => 1]]],
+            ];
+            $snapshot['transformers'][0]['sections'][1]['consumers'] = [];
+            $revision->snapshot = app(EngineeringConfiguration::class)->apply($snapshot);
+            $payload = $this->builder()->build($revision, $template, 1, str_repeat('a', 64));
+            $this->assertCount(1, $payload['tables']['Loads']);
+            $load = $payload['tables']['Loads'][0];
+            $this->assertSame([8.0, 1.0, 1.0], [$load['Phase1Customers'], $load['Phase2Customers'], $load['Phase3Customers']]);
+            $this->assertSame([16.0, 2.0, 2.0], [$load['Phase1Kva'], $load['Phase2Kva'], $load['Phase3Kva']]);
+            $this->assertSame('recorded', $payload['load_provenance'][0]['demand']['allocation_basis']);
+        }
+    }
+
+    public function test_simple_v2_meter_is_associated_with_a_separate_logical_secondary_link(): void
+    {
+        [$revision, $template] = $this->fixture();
+        $snapshot = $revision->snapshot;
+        $snapshot['configuration']['settings']['simple_mdb_generation'] = true;
+        $mapping = &$snapshot['configuration']['settings']['mapping'];
+        $mapping['version'] = ExportPayloadBuilder::EXTENDED_VERSION;
+        $mapping['networks'] = [];
+        $mapping['table_values']['InstPrimaryTransformers']['ConnectedPhases'] = 'RYB';
+        $mapping['table_values']['InstMeterPoints'] = ['Phase1Value' => 999, 'Enabled' => 1];
+        $revision->snapshot = $snapshot;
+        $payload = $this->builder()->build($revision, $template, 1, str_repeat('a', 64));
+        $sections = array_column($payload['tables']['InstSection'], null, 'SectionId');
+        $primary = $sections[$payload['tables']['InstPrimaryTransformers'][0]['SectionId']];
+        $this->assertCount(1, $payload['tables']['InstMeterPoints']);
+        $meter = $payload['tables']['InstMeterPoints'][0];
+        $this->assertSame(['SectionId'], array_keys($meter));
+        $secondary = $sections[$meter['SectionId']];
+        $this->assertNotSame($primary['SectionId'], $secondary['SectionId']);
+        $this->assertSame($primary['ToNodeId'], $secondary['FromNodeId']);
+        $this->assertSame(0.0, $secondary['SectionLength_MUL']);
+        $secondaryLoad = collect($payload['tables']['Loads'])->firstWhere('SectionId', $secondary['SectionId']);
+        $this->assertSame(0.0, $secondaryLoad['Phase1Kva']);
+        $this->assertNull($secondaryLoad['Phase1Kw']);
+    }
+
+    public function test_combining_categories_keeps_unknown_demand_unknown(): void
+    {
+        [$revision, $template] = $this->fixture();
+        $snapshot = $revision->snapshot;
+        $snapshot['configuration']['settings']['simple_mdb_generation'] = true;
+        $snapshot['transformers'][0]['sections'][0]['consumers'][] = ['category' => 'sc', 'count' => 1, 'demand' => null];
+        $revision->snapshot = $snapshot;
+        $payload = $this->builder()->build($revision, $template, 1, str_repeat('a', 64));
+        $this->assertCount(1, $payload['tables']['Loads']);
+        $this->assertNull($payload['tables']['Loads'][0]['Phase1Kva']);
+        $this->assertNull($payload['tables']['Loads'][0]['Phase1Customers']);
+        $this->assertCount(2, $payload['load_provenance']);
+    }
+
     public function test_central_configuration_applies_library_type_impedance_mode_and_category_demand_to_export(): void
     {
         [$revision, $template] = $this->fixture();
@@ -210,10 +326,10 @@ class MdbExportPayloadTest extends TestCase
             $snapshot['transformers'][0]['sections'][1]['consumers'] = [];
             $revision->snapshot = app(EngineeringConfiguration::class)->apply($snapshot);
             $payload = $this->builder()->build($revision, $template, 1, str_repeat('e', 64));
-            $this->assertCount(2, $payload['tables']['Loads']);
-            $loadCheck = collect(app(\App\Services\Mdb\ModelReadiness::class)->inspect($payload)['checks'])
+            $this->assertCount(1, $payload['tables']['Loads']);
+            $loadCheck = collect(app(ModelReadiness::class)->inspect($payload)['checks'])
                 ->firstWhere('label', 'Load demand and customer allocation');
-            $this->assertSame(2, $loadCheck['complete']);
+            $this->assertSame(1, $loadCheck['complete']);
             $this->assertSame(0, $loadCheck['missing']);
             foreach ($payload['tables']['Loads'] as $index => $load) {
                 $total = 0;
@@ -222,7 +338,8 @@ class MdbExportPayloadTest extends TestCase
                     $this->assertNull($load['Phase'.$phase.'Kw']);
                     $this->assertNull($load['Phase'.$phase.'Kvar']);
                 }
-                $this->assertEqualsWithDelta($index === 0 ? 20 : 50, $total, 1e-8);
+                $this->assertEqualsWithDelta(70, $total, 1e-8);
+                $this->assertEqualsWithDelta(20, array_sum(array_map(fn ($phase) => $load['Phase'.$phase.'Customers'], [1, 2, 3])), 1e-8);
             }
         }
     }
@@ -381,8 +498,9 @@ class MdbExportPayloadTest extends TestCase
             $this->assertNull($node['X']);
             $this->assertNull($node['Y']);
         }
-        $this->assertNull($payload['tables']['InstSection'][1]['SectionLength_MUL']);
-        $this->assertNull($payload['tables']['InstSection'][1]['SectionPhases']);
+        $surveySection = collect($payload['tables']['InstSection'])->firstWhere('SectionId', $payload['provenance'][0]['section_id']);
+        $this->assertNull($surveySection['SectionLength_MUL']);
+        $this->assertNull($surveySection['SectionPhases']);
         $this->assertNull($payload['tables']['Loads'][0]['Phase1Kva']);
         $this->assertNull($payload['tables']['Loads'][0]['Phase1Customers']);
         $this->assertNotEmpty($payload['engineering_omissions']);

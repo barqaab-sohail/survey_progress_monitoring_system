@@ -161,6 +161,25 @@ class MdbOperatorEntryTest extends TestCase
         }
     }
 
+    public function test_recorded_phase_counts_reach_the_frozen_demand_without_equal_redistribution(): void
+    {
+        Configuration::create(['project_id' => $this->batch->project_id, 'revision' => 1,
+            'settings' => ['simple_mdb_generation' => true, 'engineering' => ['blank_consumers_zero' => true],
+                'simple_model_review' => ['reviewed_by' => $this->admin->id, 'reviewed_at' => now()->toIso8601String()]],
+            'load_assumptions' => ['mode' => 'category_rates', 'single_phase_allocation' => 'recorded_or_equal', 'evidence' => 'Verified phase counts']]);
+        $this->save(['consumer_phases' => ['rs' => ['R' => 8, 'Y' => 1, 'B' => 1]],
+            'conductors' => ['R' => 'A', 'Y' => 'A', 'B' => 'A', 'N' => 'A']]);
+        $this->save(['designation' => 'E', 'waypoint_reference' => '010',
+            'consumers' => array_fill_keys(array_keys(EntryLookups::CONSUMERS), 0)]);
+        $snapshots = app(SnapshotService::class);
+        $revision = $snapshots->capture($this->batch->fresh(), $this->admin->id)->fresh();
+        $consumer = collect($revision->snapshot['transformers'][0]['sections'][0]['consumers'])->firstWhere('category', 'rs');
+        $this->assertSame(10, $consumer['count']);
+        $this->assertEquals([16, 2, 2], array_column($consumer['demand']['phase_values'], 'kva'));
+        $this->assertSame('recorded', $consumer['demand']['allocation_basis']);
+        $this->assertSame($revision->sha256, $snapshots->hash($revision->snapshot));
+    }
+
     public function test_single_phase_counts_save_reload_edit_and_keep_scalar_export_totals(): void
     {
         $phases = ['rs' => ['R' => 5, 'Y' => 2, 'B' => 7], 'sc' => ['R' => 0, 'Y' => null, 'B' => 3],

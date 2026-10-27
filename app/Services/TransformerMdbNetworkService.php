@@ -7,6 +7,7 @@ use App\Models\Mdb\Template;
 use App\Models\TransformerMdbProject;
 use App\Services\Mdb\EngineeringConfiguration;
 use App\Services\Mdb\GenerationMode;
+use App\Services\Mdb\RecordedConsumerPhases;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
@@ -288,7 +289,9 @@ class TransformerMdbNetworkService
             foreach (self::CONSUMERS as $category) {
                 $count = $end['consumers'][$category] ?? null;
                 $this->require($count !== null || ! empty($settings['blank_consumers_zero']), $label.': resolve blank consumer counts.');
-                $demand = app(EngineeringConfiguration::class)->demand((int) ($count ?? 0), $category, $phases, $settings['central_configuration']);
+                $recorded = ($settings['central_configuration']['load_assumptions']['single_phase_allocation'] ?? 'equal') === 'recorded_or_equal'
+                    ? app(RecordedConsumerPhases::class)->fromRows([$end], $category) : null;
+                $demand = app(EngineeringConfiguration::class)->demand((int) ($count ?? 0), $category, $phases, $settings['central_configuration'], $recorded);
                 foreach (['R', 'Y', 'B'] as $index => $phase) {
                     foreach (['Customers' => 'customers', 'Kw' => 'kw', 'Kvar' => 'kvar', 'Kva' => 'kva'] as $column => $key) {
                         if (! in_array($key, ['kw', 'kvar'], true)) {
@@ -351,7 +354,9 @@ class TransformerMdbNetworkService
             }
             // demand() reports provenance; this draft remains unapproved.
             $configuration['load_assumptions'] += ['method' => null, 'evidence' => null];
-            $demand = app(EngineeringConfiguration::class)->demand($count, $category, $phases, $configuration);
+            $recorded = ($configuration['load_assumptions']['single_phase_allocation'] ?? 'equal') === 'recorded_or_equal'
+                ? app(RecordedConsumerPhases::class)->fromRows([$end], $category) : null;
+            $demand = app(EngineeringConfiguration::class)->demand($count, $category, $phases, $configuration, $recorded);
             foreach (['R', 'Y', 'B'] as $index => $phase) {
                 foreach (['Customers' => 'customers', 'Kw' => 'kw', 'Kvar' => 'kvar', 'Kva' => 'kva'] as $column => $key) {
                     if (! in_array($key, ['kw', 'kvar'], true)) {

@@ -54,6 +54,10 @@
                 @endif
                 <p>{{ $modelReadiness['acceptance'] }} @unless($modelReadiness['complete'])Simple mode can download this draft, but missing inputs must be completed before using it for electrical analysis.@endunless</p>
             @endif
+            <p>Consumer categories are combined into one load record per survey section. Category details remain in the export provenance. An automatically created meter point marks the logical transformer-secondary link; it contains no measured readings.</p>
+            @if(count($payload['pv_records'] ?? []))
+                <p><strong>PV review:</strong> Recorded PV requires a generator mapping and base-year phase outputs. PV customer consumption must be supplied separately through the approved load inputs; installed solar capacity is not a consumption estimate.</p>
+            @endif
             <ul>@foreach($payload['tables'] as $table=>$rows)<li>{{ $table }}: {{ count($rows) }} records</li>@endforeach</ul>
             <form method="POST" action="{{ route('mdb-workflow.offline-synergee.download') }}">@csrf
                 <input type="hidden" name="package" value="{{ $packageJson }}">

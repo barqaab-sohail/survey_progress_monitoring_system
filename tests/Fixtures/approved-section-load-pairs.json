@@ -1,0 +1,1090 @@
+[
+  {
+    "transformer": "2211117034",
+    "source_files": [
+      "data_entry_database_2211117034.mdb",
+      "valid Synergee New BosanT-2211117034.mdb"
+    ],
+    "source_hashes": [
+      "886a0cf426fda61b05dd2d4ce81641b5ac93d829ba24adb8231fef96ad91930f",
+      "286b78644bfce595c8853f48f3fa36b6b331a699574e5bd9505602b529c47b78"
+    ],
+    "single_phase": 36,
+    "three_phase": 0,
+    "meter_section": "104032211117034.2",
+    "records": [
+      {
+        "section_id": "104031130825453",
+        "phases": "RYBN",
+        "single_phase": 0,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0,
+          0,
+          0
+        ],
+        "approved_phase_kva": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "section_id": "104031130825454",
+        "phases": "RYBN",
+        "single_phase": 1,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333
+        ],
+        "approved_phase_kva": [
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "section_id": "104031130825455",
+        "phases": " Y N",
+        "single_phase": 1,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          null,
+          1,
+          null
+        ],
+        "approved_phase_kva": [
+          null,
+          3,
+          null
+        ]
+      },
+      {
+        "section_id": "104031130825456",
+        "phases": " YBN",
+        "single_phase": 0,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          null,
+          0,
+          0
+        ],
+        "approved_phase_kva": [
+          null,
+          0,
+          0
+        ]
+      },
+      {
+        "section_id": "104031130825457",
+        "phases": " YBN",
+        "single_phase": 0,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          null,
+          0,
+          0
+        ],
+        "approved_phase_kva": [
+          null,
+          0,
+          0
+        ]
+      },
+      {
+        "section_id": "104031130825458",
+        "phases": " YBN",
+        "single_phase": 3,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          null,
+          1.5,
+          1.5
+        ],
+        "approved_phase_kva": [
+          null,
+          4.5,
+          4.5
+        ]
+      },
+      {
+        "section_id": "104031130825459",
+        "phases": "  BN",
+        "single_phase": 2,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          null,
+          null,
+          2
+        ],
+        "approved_phase_kva": [
+          null,
+          null,
+          6
+        ]
+      },
+      {
+        "section_id": "104031130825460",
+        "phases": "RYBN",
+        "single_phase": 7,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          2.3333333333333335,
+          2.3333333333333335,
+          2.3333333333333335
+        ],
+        "approved_phase_kva": [
+          7,
+          7,
+          7
+        ]
+      },
+      {
+        "section_id": "104031130825461",
+        "phases": "RYBN",
+        "single_phase": 3,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          1,
+          1,
+          1
+        ],
+        "approved_phase_kva": [
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "section_id": "104031130825462",
+        "phases": "RYBN",
+        "single_phase": 1,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333
+        ],
+        "approved_phase_kva": [
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "section_id": "104031130825463",
+        "phases": "RYBN",
+        "single_phase": 0,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0,
+          0,
+          0
+        ],
+        "approved_phase_kva": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "section_id": "104031130825464",
+        "phases": "RYBN",
+        "single_phase": 0,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0,
+          0,
+          0
+        ],
+        "approved_phase_kva": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "section_id": "104031130825465",
+        "phases": "  BN",
+        "single_phase": 4,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          null,
+          null,
+          4
+        ],
+        "approved_phase_kva": [
+          null,
+          null,
+          12
+        ]
+      },
+      {
+        "section_id": "104031130825466",
+        "phases": "  BN",
+        "single_phase": 4,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          null,
+          null,
+          4
+        ],
+        "approved_phase_kva": [
+          null,
+          null,
+          12
+        ]
+      },
+      {
+        "section_id": "104031130825467",
+        "phases": "R  N",
+        "single_phase": 0,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0,
+          null,
+          null
+        ],
+        "approved_phase_kva": [
+          0,
+          null,
+          null
+        ]
+      },
+      {
+        "section_id": "104031130825468",
+        "phases": "R  N",
+        "single_phase": 0,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0,
+          null,
+          null
+        ],
+        "approved_phase_kva": [
+          0,
+          null,
+          null
+        ]
+      },
+      {
+        "section_id": "104031130825469",
+        "phases": "R  N",
+        "single_phase": 0,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0,
+          null,
+          null
+        ],
+        "approved_phase_kva": [
+          0,
+          null,
+          null
+        ]
+      },
+      {
+        "section_id": "104031130825470",
+        "phases": "R  N",
+        "single_phase": 3,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          3,
+          null,
+          null
+        ],
+        "approved_phase_kva": [
+          9,
+          null,
+          null
+        ]
+      },
+      {
+        "section_id": "104031130825471",
+        "phases": "R  N",
+        "single_phase": 2,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          2,
+          null,
+          null
+        ],
+        "approved_phase_kva": [
+          6,
+          null,
+          null
+        ]
+      },
+      {
+        "section_id": "104031130825472",
+        "phases": "R  N",
+        "single_phase": 5,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          5,
+          null,
+          null
+        ],
+        "approved_phase_kva": [
+          15,
+          null,
+          null
+        ]
+      }
+    ]
+  },
+  {
+    "transformer": "2301017107",
+    "source_files": [
+      "data_entry_database_2301017107.mdb",
+      "valid Synergee Z TownT-2301017107.mdb"
+    ],
+    "source_hashes": [
+      "0142822a8a5b979e73676b739afb220199e63d52895172824b84f1da33541210",
+      "43570810f75671ac3cf9ff94f2780345edc050452d21467b442b92cbbd24bcf5"
+    ],
+    "single_phase": 103,
+    "three_phase": 10,
+    "meter_section": "104252301017107.2",
+    "records": [
+      {
+        "section_id": "104251130825430",
+        "phases": "RYBN",
+        "single_phase": 0,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0,
+          0,
+          0
+        ],
+        "approved_phase_kva": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "section_id": "104251130825431",
+        "phases": "RYBN",
+        "single_phase": 2,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0.6666666666666666,
+          0.6666666666666666,
+          0.6666666666666666
+        ],
+        "approved_phase_kva": [
+          2,
+          2,
+          2
+        ]
+      },
+      {
+        "section_id": "104251130825432",
+        "phases": " Y N",
+        "single_phase": 2,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          null,
+          2,
+          null
+        ],
+        "approved_phase_kva": [
+          null,
+          6,
+          null
+        ]
+      },
+      {
+        "section_id": "104251130825433",
+        "phases": "RYBN",
+        "single_phase": 0,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0,
+          0,
+          0
+        ],
+        "approved_phase_kva": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "section_id": "104251130825434",
+        "phases": "RYBN",
+        "single_phase": 6,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          2,
+          2,
+          2
+        ],
+        "approved_phase_kva": [
+          6,
+          6,
+          6
+        ]
+      },
+      {
+        "section_id": "104251130825435",
+        "phases": "RYBN",
+        "single_phase": 12,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          4,
+          4,
+          4
+        ],
+        "approved_phase_kva": [
+          12,
+          12,
+          12
+        ]
+      },
+      {
+        "section_id": "104251130825436",
+        "phases": "RYBN",
+        "single_phase": 5,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          1.6666666666666667,
+          1.6666666666666667,
+          1.6666666666666667
+        ],
+        "approved_phase_kva": [
+          5,
+          5,
+          5
+        ]
+      },
+      {
+        "section_id": "104251130825437",
+        "phases": "RYBN",
+        "single_phase": 8,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          2.6666666666666665,
+          2.6666666666666665,
+          2.6666666666666665
+        ],
+        "approved_phase_kva": [
+          8,
+          8,
+          8
+        ]
+      },
+      {
+        "section_id": "104251130825438",
+        "phases": "RYBN",
+        "single_phase": 2,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0.6666666666666666,
+          0.6666666666666666,
+          0.6666666666666666
+        ],
+        "approved_phase_kva": [
+          2,
+          2,
+          2
+        ]
+      },
+      {
+        "section_id": "104251130825439",
+        "phases": "RYBN",
+        "single_phase": 6,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          2,
+          2,
+          2
+        ],
+        "approved_phase_kva": [
+          6,
+          6,
+          6
+        ]
+      },
+      {
+        "section_id": "104251130825440",
+        "phases": "RYBN",
+        "single_phase": 2,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0.6666666666666666,
+          0.6666666666666666,
+          0.6666666666666666
+        ],
+        "approved_phase_kva": [
+          2,
+          2,
+          2
+        ]
+      },
+      {
+        "section_id": "104251130825441",
+        "phases": "RYBN",
+        "single_phase": 3,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          1,
+          1,
+          1
+        ],
+        "approved_phase_kva": [
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "section_id": "104251130825442",
+        "phases": "RYBN",
+        "single_phase": 0,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0,
+          0,
+          0
+        ],
+        "approved_phase_kva": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "section_id": "104251130825443",
+        "phases": "RYBN",
+        "single_phase": 2,
+        "three_phase": 2,
+        "approved_phase_customers": [
+          1.3333333333333333,
+          1.3333333333333333,
+          1.3333333333333333
+        ],
+        "approved_phase_kva": [
+          5.333333333333333,
+          5.333333333333333,
+          5.333333333333333
+        ]
+      },
+      {
+        "section_id": "104251130825444",
+        "phases": "RYBN",
+        "single_phase": 0,
+        "three_phase": 8,
+        "approved_phase_customers": [
+          2.6666666666666665,
+          2.6666666666666665,
+          2.6666666666666665
+        ],
+        "approved_phase_kva": [
+          13.333333333333334,
+          13.333333333333334,
+          13.333333333333334
+        ]
+      },
+      {
+        "section_id": "104251130825445",
+        "phases": "RYBN",
+        "single_phase": 8,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          2.6666666666666665,
+          2.6666666666666665,
+          2.6666666666666665
+        ],
+        "approved_phase_kva": [
+          8,
+          8,
+          8
+        ]
+      },
+      {
+        "section_id": "104251130825446",
+        "phases": "  BN",
+        "single_phase": 11,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          null,
+          null,
+          11
+        ],
+        "approved_phase_kva": [
+          null,
+          null,
+          33
+        ]
+      },
+      {
+        "section_id": "104251130825447",
+        "phases": "RYBN",
+        "single_phase": 8,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          2.6666666666666665,
+          2.6666666666666665,
+          2.6666666666666665
+        ],
+        "approved_phase_kva": [
+          8,
+          8,
+          8
+        ]
+      },
+      {
+        "section_id": "104251130825448",
+        "phases": "RYBN",
+        "single_phase": 5,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          1.6666666666666667,
+          1.6666666666666667,
+          1.6666666666666667
+        ],
+        "approved_phase_kva": [
+          5,
+          5,
+          5
+        ]
+      },
+      {
+        "section_id": "104251130825449",
+        "phases": "RYBN",
+        "single_phase": 5,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          1.6666666666666667,
+          1.6666666666666667,
+          1.6666666666666667
+        ],
+        "approved_phase_kva": [
+          5,
+          5,
+          5
+        ]
+      },
+      {
+        "section_id": "104251130825450",
+        "phases": "RYBN",
+        "single_phase": 6,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          2,
+          2,
+          2
+        ],
+        "approved_phase_kva": [
+          6,
+          6,
+          6
+        ]
+      },
+      {
+        "section_id": "104251130825451",
+        "phases": "  BN",
+        "single_phase": 6,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          null,
+          null,
+          6
+        ],
+        "approved_phase_kva": [
+          null,
+          null,
+          18
+        ]
+      },
+      {
+        "section_id": "104251130825452",
+        "phases": "  BN",
+        "single_phase": 4,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          null,
+          null,
+          4
+        ],
+        "approved_phase_kva": [
+          null,
+          null,
+          12
+        ]
+      }
+    ]
+  },
+  {
+    "transformer": "8160421110",
+    "source_files": [
+      "data_entry_database_8160421110.mdb",
+      "Valid Synergee Kot MadinaT-8160421110.mdb"
+    ],
+    "source_hashes": [
+      "98a36c25326159924f8af236da28a96291eabe772c94dc1c427dbf13e91fe3d1",
+      "eba5711b1c633c48839146bb42ed9ebec6cbe7d6028a81f77cb6345d69a995fd"
+    ],
+    "single_phase": 148,
+    "three_phase": 0,
+    "meter_section": "103338160421110.2",
+    "records": [
+      {
+        "section_id": "103331080825031",
+        "phases": "RYBN",
+        "single_phase": 4,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          1.3333333333333333,
+          1.3333333333333333,
+          1.3333333333333333
+        ],
+        "approved_phase_kva": [
+          4,
+          4,
+          4
+        ]
+      },
+      {
+        "section_id": "103331080825032",
+        "phases": "RYBN",
+        "single_phase": 0,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0,
+          0,
+          0
+        ],
+        "approved_phase_kva": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "section_id": "103331080825033",
+        "phases": "RYBN",
+        "single_phase": 0,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0,
+          0,
+          0
+        ],
+        "approved_phase_kva": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "section_id": "103331080825034",
+        "phases": "RYBN",
+        "single_phase": 5,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          1.6666666666666667,
+          1.6666666666666667,
+          1.6666666666666667
+        ],
+        "approved_phase_kva": [
+          5,
+          5,
+          5
+        ]
+      },
+      {
+        "section_id": "103331080825035",
+        "phases": "RYBN",
+        "single_phase": 12,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          4,
+          4,
+          4
+        ],
+        "approved_phase_kva": [
+          12,
+          12,
+          12
+        ]
+      },
+      {
+        "section_id": "103331080825036",
+        "phases": "RYBN",
+        "single_phase": 11,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          3.6666666666666665,
+          3.6666666666666665,
+          3.6666666666666665
+        ],
+        "approved_phase_kva": [
+          11,
+          11,
+          11
+        ]
+      },
+      {
+        "section_id": "103331080825037",
+        "phases": "RYBN",
+        "single_phase": 13,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          4.333333333333333,
+          4.333333333333333,
+          4.333333333333333
+        ],
+        "approved_phase_kva": [
+          13,
+          13,
+          13
+        ]
+      },
+      {
+        "section_id": "103331080825038",
+        "phases": "RYBN",
+        "single_phase": 14,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          4.666666666666667,
+          4.666666666666667,
+          4.666666666666667
+        ],
+        "approved_phase_kva": [
+          14,
+          14,
+          14
+        ]
+      },
+      {
+        "section_id": "103331080825039",
+        "phases": "RYBN",
+        "single_phase": 11,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          3.6666666666666665,
+          3.6666666666666665,
+          3.6666666666666665
+        ],
+        "approved_phase_kva": [
+          11,
+          11,
+          11
+        ]
+      },
+      {
+        "section_id": "103331080825040",
+        "phases": "RYBN",
+        "single_phase": 13,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          4.333333333333333,
+          4.333333333333333,
+          4.333333333333333
+        ],
+        "approved_phase_kva": [
+          13,
+          13,
+          13
+        ]
+      },
+      {
+        "section_id": "103331080825041",
+        "phases": "RYBN",
+        "single_phase": 3,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          1,
+          1,
+          1
+        ],
+        "approved_phase_kva": [
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "section_id": "103331080825042",
+        "phases": "RYBN",
+        "single_phase": 5,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          1.6666666666666667,
+          1.6666666666666667,
+          1.6666666666666667
+        ],
+        "approved_phase_kva": [
+          5,
+          5,
+          5
+        ]
+      },
+      {
+        "section_id": "103331080825043",
+        "phases": "RYBN",
+        "single_phase": 8,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          2.6666666666666665,
+          2.6666666666666665,
+          2.6666666666666665
+        ],
+        "approved_phase_kva": [
+          8,
+          8,
+          8
+        ]
+      },
+      {
+        "section_id": "103331080825044",
+        "phases": "RYBN",
+        "single_phase": 8,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          2.6666666666666665,
+          2.6666666666666665,
+          2.6666666666666665
+        ],
+        "approved_phase_kva": [
+          8,
+          8,
+          8
+        ]
+      },
+      {
+        "section_id": "103331080825045",
+        "phases": "RYBN",
+        "single_phase": 10,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          3.3333333333333335,
+          3.3333333333333335,
+          3.3333333333333335
+        ],
+        "approved_phase_kva": [
+          10,
+          10,
+          10
+        ]
+      },
+      {
+        "section_id": "103331080825046",
+        "phases": "RYBN",
+        "single_phase": 16,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          5.333333333333333,
+          5.333333333333333,
+          5.333333333333333
+        ],
+        "approved_phase_kva": [
+          16,
+          16,
+          16
+        ]
+      },
+      {
+        "section_id": "103331080825047",
+        "phases": "RYBN",
+        "single_phase": 3,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          1,
+          1,
+          1
+        ],
+        "approved_phase_kva": [
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "section_id": "103331080825048",
+        "phases": "RYBN",
+        "single_phase": 0,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0,
+          0,
+          0
+        ],
+        "approved_phase_kva": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "section_id": "103331080825049",
+        "phases": "RYBN",
+        "single_phase": 4,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          1.3333333333333333,
+          1.3333333333333333,
+          1.3333333333333333
+        ],
+        "approved_phase_kva": [
+          4,
+          4,
+          4
+        ]
+      },
+      {
+        "section_id": "103331080825050",
+        "phases": "RYBN",
+        "single_phase": 2,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0.6666666666666666,
+          0.6666666666666666,
+          0.6666666666666666
+        ],
+        "approved_phase_kva": [
+          2,
+          2,
+          2
+        ]
+      },
+      {
+        "section_id": "103331080825051",
+        "phases": "RYBN",
+        "single_phase": 5,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          1.6666666666666667,
+          1.6666666666666667,
+          1.6666666666666667
+        ],
+        "approved_phase_kva": [
+          5,
+          5,
+          5
+        ]
+      },
+      {
+        "section_id": "103331080825052",
+        "phases": "RYBN",
+        "single_phase": 1,
+        "three_phase": 0,
+        "approved_phase_customers": [
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333
+        ],
+        "approved_phase_kva": [
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  }
+]

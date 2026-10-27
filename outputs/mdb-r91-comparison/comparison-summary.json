@@ -1,0 +1,59 @@
+{
+  "generated": {
+    "totals": {
+      "Customers": [
+        29,
+        24,
+        21
+      ],
+      "Kva": [
+        58,
+        48,
+        42
+      ]
+    },
+    "zero_loads": 98,
+    "positive_loads": 10,
+    "load_rows_per_section": {
+      "9": 12
+    },
+    "length_m": 466.25410318586233,
+    "zero_sections": [
+      "sac3694570168772e1b2264107f0999",
+      "s51f353d9d3292bf0998cb8d95af3e8"
+    ],
+    "undirected_reachable": 14,
+    "directed_reachable": 13,
+    "node_count": 14,
+    "missing_endpoints": 0,
+    "orphan_loads": 0
+  },
+  "reference": {
+    "totals": {
+      "Customers": [
+        60.66666666666667,
+        53.666666666666664,
+        58.66666666666667
+      ],
+      "Kva": [
+        181.66666666666666,
+        160.66666666666666,
+        175.66666666666666
+      ]
+    },
+    "zero_loads": 3,
+    "positive_loads": 20,
+    "load_rows_per_section": {
+      "1": 23
+    },
+    "length_m": 882.1846041656545,
+    "zero_sections": [],
+    "undirected_reachable": 25,
+    "directed_reachable": 25,
+    "node_count": 26,
+    "missing_endpoints": 0,
+    "orphan_loads": 0
+  },
+  "schema_equal": true,
+  "relationships_equal": true
+}
