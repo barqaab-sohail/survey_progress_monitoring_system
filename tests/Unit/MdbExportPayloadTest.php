@@ -189,9 +189,38 @@ class MdbExportPayloadTest extends TestCase
         $this->assertSame(0, $transformer['UseInstanceImpedance']);
         $this->assertSame(0.4, $transformer['SpecNomKv']);
         $load = $payload['tables']['Loads'][0];
-        $this->assertEqualsWithDelta(2.4, $load['Phase1Kw'], 1e-8);
-        $this->assertEqualsWithDelta(1.8, $load['Phase1Kvar'], 1e-8);
-        $this->assertSame(3.0, $load['Phase1Kva']);
+        $this->assertNull($load['Phase1Kw']);
+        $this->assertNull($load['Phase1Kvar']);
+        $this->assertSame(2.0, $load['Phase1Kva']);
+    }
+
+    public function test_both_phase_types_export_direct_kva_without_power_factor_in_full_and_simple_modes(): void
+    {
+        foreach ([false, true] as $simple) {
+            [$revision, $template] = $this->fixture();
+            $snapshot = $revision->snapshot;
+            $snapshot['configuration']['revision'] = 1;
+            $snapshot['configuration']['settings']['simple_mdb_generation'] = $simple;
+            $snapshot['configuration']['settings']['engineering'] = ['configuration_id' => 'reviewed-config', 'transformer_types' => ['100' => 'reviewed-100']];
+            $snapshot['configuration']['load_assumptions'] = ['mode' => 'category_rates', 'evidence' => 'Department standard'];
+            $snapshot['transformers'][0]['capacity_kva'] = 100;
+            $snapshot['transformers'][0]['sections'][0]['consumers'] = [
+                ['category' => 'rs', 'count' => 10], ['category' => 'rl', 'count' => 10],
+            ];
+            $snapshot['transformers'][0]['sections'][1]['consumers'] = [];
+            $revision->snapshot = app(EngineeringConfiguration::class)->apply($snapshot);
+            $payload = $this->builder()->build($revision, $template, 1, str_repeat('e', 64));
+            $this->assertCount(2, $payload['tables']['Loads']);
+            foreach ($payload['tables']['Loads'] as $index => $load) {
+                $total = 0;
+                foreach ([1, 2, 3] as $phase) {
+                    $total += $load['Phase'.$phase.'Kva'];
+                    $this->assertNull($load['Phase'.$phase.'Kw']);
+                    $this->assertNull($load['Phase'.$phase.'Kvar']);
+                }
+                $this->assertEqualsWithDelta($index === 0 ? 20 : 50, $total, 1e-8);
+            }
+        }
     }
 
     public function test_composite_node_ids_keep_repeated_gps_names_from_different_surveys_distinct(): void

@@ -186,7 +186,35 @@
             "mode": null,
             "method": null,
             "evidence": "9 reference MDBs; see reference_import source SHA-256 and load evidence report.",
-            "rates": []
+            "rates": {
+                "rs": {
+                    "kva": 2
+                },
+                "rl": {
+                    "kva": 5
+                },
+                "sc": {
+                    "kva": 2
+                },
+                "lc": {
+                    "kva": 5
+                },
+                "si": {
+                    "kva": 5
+                },
+                "li": {
+                    "kva": 5
+                },
+                "pb": {
+                    "kva": 5
+                },
+                "ag": {
+                    "kva": 5
+                },
+                "st": {
+                    "kva": 2
+                }
+            }
         },
         "equipment_references": {
             "conductors": [

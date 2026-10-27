@@ -282,7 +282,7 @@ class TransformerMdbNetworkService
             $load = array_replace($defaults, ['SectionId' => $section, 'Description' => 'Centrally approved category demand']);
             foreach (['R', 'Y', 'B'] as $index => $phase) {
                 foreach (['Customers', 'Kw', 'Kvar', 'Kva'] as $quantity) {
-                    $load['Phase'.($index + 1).$quantity] = 0;
+                    $load['Phase'.($index + 1).$quantity] = in_array($quantity, ['Kw', 'Kvar'], true) ? null : 0;
                 }
             }
             foreach (self::CONSUMERS as $category) {
@@ -291,7 +291,9 @@ class TransformerMdbNetworkService
                 $demand = app(EngineeringConfiguration::class)->demand((int) ($count ?? 0), $category, $phases, $settings['central_configuration']);
                 foreach (['R', 'Y', 'B'] as $index => $phase) {
                     foreach (['Customers' => 'customers', 'Kw' => 'kw', 'Kvar' => 'kvar', 'Kva' => 'kva'] as $column => $key) {
-                        $load['Phase'.($index + 1).$column] += $demand['phase_values'][$phase][$key] ?? 0;
+                        if (! in_array($key, ['kw', 'kvar'], true)) {
+                            $load['Phase'.($index + 1).$column] += $demand['phase_values'][$phase][$key] ?? 0;
+                        }
                     }
                 }
             }
@@ -304,14 +306,15 @@ class TransformerMdbNetworkService
             $value = $end['consumers'][$category] ?? null;
             $this->require($value !== null || ! empty($settings['blank_consumers_zero']), "{$label}: enter all E row consumer counts, or explicitly treat blank consumer cells as zero.");
             $value = (int) ($value ?? 0);
-            $rate = $settings['consumer_kva'][$category] ?? null;
-            $this->require($value === 0 || $rate !== null, "{$label}: enter kVA per {$category} consumer in the engineering settings.");
+            $rate = EngineeringConfiguration::consumerKva($category);
             $count += $value;
-            $kva += $value * (float) ($rate ?? 0);
+            $kva += $value * $rate;
         }
         $connected = array_values(array_filter(['R', 'Y', 'B'], fn ($phase) => str_contains($phases, $phase)));
         $load = array_replace($defaults, ['SectionId' => $section, 'Description' => 'Survey consumers; category counts retained in application audit']);
         foreach (['R', 'Y', 'B'] as $index => $phase) {
+            $load['Phase'.($index + 1).'Kw'] = null;
+            $load['Phase'.($index + 1).'Kvar'] = null;
             $load['Phase'.($index + 1).'Customers'] = in_array($phase, $connected, true) ? $count / count($connected) : 0;
             $load['Phase'.($index + 1).'Kva'] = in_array($phase, $connected, true) ? $kva / count($connected) : 0;
         }
@@ -319,7 +322,7 @@ class TransformerMdbNetworkService
         return $load;
     }
 
-    /** Missing category demand or PF must not turn into an assumed zero demand. */
+    /** Missing consumer counts must not turn into an assumed zero demand. */
     private function simpleLoad(array $defaults, string $section, array $end, string $phases, array $settings): array
     {
         $configuration = $settings['central_configuration'];
@@ -332,15 +335,10 @@ class TransformerMdbNetworkService
             if ($count === null && empty($settings['blank_consumers_zero'])) {
                 $complete = false;
             }
-            if ((int) ($count ?? 0) > 0) {
-                $rate = $assumptions['rates'][$category] ?? [];
-                $complete = $complete && is_numeric($rate['kva'] ?? null) && $rate['kva'] >= 0
-                    && is_numeric($rate['power_factor'] ?? null) && $rate['power_factor'] > 0 && $rate['power_factor'] <= 1;
-            }
         }
         foreach (['R', 'Y', 'B'] as $index => $phase) {
             foreach (['Customers', 'Kw', 'Kvar', 'Kva'] as $quantity) {
-                $load['Phase'.($index + 1).$quantity] = $complete ? 0 : null;
+                $load['Phase'.($index + 1).$quantity] = $complete && ! in_array($quantity, ['Kw', 'Kvar'], true) ? 0 : null;
             }
         }
         if (! $complete) {
@@ -356,7 +354,9 @@ class TransformerMdbNetworkService
             $demand = app(EngineeringConfiguration::class)->demand($count, $category, $phases, $configuration);
             foreach (['R', 'Y', 'B'] as $index => $phase) {
                 foreach (['Customers' => 'customers', 'Kw' => 'kw', 'Kvar' => 'kvar', 'Kva' => 'kva'] as $column => $key) {
-                    $load['Phase'.($index + 1).$column] += $demand['phase_values'][$phase][$key] ?? 0;
+                    if (! in_array($key, ['kw', 'kvar'], true)) {
+                        $load['Phase'.($index + 1).$column] += $demand['phase_values'][$phase][$key] ?? 0;
+                    }
                 }
             }
         }

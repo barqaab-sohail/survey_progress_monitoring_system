@@ -21,6 +21,7 @@ use App\Models\SubDivision;
 use App\Models\SurveyTeam;
 use App\Models\User;
 use App\Services\Mdb\Exporter;
+use App\Services\Mdb\ExportPayloadBuilder;
 use App\Services\Mdb\ExportService;
 use App\Services\Mdb\NetworkValidator;
 use App\Services\Mdb\ReadbackVerifier;
@@ -155,14 +156,15 @@ class SimpleMdbExportWorkflowTest extends TestCase
         $this->batch->increment('revision');
         $this->approve();
         $revision = $this->batch->approvedRevision;
-        $payload = app(\App\Services\Mdb\ExportPayloadBuilder::class)->build($revision, $this->template, null, 'confirmed-simple');
+        $payload = app(ExportPayloadBuilder::class)->build($revision, $this->template, null, 'confirmed-simple');
         $this->assertSame('transformer-100', $payload['tables']['InstPrimaryTransformers'][0]['TransformerType']);
         foreach ($payload['tables']['InstSection'] as $section) {
             $this->assertSame(1, $section['LoadConnectionPhaseGnd']);
         }
         $load = $payload['tables']['Loads'][0];
-        $this->assertEqualsWithDelta(3, $load['Phase1Kva'], 1e-8);
-        $this->assertEqualsWithDelta(2.4, $load['Phase1Kw'], 1e-8);
+        $this->assertEqualsWithDelta(2, $load['Phase1Kva'], 1e-8);
+        $this->assertNull($load['Phase1Kw']);
+        $this->assertNull($load['Phase1Kvar']);
         $this->assertEquals(1, $load['Phase1Customers']);
     }
 

@@ -88,7 +88,7 @@
     form.querySelectorAll('[data-header]').forEach(input => set(input, initial.header?.[input.dataset.header]));
     setCapacity(initial.header?.capacity_kva);
     form.querySelectorAll('[data-setting]').forEach(input => set(input, initial.export_settings?.[input.dataset.setting]));
-    form.querySelectorAll('[data-rate]').forEach(input => set(input, initial.export_settings?.consumer_kva?.[input.dataset.rate]));
+    form.querySelectorAll('[data-rate]').forEach(input => set(input, input.defaultValue));
     (initial.rows ?? []).forEach(addRow); if (!rows.children.length) { addPair(); dirty = false; document.getElementById('mdb-save-state').textContent = 'Changes are saved when you choose Save.'; } renumber();
     (initial.solar ?? []).forEach(addSolar);
     const datalist = document.getElementById('gpx-names');

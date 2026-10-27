@@ -16,6 +16,22 @@ class EngineeringConfiguration
 {
     public const CATEGORIES = ['rs', 'rl', 'sc', 'lc', 'si', 'li', 'pb', 'ag', 'st'];
 
+    public const LOAD_METHOD = '2 kVA per single-phase consumer; 5 kVA per three-phase consumer; no power-factor conversion';
+
+    public static function consumerKva(string $category): float
+    {
+        if (! in_array($category, self::CATEGORIES, true)) {
+            throw ValidationException::withMessages(['engineering' => 'Unknown consumer category.']);
+        }
+
+        return in_array($category, EntryLookups::SINGLE_PHASE_CONSUMERS, true) ? 2.0 : 5.0;
+    }
+
+    public static function consumerRates(): array
+    {
+        return array_combine(self::CATEGORIES, array_map(fn ($category) => ['kva' => self::consumerKva($category)], self::CATEGORIES));
+    }
+
     /** Keep incomplete reference imports editable without granting engineering approval. */
     public function saveDraft(Project $project, Request $request): Configuration
     {
@@ -44,8 +60,8 @@ class EngineeringConfiguration
             'confirm_simple_model' => 'sometimes|boolean',
         ];
         foreach (self::CATEGORIES as $category) {
-            $rules['rates.'.$category.'.kva'] = 'nullable|numeric|min:0|max:1000000';
-            $rules['rates.'.$category.'.power_factor'] = 'nullable|numeric|gt:0|max:1';
+            $rules['rates.'.$category.'.kva'] = 'nullable|numeric|in:'.self::consumerKva($category);
+            $rules['rates.'.$category.'.power_factor'] = 'exclude';
         }
         $data = $request->validate($rules);
         if (array_key_exists('sag_allowance_percent', $data)) {
@@ -124,6 +140,7 @@ class EngineeringConfiguration
                     $loads[$key] = $data[$field];
                 }
             }
+            $loads['rates'] = self::consumerRates();
             unset($loads['method']);
             unset($settings['simple_model_review']);
             if (! empty($data['confirm_simple_model'])) {
@@ -138,10 +155,9 @@ class EngineeringConfiguration
                     $loadRules = ['evidence' => 'required|string'];
                     foreach (self::CATEGORIES as $category) {
                         $loadRules['rates.'.$category.'.kva'] = 'required|numeric|min:0|max:1000000';
-                        $loadRules['rates.'.$category.'.power_factor'] = 'required|numeric|gt:0|max:1';
                     }
                     validator($loads, $loadRules)->validate();
-                    $loads['method'] = 'Department-confirmed category kVA and power factor; integer customers balanced R/Y/B in order';
+                    $loads['method'] = self::LOAD_METHOD;
                 }
                 $settings['simple_model_review'] = ['reviewed_by' => $request->user()->id,
                     'reviewed_at' => now('UTC')->toIso8601String(), 'reason' => $data['reason']];
@@ -184,9 +200,8 @@ class EngineeringConfiguration
             'reason' => 'required|string|min:5|max:4000', 'approved' => 'required|accepted',
         ];
         foreach (self::CATEGORIES as $category) {
-            $required = $request->input('load_mode') === 'category_rates' ? 'required' : 'nullable';
-            $rules['rates.'.$category.'.kva'] = $required.'|numeric|min:0|max:1000000';
-            $rules['rates.'.$category.'.power_factor'] = $required.'|numeric|gt:0|max:1';
+            $rules['rates.'.$category.'.kva'] = 'nullable|numeric|in:'.self::consumerKva($category);
+            $rules['rates.'.$category.'.power_factor'] = 'exclude';
         }
         $data = $request->validate($rules);
         if (array_key_exists('sag_allowance_percent', $data)) {
@@ -286,8 +301,8 @@ class EngineeringConfiguration
             ]);
             $settings['mapping'] = $mapping;
             $configuration->fill(['epsg' => $data['epsg'], 'settings' => $settings,
-                'load_assumptions' => ['mode' => $data['load_mode'], 'method' => $data['load_mode'] === 'category_rates' ? 'Approved category kVA and power factor; integer customers balanced R/Y/B in order' : 'Explicit verified phase demand',
-                    'evidence' => $data['load_evidence'], 'rates' => $data['rates'] ?? []],
+                'load_assumptions' => ['mode' => $data['load_mode'], 'method' => $data['load_mode'] === 'category_rates' ? self::LOAD_METHOD : 'Explicit verified phase demand',
+                    'evidence' => $data['load_evidence'], 'rates' => self::consumerRates()],
                 'revision' => ($configuration->revision ?? 0) + 1, 'approved_by' => $request->user()->id, 'approved_at' => now('UTC')])->save();
             app(AuditService::class)->record($request->user(), 'mdb.configuration_changed', $configuration, $before, $configuration->toArray(), $data['reason']);
 
@@ -324,6 +339,11 @@ class EngineeringConfiguration
     public function apply(array $snapshot): array
     {
         $configuration = $snapshot['configuration'] ?? [];
+        if (($configuration['load_assumptions']['mode'] ?? null) === 'category_rates') {
+            $configuration['load_assumptions']['rates'] = self::consumerRates();
+            $configuration['load_assumptions']['method'] = self::LOAD_METHOD;
+            $snapshot['configuration'] = $configuration;
+        }
         $settings = $configuration['settings'] ?? [];
         $engineering = $settings['engineering'] ?? null;
         $simpleReview = $settings['simple_model_review'] ?? [];
@@ -356,10 +376,7 @@ class EngineeringConfiguration
     public function demand(int $count, string $category, array|string $phases, array $configuration): array
     {
         $method = $configuration['load_assumptions'];
-        $rate = $method['rates'][$category] ?? null;
-        if (! is_numeric($rate['kva'] ?? null) || ! is_numeric($rate['power_factor'] ?? null) || $rate['kva'] < 0 || $rate['power_factor'] <= 0 || $rate['power_factor'] > 1) {
-            throw ValidationException::withMessages(['engineering' => 'Configure an approved kVA rate and power factor for '.strtoupper($category).'.']);
-        }
+        $rate = self::consumerKva($category);
         $connected = array_values(array_filter(['R', 'Y', 'B'], fn ($phase) => is_array($phases) ? in_array($phase, $phases, true) : str_contains($phases, $phase)));
         if ($connected === []) {
             throw ValidationException::withMessages(['engineering' => 'Demand requires at least one connected live phase.']);
@@ -367,14 +384,16 @@ class EngineeringConfiguration
         $values = [];
         foreach ($connected as $index => $phase) {
             $customers = intdiv($count, count($connected)) + ($index < $count % count($connected) ? 1 : 0);
-            $kva = $customers * (float) $rate['kva'];
-            $kw = $kva * (float) $rate['power_factor'];
-            $values[$phase] = ['customers' => $customers, 'kw' => $kw, 'kvar' => sqrt(max(0, $kva * $kva - $kw * $kw)), 'kva' => $kva];
+            // Three-phase consumer kVA is a total, shared across the connected phases once.
+            // Customer columns retain integer allocation for the survey-count audit.
+            $kva = in_array($category, EntryLookups::SINGLE_PHASE_CONSUMERS, true)
+                ? $customers * $rate : $count * $rate / count($connected);
+            $values[$phase] = ['customers' => $customers, 'kw' => null, 'kvar' => null, 'kva' => $kva];
         }
 
         $reviewer = $configuration['approved_by'] ?? (GenerationMode::simple($configuration) ? ($configuration['settings']['simple_model_review']['reviewed_by'] ?? null) : null);
 
-        return ['method' => $method['method'], 'evidence' => $method['evidence'], 'approved_by' => $reviewer,
+        return ['method' => self::LOAD_METHOD, 'quantity' => 'kva', 'evidence' => $method['evidence'] ?? null, 'approved_by' => $reviewer,
             'configuration_revision' => $configuration['revision'], 'phase_values' => $values];
     }
 

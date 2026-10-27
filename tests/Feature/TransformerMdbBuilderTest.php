@@ -122,7 +122,7 @@ class TransformerMdbBuilderTest extends TestCase
         $this->assertSame('ANT', $network['tables']['InstSection'][2]['PhaseConductorId']);
         $this->assertSame('WASP', $network['tables']['InstSection'][2]['PhaseConductor2Id']);
         $this->assertSame('GNAT', $network['tables']['InstSection'][2]['PhaseConductor3Id']);
-        $this->assertEqualsWithDelta(5, $network['tables']['Loads'][0]['Phase1Kva'], 0.001);
+        $this->assertEqualsWithDelta(11 / 3, $network['tables']['Loads'][0]['Phase1Kva'], 0.001);
         $this->assertEqualsWithDelta(4 / 3, $network['tables']['Loads'][0]['Phase1Customers'], 0.001);
         $this->assertGreaterThan(3, $network['pairs'][0]['length']);
         $this->assertSame('0002', json_decode($network['survey_audit']['rows'][1]['SourceJson'], true)['gps_waypoint']);
@@ -296,8 +296,8 @@ class TransformerMdbBuilderTest extends TestCase
         $this->assertSame(60, $network['tables']['SAI_Control'][0]['Frequency']);
         $this->assertSame(11.0, $network['tables']['InstFeeders'][0]['NominalKvll']);
         $this->assertSame(2, $network['tables']['Loads'][0]['Phase1Customers']);
-        $this->assertSame(9.0, $network['tables']['Loads'][0]['Phase1Kva']);
-        $this->assertSame(0.0, $network['tables']['Loads'][0]['Phase1Kvar']);
+        $this->assertEqualsWithDelta(11 / 3, $network['tables']['Loads'][0]['Phase1Kva'], 1e-8);
+        $this->assertNull($network['tables']['Loads'][0]['Phase1Kvar']);
         $this->assertNull($configuration->fresh()->approved_by);
     }
 
@@ -464,9 +464,9 @@ class TransformerMdbBuilderTest extends TestCase
         try {
             $this->assertFileExists($path);
             $process = new Process([config('mdb.powershell'), '-NoProfile', '-NonInteractive', '-Command',
-                '$c=New-Object System.Data.OleDb.OleDbConnection("Provider=Microsoft.ACE.OLEDB.12.0;Data Source='.$path.';Mode=Read;");$c.Open();$cmd=$c.CreateCommand();$cmd.CommandText="SELECT COUNT(*) FROM Node";Write-Output $cmd.ExecuteScalar();$cmd.CommandText="SELECT TOP 1 UniqueDeviceId FROM InstPrimaryTransformers";Write-Output $cmd.ExecuteScalar();$t=$c.GetSchema("Tables");Write-Output @($t.Rows | Where-Object { $_.TABLE_TYPE -eq "TABLE" -and -not $_.TABLE_NAME.StartsWith("MSys") }).Count;$c.Close();']);
+                '$c=New-Object System.Data.OleDb.OleDbConnection("Provider=Microsoft.ACE.OLEDB.12.0;Data Source='.$path.';Mode=Read;");$c.Open();$cmd=$c.CreateCommand();$cmd.CommandText="SELECT COUNT(*) FROM Node";Write-Output $cmd.ExecuteScalar();$cmd.CommandText="SELECT TOP 1 UniqueDeviceId FROM InstPrimaryTransformers";Write-Output $cmd.ExecuteScalar();$cmd.CommandText="SELECT TOP 1 Phase1Kva+Phase2Kva+Phase3Kva FROM Loads";Write-Output $cmd.ExecuteScalar();$cmd.CommandText="SELECT COUNT(*) FROM Loads WHERE Phase1Kw IS NULL AND Phase1Kvar IS NULL AND Phase2Kw IS NULL AND Phase2Kvar IS NULL AND Phase3Kw IS NULL AND Phase3Kvar IS NULL";Write-Output $cmd.ExecuteScalar();$t=$c.GetSchema("Tables");Write-Output @($t.Rows | Where-Object { $_.TABLE_TYPE -eq "TABLE" -and -not $_.TABLE_NAME.StartsWith("MSys") }).Count;$c.Close();']);
             $process->mustRun();
-            $this->assertSame(['4', 'T-0001', '50'], preg_split('/\s+/', trim($process->getOutput())));
+            $this->assertSame(['4', 'T-0001', '11', '1', '50'], preg_split('/\s+/', trim($process->getOutput())));
         } finally {
             File::deleteDirectory(dirname($path));
         }

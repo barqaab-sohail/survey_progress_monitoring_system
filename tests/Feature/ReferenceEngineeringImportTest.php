@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\Mdb\Configuration;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\Mdb\EngineeringConfiguration;
 use App\Services\Mdb\ReferenceEngineeringImport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -60,7 +61,7 @@ class ReferenceEngineeringImportTest extends TestCase
         $this->assertSame(2000, $result['settings']['entry']['two_digit_year_start']);
         $this->assertNull($result['settings']['engineering']['supply_conductor_id']);
         $this->assertNull($result['load_assumptions']['mode']);
-        $this->assertSame([], $result['load_assumptions']['rates']);
+        $this->assertSame(EngineeringConfiguration::consumerRates(), $result['load_assumptions']['rates']);
         $this->assertSame([], $result['settings']['mapping']['networks']);
         $values = $result['settings']['mapping']['table_values'];
         $this->assertSame(4.16, $values['InstPrimaryTransformers']['SpecNomKv']);

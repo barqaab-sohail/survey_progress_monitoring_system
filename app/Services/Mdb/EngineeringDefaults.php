@@ -74,7 +74,7 @@ class EngineeringDefaults
         $settings['defaults_library'] = ['code' => $preset->code, 'revision' => $preset->revision];
 
         return ['project_id' => $project->id, 'epsg' => $payload['epsg'], 'settings' => $settings,
-            'load_assumptions' => $payload['load_assumptions'], 'revision' => $revision, 'approved_by' => null, 'approved_at' => null];
+            'load_assumptions' => array_replace($payload['load_assumptions'], ['rates' => EngineeringConfiguration::consumerRates()]), 'revision' => $revision, 'approved_by' => null, 'approved_at' => null];
     }
 
     public function validate(string $json): array
@@ -114,7 +114,7 @@ class EngineeringDefaults
             'load_assumptions.rates' => 'present|array:rs,rl,sc,lc,si,li,pb,ag,st',
             'load_assumptions.rates.*' => 'array:kva,power_factor',
             'load_assumptions.rates.*.kva' => 'nullable|numeric|min:0|max:1000000',
-            'load_assumptions.rates.*.power_factor' => 'nullable|numeric|gt:0|max:1',
+            'load_assumptions.rates.*.power_factor' => 'exclude',
             'equipment_references' => 'required|array:conductors,transformers,configurations',
         ];
         foreach (['configuration_id', 'supply_conductor_id', 'secondary_conductor_id'] as $key) {
@@ -130,7 +130,11 @@ class EngineeringDefaults
         if (array_diff(array_keys($data), ['epsg', 'settings', 'load_assumptions', 'equipment_references'])) {
             throw ValidationException::withMessages(['configuration_json' => 'Unknown configuration properties are not supported.']);
         }
+        foreach (EngineeringConfiguration::CATEGORIES as $category) {
+            $rules['load_assumptions.rates.'.$category.'.kva'] = 'nullable|numeric|in:'.EngineeringConfiguration::consumerKva($category);
+        }
         validator($data, $rules)->validate();
+        $data['load_assumptions']['rates'] = EngineeringConfiguration::consumerRates();
         foreach ($data['settings']['engineering']['transformer_types'] as $capacity => $type) {
             if (! is_numeric($capacity) || (float) $capacity <= 0) {
                 throw ValidationException::withMessages(['configuration_json' => 'Transformer type mappings need positive numeric kVA capacity keys.']);

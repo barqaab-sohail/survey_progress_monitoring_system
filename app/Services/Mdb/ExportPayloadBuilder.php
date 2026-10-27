@@ -342,7 +342,7 @@ class ExportPayloadBuilder
 
                     continue;
                 }
-                if ($this->simple && $value === null) {
+                if (($this->simple || (($demand['quantity'] ?? null) === 'kva' && in_array($name, ['kw', 'kvar'], true))) && $value === null) {
                     $row['Phase'.($index + 1).$column] = null;
 
                     continue;

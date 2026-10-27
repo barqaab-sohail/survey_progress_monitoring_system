@@ -171,6 +171,7 @@ class TransformerMdbBuilderController extends Controller
             $details = collect($duplicateMatches)->map(fn ($match) => $match['name'].'; feeder '.$match['feeder'].'; uploaded '.$match['uploaded_at'].'; uploader '.$match['uploader'])->implode(' | ');
             $response->with('warning', 'This file has already been uploaded and will not be uploaded again. Existing file details: '.$details);
         }
+
         return $response;
     }
 
@@ -249,6 +250,6 @@ class TransformerMdbBuilderController extends Controller
     {
         return ['utm_zone' => 43, 'frequency' => 50, 'nominal_kv' => 11, 'transformer_waypoints' => '', 'transformer_latitude' => null, 'transformer_longitude' => null,
             'transformer_type' => '', 'configuration_id' => '12.5/7.2 kV cross arm C2-2', 'phase_spacing_cm' => 121.9, 'neutral_spacing_cm' => 91.4,
-            'conductor_height_m' => 9.1, 'consumer_kva' => [], 'blank_consumers_zero' => false, 'engineering_reviewed' => false];
+            'conductor_height_m' => 9.1, 'consumer_kva' => array_map(fn ($rate) => $rate['kva'], EngineeringConfiguration::consumerRates()), 'blank_consumers_zero' => false, 'engineering_reviewed' => false];
     }
 }

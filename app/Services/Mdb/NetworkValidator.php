@@ -553,7 +553,7 @@ class NetworkValidator
                     $issue('invalid_load_phase', 'Demand phase allocation must use active phases; a disconnected phase can only have explicit verified zeros.', $context);
                 }
                 foreach (['customers', 'kw', 'kvar', 'kva'] as $key) {
-                    if ($simple && ($values[$key] ?? null) === null) {
+                    if (($simple || (($demand['quantity'] ?? null) === 'kva' && in_array($key, ['kw', 'kvar'], true))) && ($values[$key] ?? null) === null) {
                         continue;
                     }
                     if (! is_numeric($values[$key] ?? null) || ! is_finite((float) $values[$key]) || ($key !== 'kvar' && $values[$key] < 0)) {

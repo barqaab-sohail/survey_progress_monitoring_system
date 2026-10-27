@@ -69,7 +69,7 @@ class EngineeringConfigurationTest extends TestCase
             'conductor_library_revision' => 'fixture-conductors-v1', 'transformer_library_revision' => 'fixture-transformers-v1',
             'configuration_id' => 'approved-line', 'supply_conductor_id' => 'ANT', 'secondary_conductor_id' => 'ANT', 'phase_spacing_cm' => 100, 'neutral_spacing_cm' => 75, 'conductor_height_m' => 8,
             'pole_height_unit' => 'ft', 'two_digit_year_start' => 2000, 'load_mode' => 'category_rates', 'load_evidence' => 'Synthetic approved test method',
-            'blank_consumers_zero' => 0, 'rates' => array_fill_keys(EngineeringConfiguration::CATEGORIES, ['kva' => 3, 'power_factor' => 0.8]),
+            'blank_consumers_zero' => 0, 'rates' => EngineeringConfiguration::consumerRates(),
             'mapping_json' => json_encode(['version' => 'synergee-reviewed-v1', 'table_values' => [
                 'SAI_Control' => ['Frequency' => 60], 'Node' => (object) [], 'InstFeeders' => (object) [], 'InstSection' => (object) [],
                 'InstPrimaryTransformers' => ['UseInstanceImpedance' => 0], 'Loads' => (object) [],
@@ -98,7 +98,8 @@ class EngineeringConfigurationTest extends TestCase
         $section = $effective['transformers'][0]['sections'][0];
         $this->assertSame('approved-line', $section['equipment_ref']);
         $this->assertSame($this->admin->id, $section['consumers'][0]['demand']['approved_by']);
-        $this->assertEqualsWithDelta(7.2, $section['consumers'][0]['demand']['phase_values']['R']['kw'], 1e-8);
+        $this->assertEquals(6, $section['consumers'][0]['demand']['phase_values']['R']['kva']);
+        $this->assertNull($section['consumers'][0]['demand']['phase_values']['R']['kw']);
         $this->assertArrayNotHasKey('demand', $snapshot['transformers'][0]['sections'][0]['consumers'][0]);
         $this->put(route('engineering.update', $this->project), ['save_action' => 'draft', 'revision' => 2, 'reason' => 'Edit requires another review'])->assertSessionHasNoErrors();
         $this->assertArrayNotHasKey('simple_model_review', $configuration->fresh()->settings);
@@ -121,7 +122,7 @@ class EngineeringConfigurationTest extends TestCase
         $this->put(route('engineering.update', $this->project), $payload)->assertSessionHasErrors('section_load_connection');
     }
 
-    public function test_simple_model_confirmation_rejects_missing_power_factor_instead_of_inventing_demand(): void
+    public function test_simple_model_confirmation_accepts_missing_power_factor(): void
     {
         Configuration::create(['project_id' => $this->project->id, 'revision' => 1, 'settings' => ['simple_mdb_generation' => true]]);
         $payload = $this->payload();
@@ -129,8 +130,9 @@ class EngineeringConfigurationTest extends TestCase
         $payload['save_action'] = 'draft';
         $payload['confirm_simple_model'] = 1;
         $payload['rates']['rs']['power_factor'] = null;
-        $this->put(route('engineering.update', $this->project), $payload)->assertSessionHasErrors('rates.rs.power_factor');
-        $this->assertSame(1, Configuration::firstOrFail()->revision);
+        $this->put(route('engineering.update', $this->project), $payload)->assertSessionHasNoErrors();
+        $this->assertSame(2, Configuration::firstOrFail()->revision);
+        $this->assertEquals(EngineeringConfiguration::consumerRates(), Configuration::firstOrFail()->load_assumptions['rates']);
     }
 
     private function saveConfiguration(): Configuration
@@ -255,8 +257,8 @@ class EngineeringConfigurationTest extends TestCase
     public function test_draft_save_validates_supplied_parameters_and_json_without_requiring_missing_settings(): void
     {
         $this->put(route('engineering.update', $this->project), ['save_action' => 'draft', 'revision' => 0,
-            'frequency_hz' => 55, 'secondary_voltage_kv' => -1, 'rates' => ['rs' => ['power_factor' => 1.2]],
-            'reason' => 'Review imported engineering settings'])->assertSessionHasErrors(['frequency_hz', 'secondary_voltage_kv', 'rates.rs.power_factor']);
+            'frequency_hz' => 55, 'secondary_voltage_kv' => -1, 'rates' => ['rs' => ['kva' => 3]],
+            'reason' => 'Review imported engineering settings'])->assertSessionHasErrors(['frequency_hz', 'secondary_voltage_kv', 'rates.rs.kva']);
         $this->put(route('engineering.update', $this->project), ['save_action' => 'draft', 'revision' => 0,
             'equipment_references_json' => '{"conductors":"ANT","transformers":[],"configurations":[]}',
             'reason' => 'Review imported engineering settings'])->assertSessionHasErrors('equipment_references_json');
@@ -313,8 +315,8 @@ class EngineeringConfigurationTest extends TestCase
     public function test_invalid_rates_or_unapproved_equipment_cannot_be_approved(): void
     {
         $data = $this->payload();
-        $data['rates']['rs']['power_factor'] = 1.2;
-        $this->put(route('engineering.update', $this->project), $data)->assertSessionHasErrors('rates.rs.power_factor');
+        $data['rates']['rs']['kva'] = 3;
+        $this->put(route('engineering.update', $this->project), $data)->assertSessionHasErrors('rates.rs.kva');
         $data = $this->payload();
         $data['transformer_types_json'] = '{"100":"unknown-type"}';
         $this->put(route('engineering.update', $this->project), $data)->assertSessionHasErrors('transformer_types_json');
@@ -452,13 +454,32 @@ class EngineeringConfigurationTest extends TestCase
         $phases = $section['consumers'][0]['demand']['phase_values'];
         $this->assertSame(3, $phases['R']['customers']);
         $this->assertSame(2, $phases['B']['customers']);
-        $this->assertEqualsWithDelta(7.2, $phases['R']['kw'], 1e-8);
-        $this->assertEqualsWithDelta(5.4, $phases['R']['kvar'], 1e-8);
+        $this->assertEquals(6, $phases['R']['kva']);
+        $this->assertNull($phases['R']['kw']);
+        $this->assertNull($phases['R']['kvar']);
         $this->assertArrayNotHasKey('Y', $phases);
         $this->assertNull($section['consumers'][1]['count']);
         $this->assertSame($snapshot['transformers'][0]['entry_rows'], $effective['transformers'][0]['entry_rows']);
         $snapshot['configuration']['settings']['engineering']['blank_consumers_zero'] = 1;
         $this->assertSame(0, app(EngineeringConfiguration::class)->apply($snapshot)['transformers'][0]['sections'][0]['consumers'][1]['count']);
+    }
+
+    public function test_every_category_uses_the_phase_rate_and_ignores_legacy_power_factor(): void
+    {
+        $configuration = $this->saveConfiguration()->toArray();
+        foreach (EngineeringConfiguration::CATEGORIES as $category) {
+            $expected = in_array($category, ['rs', 'sc', 'st'], true) ? 20 : 50;
+            foreach ([null, 0.8, 0, 2] as $pf) {
+                $configuration['load_assumptions']['rates'][$category] = ['kva' => 99, 'power_factor' => $pf];
+                $demand = app(EngineeringConfiguration::class)->demand(10, $category, ['R', 'Y', 'B'], $configuration);
+                $this->assertEqualsWithDelta($expected, array_sum(array_column($demand['phase_values'], 'kva')), 1e-8);
+                $this->assertEquals(10, array_sum(array_column($demand['phase_values'], 'customers')));
+                foreach ($demand['phase_values'] as $values) {
+                    $this->assertNull($values['kw']);
+                    $this->assertNull($values['kvar']);
+                }
+            }
+        }
     }
 
     public function test_legacy_export_cannot_bypass_missing_central_configuration(): void
@@ -492,7 +513,9 @@ class EngineeringConfigurationTest extends TestCase
         $this->assertSame('approved-100', $network['tables']['InstPrimaryTransformers'][0]['TransformerType']);
         $load = $network['tables']['Loads'][0];
         $this->assertSame(9, $load['Phase1Customers']);
-        $this->assertEqualsWithDelta(21.6, $load['Phase1Kw'], 1e-8);
+        $this->assertEqualsWithDelta(16, $load['Phase1Kva'], 1e-8);
+        $this->assertNull($load['Phase1Kw']);
+        $this->assertNull($load['Phase1Kvar']);
         $this->assertSame($this->template->id, $network['engineering_template_id']);
     }
 

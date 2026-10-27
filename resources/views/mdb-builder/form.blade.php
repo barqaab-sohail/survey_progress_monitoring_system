@@ -58,8 +58,8 @@
 <label>Neutral spacing (cm)<input data-setting="neutral_spacing_cm" type="number" min="0.001" step="any" required></label>
 <label>Conductor height (m)<input data-setting="conductor_height_m" type="number" min="0.001" step="any" required></label>
 </div>
-<h3>Connected load per consumer (kVA)</h3><p>Enter the approved kVA per consumer for categories used in this survey. Loads are shared equally across the section's connected phases. Enter 0 only when intentionally modelling zero connected load.</p>
-<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(100px,1fr))">@foreach(['rs','rl','sc','lc','si','li','pb','ag','st'] as $category)<label>{{ strtoupper($category) }}<input data-rate="{{ $category }}" type="number" min="0" step="any"></label>@endforeach</div>
+<h3>Connected load per consumer (kVA)</h3><p>Use 2 kVA per single-phase consumer and 5 kVA per three-phase consumer directly. Power factor does not apply. Loads are shared across the section's connected phases.</p>
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(100px,1fr))">@foreach(['rs','rl','sc','lc','si','li','pb','ag','st'] as $category)<label>{{ strtoupper($category) }}<input data-rate="{{ $category }}" type="number" value="{{ \App\Services\Mdb\EngineeringConfiguration::consumerKva($category) }}" readonly></label>@endforeach</div>
 <label class="mdb-check"><input type="checkbox" data-setting="blank_consumers_zero">Treat all blank E row consumer cells as zero for MDB generation</label>
 <label class="mdb-check"><input type="checkbox" data-setting="engineering_reviewed">I have reviewed the transformer connection, library IDs, load allocation, and engineering settings</label>
 <small>Spacing and network defaults start from the sample MDB. Check them for this transformer. The full paper observations remain in the application and export audit.</small>

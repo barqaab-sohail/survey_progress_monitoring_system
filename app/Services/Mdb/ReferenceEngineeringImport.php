@@ -259,7 +259,7 @@ class ReferenceEngineeringImport
                     'other_ratio_records' => $ratioCount - $threeCount, 'inconsistent_power_records' => $inconsistentPower],
                 'conflicts' => $conflicts, 'missing' => $missing,
                 'equipment_references' => $references, 'notes' => $notes]],
-            'load_assumptions' => ['mode' => null, 'method' => null, 'evidence' => $expectedCount.' reference MDBs; see reference_import source SHA-256 and load evidence report.', 'rates' => []],
+            'load_assumptions' => ['mode' => null, 'method' => null, 'evidence' => $expectedCount.' reference MDBs; see reference_import source SHA-256 and load evidence report.', 'rates' => EngineeringConfiguration::consumerRates()],
             'field_evidence' => $evidence];
     }
 
