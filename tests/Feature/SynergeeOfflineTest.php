@@ -343,6 +343,37 @@ class SynergeeOfflineTest extends TestCase
         $this->post(route('mdb-workflow.offline-synergee.download'))->assertForbidden();
     }
 
+    public function test_preview_explains_missing_frozen_type_and_uses_mapping_from_a_fresh_export(): void
+    {
+        if (PHP_OS_FAMILY !== 'Windows') {
+            $this->markTestSkipped('Windows-only local UI');
+        }
+        config(['mdb_workflow.offline_enabled' => true]);
+        $this->actingAs(User::factory()->create(['role' => UserRole::SuperAdmin]));
+        $snapshot = SynergeeSnapshot::make();
+        $snapshot['configuration']['revision'] = 3;
+        $snapshot['configuration']['settings']['simple_mdb_generation'] = true;
+        $snapshot['configuration']['settings']['engineering'] = ['transformer_types' => []];
+        unset($snapshot['configuration']['settings']['mapping']['networks']['T-SYNTHETIC']['transformer_fields']['TransformerType']);
+        $oldJson = json_encode(SynergeeSnapshot::package($snapshot));
+        $this->post(route('mdb-workflow.offline-synergee.preview'), [
+            'file' => UploadedFile::fake()->createWithContent('old.json', $oldJson),
+        ])->assertOk()->assertSee('Missing from uploaded JSON')
+            ->assertSee('Uploading the same file again retains its original settings.');
+
+        $snapshot['configuration']['revision'] = 4;
+        $snapshot['configuration']['settings']['engineering']['transformer_types'] = ['100' => '100 KVA'];
+        $response = $this->post(route('mdb-workflow.offline-synergee.preview'), [
+            'file' => UploadedFile::fake()->createWithContent('fresh.json', json_encode(SynergeeSnapshot::package($snapshot))),
+        ])->assertOk()->assertSee('100 KVA')->assertDontSee('Missing from uploaded JSON');
+        $this->assertSame('100 KVA', $response->viewData('payload')['tables']['InstPrimaryTransformers'][0]['TransformerType']);
+        $check = collect($response->viewData('modelReadiness')['checks'])->firstWhere('label', 'Transformer equipment type');
+        $this->assertSame(1, $check['complete']);
+        $this->assertSame(0, $check['missing']);
+        $oldReport = app(SynergeeTransfer::class)->inspect(app(SynergeeTransfer::class)->read($oldJson));
+        $this->assertEmpty($oldReport['payload']['tables']['InstPrimaryTransformers'][0]['TransformerType'] ?? null);
+    }
+
     public function test_genuine_mdb_is_written_and_read_back_without_any_local_approved_survey(): void
     {
         if (PHP_OS_FAMILY !== 'Windows' || ! is_file(AccessPowerShell::defaultPath())) {

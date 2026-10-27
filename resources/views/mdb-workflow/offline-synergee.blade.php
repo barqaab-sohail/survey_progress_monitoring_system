@@ -20,11 +20,25 @@
         <p><strong>{{ implode(', ', $package['scope']['transformer_codes']) }}</strong> &middot; Batch {{ $package['source']['batch_id'] }} &middot; Revision {{ $package['source']['revision_number'] }}</p>
         <p>Feeder: {{ $package['source']['feeder_code'] ?? '-' }} {{ $package['source']['feeder_name'] ?? '' }} &middot; {{ $package['snapshot']['template']['synergee_version'] }}</p>
         <p>Exported {{ $package['source']['exported_at'] }}. {{ $gpxChecked ? 'The selected GPX matches the frozen source.' : 'Using coordinates and elevations embedded in the verified snapshot.' }}</p>
+        <p>Engineering configuration revision in this JSON: <strong>{{ $package['snapshot']['configuration']['revision'] ?? 'Not recorded' }}</strong>. Changes saved in Engineering Configuration apply to a new verified export. After saving changes in the source project, verify and approve the survey again, download a fresh SynerGEE JSON, and upload it here.</p>
         @if(count($issues))
         <div class="alert alert-danger"><h3>Mandatory corrections — resolve in production, then verify and export again</h3><ul>
             @foreach($issues as $issue)<li>{{ $issue['message'] }} @if(isset($issue['transformer_id']))(Transformer #{{ $issue['transformer_id'] }})@endif @if(isset($issue['source_page']))(PDF page {{ $issue['source_page'] }})@endif @if(isset($issue['section_id']))(Section #{{ $issue['section_id'] }})@endif</li>@endforeach
         </ul></div>
         @else
+            @php($transformerTypes = collect($payload['tables']['InstPrimaryTransformers'])->keyBy('UniqueDeviceId'))
+            <h3>Transformer types in this export</h3>
+            <div class="table-wrap"><table class="table"><thead><tr><th>Transformer</th><th>Survey capacity (kVA)</th><th>Equipment type for MDB</th></tr></thead><tbody>
+                @foreach($package['snapshot']['transformers'] as $transformer)
+                    @if(in_array($transformer['code'], $package['scope']['transformer_codes'], true))
+                        @php($equipmentType = trim((string) ($transformerTypes->get($transformer['code'])['TransformerType'] ?? '')))
+                        <tr><td>{{ $transformer['code'] }}</td><td>{{ $transformer['capacity_kva'] ?? 'Missing' }}</td><td>{{ $equipmentType !== '' ? $equipmentType : 'Missing from uploaded JSON' }}</td></tr>
+                    @endif
+                @endforeach
+            </tbody></table></div>
+            @if($transformerTypes->contains(fn ($row) => trim((string) ($row['TransformerType'] ?? '')) === ''))
+                <div class="alert alert-warning">A transformer equipment type is missing from this JSON. Save the capacity-to-type mapping in the source project's Engineering Configuration, verify and approve the survey again, then download and upload a fresh SynerGEE JSON. Uploading the same file again retains its original settings.</div>
+            @endif
             @if($modelReadiness)
                 <h3>Model completeness: {{ $modelReadiness['complete'] ? 'listed inputs populated' : 'draft — model inputs still missing' }}</h3>
                 <div class="table-wrap"><table class="table"><thead><tr><th>Model input</th><th>Populated records</th><th>Missing records</th></tr></thead><tbody>

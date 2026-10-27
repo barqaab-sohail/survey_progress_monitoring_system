@@ -1,0 +1,14 @@
+﻿{
+    "generated":  {
+                      "file":  "synergee_11140223003_batch-17_r79 (3).mdb",
+                      "sha256":  "b05cd9124f7a201cf07dc073db3d7dddd3dad197a8826c7bf90e3d1824a29d88",
+                      "device_id":  "11140223003",
+                      "transformer_type":  ""
+                  },
+    "reference":  {
+                      "file":  "Choper HattaT-3030216724.mdb",
+                      "sha256":  "a13f0d2599a7c998ff9554bee70b67aed7c5140d86604631b4b82901851c486b",
+                      "device_id":  "T-3030216724",
+                      "transformer_type":  "200 KVA"
+                  }
+}
