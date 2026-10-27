@@ -365,6 +365,25 @@ class EngineeringConfigurationTest extends TestCase
         $this->assertNull($effective['transformers'][0]['sections'][0]['consumers'][0]['demand']);
     }
 
+    public function test_category_demand_snapshot_checksum_survives_database_storage(): void
+    {
+        $this->saveConfiguration();
+        $transformer = $this->batch->transformers()->create(['code' => 'HASH-100', 'capacity_kva' => 100]);
+        $section = $transformer->sections()->create(['phases' => ['R', 'Y', 'B']]);
+        $section->consumers()->create(['category' => 'rs', 'count' => 3]);
+        $section->consumers()->create(['category' => 'rl', 'count' => 1]);
+        $snapshots = app(SnapshotService::class);
+        $revision = $snapshots->capture($this->batch->fresh(), $this->admin->id);
+        $stored = $revision->fresh();
+        $this->assertSame($revision->sha256, $snapshots->hash($stored->snapshot));
+        $this->assertSame($revision->sha256, $snapshots->hash($snapshots->snapshot($this->batch->fresh())));
+        $consumers = $stored->snapshot['transformers'][0]['sections'][0]['consumers'];
+        $this->assertEquals(2, $consumers[0]['demand']['phase_values']['R']['kva']);
+        $this->assertEqualsWithDelta(5 / 3, $consumers[1]['demand']['phase_values']['R']['kva'], 1e-12);
+        $this->assertNull($consumers[0]['demand']['phase_values']['R']['kw']);
+        $this->assertSame($stored->id, $snapshots->capture($this->batch->fresh(), $this->admin->id)->id);
+    }
+
     public function test_configuration_update_revokes_approval_and_preserves_old_snapshot(): void
     {
         $configuration = $this->saveConfiguration();

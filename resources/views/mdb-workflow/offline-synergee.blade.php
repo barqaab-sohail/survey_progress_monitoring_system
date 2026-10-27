@@ -44,6 +44,14 @@
                 <div class="table-wrap"><table class="table"><thead><tr><th>Model input</th><th>Populated records</th><th>Missing records</th></tr></thead><tbody>
                 @foreach($modelReadiness['checks'] as $check)<tr><td>{{ $check['label'] }}</td><td>{{ $check['complete'] }} / {{ $check['total'] }}</td><td>{{ $check['missing'] }}</td></tr>@endforeach
                 </tbody></table></div>
+                @php($loadCheck = collect($modelReadiness['checks'])->firstWhere('label', 'Load demand and customer allocation'))
+                @if(($loadCheck['missing'] ?? 0) > 0)
+                    <div class="alert alert-warning">
+                        <p><strong>Load demand is incomplete.</strong> Demand method in this JSON: {{ ($package['snapshot']['configuration']['load_assumptions']['mode'] ?? null) === 'category_rates' ? 'Central category rates' : (($package['snapshot']['configuration']['load_assumptions']['mode'] ?? null) === 'manual' ? 'Verified per-phase demand' : 'Not selected') }}.</p>
+                        <p>In the source project's Engineering Configuration, under Load-demand mapping, choose Apply central category rates automatically and confirm the demand-method evidence. In Simple mode, select Confirm and apply Simple mode settings. Then verify and approve the survey again and upload a fresh SynerGEE JSON. Alternatively, supply verified per-phase demand using the manual method.</p>
+                        <p>Category rates allocate 2 kVA per single-phase consumer and 5 kVA per three-phase consumer across connected phases. This check requires customer allocation and kVA on each connected phase; kW and kvar remain unset for this method.</p>
+                    </div>
+                @endif
                 <p>{{ $modelReadiness['acceptance'] }} @unless($modelReadiness['complete'])Simple mode can download this draft, but missing inputs must be completed before using it for electrical analysis.@endunless</p>
             @endif
             <ul>@foreach($payload['tables'] as $table=>$rows)<li>{{ $table }}: {{ count($rows) }} records</li>@endforeach</ul>

@@ -126,8 +126,12 @@ class SnapshotService
         }
         unset($transformer);
 
-        // JSON round-trip removes Carbon instances before hashing or persisting.
-        return app(EngineeringConfiguration::class)->apply(json_decode(json_encode($data, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR));
+        // Remove Carbon instances before applying the engineering settings.
+        $data = app(EngineeringConfiguration::class)->apply(json_decode(json_encode($data, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR));
+        // Derived demand introduces whole-number floats (for example 2.0 kVA).
+        // Eloquent's JSON storage writes these as integers. Normalize the final
+        // snapshot before hashing so the frozen checksum survives persistence.
+        return json_decode(json_encode($data, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
     }
 
     public function hash(array $snapshot): string

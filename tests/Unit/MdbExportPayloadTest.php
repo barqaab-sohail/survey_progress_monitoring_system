@@ -211,6 +211,10 @@ class MdbExportPayloadTest extends TestCase
             $revision->snapshot = app(EngineeringConfiguration::class)->apply($snapshot);
             $payload = $this->builder()->build($revision, $template, 1, str_repeat('e', 64));
             $this->assertCount(2, $payload['tables']['Loads']);
+            $loadCheck = collect(app(\App\Services\Mdb\ModelReadiness::class)->inspect($payload)['checks'])
+                ->firstWhere('label', 'Load demand and customer allocation');
+            $this->assertSame(2, $loadCheck['complete']);
+            $this->assertSame(0, $loadCheck['missing']);
             foreach ($payload['tables']['Loads'] as $index => $load) {
                 $total = 0;
                 foreach ([1, 2, 3] as $phase) {

@@ -29,7 +29,9 @@ class ModelReadiness
                 if (! str_contains($phases, $phase)) {
                     continue;
                 }
-                foreach (['Kw', 'Kvar', 'Kva', 'Customers'] as $field) {
+                // Category rates provide apparent demand directly. kW and kvar
+                // stay unset because this method does not assume a power factor.
+                foreach (['Kva', 'Customers'] as $field) {
                     if (! $number($row['Phase'.($i + 1).$field] ?? null)) {
                         return false;
                     }
