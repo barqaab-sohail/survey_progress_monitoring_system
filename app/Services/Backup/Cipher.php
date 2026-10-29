@@ -2,7 +2,7 @@
 
 namespace App\Services\Backup;
 
-/** Portable authenticated envelope: sealed random key + framed XChaCha20-Poly1305 stream. */
+/** Legacy encrypted-archive compatibility only. The daily ZIP runner does not use this class. */
 class Cipher
 {
     public const MAGIC = 'SPMSBK01';

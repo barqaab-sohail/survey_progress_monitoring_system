@@ -18,7 +18,7 @@ class Workspace
             throw new Failure('Cannot create private BACKUP_PATH.');
         }
         $this->path = realpath($path);
-        // No archive, SQL export or configuration snapshot can be served by Laravel.
+        // No SQL export or ZIP may be served by Laravel.
         foreach (array_merge([base_path(), public_path(), config('filesystems.disks.local.root'), config('filesystems.disks.public.root')], config('backups.web_roots', [])) as $root) {
             $root = realpath($root) ?: $root;
             if ($this->within($this->path, $root) || $this->within($root, $this->path)) {
@@ -122,16 +122,27 @@ class Workspace
         return max(1, (int) (config('backups.timeout') - (microtime(true) - $this->started)));
     }
 
-    public function cleanPlaintext(): void
+    public function createRun(): string
     {
-        // Fixed, validated workspace child only; never remove the root or pending encrypted archive.
-        $dir = $this->path.'/work';
-        if (is_link($dir)) {
-            throw new Failure('Invalid backup work directory.');
+        $directory = $this->path.'/run-'.bin2hex(random_bytes(12));
+        if (! mkdir($directory, 0700)) {
+            throw new Failure('Cannot create a private backup run directory.');
         }
-        (new Filesystem)->deleteDirectory($dir);
-        if (is_dir($dir)) {
-            throw new Failure('Private plaintext cleanup failed; check backup directory permissions.');
+
+        return $directory;
+    }
+
+    public function cleanRun(string $directory): void
+    {
+        // Check the exact resolved child before recursive cleanup; never touch older backups.
+        $resolved = realpath($directory);
+        if (is_link($directory) || ! $resolved || dirname($resolved) !== $this->path
+            || ! preg_match('/^run-[a-f0-9]{24}$/D', basename($resolved))) {
+            throw new Failure('Invalid backup cleanup directory.');
+        }
+        (new Filesystem)->deleteDirectory($resolved);
+        if (is_dir($resolved)) {
+            throw new Failure('Uploaded backup is verified, but private local cleanup failed.');
         }
     }
 }

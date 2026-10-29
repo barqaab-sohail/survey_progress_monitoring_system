@@ -18,6 +18,7 @@
 *.backup.enc
 !/tests/Fixtures/recovery/backups/previous.backup.enc
 *.backup.enc.part
+/backup-*.zip
 backup-private.key
 /backup-keys/
 /backup-restore/

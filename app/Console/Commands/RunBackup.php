@@ -7,16 +7,13 @@ use Illuminate\Console\Command;
 
 class RunBackup extends Command
 {
-    protected $signature = 'backup:run {--scheduled : Evaluate the configured schedule and retry delay}';
+    protected $signature = 'backup:run {--scheduled : Run at most once daily after 02:00 Asia/Karachi}';
 
-    protected $description = 'Create, encrypt, upload and verify a complete Google Drive recovery backup';
+    protected $description = 'Back up application code and the database as a normal ZIP to Google Drive';
 
     public function handle(Runner $runner): int
     {
         try {
-            if ($this->option('scheduled') && config('backups.enabled')) {
-                $runner->health(true);
-            }
             $this->info($runner->run((bool) $this->option('scheduled')));
 
             return self::SUCCESS;

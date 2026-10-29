@@ -1,7 +1,6 @@
 <?php
 
 use App\Services\Backup\Archive;
-use App\Services\Backup\Cipher;
 use App\Services\Backup\Workspace;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Filesystem\Filesystem;
@@ -53,26 +52,17 @@ try {
     DB::unprepared('CREATE TRIGGER preserve_label BEFORE UPDATE ON items FOR EACH ROW SET NEW.label = OLD.label');
     $workspace = new Workspace;
     $lock = $workspace->lock();
-    $stage = 'snapshot and encrypt';
-    $archive = app(Archive::class)->create('isolated-mysql-rehearsal', $workspace);
-    $pair = sodium_crypto_box_keypair();
-    Cipher::encrypt($archive, $workspace->path.'/downloaded.backup.enc', sodium_crypto_box_publickey($pair));
-    $workspace->cleanPlaintext();
-    $stage = 'offline authenticated recovery';
-    Cipher::decrypt($workspace->path.'/downloaded.backup.enc', $workspace->path.'/restored.zip', sodium_crypto_box_secretkey($pair));
-    $manifest = Archive::verify($workspace->path.'/restored.zip');
+    $stage = 'database and normal ZIP';
+    $archive = app(Archive::class)->create('backup-smoke.zip', $workspace, $workspace->createRun());
     $zip = new ZipArchive;
-    $zip->open($workspace->path.'/restored.zip');
-    $settings = json_decode($zip->getFromName('recovery/effective-config.json'), true, 512, JSON_THROW_ON_ERROR);
-    if (! hash_equals(config('app.key'), $settings['app']['key'])) {
-        throw new RuntimeException('Application key recovery failed.');
+    $zip->open($archive, ZipArchive::CHECKCONS);
+    if ($zip->locateName('application/.env') !== false || $zip->locateName('recovery/effective-config.json') !== false) {
+        throw new RuntimeException('Secret configuration must not be in the ZIP.');
     }
     if (! hash_equals(hash_file('sha256', base_path('composer.lock')), hash('sha256', $zip->getFromName('application/composer.lock')))) {
         throw new RuntimeException('Code recovery failed.');
     }
-    if (! str_contains($zip->getFromName('application/tests/Fixtures/recovery/uploads/evidence.txt'), 'survey evidence')) {
-        throw new RuntimeException('Upload recovery failed.');
-    }
+    $entryCount = $zip->numFiles;
     $stage = 'import into new isolated database';
     $quote = fn ($v) => '"'.str_replace(['\\', '"', "\n", "\r"], ['\\\\', '\\"', '\\n', '\\r'], (string) $v).'"';
     $defaults = $workspace->path.'/restore.cnf';
@@ -99,7 +89,7 @@ try {
     if ($db->query('SELECT label FROM `'.$target.'`.items WHERE id = 7')->fetchColumn() !== $row['label']) {
         throw new RuntimeException('Trigger missing.');
     }
-    echo 'PASS: actual MySQL dump -> encrypted archive -> authenticated decryption -> verified code/uploads/APP_KEY -> isolated MySQL restore, Unicode/binary/encrypted data, foreign keys, view and trigger. '.count($manifest['files'])." manifest entries.\n";
+    echo 'PASS: actual MySQL dump -> standard ZIP -> direct SQL extraction -> isolated MySQL restore; code/lock files and Unicode/binary/encrypted database values, foreign keys, view and trigger verified. '.$entryCount." ZIP entries. Existing application key supplied separately.\n";
 } catch (Throwable $e) {
     fwrite(STDERR, 'Restore rehearsal failed at '.$stage.' ('.$e::class."). Existing databases were not targeted.\n");
     $failed = true;

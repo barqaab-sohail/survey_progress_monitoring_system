@@ -31,8 +31,6 @@ class DatabaseExporter
             $options .= 'ssl-ca='.$quote($ca)."\n";
         }
         $credentials = $directory.'/mysql.cnf';
-        file_put_contents($credentials, $options);
-        chmod($credentials, 0600);
         $sql = $directory.'/database.sql';
         $args = [config('backups.mysqldump'), '--defaults-extra-file='.$credentials,
             '--single-transaction', '--quick', '--skip-lock-tables', '--no-tablespaces', '--hex-blob',
@@ -46,6 +44,8 @@ class DatabaseExporter
                 array_splice($args, -1, 0, ['--'.$option.'='.$value]);
             }
         }
+        file_put_contents($credentials, $options);
+        chmod($credentials, 0600);
         $process = new Process($args, null, ['MYSQL_PWD' => false], null, $workspace->remainingSeconds());
         $process->disableOutput(); // SQL goes directly to file; credentials/errors never enter logs.
         try {
@@ -55,6 +55,7 @@ class DatabaseExporter
                 $workspace->tick();
                 usleep(200000);
             }
+            clearstatcache(true, $sql);
             if (! $process->isSuccessful() || ! is_file($sql) || filesize($sql) === 0) {
                 throw new Failure('MySQL export failed. Check dump binary, connection and routines/events privileges.');
             }

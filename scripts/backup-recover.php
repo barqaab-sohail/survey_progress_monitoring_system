@@ -3,6 +3,7 @@
 use App\Services\Backup\Archive;
 use App\Services\Backup\Cipher;
 
+// LEGACY ONLY: retained for pre-existing encrypted archives. New ZIPs extract with ordinary ZIP tools.
 // Standalone offline utility: requires PHP 8.2+, sodium and zip; no Laravel boot or database access.
 require_once __DIR__.'/../app/Services/Backup/Failure.php';
 require_once __DIR__.'/../app/Services/Backup/Cipher.php';

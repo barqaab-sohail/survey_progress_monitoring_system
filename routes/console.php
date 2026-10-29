@@ -39,6 +39,6 @@ Schedule::command('survey-progress:work')
 
 Schedule::command('drive-storage:retry')->everyFiveMinutes()->withoutOverlapping(10);
 
-// The runner also owns a process-lifetime flock, shared by scheduled/manual/verify runs.
+// The runner owns a process-lifetime flock shared by scheduled and manual runs.
 // On Bluehost plans permitting only 15-minute cron, invoke this command directly (docs/BACKUPS.md).
 Schedule::command('backup:run --scheduled')->everyFifteenMinutes();

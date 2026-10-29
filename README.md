@@ -4,6 +4,8 @@ Responsive Laravel web application for monitoring the HAZECO baseline through fi
 
 The central principle is **minimum data entry, maximum management visibility**. Engineering files remain in Google Drive; this system stores quantities, responsibility, dates, workflow state, and secure links.
 
+For step-by-step account creation, Surveyor/mobile allocation, PDF Data Entry and Data Verification, see the [Administrator user and work-allocation guide](docs/USER_CREATION_AND_WORK_ALLOCATION.md), including a worked example, reassignment rules and current workflow limitations.
+
 ## What is included
 
 - Secure session authentication, active-account checks, login throttling, six roles, and Filament Shield permissions
@@ -527,7 +529,7 @@ Session and CSRF protections are enabled. Third-party isolation is enforced in q
 
 ## Backup and recovery
 
-- Take encrypted daily MySQL backups with at least 30 days retention and a weekly off-site copy.
+- Run the daily code/database ZIP backup to the private Google Drive folder; preserve the production `.env` and original `APP_KEY` separately. See [Daily backups](docs/BACKUPS.md). Existing backups are not automatically pruned.
 - Back up `.env` secrets through the organization’s secrets system, not source control.
 - Drive engineering folders need their own versioning/retention policy; database backups contain links, not engineering files.
 - Test restoration quarterly into an isolated environment. Verify feeder baseline, transaction totals, users, and audit logs after each drill.
@@ -573,6 +575,6 @@ See [Android setup and delivery](docs/mobile/DELIVERY.md), [app build/install in
 
 ## Automatic Google Drive source storage
 
-For complete encrypted database/code/upload recovery backups, daily 02:00 Asia/Karachi scheduling, Bluehost cron setup, independent recovery keys and restore instructions, see [Encrypted daily backups](docs/BACKUPS.md).
+For a normal ZIP of the application code and complete database, daily 02:00 Asia/Karachi scheduling, Bluehost cron setup and restoration steps, see [Daily Google Drive backups](docs/BACKUPS.md). Files already on Drive remain in place; no encryption/recovery key is required for new ZIPs.
 
 Survey PDFs/GPX files and PDF sketch attachments can transfer automatically to a private organizational Drive account while the application and database stay on this host. Transfers retain a private recovery original until Drive verification succeeds, then remove it; existing local files and authorized view/download URLs remain supported. See [credential setup, queue/scheduler configuration, recovery and optional legacy migration](docs/GOOGLE_DRIVE_STORAGE.md) before enabling `GOOGLE_DRIVE_STORAGE_ENABLED`.

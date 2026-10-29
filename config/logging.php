@@ -52,15 +52,6 @@ return [
 
     'channels' => [
 
-        'backups' => [
-            'driver' => 'daily',
-            'path' => storage_path('logs/backups.log'),
-            'level' => 'info',
-            'days' => 14,
-            'permission' => 0600,
-            'replace_placeholders' => true,
-        ],
-
         'stack' => [
             'driver' => 'stack',
             'channels' => explode(',', env('LOG_STACK', 'single')),

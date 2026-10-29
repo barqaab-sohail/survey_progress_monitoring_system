@@ -2,97 +2,68 @@
 
 namespace App\Services\Backup;
 
-use App\Models\DriveStoredFile;
-use App\Services\DriveStorage\FileStorage;
-use Illuminate\Support\Facades\Schema;
 use ZipArchive;
 
 class Archive
 {
-    public function create(string $id, Workspace $workspace): string
+    public function create(string $name, Workspace $workspace, string $directory): string
     {
-        $directory = $workspace->path.'/work';
-        if (! mkdir($directory, 0700)) {
-            throw new Failure('Cannot create backup work directory.');
+        app(DatabaseExporter::class)->export($directory, $workspace);
+        $sql = $directory.'/database.sql';
+        if (! is_file($sql) || filesize($sql) === 0) {
+            throw new Failure('The database export is empty or missing.');
         }
-        $snapshotAt = now()->toIso8601String();
-        // Bracket the SQL snapshot with stable file inventories. Concurrent changes fail safely;
-        // uploads need not be disabled, and a disappearing original can never silently be omitted.
-        $sources = $this->sourceInventory($workspace);
-        $managed = Schema::hasTable('drive_stored_files') ? DriveStoredFile::orderBy('id')->get() : collect();
-        $managedFingerprint = $this->managedFingerprint($managed);
-        $workspace->tick(array_sum(array_column($sources, 'bytes')) + (int) $managed->sum('bytes') * 2);
-        $database = app(DatabaseExporter::class)->export($directory, $workspace);
-        $manifest = ['format' => 1, 'id' => $id, 'created_at' => $snapshotAt,
-            'laravel' => app()->version(), 'php' => PHP_VERSION, 'database' => $database,
-            'drive_originals' => [], 'files' => []];
-        $archive = $directory.'/backup.zip';
+        $path = $directory.'/'.$name;
         $zip = new ZipArchive;
-        if ($zip->open($archive, ZipArchive::CREATE | ZipArchive::EXCL) !== true) {
+        if ($zip->open($path, ZipArchive::CREATE | ZipArchive::EXCL) !== true) {
             throw new Failure('Cannot create backup ZIP.');
         }
-        $add = function (string $path, string $name, ?array $expected = null) use ($zip, &$manifest, $workspace) {
-            $workspace->tick();
-            if (! is_readable($path) || ! is_file($path)) {
-                throw new Failure('A required backup file is unreadable.');
-            }
-            $size = filesize($path);
-            if (! $zip->addFile($path, $name)) {
-                throw new Failure('Backup ZIP entry could not be added.');
-            }
-            $manifest['files'][$name] = ['bytes' => $size, 'sha256' => hash_file('sha256', $path)];
-            if ($expected && $manifest['files'][$name] !== ['bytes' => $expected['bytes'], 'sha256' => $expected['sha256']]) {
-                throw new Failure('A source file changed during capture; retry in a quiet window.');
-            }
-        };
+        $hashes = [];
         try {
-            $add($directory.'/database.sql', 'database.sql');
-            foreach ($sources as $path => $source) {
-                $add($path, 'application/'.$source['name'], $source);
+            $files = [$sql => 'database.sql'];
+            foreach ($this->sourceFiles() as $file => $relative) {
+                $files[$file] = 'application/'.$relative;
             }
-            if (! config('app.key')) {
-                throw new Failure('The original APP_KEY is required for recoverable backups.');
-            }
-            // Covers settings injected by cPanel/server environment, not only the .env file.
-            $effective = $directory.'/effective-config.json';
-            file_put_contents($effective, json_encode(config()->all(), JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
-            chmod($effective, 0600);
-            $add($effective, 'recovery/effective-config.json');
-            if ($managed->isNotEmpty()) {
-                foreach ($managed as $file) {
-                    $workspace->tick($file->bytes * 2);
-                    // Materialize every managed original, including files removed from Bluehost after upload.
-                    $copy = $directory.'/original-'.$file->id;
-                    $expectedHash = $file->sha256;
-                    app(Drive::class)->retry(fn () => app(FileStorage::class)->withPath($file, $file->local_disk, $file->local_path, function ($source) use ($copy) {
-                        if (! copy($source, $copy)) {
-                            throw new Failure('Could not stage a managed Drive original.');
-                        }
-                        chmod($copy, 0600);
-                    }), fn () => $workspace->tick());
-                    if (! hash_equals($expectedHash, hash_file('sha256', $copy))) {
-                        throw new Failure('A managed original failed SHA-256 verification.');
-                    }
-                    $name = 'drive-originals/'.$file->id;
-                    $add($copy, $name);
-                    $manifest['drive_originals'][] = ['id' => $file->id, 'entry' => $name, 'disk' => $file->local_disk,
-                        'path' => $file->local_path, 'drive_file_id' => $file->drive_file_id];
+            foreach ($files as $file => $entry) {
+                $workspace->tick();
+                if (! is_readable($file)) {
+                    throw new Failure('An application source file is unreadable.');
+                }
+                $hashes[$entry] = hash_file('sha256', $file);
+                if (! $zip->addFile($file, $entry)) {
+                    throw new Failure('Could not add a file to the backup ZIP.');
                 }
             }
-            if (! $zip->addFromString('manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT))) {
-                throw new Failure('Backup manifest could not be written.');
-            }
-            // Compression happens at close; reserve room for incompressible content and ZIP overhead.
-            $workspace->tick(array_sum(array_column($manifest['files'], 'bytes')) + 1048576);
+            $workspace->tick(array_sum(array_map('filesize', array_keys($files))) + 1048576);
             if (! $zip->close()) {
-                throw new Failure('Backup ZIP could not be finalized; check disk quota.');
+                throw new Failure('Could not finish the backup ZIP; check hosting quota.');
             }
             $zip = null;
-            chmod($archive, 0600);
-            self::verify($archive, fn () => $workspace->tick());
-            if ($sources !== $this->sourceInventory($workspace)
-                || $managedFingerprint !== $this->managedFingerprint(Schema::hasTable('drive_stored_files') ? DriveStoredFile::orderBy('id')->get() : collect())) {
-                throw new Failure('Uploads changed during capture. Retry during a quiet window.');
+            chmod($path, 0600);
+            // Standard ZIP, no encrypted payload/config snapshot or special recovery format.
+            $check = new ZipArchive;
+            if ($check->open($path, ZipArchive::CHECKCONS) !== true) {
+                throw new Failure('Backup ZIP integrity check failed.');
+            }
+            try {
+                foreach ($hashes as $entry => $expected) {
+                    $workspace->tick();
+                    $stream = $check->getStream($entry);
+                    if (! $stream) {
+                        throw new Failure('A ZIP entry is missing.');
+                    }
+                    try {
+                        $hash = hash_init('sha256');
+                        hash_update_stream($hash, $stream);
+                        if (! hash_equals($expected, hash_final($hash))) {
+                            throw new Failure('A source changed during ZIP creation. Retry outside deployment hours.');
+                        }
+                    } finally {
+                        fclose($stream);
+                    }
+                }
+            } finally {
+                $check->close();
             }
         } finally {
             if ($zip) {
@@ -100,62 +71,33 @@ class Archive
             }
         }
 
-        return $archive;
+        return $path;
     }
 
-    private function sourceInventory(Workspace $workspace): array
-    {
-        $files = [];
-        foreach ($this->sourceFiles() as $path => $name) {
-            $workspace->tick();
-            clearstatcache(true, $path);
-            if (! is_readable($path)) {
-                throw new Failure('A persistent source is unreadable.');
-            }
-            $files[$path] = ['name' => $name, 'bytes' => filesize($path), 'sha256' => hash_file('sha256', $path)];
-        }
-        ksort($files);
-
-        return $files;
-    }
-
-    private function managedFingerprint($files): string
-    {
-        return hash('sha256', json_encode($files->map(fn ($file) => $file->only([
-            'id', 'sha256', 'bytes', 'local_disk', 'local_path', 'drive_file_id', 'account_id',
-        ]))->all(), JSON_THROW_ON_ERROR));
-    }
-
-    /** Explicit persistent roots, hidden files included; no following symlinks. */
     private function sourceFiles(): \Generator
     {
         $seen = [];
-        $roots = [];
-        foreach (config('backups.include') as $pattern) {
-            foreach (glob(base_path($pattern), GLOB_NOSORT) ?: [] as $path) {
-                $roots[] = $path;
+        foreach (array_merge(config('backups.include'), config('backups.root_files')) as $relative) {
+            if (preg_match('~(^|/)\.\.(/|$)~', str_replace('\\', '/', $relative)) || str_starts_with($relative, '/') || str_contains($relative, ':')) {
+                throw new Failure('Backup source roots must stay within the project.');
             }
-        }
-        foreach (config('backups.root_files') as $name) {
-            if (is_file(base_path($name))) {
-                $roots[] = base_path($name);
+            $root = base_path($relative);
+            if (! file_exists($root) || $this->excluded($relative)) {
+                continue;
             }
-        }
-        foreach ($roots as $root) {
-            $entries = is_dir($root) ? $this->walk($root) : [$root];
-            foreach ($entries as $path) {
-                if (! str_starts_with($path, base_path().DIRECTORY_SEPARATOR) || str_contains(str_replace('\\', '/', $path), '/../')) {
-                    throw new Failure('Backup include paths must stay within the project.');
-                }
-                $name = str_replace('\\', '/', substr($path, strlen(base_path()) + 1));
+            if (is_link($root)) {
+                throw new Failure('Source symlinks are not followed by backups.');
+            }
+            foreach (is_dir($root) ? $this->walk($root) : [$root] as $file) {
+                $name = str_replace('\\', '/', substr($file, strlen(base_path()) + 1));
                 if (isset($seen[$name]) || $this->excluded($name)) {
                     continue;
                 }
-                if (is_link($path)) {
-                    throw new Failure('A persistent backup path contains a symlink; configure a real upload path.');
+                if (is_link($file)) {
+                    throw new Failure('Source symlinks are not followed by backups.');
                 }
                 $seen[$name] = true;
-                yield $path => $name;
+                yield $file => $name;
             }
         }
     }
@@ -163,44 +105,57 @@ class Archive
     private function walk(string $directory): \Generator
     {
         foreach (new \FilesystemIterator($directory, \FilesystemIterator::SKIP_DOTS) as $file) {
-            $path = $file->getPathname();
-            $name = str_replace('\\', '/', substr($path, strlen(base_path()) + 1));
+            $name = str_replace('\\', '/', substr($file->getPathname(), strlen(base_path()) + 1));
             if ($this->excluded($name)) {
                 continue;
             }
             if ($file->isLink()) {
-                throw new Failure('A persistent backup directory contains a symlink.');
+                throw new Failure('Source symlinks are not followed by backups.');
             }
             if ($file->isDir()) {
-                yield from $this->walk($path);
+                yield from $this->walk($file->getPathname());
             } elseif ($file->isFile()) {
-                yield $path;
+                yield $file->getPathname();
             }
         }
     }
 
     private function excluded(string $name): bool
     {
-        foreach (config('backups.exclude') as $prefix) {
+        $name = str_replace('\\', '/', $name);
+        foreach (array_merge(config('backups.exclude'), ['storage']) as $prefix) {
             if ($name === $prefix || str_starts_with($name, $prefix.'/')) {
                 return true;
             }
         }
-        if (preg_match('~(^|/)(\.git|node_modules|vendor|\.dart_tool|\.gradle|build|logs|cache|tmp|temp|backups?)(/|$)~i', $name)
-            && ! str_starts_with($name, 'public/') && ! str_starts_with($name, 'storage/app/')) {
+        $base = basename($name);
+        // Public vendor/build are deployed application assets (Filament/PDF.js), not Composer dependencies.
+        if (! str_starts_with($name, 'public/') && preg_match('~(^|/)(vendor|build)(/|$)~i', $name)) {
             return true;
         }
-        if (preg_match('~(^|/)(backups?|\.backups)(/|$)|\.(backup\.enc|log|tmp|swp)$|(^|/)\~\$~i', $name)) {
+        if (preg_match('~(^|/)(\.git|node_modules|\.dart_tool|\.gradle|\.idea|storage|logs?|caches?|tmp|temp|backups?|secrets?)(/|$)~i', $name)) {
             return true;
         }
-        if (str_starts_with($name, 'database/') && preg_match('/\.(sqlite|sqlite3)(-wal|-shm)?$/', $name)) {
+        if (preg_match('/^(\.env($|\.)|auth\.json$|\.npmrc$|\.netrc$|\.my\.cnf$|id_rsa|id_ed25519|key\.properties$)/i', $base)) {
+            return true;
+        }
+        if (preg_match('/(credential|secret|service[_-]?account|firebase-adminsdk)/i', $base)) {
+            return true;
+        }
+        if (preg_match('/\.(key|pem|p12|pfx|jks|keystore|cnf|log|tmp|swp|zip|tar|tgz|7z|rar|enc|bak|old|sqlite|sqlite3)(-wal|-shm)?$/i', $base)) {
+            return true;
+        }
+        if (str_ends_with(strtolower($base), '.sql') && ! str_starts_with($name, 'database/schema/')) {
+            return true;
+        }
+        if (str_starts_with($base, '~$') || str_ends_with($base, '~')) {
             return true;
         }
 
         return false;
     }
 
-    /** Verify actual decompressed bytes against the manifest; catches source changes during ZIP creation. */
+    /** Legacy encrypted-archive reader only; new ZIP backups do not require this manifest/tool. */
     public static function verify(string $path, ?callable $tick = null): array
     {
         $zip = new ZipArchive;

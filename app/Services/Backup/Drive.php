@@ -59,7 +59,7 @@ class Drive extends DriveClient
     {
         $this->validId($id);
         $response = $this->retry(fn () => $this->request('GET', self::API.'/'.$id, ['query' => [
-            'fields' => 'id,name,size,md5Checksum,trashed,mimeType,parents,createdTime,appProperties', 'supportsAllDrives' => 'true',
+            'fields' => 'id,name,size,md5Checksum,trashed,mimeType,parents', 'supportsAllDrives' => 'true',
         ]], [404]));
 
         return $response->status() === 404 ? null : $response->json();
@@ -72,7 +72,7 @@ class Drive extends DriveClient
             if ($this->metadata($id)) {
                 return;
             }
-            $this->request('POST', self::API, ['json' => ['id' => $id, 'name' => 'Encrypted application backups',
+            $this->request('POST', self::API, ['json' => ['id' => $id, 'name' => 'Application backups',
                 'mimeType' => 'application/vnd.google-apps.folder']]);
         });
 
@@ -97,9 +97,8 @@ class Drive extends DriveClient
             }
             $response = $this->request('POST', 'https://www.googleapis.com/upload/drive/v3/files', [
                 'query' => ['uploadType' => 'resumable', 'supportsAllDrives' => 'true'],
-                'headers' => ['X-Upload-Content-Type' => 'application/octet-stream', 'X-Upload-Content-Length' => (string) $receipt['bytes']],
-                'json' => ['id' => $receipt['file_id'], 'name' => $receipt['name'], 'parents' => [$receipt['folder_id']],
-                    'appProperties' => ['backup_set' => $receipt['set'], 'sha256' => $receipt['sha256'], 'verified' => 'false']],
+                'headers' => ['X-Upload-Content-Type' => 'application/zip', 'X-Upload-Content-Length' => (string) $receipt['bytes']],
+                'json' => ['id' => $receipt['file_id'], 'name' => $receipt['name'], 'mimeType' => 'application/zip', 'parents' => [$receipt['folder_id']]],
             ]);
             $location = $response->header('Location');
             if (! is_string($location) || ! str_starts_with($location, 'https://www.googleapis.com/upload/drive/')) {
@@ -112,11 +111,11 @@ class Drive extends DriveClient
                     $workspace->tick();
                     $chunk = fread($stream, 8 * 1024 * 1024); // Multiple of Google's 256 KiB requirement.
                     if ($chunk === false || $chunk === '') {
-                        throw new Failure('Encrypted archive read failed.');
+                        throw new Failure('Backup ZIP read failed.');
                     }
                     $end = $offset + strlen($chunk) - 1;
                     $part = $this->request('PUT', $location, ['body' => $chunk, 'headers' => [
-                        'Content-Type' => 'application/octet-stream', 'Content-Length' => (string) strlen($chunk),
+                        'Content-Type' => 'application/zip', 'Content-Length' => (string) strlen($chunk),
                         'Content-Range' => 'bytes '.$offset.'-'.$end.'/'.$receipt['bytes'],
                     ]], [308]);
                     if ($part->status() === 308 && $part->header('Range') !== 'bytes=0-'.$end) {
@@ -140,81 +139,9 @@ class Drive extends DriveClient
     {
         if (($info['trashed'] ?? false) || ($info['id'] ?? '') !== $receipt['file_id']
             || (int) ($info['size'] ?? -1) !== $receipt['bytes'] || ! hash_equals($receipt['md5'], $info['md5Checksum'] ?? '')
-            || ! in_array($receipt['folder_id'], $info['parents'] ?? [], true)
-            || ($info['appProperties']['backup_set'] ?? '') !== $receipt['set']) {
+            || ! in_array($receipt['folder_id'], $info['parents'] ?? [], true)) {
             throw new Failure('Uploaded backup metadata or MD5 verification failed.');
         }
-    }
-
-    public function verifyArchive(array $receipt, Workspace $workspace): void
-    {
-        $this->assertMetadata($receipt, $this->metadata($receipt['file_id']) ?? []);
-        $path = $workspace->path.'/verify-download.enc';
-        try {
-            $workspace->tick($receipt['bytes']);
-            $this->retry(function () use ($receipt, $workspace, $path) {
-                // Start at byte zero on retry; never append a failed response to an earlier download.
-                $this->request('GET', self::API.'/'.$receipt['file_id'], [
-                    'query' => ['alt' => 'media', 'supportsAllDrives' => 'true'], 'sink' => $path,
-                    'progress' => function ($total, $downloaded) use ($receipt, $workspace) {
-                        if ($downloaded > $receipt['bytes']) {
-                            throw new Failure('Drive readback exceeded its expected size.');
-                        }
-                        $workspace->tick();
-                    },
-                ]);
-                clearstatcache(true, $path);
-                if (! is_file($path) || filesize($path) !== $receipt['bytes'] || ! hash_equals($receipt['sha256'], hash_file('sha256', $path))) {
-                    throw new Failure('Uploaded archive SHA-256 readback verification failed.');
-                }
-            }, fn () => $workspace->tick());
-        } finally {
-            if (is_file($path)) {
-                unlink($path);
-            }
-        }
-    }
-
-    public function markVerified(array $receipt): void
-    {
-        $this->retry(fn () => $this->request('PATCH', self::API.'/'.$receipt['file_id'], [
-            'query' => ['supportsAllDrives' => 'true'], 'json' => ['appProperties' => [
-                'backup_set' => $receipt['set'], 'sha256' => $receipt['sha256'], 'verified' => 'true',
-            ]],
-        ]));
-    }
-
-    public function prune(array $latest, Workspace $workspace): int
-    {
-        $this->assertMetadata($latest, $this->metadata($latest['file_id']) ?? []);
-        $cutoff = now()->subDays(max(1, config('backups.retention_days')))->utc()->toIso8601String();
-        $quote = fn ($s) => str_replace(['\\', "'"], ['\\\\', "\\'"], $s);
-        $q = "'".$quote($latest['folder_id'])."' in parents and trashed = false and appProperties has { key='backup_set' and value='".$quote($latest['set'])."' } and appProperties has { key='verified' and value='true' }";
-        $files = [];
-        $page = null;
-        do {
-            $workspace->tick();
-            $response = $this->retry(fn () => $this->request('GET', self::API, ['query' => array_filter([
-                'q' => $q, 'fields' => 'nextPageToken,files(id,createdTime,appProperties)', 'pageSize' => 1000,
-                'pageToken' => $page, 'supportsAllDrives' => 'true', 'includeItemsFromAllDrives' => 'true',
-            ])]));
-            $files = array_merge($files, $response->json('files', []));
-            $page = $response->json('nextPageToken');
-        } while ($page);
-        usort($files, fn ($a, $b) => strcmp($b['createdTime'], $a['createdTime']));
-        $preserve = $files[0]['id'] ?? $latest['file_id'];
-        $count = 0;
-        foreach ($files as $file) {
-            $workspace->tick();
-            if ($file['id'] === $latest['file_id'] || $file['id'] === $preserve || $file['createdTime'] >= $cutoff) {
-                continue;
-            }
-            $this->validId($file['id']);
-            $this->retry(fn () => $this->request('DELETE', self::API.'/'.$file['id'], ['query' => ['supportsAllDrives' => 'true']], [404]));
-            $count++;
-        }
-
-        return $count;
     }
 
     private function validId(string $id): void
