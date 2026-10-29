@@ -63,6 +63,7 @@ Route::middleware(['auth', 'active'])->prefix('mdb-workflow')->name('mdb-workflo
     Route::post('/{batch}/entry-headers', [MdbOperatorEntryController::class, 'header'])->name('entry.headers.store');
     Route::put('/{batch}/entry-headers/{transformer}', [MdbOperatorEntryController::class, 'header'])->name('entry.headers.update');
     Route::post('/{batch}/transformers/{transformer}/rows', [MdbOperatorEntryController::class, 'save'])->name('entry.rows.store');
+    Route::delete('/{batch}/transformers/{transformer}', [MdbOperatorEntryController::class, 'destroyTransformer'])->middleware('role:super_admin')->name('transformers.destroy');
     Route::put('/{batch}/transformers/{transformer}/rows/{row}', [MdbOperatorEntryController::class, 'save'])->name('entry.rows.update');
     Route::delete('/{batch}/transformers/{transformer}/rows/{row}', [MdbOperatorEntryController::class, 'destroy'])->name('entry.rows.destroy');
     Route::post('/{batch}/sources', 'upload')->name('sources.store');

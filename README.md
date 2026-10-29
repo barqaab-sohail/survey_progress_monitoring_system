@@ -573,4 +573,6 @@ See [Android setup and delivery](docs/mobile/DELIVERY.md), [app build/install in
 
 ## Automatic Google Drive source storage
 
+For complete encrypted database/code/upload recovery backups, daily 02:00 Asia/Karachi scheduling, Bluehost cron setup, independent recovery keys and restore instructions, see [Encrypted daily backups](docs/BACKUPS.md).
+
 Survey PDFs/GPX files and PDF sketch attachments can transfer automatically to a private organizational Drive account while the application and database stay on this host. Transfers retain a private recovery original until Drive verification succeeds, then remove it; existing local files and authorized view/download URLs remain supported. See [credential setup, queue/scheduler configuration, recovery and optional legacy migration](docs/GOOGLE_DRIVE_STORAGE.md) before enabling `GOOGLE_DRIVE_STORAGE_ENABLED`.

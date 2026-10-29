@@ -11,6 +11,7 @@ use App\Models\FeederAssignment;
 use App\Models\GridStation;
 use App\Models\Mdb\Configuration;
 use App\Models\Mdb\EntryRow;
+use App\Models\Mdb\ExportJob;
 use App\Models\Mdb\NetworkTransformer;
 use App\Models\Mdb\PdfLine;
 use App\Models\Mdb\PdfRow;
@@ -35,6 +36,7 @@ use App\Services\Mdb\WindowsExporter;
 use Database\Seeders\MdbWorkflowPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -96,6 +98,129 @@ class MdbOperatorEntryTest extends TestCase
                 $this->registeredTransformer = $registered;
             }
         }
+    }
+
+    public function test_super_admin_deletes_one_transformer_with_its_dependents_and_refreshes_progress(): void
+    {
+        $row = $this->save(['consumers' => array_replace(array_fill_keys(array_keys(EntryLookups::CONSUMERS), null), ['rs' => 2, 'pv' => 1]),
+            'pv_details' => [['reference' => 'PV-delete', 'installed_capacity_kw' => 3]]]);
+        $this->save(['designation' => 'E', 'waypoint_reference' => '010']);
+        $section = $this->transformer->sections()->firstOrFail();
+        $other = $this->batch->transformers()->create(['code' => 'KEEP-TX', 'capacity_kva' => 100]);
+        $otherSection = $section->replicate();
+        $otherSection->transformer_id = $other->id;
+        $otherSection->save();
+        $otherRow = $row->fresh()->replicate();
+        $otherRow->transformer_id = $other->id;
+        $otherRow->section_id = $otherSection->id;
+        $otherRow->save();
+        $consumer = $otherSection->consumers()->create(['category' => 'rs', 'count' => 3]);
+        $pv = $other->pvRecords()->create(['section_id' => $otherSection->id, 'reference' => 'KEEP-PV']);
+        foreach ([$row, $otherRow] as $index => $entry) {
+            PdfRow::create(['source_file_id' => $this->pdf->id, 'page' => 1, 'row_number' => $index + 1,
+                'bounds' => ['x' => 0, 'y' => 0.1, 'width' => 1, 'height' => 0.1], 'entry_row_id' => $entry->id, 'entered' => true]);
+            DB::table('mdb_review_checks')->insert(['batch_id' => $this->batch->id, 'transformer_id' => $entry->transformer_id,
+                'reviewer_id' => $this->admin->id, 'field_key' => 'header.code', 'value_hash' => str_repeat('a', 64), 'created_at' => now(), 'updated_at' => now()]);
+        }
+        $revision = app(SnapshotService::class)->capture($this->batch->fresh(), $this->admin->id);
+        $template = Template::create(['code' => 'DELETE-FIXTURE', 'version' => '1', 'path' => 'fixture.mdb',
+            'sha256' => str_repeat('a', 64), 'synergee_version' => 'Fixture', 'active' => true]);
+        $exports = collect([$this->transformer, $other])->map(function ($transformer) use ($revision, $template) {
+            $path = 'delete-test/'.$transformer->id.'.mdb';
+            Storage::disk('local')->put($path, 'generated MDB fixture');
+            $export = ExportJob::create(['batch_id' => $this->batch->id, 'revision_id' => $revision->id, 'transformer_id' => $transformer->id,
+                'template_id' => $template->id, 'idempotency_key' => hash('sha256', $path), 'status' => 'generated', 'mapping_version' => 'fixture',
+                'output_disk' => 'local', 'output_path' => $path, 'requested_by' => $this->admin->id]);
+            $export->validations()->create(['recorded_by' => $this->admin->id, 'status' => 'accepted']);
+
+            return $export;
+        });
+        $this->batch->refresh()->update(['approved_revision_id' => $revision->id, 'status' => 'approved', 'entry_completed_at' => now()]);
+        $beforeRevision = $this->batch->revision;
+        $this->get(route('mdb-workflow.show', $this->batch))->assertOk()
+            ->assertSee('data-entry-delete-transformer="'.$this->transformer->id.'"', false)->assertSee('Delete transformer KEEP-TX');
+        $this->deleteJson(route('mdb-workflow.transformers.destroy', [$this->batch, $this->transformer]), ['revision' => $beforeRevision, 'confirmed' => true])
+            ->assertOk()->assertJsonCount(1, 'transformers')->assertJsonPath('transformers.0.id', $other->id)
+            ->assertJsonPath('revision', $beforeRevision + 1)->assertJsonPath('pdf_rows.0.entered', false)->assertJsonPath('pdf_rows.0.entry_row_id', null)
+            ->assertJsonPath('pdf_rows.1.entered', true)->assertJsonPath('workflow_label', 'Draft');
+        $this->assertDatabaseMissing('mdb_workflow_transformers', ['id' => $this->transformer->id]);
+        $this->assertDatabaseMissing('mdb_workflow_entry_rows', ['transformer_id' => $this->transformer->id]);
+        $this->assertDatabaseMissing('mdb_workflow_sections', ['transformer_id' => $this->transformer->id]);
+        $this->assertDatabaseMissing('mdb_workflow_consumers', ['section_id' => $section->id]);
+        $this->assertDatabaseMissing('mdb_workflow_pv_records', ['transformer_id' => $this->transformer->id]);
+        $this->assertDatabaseMissing('mdb_review_checks', ['transformer_id' => $this->transformer->id]);
+        $this->assertDatabaseMissing('mdb_workflow_exports', ['id' => $exports[0]->id]);
+        $this->assertDatabaseMissing('mdb_workflow_model_validations', ['export_job_id' => $exports[0]->id]);
+        $this->assertDatabaseHas('mdb_workflow_entry_rows', ['id' => $otherRow->id]);
+        $this->assertDatabaseHas('mdb_workflow_sections', ['id' => $otherSection->id]);
+        $this->assertDatabaseHas('mdb_workflow_consumers', ['id' => $consumer->id]);
+        $this->assertDatabaseHas('mdb_workflow_pv_records', ['id' => $pv->id]);
+        $this->assertDatabaseHas('mdb_review_checks', ['transformer_id' => $other->id]);
+        $this->assertNotNull($exports[1]->fresh()->superseded_at);
+        $this->assertNull($this->batch->fresh()->approved_revision_id);
+        $this->assertNull($this->batch->fresh()->entry_completed_at);
+        $this->assertDatabaseHas('mdb_workflow_revisions', ['id' => $revision->id]);
+        Storage::disk('local')->assertMissing($exports[0]->output_path);
+        Storage::disk('local')->assertExists($exports[1]->output_path);
+        Storage::disk('local')->assertExists($this->pdf->path);
+        Storage::disk('local')->assertExists($this->gpx->path);
+        $this->assertSame(3, $this->batch->waypoints()->count());
+        $this->assertSame(2, $this->batch->sources()->count());
+        $this->assertSame(1, $this->batch->fresh()->transformers()->count());
+        $this->assertStringContainsString($this->transformer->code, AuditLog::where('action', 'mdb.transformer_deleted')->sole()->reason);
+        $this->get(route('mdb-workflow.show', $this->batch))->assertOk()->assertDontSee('data-entry-delete-transformer="'.$this->transformer->id.'"', false);
+        $this->get(route('mdb-workflow.index'))->assertOk()->assertSee('KEEP-TX')->assertSee('data-mdb-confirm=', false);
+    }
+
+    public function test_transformer_deletion_requires_confirmation_and_current_revision(): void
+    {
+        $url = route('mdb-workflow.transformers.destroy', [$this->batch, $this->transformer]);
+        $revision = $this->batch->fresh()->revision;
+        $this->deleteJson($url, ['revision' => $revision])->assertUnprocessable()->assertJsonValidationErrors('confirmed');
+        $this->deleteJson($url, ['revision' => $revision, 'confirmed' => false])->assertUnprocessable();
+        $this->deleteJson($url, ['revision' => $revision - 1, 'confirmed' => true])->assertUnprocessable()->assertJsonValidationErrors('revision');
+        $this->assertDatabaseHas('mdb_workflow_transformers', ['id' => $this->transformer->id]);
+        $this->assertSame($revision, $this->batch->fresh()->revision);
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'mdb.transformer_deleted']);
+    }
+
+    public function test_transformer_deletion_is_super_admin_only_and_cannot_cross_batches(): void
+    {
+        $url = route('mdb-workflow.transformers.destroy', [$this->batch, $this->transformer]);
+        foreach (UserRole::cases() as $role) {
+            if ($role === UserRole::SuperAdmin) {
+                continue;
+            }
+            $this->actingAs(User::factory()->create(['role' => $role]))->deleteJson($url, ['confirmed' => true, 'revision' => $this->batch->revision])->assertForbidden();
+        }
+        $this->actingAs($this->admin);
+        $otherBatch = $this->batch->replicate();
+        $otherBatch->save();
+        $this->deleteJson(route('mdb-workflow.transformers.destroy', [$otherBatch, $this->transformer]), ['revision' => $otherBatch->revision, 'confirmed' => true])->assertNotFound();
+        $this->assertDatabaseHas('mdb_workflow_transformers', ['id' => $this->transformer->id]);
+        [$operator] = $this->workflowActors();
+        $this->actingAs($operator)->get(route('mdb-workflow.show', $this->batch))->assertOk()->assertDontSee('data-entry-delete-transformer=', false);
+    }
+
+    public function test_deleting_the_last_transformer_preserves_batch_sources_and_returns_locked_survey_for_entry(): void
+    {
+        $this->batch->update(['staged_workflow' => true, 'survey_status' => 'awaiting_verification', 'status' => 'awaiting_verification', 'entry_completed_at' => now()]);
+        $this->deleteJson(route('mdb-workflow.transformers.destroy', [$this->batch, $this->transformer]), ['revision' => $this->batch->fresh()->revision, 'confirmed' => true])
+            ->assertOk()->assertJsonCount(0, 'transformers')->assertJsonPath('survey_status', 'returned');
+        $this->assertDatabaseHas('mdb_workflow_batches', ['id' => $this->batch->id]);
+        $this->assertSame(2, $this->batch->sources()->count());
+        $this->get(route('mdb-workflow.show', $this->batch))->assertOk()->assertSee('No transformers in this batch.')->assertSee('entry-header-form', false);
+    }
+
+    public function test_transformer_deletion_rolls_back_when_audit_fails(): void
+    {
+        $row = $this->save();
+        $revision = $this->batch->fresh()->revision;
+        $this->mock(\App\Services\AuditService::class)->shouldReceive('record')->andThrow(new \RuntimeException('Simulated audit failure'));
+        $this->deleteJson(route('mdb-workflow.transformers.destroy', [$this->batch, $this->transformer]), ['revision' => $revision, 'confirmed' => true])->assertStatus(500);
+        $this->assertDatabaseHas('mdb_workflow_transformers', ['id' => $this->transformer->id]);
+        $this->assertDatabaseHas('mdb_workflow_entry_rows', ['id' => $row->id]);
+        $this->assertSame($revision, $this->batch->fresh()->revision);
     }
 
     private function payload(array $changes = []): array

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Mdb\EntryRow;
+use App\Models\Mdb\ExportJob;
 use App\Models\Mdb\NetworkTransformer;
 use App\Models\Mdb\PdfRow;
 use App\Models\Mdb\SurveyBatch;
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -262,6 +264,77 @@ class MdbOperatorEntryController extends Controller
         });
 
         return response()->json($this->entries->editorData($batch->fresh()));
+    }
+
+    public function destroyTransformer(Request $request, SurveyBatch $batch, NetworkTransformer $transformer)
+    {
+        // Match permanent batch deletion, rather than granting deletion to every entry editor.
+        abort_unless($request->user()->role?->value === 'super_admin', 403);
+        $this->access->authorize($request->user(), $batch);
+        abort_unless($transformer->batch_id === $batch->id, 404);
+        $request->validate(['revision' => 'required|integer', 'confirmed' => 'required|accepted']);
+
+        $files = DB::transaction(function () use ($request, $batch, $transformer) {
+            $locked = SurveyBatch::lockForUpdate()->findOrFail($batch->id);
+            $this->access->authorize($request->user(), $locked);
+            $this->assertRevision($locked, (int) $request->input('revision'));
+            $selected = $locked->transformers()->lockForUpdate()->findOrFail($transformer->id);
+            $old = $this->snapshots->snapshot($locked);
+            $exports = $locked->exports()->where('transformer_id', $selected->id)->lockForUpdate()->get();
+            $files = $exports->flatMap(fn ($export) => [
+                ['disk' => $export->output_disk, 'path' => $export->output_path],
+                ['disk' => $export->output_disk, 'path' => $export->payload_path],
+            ])->all();
+
+            $this->snapshots->invalidate($locked);
+            $this->access->recordEntry($locked, $request->user());
+            $locked->entry_completed_at = null;
+            if ($locked->staged_workflow && ! in_array($locked->survey_status, ['entry', 'returned'], true)) {
+                $locked->fill(['survey_status' => 'returned', 'survey_verifier_id' => null, 'survey_verified_at' => null,
+                    'survey_remarks' => 'A transformer was deleted. Review the remaining survey and submit it for verification.']);
+            }
+            // Shared source files, waypoints and PDF layout belong to the batch, not this transformer.
+            PdfRow::whereIn('entry_row_id', $selected->entryRows()->select('id'))
+                ->update(['entry_row_id' => null, 'entered' => false]);
+            DB::table('mdb_workflow_model_validations')->whereIn('export_job_id', $exports->pluck('id'))->delete();
+            $locked->exports()->whereIn('id', $exports->pluck('id'))->delete();
+            $selected->pvRecords()->delete();
+            $selected->entryRows()->delete();
+            DB::table('mdb_workflow_consumers')->whereIn('section_id', $selected->sections()->select('id'))->delete();
+            $selected->sections()->delete();
+            $selected->delete(); // Review checks cascade; immutable revision history is retained.
+            $locked->revision++;
+            $locked->save();
+            $this->audit->record($request->user(), 'mdb.transformer_deleted', $locked, $old,
+                $this->snapshots->snapshot($locked), 'Super Admin permanently deleted transformer '.$selected->code.' (#'.$selected->id.') from Batch #'.$locked->id.'.');
+
+            return $files;
+        });
+
+        foreach ($files as $file) {
+            if (empty($file['disk']) || empty($file['path'])) {
+                continue;
+            }
+            try {
+                // Avoid removing a file if another export still references it.
+                if (ExportJob::where('output_disk', $file['disk'])->where(fn ($query) => $query->where('output_path', $file['path'])->orWhere('payload_path', $file['path']))->exists()) {
+                    continue;
+                }
+                if (! Storage::disk($file['disk'])->delete($file['path'])) {
+                    throw new \RuntimeException('Export cleanup failed.');
+                }
+            } catch (Throwable) {
+                Log::warning('Deleted transformer export file awaits cleanup.', ['batch_id' => $batch->id, 'transformer_id' => $transformer->id]);
+            }
+        }
+
+        if ($request->expectsJson()) {
+            $fresh = $batch->fresh();
+
+            return response()->json($this->entries->editorData($fresh) + ['workflow_label' => $fresh->workflow_label]);
+        }
+
+        return to_route('mdb-workflow.show', $batch)->with('success', 'Transformer '.$transformer->code.' was deleted. The batch and other transformers were preserved.');
     }
 
     public function header(Request $request, SurveyBatch $batch, ?NetworkTransformer $transformer = null)

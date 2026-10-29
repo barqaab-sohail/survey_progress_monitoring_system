@@ -13,6 +13,14 @@
 .env
 .env.backup
 .env.production
+.env.*
+!.env.example
+*.backup.enc
+!/tests/Fixtures/recovery/backups/previous.backup.enc
+*.backup.enc.part
+backup-private.key
+/backup-keys/
+/backup-restore/
 .phpactor.json
 .phpunit.result.cache
 Homestead.json

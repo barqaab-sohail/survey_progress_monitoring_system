@@ -38,3 +38,7 @@ Schedule::command('survey-progress:work')
     ->everyMinute()->withoutOverlapping(120)->appendOutputTo(storage_path('logs/survey-progress-worker.log'));
 
 Schedule::command('drive-storage:retry')->everyFiveMinutes()->withoutOverlapping(10);
+
+// The runner also owns a process-lifetime flock, shared by scheduled/manual/verify runs.
+// On Bluehost plans permitting only 15-minute cron, invoke this command directly (docs/BACKUPS.md).
+Schedule::command('backup:run --scheduled')->everyFifteenMinutes();

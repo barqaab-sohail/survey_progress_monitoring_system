@@ -3,7 +3,7 @@
 @section('content')
 <div class="mdb-workflow mdb-entry" id="mdb-entry-workspace">
     <div class="page-head"><div><span class="eyebrow">{{ $batch->project?->name }}</span><h1>PDF Data Entry</h1><p>{{ $batch->feeder?->feeder_name }} · Batch #{{ $batch->id }}</p></div><div class="actions"><a class="btn btn-light" href="{{ route('mdb-workflow.index') }}">All batches</a><a class="btn btn-primary" data-entry-leave href="{{ route('mdb-workflow.review', $batch) }}">Review saved survey</a></div></div>
-    <p class="mdb-note">Status: <strong>{{ $batch->workflow_label }}</strong>@if($batch->survey_remarks) &middot; Verification / correction comments: {{ $batch->survey_remarks }}@endif</p>
+    <p class="mdb-note">Status: <strong id="entry-batch-status">{{ $batch->workflow_label }}</strong>@if($batch->survey_remarks) &middot; Verification / correction comments: {{ $batch->survey_remarks }}@endif</p>
     @include('mdb-workflow.partials.data-entry-export-button')
     <p class="entry-steps">1. Upload PDF + GPX <span>›</span> 2. Transformer header <span>›</span> 3. S/E rows <span>›</span> 4. Submit Transformer</p>
     <div class="entry-workspace-columns">
@@ -26,6 +26,15 @@
     <div class="entry-save-bar"><span id="entry-save-status" role="status" aria-live="polite">Saved records loaded.</span><div id="entry-errors" class="entry-error-summary" role="alert" tabindex="-1" hidden></div><button type="button" class="btn btn-sm btn-light" id="entry-refresh">Refresh saved records</button></div>
     <noscript><p class="entry-error-summary">Enable JavaScript to use the PDF viewer and row editor. <a href="{{ route('mdb-workflow.advanced', $batch) }}">Open the existing record editor</a>.</p></noscript>
     <section class="card entry-transformer">
+        @if(auth()->user()->role?->value === 'super_admin')
+        <details open><summary>Transformers in this batch (<span id="entry-transformer-count">{{ count($editorData['transformers']) }}</span>)</summary>
+            <div id="entry-transformer-list" class="table-wrap"><table class="table"><thead><tr><th>Transformer</th><th>Saved rows</th><th>Action</th></tr></thead><tbody>
+            @forelse($editorData['transformers'] as $transformer)
+                <tr><td>{{ $transformer['code'] }}</td><td>{{ count($transformer['rows']) }}</td><td><button type="button" class="btn btn-sm btn-danger" data-entry-delete-transformer="{{ $transformer['id'] }}" aria-label="Delete transformer {{ $transformer['code'] }}">Delete</button></td></tr>
+            @empty<tr><td colspan="3">No transformers in this batch.</td></tr>@endforelse
+            </tbody></table></div>
+        </details>
+        @endif
         <div class="entry-transformer-bar"><div class="entry-select-filter"><label for="entry-transformer">Active transformer</label><input id="entry-transformer-search" hidden type="search" placeholder="Search transformer code" aria-label="Search transformer codes"><select id="entry-transformer" data-compact-select data-full-label aria-label="Active transformer"></select><small id="entry-transformer-help"></small></div>@if($canEdit)<button type="button" class="btn btn-light" data-entry-add-transformer>Add Transformer</button>@endif</div>
         <details id="entry-header-panel"><summary>Transformer header <span id="entry-header-caption"></span></summary>
             @if($canEdit)<form id="entry-header-form" autocomplete="off" novalidate><div class="entry-fields">
@@ -120,5 +129,5 @@
 @endsection
 @push('styles')<link rel="stylesheet" href="{{ asset('css/mdb-workflow.css') }}"><link rel="stylesheet" href="{{ asset('css/mdb-entry.css').'?v='.filemtime(public_path('css/mdb-entry.css')) }}">@endpush
 @push('scripts')
-<script>window.mdbEntryBoot = {{ \Illuminate\Support\Js::from($editorData + ['base_url' => route('mdb-workflow.show', $batch), 'index_url' => route('mdb-workflow.index'), 'settings_url' => route('mdb-workflow.config', $batch->project_id), 'pdfjs_url' => asset('vendor/pdfjs/build/pdf.min.mjs'), 'pdfjs_worker' => asset('vendor/pdfjs/build/pdf.worker.min.mjs'), 'pdfjs_assets' => asset('vendor/pdfjs').'/', 'storage_key' => 'mdb-entry:'.auth()->id().':'.$batch->id, 'can_configure' => auth()->user()->can('mdb-workflow.configure'), 'can_edit' => $canEdit, 'active_transformer_id' => (int) request('transformer_id')]) }};</script><script src="{{ asset('js/mdb-entry.js').'?v='.filemtime(public_path('js/mdb-entry.js')) }}" type="module"></script>
+<script>window.mdbEntryBoot = {{ \Illuminate\Support\Js::from($editorData + ['base_url' => route('mdb-workflow.show', $batch), 'index_url' => route('mdb-workflow.index'), 'settings_url' => route('mdb-workflow.config', $batch->project_id), 'pdfjs_url' => asset('vendor/pdfjs/build/pdf.min.mjs'), 'pdfjs_worker' => asset('vendor/pdfjs/build/pdf.worker.min.mjs'), 'pdfjs_assets' => asset('vendor/pdfjs').'/', 'storage_key' => 'mdb-entry:'.auth()->id().':'.$batch->id, 'can_configure' => auth()->user()->can('mdb-workflow.configure'), 'can_edit' => $canEdit, 'can_delete_transformer' => auth()->user()->role?->value === 'super_admin', 'active_transformer_id' => (int) request('transformer_id')]) }};</script><script src="{{ asset('js/mdb-entry.js').'?v='.filemtime(public_path('js/mdb-entry.js')) }}" type="module"></script>
 @endpush

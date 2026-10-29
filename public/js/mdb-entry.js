@@ -301,6 +301,7 @@ function initialize(boot) {
         [rowForm, headerForm].filter(Boolean).forEach(form => Array.from(form.elements).forEach(el => el.disabled = value || !editable()));
         document.querySelectorAll('.entry-source-files form input,.entry-source-files form button').forEach(el=>el.disabled=value || !editable());
         $('entry-transformer').disabled = value;
+        document.querySelectorAll('[data-entry-delete-transformer]').forEach(button=>button.disabled=value || !boot.can_delete_transformer);
         document.querySelectorAll('[data-entry-add-transformer],#entry-continue,#entry-submit-form button,#entry-transformer-submit,#entry-next-transformer button').forEach(el=>el.disabled=value || !editable() || (el.id==='entry-transformer-submit' && !active()));
         document.querySelectorAll('.entry-copy-bar button').forEach(el=>el.disabled=value || !editable());
         $('entry-refresh').disabled=value;
@@ -329,6 +330,10 @@ function initialize(boot) {
         select.value = selected;
     }
     function renderLists() {
+        if($('entry-transformer-list')){
+            $('entry-transformer-count').textContent=String(data.transformers.length);
+            $('entry-transformer-list').innerHTML='<table class="table"><thead><tr><th>Transformer</th><th>Saved rows</th><th>Action</th></tr></thead><tbody>'+(data.transformers.length ? data.transformers.map(t=>`<tr><td>${esc(t.code)}</td><td>${t.rows.length}</td><td><button type="button" class="btn btn-sm btn-danger" data-entry-delete-transformer="${t.id}" aria-label="Delete transformer ${esc(t.code)}" ${busy || !boot.can_delete_transformer ? 'disabled' : ''}>Delete</button></td></tr>`).join('') : '<tr><td colspan="3">No transformers in this batch.</td></tr>')+'</tbody></table>';
+        }
         const available=(data.registered_transformers || []).filter(t=>!data.transformers.some(saved=>transformerCodeKey(saved.code)===transformerCodeKey(t.code)));
         optionList($('entry-transformer'), [...data.transformers.map(t=>[t.id,t.code]),...(editable() ? available.map(t=>[`registered:${t.id}`,`${t.code} — registered; new survey header`]) : []),...(editable() ? [['__manual__','Transformer not found? Add manually']] : [])], 'Choose a transformer', transformerSelection());
         if($('entry-transformer-help'))$('entry-transformer-help').textContent='Search to choose a saved or registered transformer. If it is not listed, use Add Transformer to enter it manually.';
@@ -985,6 +990,28 @@ function initialize(boot) {
         if(remove){if(headerDirty || rowDirty){error('Save or cancel your current draft before deleting a saved row.');return;}if(!window.confirm('Delete this saved S/E row? Its paired row will remain as an incomplete draft.'))return;setBusy(true);try{data=await api(`/transformers/${activeId}/rows/${remove.dataset.entryDelete}`,'DELETE',{revision:data.revision,confirmed:true});renderLists();renderSaved();newRow();status('Row deleted. Check the remaining pair in review.');}catch(e){error('Row could not be deleted.',e.errors || {delete:[e.message]});}finally{setBusy(false);}}
     });
     $('entry-continue')?.addEventListener('click',async()=>{if(busy || !active())return;setBusy(true);try{data=await api(`/transformers/${activeId}/pages`,'POST',{revision:data.revision,source_pdf_id:number($('entry-pdf-source').value),page:pageNumber,role:'continuation',confirmed:true});renderLists();renderSaved();updateAssociation();status('Current transformer retained; continuation page confirmed.');persist();}catch(e){error('Continuation page could not be confirmed.',e.errors || {page:[e.message]});}finally{setBusy(false);}});
+    $('entry-transformer-list')?.addEventListener('click',async event=>{
+        const button=event.target.closest('[data-entry-delete-transformer]');
+        if(!button || busy || !boot.can_delete_transformer)return;
+        const selected=data.transformers.find(t=>t.id===Number(button.dataset.entryDeleteTransformer));
+        if(!selected)return;
+        // Match row deletion: never discard an unsaved header or row as a side effect.
+        if(headerDirty || rowDirty){error('Save or cancel your current draft before deleting a transformer.');return;}
+        if(!window.confirm(`Permanently delete transformer ${selected.code} from Batch #${data.batch_id}, including its saved rows, sections, consumer/PV data and transformer-specific exports? The batch, shared PDF/GPX files and other transformers will remain. Existing approval will be invalidated. This cannot be undone.`))return;
+        setBusy(true);
+        try{
+            const fresh=await api(`/transformers/${selected.id}`,'DELETE',{revision:data.revision,confirmed:true});
+            if(!Array.isArray(fresh.transformers) || fresh.transformers.some(t=>t.id===selected.id))throw new Error('The server did not confirm deletion. Refresh saved records before retrying.');
+            data=fresh;selectedPdfRowId=null;clearErrors();
+            chooseTransformer(data.transformers.some(t=>t.id===Number(activeId)) ? activeId : data.transformers[0]?.id ?? null);
+            if($('entry-batch-status') && fresh.workflow_label)$('entry-batch-status').textContent=fresh.workflow_label;
+            status(`Transformer ${selected.code} deleted. ${data.transformers.length} transformer(s) remain in this batch.`);
+            persist();
+            // A locked survey now needs entry forms rendered by the server after approval is revoked.
+            if(!boot.can_edit){busy=false;location.assign(`${boot.base_url}${activeId ? '?transformer_id='+activeId : ''}`);}
+        }catch(e){error('Transformer could not be deleted.',e.errors || {delete:[e.message]});}
+        finally{setBusy(false);}
+    });
     $('entry-refresh').addEventListener('click',async()=>{if(busy)return;const h=headerPayload(),r=rowPayload(),id=rowId,identity=clientUuid;setBusy(true);try{data=await api('/entry-data');clearErrors();renderLists();renderSaved();if(headerDirty)fillHeader(h);else fillHeader(active() || {header:data.defaults});if(rowDirty){fillRow(r,id,identity);rowDirty=true;}else newRow();status('Saved records refreshed. Review retained fields before saving.',headerDirty || rowDirty ? 'dirty' : 'saved');persist();await loadPdf();}catch(e){error(e.message);}finally{setBusy(false);}});
     $('entry-pdf-source').addEventListener('change',()=>{pageNumber=1;loadPdf();persist();});$('entry-page').addEventListener('change',()=>setPage(Number($('entry-page').value)||1));$('entry-page-previous').addEventListener('click',()=>setPage(pageNumber-1));$('entry-page-next').addEventListener('click',()=>setPage(pageNumber+1));
     $('entry-zoom-out').addEventListener('click',()=>{cancelLineDrawing();zoom=Math.max(.25,zoom/1.25);renderPdf();persist();});$('entry-zoom-in').addEventListener('click',()=>{cancelLineDrawing();zoom=Math.min(3,zoom*1.25);renderPdf();persist();});$('entry-zoom-fit').addEventListener('click',()=>{cancelLineDrawing();zoom=1;renderPdf();persist();});$('entry-rotate').addEventListener('click',()=>{cancelLineDrawing();rotation=(rotation+90)%360;renderPdf();persist();});

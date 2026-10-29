@@ -14,7 +14,7 @@ class DriveClient
 {
     public const API = 'https://www.googleapis.com/drive/v3/files';
 
-    private function client()
+    protected function client()
     {
         $token = Cache::lock('drive-storage:oauth', 60)->block(10, function () {
             $connection = DriveStorageConnection::find(1);
