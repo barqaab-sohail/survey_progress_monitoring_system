@@ -1,0 +1,129 @@
+HAZECO
+Field SurveyUser Manual
+A step-by-step guide for Android field survey teams
+From first sign-in to confirmed synchronization
+Prepared for field useInterface checked against the Android app build dated 18 October 2026
+Demonstration screenshots use fictional records. Sync status examples are simulated for training and do not show a live production upload.
+
+Contents
+Follow the steps in order the first time. Return to any numbered section during fieldwork.
+1. Install, open, and sign in3
+2. Home screen and feeder selection4
+3. Start a new transformer survey5
+4. Add S and E observation rows6
+5. Enter conductor, equipment, pole, and consumer data7
+6. Enter meter and reference numbers8
+7. Record GPS coordinates and waypoint ID9
+8. Take and attach photographs10
+9. Save a draft and resume later11
+10. Review, validate, and submit12
+11. Choose the next action after submission13
+12. Work without internet and check survey lists14
+13. Use Sync now and confirm synchronization15
+14. Fix validation errors16
+15. Fix camera and permission problems17
+16. Fix GPS, internet, and synchronization problems18
+17. Field checklist and safe working practices19
+
+1. Install, open, and sign in
+Install the current HAZECO Field Survey app from the APK supplied by your survey lead or approved organization channel. Open the app from the phoneâ€™s app list. The first sign-in requires internet and a survey team assigned to your account.
+Enter your assigned email and password, then tap Sign in and download assignments. Wait for the Home screen and assignment download to finish. The app does not save your password. Keep credentials private and never include them in a screenshot.
+
+Figure 1. The launch screen is also the sign-in screen.  1 Email field. 2 Password field. 3 Sign in and download assignments.
+
+2. Home screen and feeder selection
+Home shows your local surveys and their status. Tap New survey, choose your assigned team, and open the feeder selector. Search by feeder code or name, select the feeder that matches your work order, then tap Create survey. If the correct feeder is missing, stop and ask your field lead to check the assignment.
+
+Figure 2. Home shows sync status, filters, saved surveys, and New survey.  1 Sync status and Sync now. 2 Survey filters. 3 New survey.
+Figure 3. Select a feeder assigned to the chosen team.  1 Search or choose the listed feeder. 2 Close the selector after choosing.
+
+3. Start a new transformer survey
+The Start a field survey panel shows the selected team and feeder. Confirm both before creating the survey. The new form opens on Details with the same feeder shown above the tabs. Use Find imported transformer when the asset is listed; check imported details against the equipment in front of you. Otherwise, fill the fields from the approved survey sheet.
+
+Figure 4. Confirm team and feeder before creating the form.  1 Selected feeder. 2 Create survey.
+Figure 5. Transformer details for a demonstration record.  1 Transformer code. 2 Capacity and make. 3 Mounting and duty.
+
+4. Add S and E observation rows
+Open S/E rows and tap Add / complete S/E pair. The app opens an S row first. Enter the values shown on the matching paper form, then tap Done; complete the paired E row. Keep one pair for each required observation and check that every pair contains both S and E rows. The row date and group identifier should match your field records.
+
+Figure 6. S/E rows lists each observation and the Add / complete S/E pair action.  1 Add a complete S/E pair.
+Figure 7. A row records its S/E code, group, date, and waypoint ID.  1 S or E row type. 2 Group and date. 3 Waypoint identifier.
+
+5. Enter conductor, equipment, pole, and consumer data
+For each S and E row, enter conductor information from the field sheet. Select at least one of R, Y, B, or Neutral; Phase is filled from R/Y/B selections. Then select equipment type and pole class, enter pole height in feet, and mark Int only when the observation is an intersection. Enter consumer counts by category; use zero when none are observed and the form requires a count. Add a short row remark when useful.
+
+Figure 8. Conductor values and the automatically derived phase.  1 Enter a conductor value. 2 Phase is derived from R/Y/B.
+Figure 9. Equipment type, pole class, and pole height.  1 Equipment type. 2 Pole class. 3 Pole height in feet.
+Figure 10. Consumer categories are entered for the current observation.  1 Residential categories. 2 Agriculture and street lights. 3 Other consumer categories.
+
+6. Enter meter and reference numbers
+If the observation has a solar or net-metering installation, open Solar / net-metering and tap Add solar installation. Enter the consumer reference number and meter number exactly as printed or marked in the field. Both fields open a numeric keyboard. Keep leading zeroes, for example 00123456; do not add spaces or reformat the identifier. Enter service load and installed PV capacity when applicable, then save the installation with the form.
+
+Figure 11. Consumer reference, load, solar capacity, meter, and remarks.  1 Consumer reference number. 2 Meter number. 3 Installation remarks.
+
+7. Record GPS coordinates and waypoint ID
+The mobile app records a GPS waypoint identifier on each S/E row. It does not capture phone latitude or longitude and does not ask for location permission. Use the GPS/GPX method approved by your project to record coordinates outside this app. Enter the matching waypoint identifier in the row, preserving leading zeroes, and submit the GPX through the separate organization workflow. Never enter latitude/longitude in the waypoint ID field.
+
+Figure 12. The row stores a waypoint ID; this is not a latitude/longitude reading.  1 Enter the field waypoint ID exactly, including leading zeroes. Record coordinates separately using your approved GPS/GPX method.
+
+8. Take and attach photographs
+Open the correct S or E row before taking a photo so the image attaches to that observation. Tap Take photo to use the phone camera, Choose image to select an existing photo, or Photograph sketch for a paper sketch. Review the captured image and accept it. Confirm the thumbnail appears under Photos and sketches before leaving the row. Photos remain on the phone and upload with the submitted survey.
+
+Figure 13. Choose how to add an image to this observation.  1 Take photo. 2 Choose image. 3 Photograph sketch.
+Figure 14. Review the camera image and accept it to attach.  1 Accept the photo. 2 Cancel and retake if it is wrong.
+Figure 15. An accepted image appears under Photos and sketches.  1 Attached image preview.
+
+9. Save a draft and resume later
+The form saves locally as you work. Tap the save icon when you want to save explicitly; look for Saved on this phone or the draft-saved message. Return Home with the back arrow. Choose Drafts, then tap the survey card to reopen it. Confirm the transformer code and feeder before continuing. Keep the app installed and do not clear app storage while local drafts or photos are waiting.
+
+Figure 16. Save the current S/E survey draft on the phone.  1 Save icon. 2 Saved on this phone confirms local storage.
+Figure 17. Open Drafts to find unfinished surveys.  1 Drafts filter. 2 Tap the draft to resume.
+Figure 18. The saved transformer details reappear when the draft opens.  1 Confirm feeder and team. 2 Continue from the saved details.
+
+10. Review, validate, and submit
+Before submitting, compare Details and every S/E row with the paper form. Check dates, group IDs, waypoint IDs, conductor values, pole details, counts, meter/reference values, and attached photos. Tap Submit survey. Review the confirmation showing how many S/E rows will be queued. Tap Submit only when ready; choose Keep draft to return and make corrections. Submission saves a queued copy on the phone. Server receipt happens later during synchronization.
+
+Figure 19. Review both tabs and use Submit survey when the form is complete.  1 Details and S/E rows tabs. 2 Review the row list. 3 Submit survey.
+Figure 20. Confirm the row count before queuing the survey.  1 Submit queues the saved survey; Keep draft returns to editing.
+
+11. Choose the next action after submission
+After a successful local submission, the Survey saved popup offers two choices. Tap Create New Survey to start a blank form under the same team and feeder; the submitted survey remains queued and its data is not copied into the new form. Tap Go to Home to return to the survey list, then use New survey to select a different feeder. The popup appears only after the submitted survey has been saved on the phone.
+
+Figure 21. Select what to do after the submitted copy is saved locally.  1 Go to Home to choose a different feeder. 2 Create New Survey for the same feeder.
+Figure 22. A new blank survey opens under the same feeder.  1 Same feeder is retained. 2 New form fields are blank.
+
+12. Work without internet and check survey lists
+After the first sign-in and assignment download, you can enter surveys offline. Drafts and photos stay on the phone. Submit completed forms when ready; they appear in Waiting until the server confirms receipt. On Home, use Drafts for unfinished work, Waiting for submitted work awaiting upload, Synced for confirmed uploads, and Attention for work that needs action. The number in brackets is the number of records in that filter.
+
+Figure 23. Waiting contains submitted surveys not yet confirmed by the server.  1 Waiting filter. 2 Open the waiting survey if you need to review it.
+Figure 24. Synced shows server-confirmed surveys.  1 Synced filter. 2 Synced survey card.
+Figure 25. Attention shows a record that needs a retry or other action.  1 Attention filter. 2 Read the reason on the survey card.
+
+13. Use Sync now and confirm synchronization
+When internet is available, open Home and tap Sync now. Wait for Sync in progress to finish; keep the app open and avoid tapping repeatedly. A success message reports the surveys and photos accepted. Then open Synced and confirm each submitted survey is listed. Open the survey to verify its attachments show as synced. A saved draft is not uploaded until you submit it. If synchronization fails, read the actual reason and retry after fixing it.
+
+Figure 26. Sync in progress; wait for a result.  1 Sync now starts the attempt. 2 Progress message and spinner.
+Figure 27. Example success message with survey and photo counts.  1 Read the server-confirmed upload count. 2 Synced filter for follow-up.
+Figure 28. Example failure reason; work remains saved locally.  1 Failure reason. 2 Retry after restoring internet. 3 Attention record remains visible.
+
+14. Fix validation errors
+A red field message tells you what needs correction. Scroll through Details and every S/E row, complete the named field, and submit again. Typical checks require transformer code and capacity, inspector names, a complete S/E pair, date, group and waypoint IDs, equipment type, pole class and height, and at least one conductor for every row. Check number formats and do not remove meaningful leading zeroes. The app will keep the draft on the phone while you correct it.
+
+Figure 29. Required conductor, equipment, and pole values are highlighted.  1 Select at least one conductor. 2 Choose equipment type. 3 Complete pole class and height.
+
+15. Fix camera and permission problems
+If Android displays a camera or photo-access prompt, allow access for the camera or photo app named in the prompt. If access was denied, open Android Settings, find that named app under Apps and Permissions, and allow camera or photo access; then return to the survey and try again. On some phones, camera and gallery access use separate system apps. Confirm the image preview appears before leaving the observation. Never attach a photo to the wrong row.
+
+Figure 30. The photo controls remain available from the observation.  1 Use Take photo after granting camera access. 2 Choose image if you already have a photo.
+Figure 31. The phone camera opens for capture. The exact permission prompt depends on Android and device settings.  1 Camera shutter. If Android first shows a permission prompt, allow access while using the app.
+
+16. Fix GPS, internet, and synchronization problems
+For a missing or mismatched waypoint, compare the row ID with the separate GPS/GPX record; the app cannot read coordinates itself. For no internet, move to reliable Wi-Fi or mobile data and retry Sync now. If the failure reason says sign-in is required, sign in again with the assigned account. For a server or upload error, keep the phone copy, note the exact message, and contact the field lead. Do not create duplicate surveys or delete local work while a retry is pending.
+
+Figure 32. Match the row identifier to the external GPS record.  1 Waypoint ID only; coordinates are recorded separately.
+Figure 33. A failed sync reports the reason and keeps pending work local.  1 Read the reason. 2 Restore the connection and retry. 3 Pending survey stays on the phone.
+
+17. Field checklist and safe working practices
+Before leaving each transformer, confirm the feeder and transformer code, each required S/E pair, the row date and group, waypoint IDs, conductors, equipment and pole details, consumer values, meter/reference digits, and photo attachments. Save often. At the end of the day, connect to the internet, submit completed forms, tap Sync now, and confirm the surveys and photos appear under Synced. Keep the app installed until all work is confirmed. Ask your field lead for help if a feeder, permission, or server issue remains.
+
+Figure 34. Home is the starting point for reviewing local work and sync status.  1 Check sync message. 2 Review filters. 3 Open New survey only when starting another record.

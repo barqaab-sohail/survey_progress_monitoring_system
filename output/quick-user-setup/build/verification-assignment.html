@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8">
+    <meta name="theme-color" content="#0b1f3a">
+    <link rel="manifest" href="http://localhost/manifest.webmanifest">
+    <title>User Assignments &middot; Training Project</title>
+    <link rel="icon" type="image/png" href="http://localhost/branding/barqaab-favicon.png">
+    <link rel="apple-touch-icon" href="http://localhost/branding/barqaab-favicon.png">
+    <link rel="stylesheet" href="http://localhost/css/app.css?v=20261009-mdb-sidebar-fixed">
+    <link rel="stylesheet" href="http://localhost/css/user-assignments.css?v=1">
+</head>
+<body>
+<div class="shell">
+    <header class="topbar">
+        <a class="brand" href="http://localhost">
+            <span class="brand-mark brand-logo-mark"><img src="http://localhost/branding/barqaab-favicon.png" alt=""></span>
+            <span class="brand-copy"><strong>Training Project</strong><small>Survey · MDB · Verification</small></span>
+        </a>
+                <button class="btn btn-sm logout-btn nav-toggle" type="button" aria-label="Open navigation" onclick="document.querySelector('.sidebar').classList.toggle('open')">Menu</button>
+        <div class="user-area">
+            <a href="http://localhost/profile" aria-label="My Profile"><span class="user-avatar user-avatar-initials" role="img" aria-label="Guide Administrator" style="width:40px;height:40px">G</span>
+</a>
+            <div class="user-meta"><strong>Guide Administrator</strong><small>Super Admin</small></div>
+            <form method="POST" action="http://localhost/logout"><input type="hidden" name="_token" value="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8" autocomplete="off"><button class="btn btn-sm logout-btn" type="submit">Sign out</button></form>
+        </div>
+    </header>
+    <div class="workspace">
+        <aside class="sidebar" id="primary-navigation">
+            <a class="nav-link " href="http://localhost/profile">My Profile</a>
+                        <a class="nav-link " href="http://localhost">Overview Dashboard</a>
+                            <a class="nav-link " href="http://localhost/gpx-calculator">GPX Length &amp; KMZ Export</a>
+                                        <a class="nav-link " href="http://localhost/mdb-workflow">MDB Creation &amp; Validation</a>
+                                        <a class="nav-link " href="http://localhost/mdb-workflow/offline-mdb">JSON to MDB</a>                                        <a class="nav-link " href="http://localhost/mdb-workflow/offline-synergee">JSON to SynerGEE</a>                                        <a class="nav-link " href="http://localhost/survey-progress">Automatic Survey Progress</a>
+                <a class="nav-link " href="http://localhost/field-surveys">Mobile Field Surveys</a>
+                                        <div class="nav-label">Survey</div>
+                                <a class="nav-link " href="http://localhost/survey">My Survey Entries</a>
+                <a class="nav-link " href="http://localhost/survey/returned">Returned Entries</a>
+                <a class="nav-link " href="http://localhost/team-work">Survey Task Assignments</a>                                        <a class="nav-link " href="http://localhost/team-work/workflow">Workflow Task Assignments</a>
+                                        <div class="nav-label">MDB workflow</div>
+                <a class="nav-link " href="http://localhost/verification">Verify Survey Entries</a>
+                <a class="nav-link " href="http://localhost/mdb/create">Add Daily MDB</a>
+                <a class="nav-link " href="http://localhost/mdb">MDB History</a>
+                <a class="nav-link " href="http://localhost/mdb/returned">Returned MDB Entries</a>
+                                        <a class="nav-link " href="http://localhost/field-survey-test">Android Survey Web Test</a>
+                <a class="nav-link " href="http://localhost/mdb-builder">Create Transformer MDB</a>
+                                        <div class="nav-label">Reference data</div>
+                <a class="nav-link " href="http://localhost/transformer-gis">Transformer GIS Data</a>
+                                        <div class="nav-label">Control centre</div>
+                <a class="nav-link" href="http://localhost/admin">Filament Administration</a>
+                                        <div class="nav-label">MDB verification</div>
+                <a class="nav-link " href="http://localhost/mdb-verification">Verify MDB Files</a>
+                <a class="nav-link " href="http://localhost/mdb-verification/history">MDB Review History</a>
+                                        <div class="nav-label">Administration</div>
+                <a class="nav-link " href="http://localhost/admin/engineering">Engineering Configuration</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/master-data">Master Data & Import</a>
+                <a class="nav-link active" href="http://localhost/legacy-admin/assignments">User Assignments</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/teams">Teams & Assignments</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/users">Users</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/organizations">Organizations</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/audit-log">Audit Log</a>
+                                        <div class="nav-label">Reporting</div>
+                <a class="nav-link " href="http://localhost/reports">Progress Reports</a>
+                    </aside>
+        <main class="main">
+                                                <div class="page-head assignment-page-head"><div><h1>User Assignments</h1><p>Select a user to see their work and assign tasks in one place.</p></div>
+    <a class="btn btn-secondary" href="http://localhost/legacy-admin/teams">Manage teams</a>
+</div>
+<div class="assignment-hub" data-assignment-hub>
+<section class="card">
+    <h2>1. Select a user</h2>
+    <form method="get" action="http://localhost/legacy-admin/assignments" class="assignment-fields">
+        <div class="field"><label for="user-search">Find user</label><input id="user-search" type="search" placeholder="Search by name, email or role" data-filter-select="assignment-user" autocomplete="off"></div>
+        <div class="field assignment-grow"><label for="assignment-user">User</label><select id="assignment-user" name="user_id" required>
+            <option value="">Choose a user</option>
+                            <option value="2" >Ali Surveyor · ali.survey@example.com · Surveyor · surveyor</option>
+                            <option value="1" >Guide Administrator · admin@example.com · Super Admin · super admin</option>
+                            <option value="4" selected>Nadia Verifier · nadia.verify@example.com · Data Verifier · survey data verifier</option>
+                            <option value="3" >Sara Entry · sara.entry@example.com · Data Entry Operator · survey data entry operator</option>
+                    </select></div>
+        <button class="btn" type="submit">View assignments</button>
+    </form>
+    <p class="muted" data-user-search-status role="status"></p>
+            <div class="assignment-user-summary"><strong>Nadia Verifier</strong><span>nadia.verify@example.com</span>
+            <span class="status">Active</span>
+            <span>survey data verifier</span>
+        </div>
+    </section>
+<section class="card" id="assignment-history">
+    <div class="assignment-section-head"><div><h2>All assignments <span class="assignment-count">2</span></h2>
+        <p class="muted">Direct tasks and shared allocations, including completed and historical records. Batch statuses show the current workflow stage.</p></div>
+        <a class="btn" href="#assign-tasks">Assign tasks</a>    </div>
+    <div class="assignment-types">
+        <a class="assignment-chip" href="http://localhost/legacy-admin/assignments?user_id=4&amp;type=feeder_pool&amp;task_type=verification#assignment-history">Shared Survey Feeders <strong>1</strong></a><a class="assignment-chip" href="http://localhost/legacy-admin/assignments?user_id=4&amp;type=survey_team&amp;task_type=verification#assignment-history">Survey Team Membership <strong>1</strong></a>    </div>
+    <form method="get" action="http://localhost/legacy-admin/assignments#assignment-history" class="assignment-fields assignment-filters">
+        <input type="hidden" name="user_id" value="4"><input type="hidden" name="task_type" value="verification">
+        <div class="field"><label for="history-search">Search assignments</label><input id="history-search" name="search" value="" maxlength="100" placeholder="Feeder, team or batch number"></div>
+        <div class="field"><label for="history-type">Type</label><select id="history-type" name="type"><option value="">All types</option><option value="mobile" >Mobile App Survey</option><option value="entry" >Data Entry</option><option value="verification" >Data Verification</option><option value="mdb" >MDB Creation</option><option value="survey_team" >Survey Team Membership</option><option value="mdb_team" >MDB Team Membership</option><option value="processing_team" >Processing Team Membership</option><option value="feeder_pool" >Shared Survey Feeders</option><option value="processing" >MDB Processing</option></select></div>
+        <div class="field"><label for="history-status">Status</label><select id="history-status" name="status"><option value="">All statuses</option><option  value="active">Active</option></select></div>
+        <div class="field"><label for="history-project">Project</label><select id="history-project" name="project_id"><option value="">All projects</option><option value="1" >Training Project</option></select></div>
+        <button class="btn btn-secondary" type="submit">Apply filters</button><a href="http://localhost/legacy-admin/assignments?user_id=4&amp;task_type=verification#assignment-history">Clear</a>
+    </form>
+    <div class="assignment-table-wrap"><table class="table assignment-table"><thead><tr><th>Assignment</th><th>Type / allocation</th><th>Status</th><th>Record date / deadline</th><th>Action</th></tr></thead><tbody>
+            <tr><td><strong>01</strong>
+                        <div class="muted">Survey Team 01</div><div class="muted">Training Project</div></td>
+            <td>Survey Team Membership<div class="muted">Team membership</div></td>
+            <td><span class="status">Active</span></td>
+            <td>2026-10-31<div class="muted">Due: Not set</div></td>
+            <td><span class="muted">—</span></td></tr>
+            <tr><td><strong>000407</strong>
+                        <div class="muted">Survey Team 01</div><div class="muted">Training Project</div></td>
+            <td>Shared Survey Feeders<div class="muted">Shared through survey team</div></td>
+            <td><span class="status">Active</span></td>
+            <td>2026-10-30<div class="muted">Due: Not set</div></td>
+            <td><span class="muted">—</span></td></tr>
+        </tbody></table></div>
+    <div class="assignment-pagination"></div>
+    <p class="muted">Workflow record dates refer to batch creation; previous-owner dates refer to audit events. Shared work belongs to a team or organization. Previous workflow owners appear where an audit record exists.</p>
+</section>
+<section class="card" id="assign-tasks">
+    <h2>2. Assign tasks to Nadia Verifier</h2>
+    <form method="get" action="http://localhost/legacy-admin/assignments#assign-tasks" class="assignment-fields" id="task-kind-form">
+        <input type="hidden" name="user_id" value="4">
+        <div class="field assignment-grow"><label for="task-kind">Assignment type</label><select id="task-kind" name="task_type"><option value="mobile"  disabled>Mobile App Survey — existing role or membership required</option><option value="entry"  disabled>Data Entry — existing role or membership required</option><option value="verification" selected >Data Verification</option><option value="mdb"  disabled>MDB Creation — existing role or membership required</option><option value="survey_team"  >Survey Team Membership</option><option value="mdb_team"  disabled>MDB Team Membership — existing role or membership required</option><option value="feeder_pool"  >Shared Survey Feeders</option></select></div>
+        <button class="btn btn-secondary" type="submit">Choose type</button>
+    </form>
+        <form method="get" action="http://localhost/legacy-admin/assignments#assign-tasks" id="task-finder" class="assignment-fields assignment-filters" data-options-url="http://localhost/legacy-admin/assignments/options">
+        <input type="hidden" name="user_id" value="4"><input type="hidden" name="task_type" value="verification">
+                <div class="field assignment-grow"><label for="task-search">Find tasks</label><input id="task-search" type="search" name="task_search" maxlength="100" value="" placeholder="Search feeder, team or batch number"></div>
+        <div class="field"><label for="task-project">Project</label><select id="task-project" name="task_project"><option value="">All projects</option><option value="1" selected>Training Project</option></select></div>
+        <button class="btn btn-secondary" type="submit">Find tasks</button>
+    </form>
+            <p class="assignment-notice">Only batches ready for this stage appear. Select an existing owner's batch to reassign it with a reason.</p>    <form method="post" action="http://localhost/legacy-admin/assignments" id="assign-form" data-user-name="Nadia Verifier" data-task-label="Data Verification" data-task-type="verification">
+        <input type="hidden" name="_token" value="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8" autocomplete="off"><input type="hidden" name="user_id" value="4"><input type="hidden" name="task_type" value="verification">
+        <input type="hidden" name="survey_team_id" value="1" id="assign-team">
+        <div class="assignment-selection-head"><strong id="selected-count" role="status" aria-live="polite">Select tasks below (maximum 50)</strong>
+            <button class="btn btn-secondary" type="button" id="select-visible">Select available on this page</button>
+            <button class="btn btn-secondary" type="button" id="clear-selected">Clear selection</button>
+        </div>
+        <div id="selection-summary" class="muted" aria-live="polite"></div><div id="selected-hidden"></div>
+        <div id="task-results" class="assignment-choices" aria-busy="false">
+                        <label class="assignment-choice "><input type="checkbox" name="task_ids[]" value="1" data-choice data-label="Batch #1 · 000407" data-owner="0" >
+                <span><strong>Batch #1 · 000407</strong><small>Training Project · awaiting verification · Current owner: Unassigned</small><small></small></span>
+                <input type="hidden" name="expected_assignees[1]" value="0">            </label>
+                    </div>
+        <p id="task-feedback" role="status" aria-live="polite"></p>
+        <div class="assignment-choice-pages">
+            <button type="button" class="btn btn-secondary" id="choices-prev" disabled>Previous tasks</button>
+            <span id="choices-page">Page 1</span>
+            <button type="button" class="btn btn-secondary" id="choices-next" disabled>Next tasks</button>
+            <noscript><p>Enable JavaScript to search across pages and review your selection. Use the existing assignment screens if JavaScript is unavailable.</p></noscript>
+        </div>
+        <div class="assignment-fields">
+                    </div>
+        <div class="field"><label for="assignment-reason">Reason (required when replacing an owner)</label><textarea id="assignment-reason" name="reason" rows="2" maxlength="1000"></textarea></div>
+        <label class="assignment-check"><input type="checkbox" name="replace_existing" value="1"> I authorize replacing the current owners of selected batches.</label>                <label class="assignment-check"><input type="checkbox" name="confirmed" value="1" required> I have checked the user, assignment type and selected tasks.</label>
+        <button type="submit" class="btn" id="review-assignments">Review and assign</button>
+    </form>
+    </section>
+<dialog id="assignment-review" class="assignment-dialog"><h2>Confirm assignment</h2><p id="review-summary"></p><p id="review-details" class="muted"></p><div class="assignment-fields"><button type="button" class="btn btn-secondary" data-close-dialog>Go back</button><button type="button" class="btn" id="confirm-assignment">Confirm and save</button></div></dialog>
+<dialog id="reassign-dialog" class="assignment-dialog"><h2>Reassign pending survey task</h2><p id="reassign-label"></p><p class="muted">The existing assignment remains in history. Started or completed work retains its owner.</p>
+    <form method="post" action="http://localhost/legacy-admin/assignments" id="reassign-form"><input type="hidden" name="_token" value="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8" autocomplete="off">        <input type="hidden" name="task_type" value="mobile_reassign"><input type="hidden" name="assignment_id"><input type="hidden" name="expected_owner">
+        <div class="field"><label for="reassign-user-search">Find replacement user</label><input id="reassign-user-search" type="search" data-filter-select="reassign-user"></div>
+        <div class="field"><label for="reassign-user">New owner (same team)</label><select id="reassign-user" name="user_id" required><option value="">Loading eligible users…</option></select></div>
+        <div class="field"><label for="reassign-reason">Reason</label><textarea id="reassign-reason" name="reason" required minlength="3" maxlength="1000"></textarea></div>
+        <label class="assignment-check"><input type="checkbox" name="confirmed" value="1" required> Confirm transfer to the selected user.</label>
+        <p id="reassign-feedback" role="status"></p><div class="assignment-fields"><button type="button" class="btn btn-secondary" data-close-dialog>Cancel</button><button type="submit" class="btn">Confirm reassignment</button></div>
+    </form>
+</dialog>
+</div>
+            <footer><a href="http://localhost/privacy-policy">Privacy Policy</a> | <a href="http://localhost/terms-of-service">Terms of Service</a></footer>
+        </main>
+    </div>
+</div>
+<script>
+document.addEventListener('click', e => { if (innerWidth <= 820 && !e.target.closest('.sidebar') && !e.target.closest('.nav-toggle')) document.querySelector('.sidebar')?.classList.remove('open'); });
+const sidebarCollapseButton = document.getElementById('sidebar-collapse-toggle');
+const workspace = document.querySelector('.workspace');
+const sidebarPreferenceKey = 'mdb-workflow:sidebar-collapsed';
+function setSidebarCollapsed(collapsed, remember = true) {
+    if (!sidebarCollapseButton || !workspace) return;
+    const desktopCollapsed = collapsed && innerWidth > 820;
+    workspace.classList.toggle('sidebar-collapsed', desktopCollapsed);
+    sidebarCollapseButton.textContent = desktopCollapsed ? 'Show menu' : 'Hide menu';
+    sidebarCollapseButton.title = desktopCollapsed ? 'Show left navigation' : 'Hide left navigation and use the full page width';
+    sidebarCollapseButton.setAttribute('aria-expanded', String(!desktopCollapsed));
+    if (remember) try { localStorage.setItem(sidebarPreferenceKey, collapsed ? '1' : '0'); } catch (_) {}
+}
+if (sidebarCollapseButton) {
+    let collapsed = false;
+    try { collapsed = localStorage.getItem(sidebarPreferenceKey) === '1'; } catch (_) {}
+    setSidebarCollapsed(collapsed, false);
+    sidebarCollapseButton.addEventListener('click', () => setSidebarCollapsed(!workspace.classList.contains('sidebar-collapsed')));
+    window.addEventListener('resize', () => {
+        let preferred = false;
+        try { preferred = localStorage.getItem(sidebarPreferenceKey) === '1'; } catch (_) {}
+        setSidebarCollapsed(preferred, false);
+    });
+}
+if ('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('http://localhost/service-worker.js'));
+</script>
+<script type="module" src="http://localhost/js/user-assignments.js?v=1"></script></body>
+</html>

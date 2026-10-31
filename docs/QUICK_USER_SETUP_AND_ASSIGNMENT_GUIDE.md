@@ -1,0 +1,187 @@
+# Quick User Setup and Assignment Guide
+
+HAZECO • Administrator guide • 31 October 2026
+
+Website: https://hazeco.barqaab.pk • Mobile app: HAZECO Field Survey
+
+## 1. Before you start
+
+Have an active Super Admin login, an active project, Survey Team and feeder in that project. Mobile users need the approved HAZECO Field Survey Android app and internet for sign-in/sync. For PDF work, have the matching source PDF and GPX.
+
+Check the project and Active Survey Team. Screens use training examples; use your approved records.
+
+☐ Administrator access, project, team and feeder are ready.
+
+## 2. Create and activate the three accounts
+
+Menu: Administration → Users
+
+1. In Add user, enter Name, unique Email, Role, Password and Confirm password. Use 10 or more password characters. Organization may remain None; phone and photo are optional.
+
+Person
+
+Exact Role to select
+
+Mobile collector
+
+Surveyor
+
+PDF entry person
+
+Data Entry Operator
+
+Independent reviewer
+
+Data Verifier
+
+2. Click Create user. Repeat for all three people. New accounts are Active. In Existing users, check Role and Status: Active; click Save user if you change either.
+
+Add user: enter the person’s details, select the exact Role, then click Create user.
+
+3. Give each person their own login securely. The app does not automatically send an account invitation. Keep entry and verification as different people/accounts.
+
+☐ Surveyor, Data Entry Operator and Data Verifier accounts exist and are Active.
+
+## 3. Add users to the correct Survey Team
+
+Menu: Administration → Teams & Assignments
+
+1. In Assign member, select Team type: Survey, the Team, and the User. Leave Survey team leader unchecked. Click Assign member. Repeat for all three people.
+
+Choose Survey and the correct Survey Team.
+
+Choose the user, then click Assign member.
+
+2. In Assign survey feeders, select the Survey team, Feeder selection: One feeder, Feeder and Start date → Assign feeders. Check Active feeder assignments. Dates must cover work and later sync.
+
+Membership does not assign a personal mobile task or PDF batch. Mobile teams need a clear team number, for example code 01 and name Survey Team 01.
+
+☐ All three users belong to the Survey Team; its feeder allocation is current.
+
+## 4. Assign a personal Mobile App Survey task
+
+Menu: Administration → User Assignments
+
+1. Find/select the Surveyor and click View assignments. Check All assignments first to avoid giving duplicate work.
+
+2. Choose Assignment type: Mobile App Survey → Choose type. Select Survey team and Project. Find tasks, then tick the intended feeder. Enter Start date, optional Deadline and Priority.
+
+Mobile App Survey: select the team/project and tick the feeder for this surveyor.
+
+3. Tick “I have checked the user, assignment type and selected tasks.” Click Review and assign, then Confirm and save. Check the success message and the new Direct task.
+
+Check the person, type and selection before Confirm and save.
+
+Leave overlapping work unchecked for ordinary allocation. Do not create another task merely because the first one is not yet downloaded.
+
+☐ The surveyor has a personal Mobile App Survey task, not just team membership.
+
+## 4. Mobile app: download, collect and sync
+
+1. While online, the Surveyor opens HAZECO Field Survey. Enter Email and Password, then tap Sign in and download assignments. Later, use the cloud Download assignments icon on Home.
+
+2. Tap New survey. Choose the assigned Survey Team and feeder, then Create survey. Complete the actual transformer Details, S/E rows and required evidence.
+
+3. Use Save draft when unfinished. When complete, tap Submit survey → Submit. On Home, tap Sync now and keep the app open until uploads finish.
+
+4. Check that the form shows Synced and each photo shows Uploaded. The administrator checks receipt in Mobile Field Surveys.
+
+A draft stays on the phone. Do not uninstall or clear app data before uploads finish. Synced is server receipt, not independent verification or proof that the entire feeder is complete.
+
+Existing Android training screen: Download assignments, Sync now and Synced. Example status only.
+
+☐ The surveyor can see the feeder, and the administrator can see the synced submission.
+
+## 5. Start the separate PDF/GPX workflow
+
+Mobile uploads do not automatically create a PDF/GPX batch. Obtain the matching source files separately.
+
+Menu: MDB Creation & Validation → Create survey batch
+
+1. Select Survey PDF and GPS GPX. Choose Project, Survey team, Feeder and Survey date. Click Create batch & start entry. Record the batch number and wait for both files to show Ready.
+
+Choose the matching source PDF and GPX.
+
+Check scope/date, then Create batch & start entry.
+
+☐ A numbered PDF batch exists and both sources are Ready.
+
+## 5. PDF: assign entry, submit, then assign verification
+
+Admin menu: Workflow Task Assignments
+
+2. Find the batch. Select Stage: Data entry and Assignee: the Data Entry Operator. Add a note if useful, then click Assign. Confirm Entry shows that person.
+
+For the Draft batch, choose Data entry and Sara Entry, then Assign. Replace the example with your operator.
+
+3. The operator signs in to the website: MDB Creation & Validation → PDF Data Entry → Open batch. Save each transformer header and its complete S/E pairs against the PDF and GPX. Fill required values such as Inspector, Location and Service category. Check that the saved records appear.
+
+4. When all transformers are complete, open Review saved survey. In Survey workflow, click Submit for Verification. Resolve any validation errors. The whole batch becomes Pending Verification and entry is locked.
+
+Operator review: Submit for Verification sends the whole batch for review. Saving rows alone does not submit it.
+
+Alternative: Submit Transformer checks one transformer; continue if more remain. After the last one, “No, go to MDB Creation & Validation” submits the batch.
+
+5. The administrator returns to Workflow Task Assignments. For that Pending Verification batch, select Stage: Verification and Assignee: a different Data Verifier. Click Assign.
+
+Once Pending Verification, choose Verification and Nadia Verifier, then Assign.
+
+Anyone who entered the batch must not verify it. Changing the entry owner later does not remove this restriction. Assign existing batches; do not delete/recreate work to transfer it.
+
+☐ Entry is submitted; a different person is the verification assignee.
+
+## 5. PDF: approve or return for correction
+
+Verifier menu: MDB Creation & Validation → Data Verification → Open batch
+
+6. Check every transformer and its entered values against the source PDF/GPX. Review ticks are aids; they do not approve the batch. In Survey workflow, choose the correct decision below.
+
+Approve accepts the batch. For entry changes, write clear comments and choose Return for Correction.
+
+Approve → Verified. Return for Correction → operator edits the same batch, saves and resubmits; verifier reviews it again. Identify the transformer, PDF page and error in return comments. Flag Discrepancy keeps entry locked; it is not a return.
+
+This decision applies to the whole PDF batch. Mobile uploads do not use this approval path; corrections to already synced mobile work need administrator/support assistance.
+
+☐ The PDF batch is Verified, or returned with clear correction instructions.
+
+## 6. Final sign-in and assignment checklist
+
+☐ Surveyor signs in on Android, downloads and sees the intended feeder.
+
+☐ Entry operator signs in on the website and sees the assigned Draft/Returned batch.
+
+☐ Different verifier signs in and sees the submitted batch in Data Verification.
+
+☐ Admin checks Workflow Task Assignments for both owners and the correct batch status.
+
+Current assignees confirms the two different owners on the same batch.
+
+## 7. Common Problems
+
+Problem
+
+Quick fix
+
+Cannot sign in
+
+Check Email, Password and Active status. Admin can reset the password in Users.
+
+Feeder/task missing
+
+Check role, team, current dates and personal assignment. Download assignments on the phone; clear website filters.
+
+PDF/GPX stays Queued
+
+Ask hosting/support to check source processing. Avoid creating duplicate batches.
+
+Verifier/batch unavailable
+
+Submit first. Choose Data Verifier and a person who did not enter that batch.
+
+Returned batch still locked
+
+Use Return for Correction when entry changes are needed. Flag Discrepancy alone keeps it pending.
+
+☐ Each person has tested their own login and can see the correct work.
+
+HAZECO  /  ADMINISTRATOR QUICK GUIDE

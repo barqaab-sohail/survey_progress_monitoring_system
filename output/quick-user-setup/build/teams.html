@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8">
+    <meta name="theme-color" content="#0b1f3a">
+    <link rel="manifest" href="http://localhost/manifest.webmanifest">
+    <title>Teams &amp; Assignments &middot; Training Project</title>
+    <link rel="icon" type="image/png" href="http://localhost/branding/barqaab-favicon.png">
+    <link rel="apple-touch-icon" href="http://localhost/branding/barqaab-favicon.png">
+    <link rel="stylesheet" href="http://localhost/css/app.css?v=20261009-mdb-sidebar-fixed">
+    </head>
+<body>
+<div class="shell">
+    <header class="topbar">
+        <a class="brand" href="http://localhost">
+            <span class="brand-mark brand-logo-mark"><img src="http://localhost/branding/barqaab-favicon.png" alt=""></span>
+            <span class="brand-copy"><strong>Training Project</strong><small>Survey · MDB · Verification</small></span>
+        </a>
+                <button class="btn btn-sm logout-btn nav-toggle" type="button" aria-label="Open navigation" onclick="document.querySelector('.sidebar').classList.toggle('open')">Menu</button>
+        <div class="user-area">
+            <a href="http://localhost/profile" aria-label="My Profile"><span class="user-avatar user-avatar-initials" role="img" aria-label="Guide Administrator" style="width:40px;height:40px">G</span>
+</a>
+            <div class="user-meta"><strong>Guide Administrator</strong><small>Super Admin</small></div>
+            <form method="POST" action="http://localhost/logout"><input type="hidden" name="_token" value="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8" autocomplete="off"><button class="btn btn-sm logout-btn" type="submit">Sign out</button></form>
+        </div>
+    </header>
+    <div class="workspace">
+        <aside class="sidebar" id="primary-navigation">
+            <a class="nav-link " href="http://localhost/profile">My Profile</a>
+                        <a class="nav-link " href="http://localhost">Overview Dashboard</a>
+                            <a class="nav-link " href="http://localhost/gpx-calculator">GPX Length &amp; KMZ Export</a>
+                                        <a class="nav-link " href="http://localhost/mdb-workflow">MDB Creation &amp; Validation</a>
+                                        <a class="nav-link " href="http://localhost/mdb-workflow/offline-mdb">JSON to MDB</a>                                        <a class="nav-link " href="http://localhost/mdb-workflow/offline-synergee">JSON to SynerGEE</a>                                        <a class="nav-link " href="http://localhost/survey-progress">Automatic Survey Progress</a>
+                <a class="nav-link " href="http://localhost/field-surveys">Mobile Field Surveys</a>
+                                        <div class="nav-label">Survey</div>
+                                <a class="nav-link " href="http://localhost/survey">My Survey Entries</a>
+                <a class="nav-link " href="http://localhost/survey/returned">Returned Entries</a>
+                <a class="nav-link " href="http://localhost/team-work">Survey Task Assignments</a>                                        <a class="nav-link " href="http://localhost/team-work/workflow">Workflow Task Assignments</a>
+                                        <div class="nav-label">MDB workflow</div>
+                <a class="nav-link " href="http://localhost/verification">Verify Survey Entries</a>
+                <a class="nav-link " href="http://localhost/mdb/create">Add Daily MDB</a>
+                <a class="nav-link " href="http://localhost/mdb">MDB History</a>
+                <a class="nav-link " href="http://localhost/mdb/returned">Returned MDB Entries</a>
+                                        <a class="nav-link " href="http://localhost/field-survey-test">Android Survey Web Test</a>
+                <a class="nav-link " href="http://localhost/mdb-builder">Create Transformer MDB</a>
+                                        <div class="nav-label">Reference data</div>
+                <a class="nav-link " href="http://localhost/transformer-gis">Transformer GIS Data</a>
+                                        <div class="nav-label">Control centre</div>
+                <a class="nav-link" href="http://localhost/admin">Filament Administration</a>
+                                        <div class="nav-label">MDB verification</div>
+                <a class="nav-link " href="http://localhost/mdb-verification">Verify MDB Files</a>
+                <a class="nav-link " href="http://localhost/mdb-verification/history">MDB Review History</a>
+                                        <div class="nav-label">Administration</div>
+                <a class="nav-link " href="http://localhost/admin/engineering">Engineering Configuration</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/master-data">Master Data & Import</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/assignments">User Assignments</a>
+                <a class="nav-link active" href="http://localhost/legacy-admin/teams">Teams & Assignments</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/users">Users</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/organizations">Organizations</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/audit-log">Audit Log</a>
+                                        <div class="nav-label">Reporting</div>
+                <a class="nav-link " href="http://localhost/reports">Progress Reports</a>
+                    </aside>
+        <main class="main">
+                                                
+<div class="page-head">
+    <div>
+        <h1>Teams & Assignments</h1>
+        <p>Maintain delivery teams, membership, and survey feeder allocation.</p>
+    </div>
+    <a class="btn" href="http://localhost/legacy-admin/assignments">User Assignments</a>
+</div>
+
+<section class="grid period-grid">
+        <div class="card">
+        <h2>Survey Teams</h2>
+                <div style="padding:10px 0;border-top:1px solid var(--line)">
+            <strong>01 | Survey Team 01</strong>
+            <div class="muted">Training Project | Active</div>
+            <div class="muted">Ali Surveyor, Sara Entry, Nadia Verifier</div>
+        </div>
+            </div>
+        <div class="card">
+        <h2>MDB Teams</h2>
+                <p class="muted">None configured.</p>
+            </div>
+    </section>
+
+<div class="grid period-grid">
+    <form class="card" method="POST" action="http://localhost/legacy-admin/teams">
+        <input type="hidden" name="_token" value="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8" autocomplete="off">        <h2>Create team</h2>
+        <div class="field">
+            <label for="new-team-type">Type</label>
+            <select name="type" id="new-team-type">
+                <option value="survey" selected>Survey</option>
+                <option value="mdb" >MDB</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="new-team-project">Project</label>
+            <select name="project_id" id="new-team-project" required>
+                                <option value="1" >Training Project</option>
+                            </select>
+        </div>
+        <div class="field"><label for="new-team-code">Code</label><input id="new-team-code" name="code" value="" required></div>
+        <div class="field"><label for="new-team-name">Name</label><input id="new-team-name" name="name" value="" required></div>
+        <button class="btn btn-primary" style="margin-top:14px">Create team</button>
+    </form>
+
+    <form class="card" method="POST" action="http://localhost/legacy-admin/teams/member">
+        <input type="hidden" name="_token" value="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8" autocomplete="off">        <h2>Assign member</h2>
+        <div class="field">
+            <label for="member-type">Team type</label>
+            <select name="type" id="member-type">
+                <option value="survey" selected>Survey</option>
+                <option value="mdb" >MDB</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="member-team">Team</label>
+            <select name="team_id" id="member-team" required>
+                <option value="">Select a team</option>
+                                <optgroup label="Survey teams">
+                                        <option value="1" data-team-type="survey" >01 | Survey Team 01 | Training Project</option>
+                                    </optgroup>
+                                <optgroup label="MDB teams">
+                                    </optgroup>
+                            </select>
+            <small>Choose a team matching the selected type. Only active teams in active projects are available.</small>
+        </div>
+        <div class="field">
+            <label for="member-user">User</label>
+            <select name="user_id" id="member-user" required>
+                <option value="">Select a user</option>
+                                <option value="2" data-team-types="survey" >Ali Surveyor | Surveyor</option>
+                                <option value="1" data-team-types="survey mdb" >Guide Administrator | Super Admin</option>
+                                <option value="4" data-team-types="survey" >Nadia Verifier | Data Verifier</option>
+                                <option value="3" data-team-types="survey" >Sara Entry | Data Entry Operator</option>
+                            </select>
+            <small>Only active users with a role allowed in the selected team type are available.</small>
+        </div>
+        <label style="display:flex;gap:8px;margin-top:12px">
+            <input type="checkbox" id="member-leader" name="is_leader" value="1" >
+            Survey team leader
+        </label>
+        <button class="btn btn-primary" style="margin-top:14px">Assign member</button>
+    </form>
+
+    <form class="card" method="POST" action="http://localhost/legacy-admin/teams/assign-feeder">
+        <input type="hidden" name="_token" value="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8" autocomplete="off">        <h2>Assign survey feeders</h2>
+        <div class="field">
+            <label for="assignment-team">Survey team</label>
+            <select name="survey_team_id" id="assignment-team" required>
+                <option value="">Select a survey team</option>
+                                <option value="1" data-project-id="1" >01 | Survey Team 01 | Training Project | Ali Surveyor, Sara Entry, Nadia Verifier</option>
+                            </select>
+            <small>Team allocations provide the shared feeder pool. Use Team Work to assign individual surveyors, deadlines, priority, and instructions.</small>
+        </div>
+        <div class="field">
+            <label for="assignment-scope">Feeder selection</label>
+            <select name="assignment_scope" id="assignment-scope">
+                <option value="single" selected>One feeder</option>
+                <option value="all" >All active feeders in this project</option>
+            </select>
+            <small>The all-feeders option assigns the current active feeders in the selected team's project. Run it again after importing new feeders.</small>
+        </div>
+        <div class="field" id="assignment-feeder-field">
+            <label for="assignment-feeder">Feeder</label>
+            <select name="feeder_id" id="assignment-feeder">
+                <option value="">Select a feeder</option>
+                                <option value="1" data-project-id="1" >000407 | Training Feeder</option>
+                            </select>
+            <small>Required for one feeder. The all-feeders option uses the selected team and ignores this field.</small>
+        </div>
+        <div class="field"><label for="assignment-start">Start date</label><input id="assignment-start" type="date" name="start_date" value="2026-10-31" required></div>
+        <div class="field"><label for="assignment-end">End date</label><input id="assignment-end" type="date" name="end_date" value=""></div>
+        <div class="field"><label for="assignment-remarks">Remarks</label><input id="assignment-remarks" name="remarks" value=""></div>
+        <button class="btn btn-primary" style="margin-top:14px">Assign feeders</button>
+    </form>
+</div>
+
+<div class="section-title"><h2>Active feeder assignments</h2></div>
+<div class="card table-wrap">
+    <table class="table">
+        <thead><tr><th>Feeder</th><th>Survey team</th><th>Start</th><th>End</th></tr></thead>
+        <tbody>
+                <tr>
+            <td>000407</td>
+            <td>Survey Team 01</td>
+            <td>30 Oct 2026</td>
+            <td>Open</td>
+        </tr>
+                </tbody>
+    </table>
+</div>
+            <footer><a href="http://localhost/privacy-policy">Privacy Policy</a> | <a href="http://localhost/terms-of-service">Terms of Service</a></footer>
+        </main>
+    </div>
+</div>
+<script>
+document.addEventListener('click', e => { if (innerWidth <= 820 && !e.target.closest('.sidebar') && !e.target.closest('.nav-toggle')) document.querySelector('.sidebar')?.classList.remove('open'); });
+const sidebarCollapseButton = document.getElementById('sidebar-collapse-toggle');
+const workspace = document.querySelector('.workspace');
+const sidebarPreferenceKey = 'mdb-workflow:sidebar-collapsed';
+function setSidebarCollapsed(collapsed, remember = true) {
+    if (!sidebarCollapseButton || !workspace) return;
+    const desktopCollapsed = collapsed && innerWidth > 820;
+    workspace.classList.toggle('sidebar-collapsed', desktopCollapsed);
+    sidebarCollapseButton.textContent = desktopCollapsed ? 'Show menu' : 'Hide menu';
+    sidebarCollapseButton.title = desktopCollapsed ? 'Show left navigation' : 'Hide left navigation and use the full page width';
+    sidebarCollapseButton.setAttribute('aria-expanded', String(!desktopCollapsed));
+    if (remember) try { localStorage.setItem(sidebarPreferenceKey, collapsed ? '1' : '0'); } catch (_) {}
+}
+if (sidebarCollapseButton) {
+    let collapsed = false;
+    try { collapsed = localStorage.getItem(sidebarPreferenceKey) === '1'; } catch (_) {}
+    setSidebarCollapsed(collapsed, false);
+    sidebarCollapseButton.addEventListener('click', () => setSidebarCollapsed(!workspace.classList.contains('sidebar-collapsed')));
+    window.addEventListener('resize', () => {
+        let preferred = false;
+        try { preferred = localStorage.getItem(sidebarPreferenceKey) === '1'; } catch (_) {}
+        setSidebarCollapsed(preferred, false);
+    });
+}
+if ('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('http://localhost/service-worker.js'));
+</script>
+<script>
+(() => {
+    const memberType = document.getElementById('member-type');
+    const memberTeam = document.getElementById('member-team');
+    const memberLeader = document.getElementById('member-leader');
+    const memberUser = document.getElementById('member-user');
+    const teamOptions = Array.from(memberTeam.querySelectorAll('option[data-team-type]'));
+    const userOptions = Array.from(memberUser.querySelectorAll('option[data-team-types]'));
+
+    function updateMemberTeams(changedType = false) {
+        const selected = changedType ? '' : memberTeam.value;
+        const options = teamOptions.filter(option => option.dataset.teamType === memberType.value);
+        memberTeam.replaceChildren(new Option('Select a team', ''));
+        options.forEach(option => memberTeam.appendChild(option.cloneNode(true)));
+        memberTeam.value = options.some(option => option.value === selected) ? selected : '';
+        const selectedUser = memberUser.value;
+        const eligibleUsers = userOptions.filter(option => option.dataset.teamTypes.split(' ').includes(memberType.value));
+        memberUser.replaceChildren(new Option('Select a user', ''));
+        eligibleUsers.forEach(option => memberUser.appendChild(option.cloneNode(true)));
+        memberUser.value = eligibleUsers.some(option => option.value === selectedUser) ? selectedUser : '';
+        memberLeader.disabled = memberType.value !== 'survey';
+    }
+
+    memberType.addEventListener('change', () => updateMemberTeams(true));
+    updateMemberTeams();
+
+    const assignmentTeam = document.getElementById('assignment-team');
+    const assignmentScope = document.getElementById('assignment-scope');
+    const assignmentFeeder = document.getElementById('assignment-feeder');
+    const feederField = document.getElementById('assignment-feeder-field');
+    const feederOptions = Array.from(assignmentFeeder.querySelectorAll('option[data-project-id]'));
+
+    function updateFeederOptions() {
+        const selected = assignmentFeeder.value;
+        const projectId = assignmentTeam.selectedOptions[0]?.dataset.projectId;
+        const options = feederOptions.filter(option => !projectId || option.dataset.projectId === projectId);
+        assignmentFeeder.replaceChildren(new Option('Select a feeder', ''));
+        options.forEach(option => assignmentFeeder.appendChild(option.cloneNode(true)));
+        assignmentFeeder.value = options.some(option => option.value === selected) ? selected : '';
+    }
+
+    function updateAssignmentScope() {
+        const allFeeders = assignmentScope.value === 'all';
+        assignmentFeeder.required = !allFeeders;
+        assignmentFeeder.disabled = allFeeders;
+        feederField.hidden = allFeeders;
+    }
+
+    assignmentTeam.addEventListener('change', updateFeederOptions);
+    assignmentScope.addEventListener('change', updateAssignmentScope);
+    updateFeederOptions();
+    updateAssignmentScope();
+})();
+</script>
+</body>
+</html>

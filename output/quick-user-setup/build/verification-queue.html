@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8">
+    <meta name="theme-color" content="#0b1f3a">
+    <link rel="manifest" href="http://localhost/manifest.webmanifest">
+    <title>MDB creation and verification &middot; Training Project</title>
+    <link rel="icon" type="image/png" href="http://localhost/branding/barqaab-favicon.png">
+    <link rel="apple-touch-icon" href="http://localhost/branding/barqaab-favicon.png">
+    <link rel="stylesheet" href="http://localhost/css/app.css?v=20261009-mdb-sidebar-fixed">
+    <link rel="stylesheet" href="http://localhost/css/mdb-workflow.css"></head>
+<body>
+<div class="shell">
+    <header class="topbar">
+        <a class="brand" href="http://localhost">
+            <span class="brand-mark brand-logo-mark"><img src="http://localhost/branding/barqaab-favicon.png" alt=""></span>
+            <span class="brand-copy"><strong>Training Project</strong><small>Survey · MDB · Verification</small></span>
+        </a>
+                    <button class="btn btn-sm logout-btn sidebar-collapse-toggle" id="sidebar-collapse-toggle" type="button" aria-controls="primary-navigation" aria-expanded="true" title="Hide left navigation and use the full page width">Hide menu</button>
+                <button class="btn btn-sm logout-btn nav-toggle" type="button" aria-label="Open navigation" onclick="document.querySelector('.sidebar').classList.toggle('open')">Menu</button>
+        <div class="user-area">
+            <a href="http://localhost/profile" aria-label="My Profile"><span class="user-avatar user-avatar-initials" role="img" aria-label="Nadia Verifier" style="width:40px;height:40px">N</span>
+</a>
+            <div class="user-meta"><strong>Nadia Verifier</strong><small>Data Verifier</small></div>
+            <form method="POST" action="http://localhost/logout"><input type="hidden" name="_token" value="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8" autocomplete="off"><button class="btn btn-sm logout-btn" type="submit">Sign out</button></form>
+        </div>
+    </header>
+    <div class="workspace">
+        <aside class="sidebar" id="primary-navigation">
+            <a class="nav-link " href="http://localhost/profile">My Profile</a>
+                        <a class="nav-link " href="http://localhost">Overview Dashboard</a>
+                                        <a class="nav-link active" href="http://localhost/mdb-workflow">MDB Creation &amp; Validation</a>
+                                                                                                                                                                                                                            </aside>
+        <main class="main">
+                                                <div class="mdb-workflow">
+    <nav class="mdb-tabs">
+                                <a href="http://localhost/mdb-workflow?queue=survey_verification"  aria-current="page" >Data Verification (1)</a>                            </nav>
+    <div class="actions"><a class="btn btn-light" href="http://localhost/mdb-workflow">All batches / legacy records</a> </div>
+    <div class="page-head"><div><span class="eyebrow">Survey to engineering model</span><h1>MDB creation and verification</h1><p>Track source surveys, verified transformer networks, MDB outputs and SynerGEE acceptance.</p></div>
+            </div>
+    <p class="mdb-note">Draft: 0 &middot; Pending Verification: 1 &middot; Returned for Correction: 0 &middot; Verified: 0 &middot; MDB Created: 0. Counts cover batches you can access.</p>
+    <div class="mdb-metrics">
+                <article class="card mdb-metric"><span class="kpi-label">Surveyed transformers</span><strong class="kpi-value">1</strong><small>Transformer records</small></article>
+                <article class="card mdb-metric"><span class="kpi-label">Sections entered</span><strong class="kpi-value">1</strong><small>Survey sections</small></article>
+                <article class="card mdb-metric"><span class="kpi-label">Validation errors</span><strong class="kpi-value">32</strong><small>Current data revisions</small></article>
+                <article class="card mdb-metric"><span class="kpi-label">Awaiting verification</span><strong class="kpi-value">1</strong><small>Survey batches</small></article>
+                <article class="card mdb-metric"><span class="kpi-label">Approved transformers</span><strong class="kpi-value">0</strong><small>Transformer records</small></article>
+                <article class="card mdb-metric"><span class="kpi-label">Export failures</span><strong class="kpi-value">0</strong><small>Export jobs</small></article>
+                <article class="card mdb-metric"><span class="kpi-label">MDB generated</span><strong class="kpi-value">0</strong><small>Current readable MDB outputs</small></article>
+                <article class="card mdb-metric"><span class="kpi-label">Analysis accepted</span><strong class="kpi-value">0</strong><small>Currently accepted MDB outputs</small></article>
+            </div>
+    <p class="mdb-note">Transformer record counts and export output counts are separate. Open a batch to see validation errors linked to the source PDF page and row.</p>
+    <section class="card"><h2>Find survey batches</h2><form method="GET" action="http://localhost/mdb-workflow" class="mdb-fields mdb-filter-grid">
+        <input type="hidden" name="queue" value="survey_verification"><label>Project<select name="project_id"><option value="">All projects</option><option value="1" >TRAINING | Training Project</option></select></label>
+        <label>Feeder<select name="feeder_id"><option value="">All feeders</option><option value="1" >000407 | Training Feeder</option></select></label>
+        <label>Transformer reference<input name="transformer" value="" maxlength="100" placeholder="Code or name"></label>
+        <label>Survey team<select name="survey_team_id"><option value="">All teams</option><option value="1" >01 | Survey Team 01</option></select></label>
+        <label>Survey date from<input name="date_from" type="date" value=""></label>
+        <label>Survey date to<input name="date_to" type="date" value=""></label>
+        <label>Workflow status<select name="status"><option value="">All statuses</option><option value="draft" >Draft</option><option value="awaiting_verification" >Pending Verification</option><option value="returned" >Returned for Correction</option><option value="approved" >Verified</option><option value="mdb_created" >MDB Created</option></select></label>
+        <div class="actions mdb-filter-actions"><button class="btn btn-primary">Apply filters</button><a class="btn btn-light" href="http://localhost/mdb-workflow">Reset</a></div>
+    </form></section>
+    <section class="card table-wrap"><table class="table mdb-batch-table"><thead><tr><th>Survey batch</th><th>Project / feeder</th><th>Team / date</th><th>Transformer records</th><th>Source files</th><th>Workflow</th><th></th></tr></thead><tbody>
+                <tr><td><strong>Batch #1</strong><small>Revision 1</small></td><td>Training Project<small>000407 | Training Feeder</small><small class="mdb-transformer-reference"><strong>Transformer No.:</strong> TX-1001</small></td><td>Survey Team 01<small>31 Oct 2026</small></td><td>1</td><td>2</td><td><span class="status mdb-status-awaiting_verification">Pending Verification</span></td><td class="mdb-batch-actions"><a class="btn btn-sm btn-light" href="http://localhost/mdb-workflow/1/review">Open batch</a></td></tr>
+            </tbody></table></section>
+    
+    </div>
+            <footer><a href="http://localhost/privacy-policy">Privacy Policy</a> | <a href="http://localhost/terms-of-service">Terms of Service</a></footer>
+        </main>
+    </div>
+</div>
+<script>
+document.addEventListener('click', e => { if (innerWidth <= 820 && !e.target.closest('.sidebar') && !e.target.closest('.nav-toggle')) document.querySelector('.sidebar')?.classList.remove('open'); });
+const sidebarCollapseButton = document.getElementById('sidebar-collapse-toggle');
+const workspace = document.querySelector('.workspace');
+const sidebarPreferenceKey = 'mdb-workflow:sidebar-collapsed';
+function setSidebarCollapsed(collapsed, remember = true) {
+    if (!sidebarCollapseButton || !workspace) return;
+    const desktopCollapsed = collapsed && innerWidth > 820;
+    workspace.classList.toggle('sidebar-collapsed', desktopCollapsed);
+    sidebarCollapseButton.textContent = desktopCollapsed ? 'Show menu' : 'Hide menu';
+    sidebarCollapseButton.title = desktopCollapsed ? 'Show left navigation' : 'Hide left navigation and use the full page width';
+    sidebarCollapseButton.setAttribute('aria-expanded', String(!desktopCollapsed));
+    if (remember) try { localStorage.setItem(sidebarPreferenceKey, collapsed ? '1' : '0'); } catch (_) {}
+}
+if (sidebarCollapseButton) {
+    let collapsed = false;
+    try { collapsed = localStorage.getItem(sidebarPreferenceKey) === '1'; } catch (_) {}
+    setSidebarCollapsed(collapsed, false);
+    sidebarCollapseButton.addEventListener('click', () => setSidebarCollapsed(!workspace.classList.contains('sidebar-collapsed')));
+    window.addEventListener('resize', () => {
+        let preferred = false;
+        try { preferred = localStorage.getItem(sidebarPreferenceKey) === '1'; } catch (_) {}
+        setSidebarCollapsed(preferred, false);
+    });
+}
+if ('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('http://localhost/service-worker.js'));
+</script>
+<script src="http://localhost/js/mdb-workflow.js" defer></script></body>
+</html>

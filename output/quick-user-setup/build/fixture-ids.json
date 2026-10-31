@@ -1,0 +1,11 @@
+{
+    "admin": 1,
+    "surveyor": 2,
+    "entry": 3,
+    "verifier": 4,
+    "project": 1,
+    "team": 1,
+    "feeder": 1,
+    "batch": 1,
+    "pdf": 1
+}

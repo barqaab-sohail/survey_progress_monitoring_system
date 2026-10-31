@@ -1,0 +1,32 @@
+﻿[
+    {
+        "Path":  "D:\\xampp\\htdocs\\survey_progress_monitoring_system\\docs\\USER_CREATION_AND_WORK_ALLOCATION.md",
+        "OriginalHash":  "8293BB6FB8FAD6EEB0BF3FD21AFDADEE46F1F649818E0726C35337CC8A45316E",
+        "CurrentHash":  "8293BB6FB8FAD6EEB0BF3FD21AFDADEE46F1F649818E0726C35337CC8A45316E",
+        "Unchanged":  true
+    },
+    {
+        "Path":  "D:\\xampp\\htdocs\\survey_progress_monitoring_system\\docs\\USER_ASSIGNMENTS.md",
+        "OriginalHash":  "EC19AB5FD577A5F09FE49A494C62D7668BCA744F927D43DF61651FE66FC69A44",
+        "CurrentHash":  "EC19AB5FD577A5F09FE49A494C62D7668BCA744F927D43DF61651FE66FC69A44",
+        "Unchanged":  true
+    },
+    {
+        "Path":  "D:\\xampp\\htdocs\\survey_progress_monitoring_system\\output\\manual\\HAZECO_Field_Survey_User_Manual.docx",
+        "OriginalHash":  "28831FFF9F0D686CDBE80930877AB492DAC8FA0B5D8CE2C4CD8427F6A4C916BB",
+        "CurrentHash":  "28831FFF9F0D686CDBE80930877AB492DAC8FA0B5D8CE2C4CD8427F6A4C916BB",
+        "Unchanged":  true
+    },
+    {
+        "Path":  "D:\\xampp\\htdocs\\survey_progress_monitoring_system\\output\\pdf\\HAZECO_Field_Survey_User_Manual.pdf",
+        "OriginalHash":  "3060E5D8255C05B75E2677913AEF9FC444ABE8DA5E750CFEF1016BFB41ECC431",
+        "CurrentHash":  "3060E5D8255C05B75E2677913AEF9FC444ABE8DA5E750CFEF1016BFB41ECC431",
+        "Unchanged":  true
+    },
+    {
+        "Path":  "D:\\xampp\\htdocs\\survey_progress_monitoring_system\\output\\pdf\\HAZECO_Field_Survey_User_Manual_Revised.pdf",
+        "OriginalHash":  "8DB09492C7A6CC713996AD20DFA731A36001D119505D360884CD27E212201FF6",
+        "CurrentHash":  "8DB09492C7A6CC713996AD20DFA731A36001D119505D360884CD27E212201FF6",
+        "Unchanged":  true
+    }
+]

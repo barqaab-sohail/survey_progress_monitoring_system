@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8">
+    <meta name="theme-color" content="#0b1f3a">
+    <link rel="manifest" href="http://localhost/manifest.webmanifest">
+    <title>Users &middot; Training Project</title>
+    <link rel="icon" type="image/png" href="http://localhost/branding/barqaab-favicon.png">
+    <link rel="apple-touch-icon" href="http://localhost/branding/barqaab-favicon.png">
+    <link rel="stylesheet" href="http://localhost/css/app.css?v=20261009-mdb-sidebar-fixed">
+    </head>
+<body>
+<div class="shell">
+    <header class="topbar">
+        <a class="brand" href="http://localhost">
+            <span class="brand-mark brand-logo-mark"><img src="http://localhost/branding/barqaab-favicon.png" alt=""></span>
+            <span class="brand-copy"><strong>Training Project</strong><small>Survey · MDB · Verification</small></span>
+        </a>
+                <button class="btn btn-sm logout-btn nav-toggle" type="button" aria-label="Open navigation" onclick="document.querySelector('.sidebar').classList.toggle('open')">Menu</button>
+        <div class="user-area">
+            <a href="http://localhost/profile" aria-label="My Profile"><span class="user-avatar user-avatar-initials" role="img" aria-label="Guide Administrator" style="width:40px;height:40px">G</span>
+</a>
+            <div class="user-meta"><strong>Guide Administrator</strong><small>Super Admin</small></div>
+            <form method="POST" action="http://localhost/logout"><input type="hidden" name="_token" value="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8" autocomplete="off"><button class="btn btn-sm logout-btn" type="submit">Sign out</button></form>
+        </div>
+    </header>
+    <div class="workspace">
+        <aside class="sidebar" id="primary-navigation">
+            <a class="nav-link " href="http://localhost/profile">My Profile</a>
+                        <a class="nav-link " href="http://localhost">Overview Dashboard</a>
+                            <a class="nav-link " href="http://localhost/gpx-calculator">GPX Length &amp; KMZ Export</a>
+                                        <a class="nav-link " href="http://localhost/mdb-workflow">MDB Creation &amp; Validation</a>
+                                        <a class="nav-link " href="http://localhost/mdb-workflow/offline-mdb">JSON to MDB</a>                                        <a class="nav-link " href="http://localhost/mdb-workflow/offline-synergee">JSON to SynerGEE</a>                                        <a class="nav-link " href="http://localhost/survey-progress">Automatic Survey Progress</a>
+                <a class="nav-link " href="http://localhost/field-surveys">Mobile Field Surveys</a>
+                                        <div class="nav-label">Survey</div>
+                                <a class="nav-link " href="http://localhost/survey">My Survey Entries</a>
+                <a class="nav-link " href="http://localhost/survey/returned">Returned Entries</a>
+                <a class="nav-link " href="http://localhost/team-work">Survey Task Assignments</a>                                        <a class="nav-link " href="http://localhost/team-work/workflow">Workflow Task Assignments</a>
+                                        <div class="nav-label">MDB workflow</div>
+                <a class="nav-link " href="http://localhost/verification">Verify Survey Entries</a>
+                <a class="nav-link " href="http://localhost/mdb/create">Add Daily MDB</a>
+                <a class="nav-link " href="http://localhost/mdb">MDB History</a>
+                <a class="nav-link " href="http://localhost/mdb/returned">Returned MDB Entries</a>
+                                        <a class="nav-link " href="http://localhost/field-survey-test">Android Survey Web Test</a>
+                <a class="nav-link " href="http://localhost/mdb-builder">Create Transformer MDB</a>
+                                        <div class="nav-label">Reference data</div>
+                <a class="nav-link " href="http://localhost/transformer-gis">Transformer GIS Data</a>
+                                        <div class="nav-label">Control centre</div>
+                <a class="nav-link" href="http://localhost/admin">Filament Administration</a>
+                                        <div class="nav-label">MDB verification</div>
+                <a class="nav-link " href="http://localhost/mdb-verification">Verify MDB Files</a>
+                <a class="nav-link " href="http://localhost/mdb-verification/history">MDB Review History</a>
+                                        <div class="nav-label">Administration</div>
+                <a class="nav-link " href="http://localhost/admin/engineering">Engineering Configuration</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/master-data">Master Data & Import</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/assignments">User Assignments</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/teams">Teams & Assignments</a>
+                <a class="nav-link active" href="http://localhost/legacy-admin/users">Users</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/organizations">Organizations</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/audit-log">Audit Log</a>
+                                        <div class="nav-label">Reporting</div>
+                <a class="nav-link " href="http://localhost/reports">Progress Reports</a>
+                    </aside>
+        <main class="main">
+                                                <div class="page-head"><div><h1>User Management</h1><p>Create accounts, assign roles and organizations, or deactivate access. Third-Party Processor requires an active third-party organization; there is no Internal Processor role.</p></div></div>
+<form class="card" method="POST" enctype="multipart/form-data" action="http://localhost/legacy-admin/users"><input type="hidden" name="_token" value="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8" autocomplete="off"><h2 style="margin-top:0">Add user</h2><div class="form-grid"><div class="field"><label>Name</label><input name="name" required></div><div class="field"><label>Email</label><input type="email" name="email" required></div><div class="field"><label>Organization</label><select name="organization_id"><option value="">None</option></select></div><div class="field"><label>Role</label><select name="role"><option value="super_admin">Super Admin</option><option value="project_manager">Project Manager</option><option value="survey_team_leader">Survey Team Leader</option><option value="surveyor">Surveyor</option><option value="data_entry_verification_team_leader">Data Entry &amp; Verification Team Leader</option><option value="mdb_creation_team_leader">MDB Creation Team Leader</option><option value="mdb_team_user">MDB User</option><option value="mdb_processing_user">Third-Party Processor</option><option value="management_viewer">Management / Viewer</option><option value="survey_data_entry_operator">Data Entry Operator</option><option value="survey_data_verifier">Data Verifier</option><option value="mdb_generator">MDB Creator</option><option value="mdb_verifier">MDB Verifier</option></select></div><div class="field"><label>Profile picture</label><input type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG or WebP; maximum 2 MB, 4096 ? 4096 pixels.</small></div><div class="field"><label>Phone</label><input name="phone"></div><div class="field"><label>Password</label><input type="password" name="password" minlength="10" required></div><div class="field"><label>Confirm password</label><input type="password" name="password_confirmation" minlength="10" required></div></div><div class="form-footer"><span></span><button class="btn btn-primary">Create user</button></div></form>
+<div class="section-title"><h2>Existing users</h2></div><form class="card" method="POST" enctype="multipart/form-data" action="http://localhost/legacy-admin/users/2"><input type="hidden" name="_token" value="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8" autocomplete="off"> <input type="hidden" name="_method" value="PUT"><span class="user-avatar user-avatar-initials" role="img" aria-label="Ali Surveyor" style="width:64px;height:64px">A</span>
+<div class="form-grid"><div class="field"><label>Name</label><input name="name" value="Ali Surveyor" required></div><div class="field"><label>Email</label><input type="email" name="email" value="ali.survey@example.com" required></div><div class="field"><label>Organization</label><select name="organization_id"><option value="">None</option></select></div><div class="field"><label>Role</label><select name="role"><option value="super_admin" >Super Admin</option><option value="project_manager" >Project Manager</option><option value="survey_team_leader" >Survey Team Leader</option><option value="surveyor" selected>Surveyor</option><option value="data_entry_verification_team_leader" >Data Entry &amp; Verification Team Leader</option><option value="mdb_creation_team_leader" >MDB Creation Team Leader</option><option value="mdb_team_user" >MDB User</option><option value="mdb_processing_user" >Third-Party Processor</option><option value="management_viewer" >Management / Viewer</option><option value="survey_data_entry_operator" >Data Entry Operator</option><option value="survey_data_verifier" >Data Verifier</option><option value="mdb_generator" >MDB Creator</option><option value="mdb_verifier" >MDB Verifier</option></select></div><div class="field"><label>Status</label><select name="status"><option value="active" selected>Active</option><option value="inactive" >Inactive</option></select></div><div class="field"><label>Profile picture</label><input type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG or WebP; maximum 2 MB, 4096 ? 4096 pixels.</small></div><div class="field"><label>Phone</label><input name="phone" value=""></div><div class="field"><label>New password <small>(leave blank to keep)</small></label><input type="password" name="password" minlength="10"></div><div class="field"><label>Confirm new password</label><input type="password" name="password_confirmation" minlength="10"></div></div><div class="form-footer"><span></span><button class="btn btn-light">Save user</button></div></form><form class="card" method="POST" enctype="multipart/form-data" action="http://localhost/legacy-admin/users/1"><input type="hidden" name="_token" value="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8" autocomplete="off"> <input type="hidden" name="_method" value="PUT"><span class="user-avatar user-avatar-initials" role="img" aria-label="Guide Administrator" style="width:64px;height:64px">G</span>
+<div class="form-grid"><div class="field"><label>Name</label><input name="name" value="Guide Administrator" required></div><div class="field"><label>Email</label><input type="email" name="email" value="admin@example.com" required></div><div class="field"><label>Organization</label><select name="organization_id"><option value="">None</option></select></div><div class="field"><label>Role</label><select name="role"><option value="super_admin" selected>Super Admin</option><option value="project_manager" >Project Manager</option><option value="survey_team_leader" >Survey Team Leader</option><option value="surveyor" >Surveyor</option><option value="data_entry_verification_team_leader" >Data Entry &amp; Verification Team Leader</option><option value="mdb_creation_team_leader" >MDB Creation Team Leader</option><option value="mdb_team_user" >MDB User</option><option value="mdb_processing_user" >Third-Party Processor</option><option value="management_viewer" >Management / Viewer</option><option value="survey_data_entry_operator" >Data Entry Operator</option><option value="survey_data_verifier" >Data Verifier</option><option value="mdb_generator" >MDB Creator</option><option value="mdb_verifier" >MDB Verifier</option></select></div><div class="field"><label>Status</label><select name="status"><option value="active" selected>Active</option><option value="inactive" >Inactive</option></select></div><div class="field"><label>Profile picture</label><input type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG or WebP; maximum 2 MB, 4096 ? 4096 pixels.</small></div><div class="field"><label>Phone</label><input name="phone" value=""></div><div class="field"><label>New password <small>(leave blank to keep)</small></label><input type="password" name="password" minlength="10"></div><div class="field"><label>Confirm new password</label><input type="password" name="password_confirmation" minlength="10"></div></div><div class="form-footer"><span></span><button class="btn btn-light">Save user</button></div></form><form class="card" method="POST" enctype="multipart/form-data" action="http://localhost/legacy-admin/users/4"><input type="hidden" name="_token" value="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8" autocomplete="off"> <input type="hidden" name="_method" value="PUT"><span class="user-avatar user-avatar-initials" role="img" aria-label="Nadia Verifier" style="width:64px;height:64px">N</span>
+<div class="form-grid"><div class="field"><label>Name</label><input name="name" value="Nadia Verifier" required></div><div class="field"><label>Email</label><input type="email" name="email" value="nadia.verify@example.com" required></div><div class="field"><label>Organization</label><select name="organization_id"><option value="">None</option></select></div><div class="field"><label>Role</label><select name="role"><option value="super_admin" >Super Admin</option><option value="project_manager" >Project Manager</option><option value="survey_team_leader" >Survey Team Leader</option><option value="surveyor" >Surveyor</option><option value="data_entry_verification_team_leader" >Data Entry &amp; Verification Team Leader</option><option value="mdb_creation_team_leader" >MDB Creation Team Leader</option><option value="mdb_team_user" >MDB User</option><option value="mdb_processing_user" >Third-Party Processor</option><option value="management_viewer" >Management / Viewer</option><option value="survey_data_entry_operator" >Data Entry Operator</option><option value="survey_data_verifier" selected>Data Verifier</option><option value="mdb_generator" >MDB Creator</option><option value="mdb_verifier" >MDB Verifier</option></select></div><div class="field"><label>Status</label><select name="status"><option value="active" selected>Active</option><option value="inactive" >Inactive</option></select></div><div class="field"><label>Profile picture</label><input type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG or WebP; maximum 2 MB, 4096 ? 4096 pixels.</small></div><div class="field"><label>Phone</label><input name="phone" value=""></div><div class="field"><label>New password <small>(leave blank to keep)</small></label><input type="password" name="password" minlength="10"></div><div class="field"><label>Confirm new password</label><input type="password" name="password_confirmation" minlength="10"></div></div><div class="form-footer"><span></span><button class="btn btn-light">Save user</button></div></form><form class="card" method="POST" enctype="multipart/form-data" action="http://localhost/legacy-admin/users/3"><input type="hidden" name="_token" value="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8" autocomplete="off"> <input type="hidden" name="_method" value="PUT"><span class="user-avatar user-avatar-initials" role="img" aria-label="Sara Entry" style="width:64px;height:64px">S</span>
+<div class="form-grid"><div class="field"><label>Name</label><input name="name" value="Sara Entry" required></div><div class="field"><label>Email</label><input type="email" name="email" value="sara.entry@example.com" required></div><div class="field"><label>Organization</label><select name="organization_id"><option value="">None</option></select></div><div class="field"><label>Role</label><select name="role"><option value="super_admin" >Super Admin</option><option value="project_manager" >Project Manager</option><option value="survey_team_leader" >Survey Team Leader</option><option value="surveyor" >Surveyor</option><option value="data_entry_verification_team_leader" >Data Entry &amp; Verification Team Leader</option><option value="mdb_creation_team_leader" >MDB Creation Team Leader</option><option value="mdb_team_user" >MDB User</option><option value="mdb_processing_user" >Third-Party Processor</option><option value="management_viewer" >Management / Viewer</option><option value="survey_data_entry_operator" selected>Data Entry Operator</option><option value="survey_data_verifier" >Data Verifier</option><option value="mdb_generator" >MDB Creator</option><option value="mdb_verifier" >MDB Verifier</option></select></div><div class="field"><label>Status</label><select name="status"><option value="active" selected>Active</option><option value="inactive" >Inactive</option></select></div><div class="field"><label>Profile picture</label><input type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG or WebP; maximum 2 MB, 4096 ? 4096 pixels.</small></div><div class="field"><label>Phone</label><input name="phone" value=""></div><div class="field"><label>New password <small>(leave blank to keep)</small></label><input type="password" name="password" minlength="10"></div><div class="field"><label>Confirm new password</label><input type="password" name="password_confirmation" minlength="10"></div></div><div class="form-footer"><span></span><button class="btn btn-light">Save user</button></div></form>            <footer><a href="http://localhost/privacy-policy">Privacy Policy</a> | <a href="http://localhost/terms-of-service">Terms of Service</a></footer>
+        </main>
+    </div>
+</div>
+<script>
+document.addEventListener('click', e => { if (innerWidth <= 820 && !e.target.closest('.sidebar') && !e.target.closest('.nav-toggle')) document.querySelector('.sidebar')?.classList.remove('open'); });
+const sidebarCollapseButton = document.getElementById('sidebar-collapse-toggle');
+const workspace = document.querySelector('.workspace');
+const sidebarPreferenceKey = 'mdb-workflow:sidebar-collapsed';
+function setSidebarCollapsed(collapsed, remember = true) {
+    if (!sidebarCollapseButton || !workspace) return;
+    const desktopCollapsed = collapsed && innerWidth > 820;
+    workspace.classList.toggle('sidebar-collapsed', desktopCollapsed);
+    sidebarCollapseButton.textContent = desktopCollapsed ? 'Show menu' : 'Hide menu';
+    sidebarCollapseButton.title = desktopCollapsed ? 'Show left navigation' : 'Hide left navigation and use the full page width';
+    sidebarCollapseButton.setAttribute('aria-expanded', String(!desktopCollapsed));
+    if (remember) try { localStorage.setItem(sidebarPreferenceKey, collapsed ? '1' : '0'); } catch (_) {}
+}
+if (sidebarCollapseButton) {
+    let collapsed = false;
+    try { collapsed = localStorage.getItem(sidebarPreferenceKey) === '1'; } catch (_) {}
+    setSidebarCollapsed(collapsed, false);
+    sidebarCollapseButton.addEventListener('click', () => setSidebarCollapsed(!workspace.classList.contains('sidebar-collapsed')));
+    window.addEventListener('resize', () => {
+        let preferred = false;
+        try { preferred = localStorage.getItem(sidebarPreferenceKey) === '1'; } catch (_) {}
+        setSidebarCollapsed(preferred, false);
+    });
+}
+if ('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('http://localhost/service-worker.js'));
+</script>
+</body>
+</html>

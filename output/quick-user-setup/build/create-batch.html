@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8">
+    <meta name="theme-color" content="#0b1f3a">
+    <link rel="manifest" href="http://localhost/manifest.webmanifest">
+    <title>Create survey batch &middot; Training Project</title>
+    <link rel="icon" type="image/png" href="http://localhost/branding/barqaab-favicon.png">
+    <link rel="apple-touch-icon" href="http://localhost/branding/barqaab-favicon.png">
+    <link rel="stylesheet" href="http://localhost/css/app.css?v=20261009-mdb-sidebar-fixed">
+    <link rel="stylesheet" href="http://localhost/css/mdb-workflow.css"></head>
+<body>
+<div class="shell">
+    <header class="topbar">
+        <a class="brand" href="http://localhost">
+            <span class="brand-mark brand-logo-mark"><img src="http://localhost/branding/barqaab-favicon.png" alt=""></span>
+            <span class="brand-copy"><strong>Training Project</strong><small>Survey · MDB · Verification</small></span>
+        </a>
+                    <button class="btn btn-sm logout-btn sidebar-collapse-toggle" id="sidebar-collapse-toggle" type="button" aria-controls="primary-navigation" aria-expanded="true" title="Hide left navigation and use the full page width">Hide menu</button>
+                <button class="btn btn-sm logout-btn nav-toggle" type="button" aria-label="Open navigation" onclick="document.querySelector('.sidebar').classList.toggle('open')">Menu</button>
+        <div class="user-area">
+            <a href="http://localhost/profile" aria-label="My Profile"><span class="user-avatar user-avatar-initials" role="img" aria-label="Guide Administrator" style="width:40px;height:40px">G</span>
+</a>
+            <div class="user-meta"><strong>Guide Administrator</strong><small>Super Admin</small></div>
+            <form method="POST" action="http://localhost/logout"><input type="hidden" name="_token" value="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8" autocomplete="off"><button class="btn btn-sm logout-btn" type="submit">Sign out</button></form>
+        </div>
+    </header>
+    <div class="workspace">
+        <aside class="sidebar" id="primary-navigation">
+            <a class="nav-link " href="http://localhost/profile">My Profile</a>
+                        <a class="nav-link " href="http://localhost">Overview Dashboard</a>
+                            <a class="nav-link " href="http://localhost/gpx-calculator">GPX Length &amp; KMZ Export</a>
+                                        <a class="nav-link active" href="http://localhost/mdb-workflow">MDB Creation &amp; Validation</a>
+                                        <a class="nav-link " href="http://localhost/mdb-workflow/offline-mdb">JSON to MDB</a>                                        <a class="nav-link " href="http://localhost/mdb-workflow/offline-synergee">JSON to SynerGEE</a>                                        <a class="nav-link " href="http://localhost/survey-progress">Automatic Survey Progress</a>
+                <a class="nav-link " href="http://localhost/field-surveys">Mobile Field Surveys</a>
+                                        <div class="nav-label">Survey</div>
+                                <a class="nav-link " href="http://localhost/survey">My Survey Entries</a>
+                <a class="nav-link " href="http://localhost/survey/returned">Returned Entries</a>
+                <a class="nav-link " href="http://localhost/team-work">Survey Task Assignments</a>                                        <a class="nav-link " href="http://localhost/team-work/workflow">Workflow Task Assignments</a>
+                                        <div class="nav-label">MDB workflow</div>
+                <a class="nav-link " href="http://localhost/verification">Verify Survey Entries</a>
+                <a class="nav-link " href="http://localhost/mdb/create">Add Daily MDB</a>
+                <a class="nav-link " href="http://localhost/mdb">MDB History</a>
+                <a class="nav-link " href="http://localhost/mdb/returned">Returned MDB Entries</a>
+                                        <a class="nav-link " href="http://localhost/field-survey-test">Android Survey Web Test</a>
+                <a class="nav-link " href="http://localhost/mdb-builder">Create Transformer MDB</a>
+                                        <div class="nav-label">Reference data</div>
+                <a class="nav-link " href="http://localhost/transformer-gis">Transformer GIS Data</a>
+                                        <div class="nav-label">Control centre</div>
+                <a class="nav-link" href="http://localhost/admin">Filament Administration</a>
+                                        <div class="nav-label">MDB verification</div>
+                <a class="nav-link " href="http://localhost/mdb-verification">Verify MDB Files</a>
+                <a class="nav-link " href="http://localhost/mdb-verification/history">MDB Review History</a>
+                                        <div class="nav-label">Administration</div>
+                <a class="nav-link " href="http://localhost/admin/engineering">Engineering Configuration</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/master-data">Master Data & Import</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/assignments">User Assignments</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/teams">Teams & Assignments</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/users">Users</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/organizations">Organizations</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/audit-log">Audit Log</a>
+                                        <div class="nav-label">Reporting</div>
+                <a class="nav-link " href="http://localhost/reports">Progress Reports</a>
+                    </aside>
+        <main class="main">
+                                                <div class="mdb-workflow">
+    <div class="page-head"><div><h1>Create survey batch</h1><p>Group the survey's source files and transformer networks under one project, feeder and team.</p></div><a class="btn btn-light" href="http://localhost/mdb-workflow">All batches</a></div>
+        <form method="POST" action="http://localhost/mdb-workflow" enctype="multipart/form-data" class="card" data-batch-create data-drive-preview="http://localhost/mdb-workflow/drive-preview" data-can-choose-unassigned="1"><input type="hidden" name="_token" value="pZilKZ5Jf2HyGgYB110q3diog8m4tEMk0Xk7phT8" autocomplete="off">        <h2>1. Select the survey PDF</h2>
+        <div class="mdb-fields">
+        <div data-source-field="survey_pdf">
+        <label>Survey PDF<input name="survey_pdf" type="file" accept=".pdf" data-source-local required></label>
+                            </div>
+        <div data-source-field="gps_gpx">
+        <label>GPS GPX<input name="gps_gpx" type="file" accept=".gpx" data-source-local required></label>
+                            </div>
+    </div>
+<p class="mdb-note">Google Drive import needs administrator configuration. Local PDF and GPX uploads are available.</p>
+<noscript><p>Enable JavaScript to preview PDFs and import Drive links. Local uploads still work.</p></noscript>
+        <p data-create-status role="status" aria-live="polite"></p>
+        <div class="mdb-create-layout">
+            <section class="mdb-create-preview" aria-label="Survey PDF preview">
+                <p class="muted" data-preview-placeholder>Select a PDF above to view it here.</p>
+                <a class="btn btn-light" data-preview-open hidden target="_blank" rel="noopener">Open PDF in a new tab</a>
+                <iframe title="Survey PDF preview" data-create-pdf hidden></iframe>
+            </section>
+            <section><h2>2. Enter details from the PDF</h2>
+        <div class="mdb-fields">
+            <label>Project<select name="project_id" required data-mdb-project><option value="">Choose project</option><option value="1" >TRAINING | Training Project</option></select></label>
+            <label>Survey team<select name="survey_team_id" required data-mdb-project-dependent><option value="">Choose survey team</option><option value="1" data-project-id="1" >01 | Survey Team 01</option></select></label>
+            <label>Feeder<select name="feeder_id" required data-mdb-project-dependent data-mdb-feeder-dependent disabled><option value="">Choose a survey team first</option><option value="1" data-project-id="1" data-team-ids="1" >000407 | Training Feeder</option></select><small>Only active feeders assigned to the selected survey team are available.</small></label>
+            <label>Survey date<input type="date" name="survey_date" value="" required></label>
+
+        </div>
+        <p class="muted">Both files must finish processing before entry starts. Originals are kept privately while processing runs in the background.</p>
+        <button class="btn btn-primary">Create batch &amp; start entry</button>
+            </section>
+        </div>
+    </form>
+</div>
+            <footer><a href="http://localhost/privacy-policy">Privacy Policy</a> | <a href="http://localhost/terms-of-service">Terms of Service</a></footer>
+        </main>
+    </div>
+</div>
+<script>
+document.addEventListener('click', e => { if (innerWidth <= 820 && !e.target.closest('.sidebar') && !e.target.closest('.nav-toggle')) document.querySelector('.sidebar')?.classList.remove('open'); });
+const sidebarCollapseButton = document.getElementById('sidebar-collapse-toggle');
+const workspace = document.querySelector('.workspace');
+const sidebarPreferenceKey = 'mdb-workflow:sidebar-collapsed';
+function setSidebarCollapsed(collapsed, remember = true) {
+    if (!sidebarCollapseButton || !workspace) return;
+    const desktopCollapsed = collapsed && innerWidth > 820;
+    workspace.classList.toggle('sidebar-collapsed', desktopCollapsed);
+    sidebarCollapseButton.textContent = desktopCollapsed ? 'Show menu' : 'Hide menu';
+    sidebarCollapseButton.title = desktopCollapsed ? 'Show left navigation' : 'Hide left navigation and use the full page width';
+    sidebarCollapseButton.setAttribute('aria-expanded', String(!desktopCollapsed));
+    if (remember) try { localStorage.setItem(sidebarPreferenceKey, collapsed ? '1' : '0'); } catch (_) {}
+}
+if (sidebarCollapseButton) {
+    let collapsed = false;
+    try { collapsed = localStorage.getItem(sidebarPreferenceKey) === '1'; } catch (_) {}
+    setSidebarCollapsed(collapsed, false);
+    sidebarCollapseButton.addEventListener('click', () => setSidebarCollapsed(!workspace.classList.contains('sidebar-collapsed')));
+    window.addEventListener('resize', () => {
+        let preferred = false;
+        try { preferred = localStorage.getItem(sidebarPreferenceKey) === '1'; } catch (_) {}
+        setSidebarCollapsed(preferred, false);
+    });
+}
+if ('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('http://localhost/service-worker.js'));
+</script>
+<script src="http://localhost/js/mdb-workflow.js" defer></script><script src="http://localhost/js/mdb-batch-create.js" defer></script></body>
+</html>
