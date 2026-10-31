@@ -1,0 +1,198 @@
+﻿{
+    "date":  "2026-10-31",
+    "baseline_git_revision":  "55af3167786157d57ae2888156d6096e6393576f",
+    "mutation_database":  "SQLite :memory: only",
+    "production_access":  "Not available; no production commands or cleanup executed",
+    "targeted":  {
+                     "tests":  40,
+                     "assertions":  461,
+                     "failures":  0,
+                     "errors":  0
+                 },
+    "broader_checkpoint":  {
+                               "tests":  308,
+                               "assertions":  3488,
+                               "failures":  34,
+                               "errors":  0,
+                               "risky":  2
+                           },
+    "baseline_method":  "HEAD versions of AuditService, MdbOperatorEntryController and MdbWorkflowController loaded in place of modified classes for every failing test",
+    "baseline_reproduced_failures":  34,
+    "failures":  [
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_first_staged_header_accepts_optional_client_information_on_create_and_update",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 422."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_header_technical_failure_is_logged_safely_and_transaction_rolls_back",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [500] but received 422."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_header_valid_retry_succeeds_and_invalid_source_fields_are_identified",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Failed to find a validation error in the response for key: \u0027source_page\u0027\r"
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_header_pdf_location_is_required_validated_and_opens_the_selected_transformer_page",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Failed to find a validation error in the response for key: \u0027source_page\u0027\r"
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_new_header_uses_only_a_registered_transformer_from_its_feeder",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 422."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_manual_transformer_can_be_saved_and_duplicates_cannot_be_added",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 422."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_transformer_duplicates_are_blocked_across_batches_and_advanced_entry",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Failed to find a validation error in the response for key: \u0027code\u0027\r"
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_transformer_number_can_be_used_for_a_different_project",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 422."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_dedicated_survey_roles_have_separate_server_enforced_rights_with_team_scope",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 422."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_survey_review_and_submission_do_not_require_continuation_page_confirmation",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Session has unexpected errors: \r"
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_operator_can_review_draft_values_and_correct_them_before_submission",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 422."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_verifier_checks_persist_and_corrections_are_audited_and_invalidate_changed_values",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 422."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_creator_freezes_pdf_gpx_kmz_and_required_base_files_without_editing_approved_survey",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Failed to find a validation error in the response for key: \u0027generation_inputs\u0027\r"
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_custom_capacity_and_height_values_are_positive_and_survive_editing",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 422."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_continuation_inherits_omitted_components_and_manual_edits_clear_copy_provenance",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 422."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_continuation_and_header_corrections_keep_one_transformer_and_new_transformer_is_separate",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 422."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbOperatorEntryTest::test_complete_staged_correction_approval_generation_and_reverification_with_genuine_mdb",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Session has unexpected errors: \r"
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbVerificationWorkflowTest::test_default_accounts_include_only_third_party_processors",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Failed asserting that a row in the table [users] matches the attributes {"
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbWorkflowTest::test_automatic_drive_storage_keeps_sources_processable_and_private_after_local_cleanup",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [403] but received 200."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbWorkflowTest::test_stale_edits_do_not_create_sections_or_invalidate_a_current_revision",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Session missing error: revision"
+                     },
+                     {
+                         "test":  "Tests\\Feature\\MdbWorkflowTest::test_section_and_pv_corrections_preserve_raw_values_and_page_associations",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Session has unexpected errors: \r"
+                     },
+                     {
+                         "test":  "Tests\\Feature\\TeamAssignmentTest::test_member_and_bulk_assignment_make_all_project_feeders_available_for_survey_entry",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 302."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\TeamAssignmentTest::test_surveys_can_use_bulk_assigned_feeders_from_a_second_authorized_team",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 302."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\TeamAssignmentTest::test_survey_team_selection_cannot_access_another_users_team",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [403] but received 302."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\TeamAssignmentTest::test_inactive_older_membership_does_not_hide_an_active_survey_team",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 302."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\WorkflowTest::test_authentication_and_role_authorization_are_enforced",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 302."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\WorkflowTest::test_survey_form_explains_missing_feeder_assignments",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 302."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\WorkflowTest::test_assigned_imported_feeders_appear_with_baseline_guidance",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 302."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\WorkflowTest::test_survey_validation_preserves_all_entered_rows_and_fields",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [201, 301, 302, 303, 307, 308] but received 409."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\WorkflowTest::test_survey_business_validation_preserves_entered_values",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [201, 301, 302, 303, 307, 308] but received 409."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\WorkflowTest::test_survey_leader_dashboard_excludes_unassigned_feeders",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Failed asserting that \u0027\u003c!doctype html\u003e\\n"
+                     },
+                     {
+                         "test":  "Tests\\Feature\\WorkflowTest::test_survey_entry_is_editable_only_by_owner_before_verification",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Failed asserting that \u0027\u003c!doctype html\u003e\\n"
+                     },
+                     {
+                         "test":  "Tests\\Feature\\WorkflowTest::test_survey_edit_rejects_over_baseline_and_retains_input",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [201, 301, 302, 303, 307, 308] but received 409."
+                     },
+                     {
+                         "test":  "Tests\\Feature\\WorkflowTest::test_daily_forms_show_capacity_and_clear_only_successful_drafts",
+                         "reproduced_with_original_classes":  true,
+                         "assertion":  "Expected response status code [200] but received 302."
+                     }
+                 ],
+    "local_payload_fixture":  {
+                                  "fixture":  "1000 GPX points, 100 transformers, one location correction",
+                                  "before_bytes":  386670,
+                                  "after_bytes":  118
+                              }
+}

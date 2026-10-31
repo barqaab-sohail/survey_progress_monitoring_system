@@ -35,16 +35,18 @@ class MdbSurveyReviewController extends Controller
             $state = app(ReviewService::class)->state($locked, $transformer, $request->user()->id);
             $fields = collect($state['header']['fields'])->concat(collect($state['pairs'])->flatMap(fn ($pair)=>collect($pair['rows'])->flatMap(fn ($row)=>$row['fields'])))->keyBy('key');
             $checked = array_fill_keys($state['checked'], true);
+            $changedFields = [];
             foreach ($data['fields'] as $submitted) {
                 $field = $fields[$submitted['key']] ?? null;
                 if (! $field || ! hash_equals($field['hash'], $submitted['hash'])) throw ValidationException::withMessages(['fields'=>'This value changed or does not belong to this transformer. Refresh and check it again.']);
                 $key = ['batch_id'=>$locked->id,'transformer_id'=>$transformer->id,'reviewer_id'=>$request->user()->id,'field_key'=>$field['key']];
+                if (isset($checked[$field['key']]) !== (bool) $data['checked']) $changedFields[] = $field['key'];
                 if ($data['checked']) DB::table('mdb_review_checks')->updateOrInsert($key,['value_hash'=>$field['hash'],'created_at'=>now(),'updated_at'=>now()]);
                 else DB::table('mdb_review_checks')->where($key)->delete();
                 if ($data['checked']) $checked[$field['key']] = true;
                 else unset($checked[$field['key']]);
             }
-            app(AuditService::class)->record($request->user(),'mdb.verification_values_checked',$locked,[],['transformer_id'=>$transformer->id,'fields'=>array_column($data['fields'],'key'),'checked'=>$data['checked']]);
+            if ($changedFields) app(AuditService::class)->record($request->user(),'mdb.verification_values_checked',$locked,[],['transformer_id'=>$transformer->id,'fields'=>$changedFields,'checked'=>$data['checked']]);
 
             return response()->json(['revision'=>$locked->revision,'checked'=>array_keys($checked)]);
         });

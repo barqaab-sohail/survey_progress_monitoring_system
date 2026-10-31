@@ -38,7 +38,7 @@ class GpxCalculatorController extends Controller
             $record = GpxCalculation::create(['project_id' => $batch->project_id, 'feeder_id' => $batch->feeder_id,
                 'created_by' => $request->user()->id, 'file_name' => 'Transformer '.$source['survey']['transformer_code'].' revision '.$source['survey']['revision'],
                 'source_sha256' => $source['survey']['revision_sha256'], 'source_data' => $source, 'settings' => $settings, 'result' => $result]);
-            $this->audit->record($request->user(), 'gpx.verified_survey_loaded', $record, new: $source['survey']);
+            $this->audit->record($request->user(), 'gpx.verified_survey_loaded', $record, new: array_intersect_key($source['survey'], array_flip(['batch_id', 'transformer_id', 'transformer_code', 'revision', 'revision_sha256'])));
             return $record;
         });
         return redirect()->route('gpx-calculator.show', $record)->with('success', 'Verified transformer loaded and horizontal length calculated. Elevation and sag are optional.');

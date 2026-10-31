@@ -42,3 +42,7 @@ Schedule::command('drive-storage:retry')->everyFiveMinutes()->withoutOverlapping
 // The runner owns a process-lifetime flock shared by scheduled and manual runs.
 // On Bluehost plans permitting only 15-minute cron, invoke this command directly (docs/BACKUPS.md).
 Schedule::command('backup:run --scheduled')->everyFifteenMinutes();
+
+Schedule::command('audit:maintain prune --scheduled')
+    ->dailyAt(config('audit.cleanup_time'))->timezone(config('audit.timezone'))
+    ->withoutOverlapping(15)->appendOutputTo(storage_path('logs/audit-maintenance.log'));

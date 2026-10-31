@@ -49,6 +49,9 @@ class Runner
             $directory = $workspace->createRun();
             $name = 'backup-'.$now->format('Y-m-d-Hi').'.zip';
             $this->stage = 'database and ZIP';
+            // Conservative boundary captured BEFORE mysqldump's consistent snapshot.
+            $auditThroughId = (int) \Illuminate\Support\Facades\DB::table('audit_logs')->max('id');
+            $databaseFingerprint = (new \App\Services\Audit\Storage)->identity();
             $path = $this->archive->create($name, $workspace, $directory);
             $receipt = ['file_id' => $this->drive->retry(fn () => $this->drive->generateId()),
                 'name' => $name, 'folder_id' => config('backups.folder_id'), 'bytes' => filesize($path), 'md5' => md5_file($path)];
@@ -56,7 +59,8 @@ class Runner
             $this->drive->uploadArchive($receipt, $path, $workspace);
             $this->stage = 'upload verification';
             $this->drive->assertMetadata($receipt, $this->drive->metadata($receipt['file_id']) ?? []);
-            $state['latest_zip'] = $receipt + ['uploaded_at' => now()->toIso8601String()];
+            $state['latest_zip'] = $receipt + ['uploaded_at' => now()->toIso8601String(),
+                'database_fingerprint' => $databaseFingerprint, 'audit_through_id' => $auditThroughId];
             $workspace->save('state', $state);
             $this->stage = 'local cleanup';
             $workspace->cleanRun($directory); // Only this run, and only after confirmed size/MD5.

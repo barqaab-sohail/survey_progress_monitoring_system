@@ -32,6 +32,7 @@ class FeederImportService
         }
 
         $result = ['total' => 0, 'imported' => 0, 'updated' => 0, 'rejected' => 0, 'errors' => []];
+        $unchanged = 0;
         $line = 1;
         while (($values = fgetcsv($handle)) !== false) {
             $line++;
@@ -56,7 +57,7 @@ class FeederImportService
             }
 
             try {
-                DB::transaction(function () use ($row, $actor, &$result) {
+                DB::transaction(function () use ($row, $actor, &$result, &$unchanged) {
                     $project = Project::firstOrCreate(['code' => trim($row['project_code'])], ['name' => trim(($row['project_name'] ?? null) ?: $row['project_code']), 'timezone' => 'Asia/Karachi', 'processing_required' => true, 'status' => 'active']);
                     $circle = Circle::firstOrCreate(['project_id' => $project->id, 'code' => trim($row['circle_code'])], ['name' => trim(($row['circle_name'] ?? null) ?: $row['circle_code'])]);
                     $division = Division::firstOrCreate(['project_id' => $project->id, 'code' => trim($row['division_code'])], ['circle_id' => $circle->id, 'name' => trim(($row['division_name'] ?? null) ?: $row['division_code'])]);
@@ -74,7 +75,10 @@ class FeederImportService
                         'processing_required' => ! in_array(strtolower((string) ($row['processing_required'] ?? 'yes')), ['0', 'no', 'false'], true),
                         'status' => strtolower((string) ($row['status'] ?? 'active')) === 'inactive' ? 'inactive' : 'active',
                     ])->save();
-                    $this->audit->record($actor, $exists ? 'feeder.import_updated' : 'feeder.imported', $feeder, $old, $feeder->toArray());
+                    $event = $this->audit->record($actor, $exists ? 'feeder.import_updated' : 'feeder.imported', $feeder, $old, $feeder->toArray());
+                    if ($exists && $event === null) {
+                        $unchanged++;
+                    }
                     $exists ? $result['updated']++ : $result['imported']++;
                 });
             } catch (\Throwable $exception) {
@@ -83,6 +87,13 @@ class FeederImportService
             }
         }
         fclose($handle);
+
+        // Keep individual changed feeder fields for traceability, plus one compact import outcome.
+        $this->audit->record($actor, 'feeder.import_completed', $actor, [], $result + [
+            'file_name' => $file->getClientOriginalName(), 'sha256' => hash_file('sha256', $file->getRealPath()),
+            'unchanged' => $unchanged, 'existing_rows_changed' => $result['updated'] - $unchanged,
+            'outcome' => $result['rejected'] > 0 ? 'completed_with_errors' : 'completed',
+        ]);
 
         return $result;
     }

@@ -61,6 +61,43 @@ class MdbWorkflowTest extends TestCase
         $this->actingAs($this->admin);
     }
 
+    public function test_section_deletion_audits_changed_provenance_without_touching_frozen_history(): void
+    {
+        $transformer = $this->batch->transformers()->create(['code' => 'AUDIT-SECTION', 'capacity_kva' => 100]);
+        $section = $transformer->sections()->create(['start_reference' => '001', 'end_reference' => '002']);
+        $section->consumers()->create(['category' => 'rs', 'count' => 1, 'original_value' => 'handwritten I']);
+        $this->batch->transformers()->create(['code' => 'UNRELATED-TRANSFORMER', 'capacity_kva' => 50]);
+        $revision = app(SnapshotService::class)->capture($this->batch, $this->admin->id);
+        $snapshot = $revision->snapshot;
+        $hash = $revision->sha256;
+        $this->delete(route('mdb-workflow.sections.destroy', [$this->batch, $transformer, $section]),
+            ['revision' => 1, 'reason' => 'Duplicate transcription section'])->assertRedirect()->assertSessionHasNoErrors();
+        $audit = AuditLog::where('action', 'mdb.data_edited')->sole();
+        $this->assertSame($section::class, $audit->auditable_type);
+        $this->assertSame($section->id, $audit->auditable_id);
+        $this->assertSame('handwritten I', $audit->old_values['transformers'][0]['sections'][0]['consumers'][0]['original_value']);
+        $this->assertStringNotContainsString('UNRELATED-TRANSFORMER', json_encode([$audit->old_values, $audit->new_values]));
+        $this->assertSame($snapshot, $revision->fresh()->snapshot);
+        $this->assertSame($hash, $revision->fresh()->sha256);
+        $this->assertDatabaseMissing('mdb_workflow_sections', ['id' => $section->id]);
+    }
+
+    public function test_batch_action_history_does_not_load_legacy_snapshot_payloads(): void
+    {
+        AuditLog::create(['user_id' => $this->admin->id, 'action' => 'mdb.survey_submit',
+            'auditable_type' => $this->batch::class, 'auditable_id' => $this->batch->id,
+            'old_values' => ['legacy' => str_repeat('full snapshot', 10000)],
+            'reason' => 'Reviewed submission']);
+        $this->get(route('mdb-workflow.review', $this->batch))->assertOk()
+            ->assertSee('Reviewed submission')->assertViewHas('workflowHistory', function ($history) {
+                $this->assertCount(1, $history);
+                $this->assertArrayNotHasKey('old_values', $history->first()->getAttributes());
+                $this->assertArrayNotHasKey('new_values', $history->first()->getAttributes());
+
+                return true;
+            });
+    }
+
     public function test_automatic_drive_storage_keeps_sources_processable_and_private_after_local_cleanup(): void
     {
         config(['drive_storage.enabled' => true]);

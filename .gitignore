@@ -9,6 +9,7 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/framework/audit-maintenance.lock
 /vendor
 .env
 .env.backup

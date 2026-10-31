@@ -169,6 +169,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/teams/member', [TeamController::class, 'member'])->name('teams.member');
         Route::post('/teams/assign-feeder', [TeamController::class, 'assignFeeder'])->name('teams.assign-feeder');
         Route::get('/audit-log', AuditLogController::class)->name('audit.index');
+        Route::post('/audit-log/preview-clear', [AuditLogController::class, 'preview'])->name('audit.preview');
+        Route::get('/audit-log/clear-records.csv', [AuditLogController::class, 'records'])->name('audit.records');
+        Route::post('/audit-log/clear', [AuditLogController::class, 'clear'])->name('audit.clear');
     });
     Route::middleware('role:survey_team_leader,super_admin')->prefix('team-work')->name('team-work.')->controller(\App\Http\Controllers\TeamWorkAssignmentController::class)->group(function () {
         Route::get('/', 'index')->name('index');

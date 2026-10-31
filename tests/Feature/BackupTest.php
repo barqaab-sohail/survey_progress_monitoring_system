@@ -5,11 +5,14 @@ namespace Tests\Feature;
 use App\Enums\UserRole;
 use App\Models\DriveStorageConnection;
 use App\Models\User;
+use App\Services\Audit\BackupGuard;
+use App\Services\Audit\Storage;
 use App\Services\Backup\DatabaseExporter;
 use App\Services\Backup\Runner;
 use App\Services\Backup\Workspace;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
@@ -17,6 +20,31 @@ use Tests\TestCase;
 class BackupTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_audit_cleanup_requires_fresh_verified_backup_covering_this_database_and_ids(): void
+    {
+        $id = DB::table('audit_logs')->insertGetId([
+            'action' => 'user.password_reset', 'auditable_type' => User::class, 'auditable_id' => 1,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        app(Runner::class)->run();
+        $workspace = new Workspace;
+        $state = $workspace->read('state');
+        $this->assertSame($id, $state['latest_zip']['audit_through_id']);
+        $this->assertSame((new Storage)->identity(), $state['latest_zip']['database_fingerprint']);
+        app(BackupGuard::class)->verify($id);
+        foreach ([['audit_through_id' => $id - 1], ['database_fingerprint' => 'different database'], ['uploaded_at' => now()->subHours(49)->toIso8601String()]] as $invalid) {
+            $changed = $state;
+            $changed['latest_zip'] = array_replace($state['latest_zip'], $invalid);
+            $workspace->save('state', $changed);
+            try {
+                app(BackupGuard::class)->verify($id);
+                $this->fail('Unsafe backup receipt must be rejected.');
+            } catch (\RuntimeException $error) {
+                $this->assertStringContainsString('recent verified backup', $error->getMessage());
+            }
+        }
+    }
 
     private string $directory;
 

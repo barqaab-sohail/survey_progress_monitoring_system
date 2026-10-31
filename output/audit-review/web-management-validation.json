@@ -1,0 +1,27 @@
+﻿{
+    "date":  "2026-10-31",
+    "tests":  66,
+    "assertions":  759,
+    "failures":  0,
+    "errors":  0,
+    "new_management_tests":  15,
+    "database":  "SQLite :memory: for all mutation tests",
+    "production_changes":  "None",
+    "browser":  {
+                    "actual_blade":  true,
+                    "desktop":  true,
+                    "mobile_sidebar_collapsed":  true,
+                    "mobile_no_horizontal_overflow":  true,
+                    "loading_indicator":  true,
+                    "batch_progress":  true,
+                    "completed_redirect":  true,
+                    "visible_backup_error":  true,
+                    "retry_enabled":  true,
+                    "password_cleared":  true,
+                    "all_http_intercepted":  true,
+                    "requests":  2,
+                    "errors":  [
+
+                               ]
+                }
+}

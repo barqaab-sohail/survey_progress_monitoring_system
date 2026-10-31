@@ -213,7 +213,7 @@ class MdbOperatorEntryController extends Controller
                     }
                 }
             }
-            $old = $this->snapshots->snapshot($locked);
+            $old = $existing?->surveyData() ?? [];
             $this->invalidateEntry($request, $locked);
             $values = $data + ['client_uuid' => $validated['client_uuid'], 'save_uuid' => $validated['save_uuid'], 'save_hash' => $hash];
             if (($data['identity_version'] ?? null) == 2) {
@@ -236,7 +236,7 @@ class MdbOperatorEntryController extends Controller
             $this->entries->synchronizeTransformerLocation($transformer);
             $this->entries->synchronizePv($record->fresh());
             $locked->increment('revision');
-            $this->audit->record($request->user(), $request->attributes->get('mdb_verifier_correction') ? 'mdb.verifier_row_corrected' : 'mdb.entry_row_saved', $record, $old, $this->snapshots->snapshot($locked), $request->input('correction_reason'));
+            $this->audit->record($request->user(), $request->attributes->get('mdb_verifier_correction') ? 'mdb.verifier_row_corrected' : 'mdb.entry_row_saved', $record, $old, $record->fresh()->surveyData(), $request->input('correction_reason'));
         });
 
         return response()->json($this->entries->editorData($batch->fresh()));
@@ -252,7 +252,7 @@ class MdbOperatorEntryController extends Controller
             $this->access->authorize($request->user(), $locked, 'edit');
             $this->access->recordEntry($locked, $request->user());
             $this->assertRevision($locked, (int) $request->input('revision'));
-            $old = $this->snapshots->snapshot($locked);
+            $old = $row->surveyData();
             $this->snapshots->invalidate($locked);
             $row->pvRecords()->delete();
             PdfRow::where('entry_row_id', $row->id)->update(['entry_row_id' => null, 'entered' => false]);
@@ -260,7 +260,7 @@ class MdbOperatorEntryController extends Controller
             $this->entries->synchronizePair($transformer, $row->pair_number);
             $this->entries->synchronizeTransformerLocation($transformer);
             $locked->increment('revision');
-            $this->audit->record($request->user(), 'mdb.entry_row_deleted', $locked, $old, $this->snapshots->snapshot($locked), 'Operator confirmed row deletion.');
+            $this->audit->record($request->user(), 'mdb.entry_row_deleted', $row, $old, [], 'Operator confirmed row deletion.');
         });
 
         return response()->json($this->entries->editorData($batch->fresh()));
@@ -279,7 +279,7 @@ class MdbOperatorEntryController extends Controller
             $this->access->authorize($request->user(), $locked);
             $this->assertRevision($locked, (int) $request->input('revision'));
             $selected = $locked->transformers()->lockForUpdate()->findOrFail($transformer->id);
-            $old = $this->snapshots->snapshot($locked);
+            $old = $selected->attributesToArray() + ['entry_rows_count' => $selected->entryRows()->count(), 'sections_count' => $selected->sections()->count()];
             $exports = $locked->exports()->where('transformer_id', $selected->id)->lockForUpdate()->get();
             $files = $exports->flatMap(fn ($export) => [
                 ['disk' => $export->output_disk, 'path' => $export->output_path],
@@ -305,8 +305,8 @@ class MdbOperatorEntryController extends Controller
             $selected->delete(); // Review checks cascade; immutable revision history is retained.
             $locked->revision++;
             $locked->save();
-            $this->audit->record($request->user(), 'mdb.transformer_deleted', $locked, $old,
-                $this->snapshots->snapshot($locked), 'Super Admin permanently deleted transformer '.$selected->code.' (#'.$selected->id.') from Batch #'.$locked->id.'.');
+            $this->audit->record($request->user(), 'mdb.transformer_deleted', $selected, $old,
+                [], 'Super Admin permanently deleted transformer '.$selected->code.' (#'.$selected->id.') from Batch #'.$locked->id.'.');
 
             return $files;
         });
@@ -441,7 +441,7 @@ class MdbOperatorEntryController extends Controller
                 $this->access->recordEntry($locked, $request->user());
             }
             $this->assertRevision($locked, (int) $data['revision']);
-            $old = $this->snapshots->snapshot($locked);
+            $old = $transformer?->attributesToArray() ?? [];
             $this->invalidateEntry($request, $locked);
             $header = array_replace($transformer?->header ?? [], array_intersect_key($data['header'], array_flip($fields)), ['manually_verified' => false, 'operator_entry' => true]);
             app(TransformerIdentity::class)->assertAvailable($locked, $data['code'], $transformer);
@@ -472,7 +472,7 @@ class MdbOperatorEntryController extends Controller
             $record = $transformer ? tap($transformer)->update($values) : $locked->transformers()->create($values);
             $this->entries->synchronizeTransformerLocation($record);
             $locked->increment('revision');
-            $this->audit->record($request->user(), $request->attributes->get('mdb_verifier_correction') ? 'mdb.verifier_header_corrected' : 'mdb.operator_header_saved', $record, $old, $this->snapshots->snapshot($locked), $request->input('correction_reason'));
+            $this->audit->record($request->user(), $request->attributes->get('mdb_verifier_correction') ? 'mdb.verifier_header_corrected' : 'mdb.operator_header_saved', $record, $old, $record->fresh()->attributesToArray(), $request->input('correction_reason'));
         });
 
         return response()->json($this->entries->editorData($batch->fresh()) + ['active_transformer_id' => $record->id]);
@@ -492,7 +492,7 @@ class MdbOperatorEntryController extends Controller
             if ($issues->isNotEmpty()) {
                 throw ValidationException::withMessages(['rows' => $issues->pluck('message')->all()]);
             }
-            $old = $this->snapshots->snapshot($locked);
+            $old = ['manually_verified' => (bool) ($transformer->header['manually_verified'] ?? false)];
             $this->snapshots->invalidate($locked);
             $this->entries->synchronizeTransformerLocation($transformer);
             $transformer->update(['header' => array_replace($transformer->header ?? [], ['manually_verified' => true])]);
@@ -502,7 +502,8 @@ class MdbOperatorEntryController extends Controller
             }
             $transformer->pvRecords()->whereNotNull('entry_row_id')->get()->each(fn ($pv) => $pv->update(['original_entry' => array_replace($pv->original_entry ?? [], ['manually_verified' => true])]));
             $locked->increment('revision');
-            $this->audit->record($request->user(), 'mdb.operator_review_saved', $transformer, $old, $this->snapshots->snapshot($locked));
+            $this->audit->record($request->user(), 'mdb.operator_review_saved', $transformer, $old,
+                ['manually_verified' => true, 'entry_rows_count' => $transformer->entryRows()->count(), 'batch_id' => $locked->id]);
         });
 
         if ($request->expectsJson()) {

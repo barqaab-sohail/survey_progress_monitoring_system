@@ -289,13 +289,14 @@ class MdbWorkflowController extends Controller
             'canVerify' => $this->access->allowsForBatch($request->user(), $batch, 'surveyVerify') && ! in_array($request->user()->id, $batch->entry_actor_ids ?? [], true),
             'canCreateMdb' => (! $batch->staged_workflow || $batch->survey_status === 'approved') && $this->access->allowsForBatch($request->user(), $batch, $batch->staged_workflow ? 'generate' : 'export') && $this->access->allowsForBatch($request->user(), $batch, 'export'),
             'validation' => app(NetworkValidator::class)->validate($batch), 'workerConfigured' => ExporterFactory::make()->configured(),
-            'workflowHistory' => AuditLog::with('user')->where(function ($query) use ($batch) {
+            'workflowHistory' => AuditLog::select(['id', 'user_id', 'action', 'created_at'])->selectRaw('SUBSTR(reason, 1, 2049) AS reason')->with('user')->where(function ($query) use ($batch) {
                 $query->where(fn ($scope) => $scope->where('auditable_type', (new NetworkTransformer)->getMorphClass())->whereIn('auditable_id', $batch->transformers()->select('id')))
                     ->orWhere(fn ($scope) => $scope->where('auditable_type', (new EntryRow)->getMorphClass())->whereIn('auditable_id', EntryRow::whereIn('transformer_id', $batch->transformers()->select('id'))->select('id')))
                     ->orWhere(fn ($scope) => $scope->where('auditable_type', $batch->getMorphClass())->where('auditable_id', $batch->id))
                     ->orWhere(fn ($scope) => $scope->where('auditable_type', (new ExportJob)->getMorphClass())->whereIn('auditable_id', $batch->exports()->select('id')));
             })->whereIn('action', ['mdb.verifier_row_corrected', 'mdb.verifier_header_corrected', 'mdb.survey_submit', 'mdb.survey_approve', 'mdb.survey_return', 'mdb.survey_flag', 'mdb.survey_reopened', 'mdb_workflow.export_requested',
-                'mdb_workflow.export_generated', 'mdb_workflow.export_retried', 'mdb_workflow.export_failed', 'mdb.output_downloaded'])->orderBy('id')->get()]);
+                'mdb_workflow.export_generated', 'mdb_workflow.export_retried', 'mdb_workflow.export_failed', 'mdb.output_downloaded'])->orderBy('id')->get()
+                ->each(fn ($event) => $event->setAttribute('reason', (new \App\Services\Audit\Payload)->text($event->reason)))]);
     }
 
     public function advanced(Request $request, SurveyBatch $batch)
@@ -542,7 +543,7 @@ class MdbWorkflowController extends Controller
             $section->consumers()->delete();
             $section->delete();
 
-            return null;
+            return $section; // Retain the affected section ID in audit metadata after deletion.
         }, $request->input('reason'));
 
         return back()->with('success', 'Section removed from the current network. Previous entries remain in the audit and frozen revisions.');
@@ -1015,11 +1016,15 @@ class MdbWorkflowController extends Controller
                 }
             }
             $this->assertRevision($locked, (int) $request->input('revision'));
-            $old = $this->snapshots->snapshot($locked);
+            // SourceService already records upload identity/hash; do not duplicate it with a batch snapshot.
+            $sourceUpload = $request->routeIs('mdb-workflow.sources.store');
+            $old = $sourceUpload ? [] : $this->snapshots->snapshot($locked);
             $this->snapshots->invalidate($locked);
             $result = $operation($locked);
             $locked->increment('revision');
-            $this->audit->record($request->user(), 'mdb.data_edited', $result ?? $locked, $old, $this->snapshots->snapshot($locked), $reason);
+            if (! $sourceUpload) {
+                $this->audit->record($request->user(), 'mdb.data_edited', $result ?? $locked, $old, $this->snapshots->snapshot($locked), $reason);
+            }
         });
     }
 

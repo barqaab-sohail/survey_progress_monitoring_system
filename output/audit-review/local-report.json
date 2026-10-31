@@ -1,0 +1,322 @@
+﻿{
+    "database_fingerprint": "2050e2d62c204a9d7960cfde3ad473727619e2827c91e12d7f0d47a01eb43e6e",
+    "start_after_id": 0,
+    "snapshot_max_id": 12,
+    "rows_measured": 12,
+    "column_bytes": {
+        "old_values": 238,
+        "new_values": 4741,
+        "reason": 103,
+        "user_agent": 1323
+    },
+    "events": {
+        "mdb.source_uploaded": {
+            "rows": 6,
+            "bytes": 3636,
+            "maximum_bytes": 628,
+            "column_bytes": {
+                "old_values": 0,
+                "new_values": 2976,
+                "reason": 0,
+                "user_agent": 660
+            }
+        },
+        "mdb.batch_created": {
+            "rows": 3,
+            "bytes": 1074,
+            "maximum_bytes": 373,
+            "column_bytes": {
+                "old_values": 0,
+                "new_values": 744,
+                "reason": 0,
+                "user_agent": 330
+            }
+        },
+        "mdb.generation_mode_changed": {
+            "rows": 2,
+            "bytes": 981,
+            "maximum_bytes": 670,
+            "column_bytes": {
+                "old_values": 238,
+                "new_values": 418,
+                "reason": 103,
+                "user_agent": 222
+            }
+        },
+        "survey.feeders_assigned": {
+            "rows": 1,
+            "bytes": 714,
+            "maximum_bytes": 714,
+            "column_bytes": {
+                "old_values": 0,
+                "new_values": 603,
+                "reason": 0,
+                "user_agent": 111
+            }
+        }
+    },
+    "largest": [
+        {
+            "id": 1,
+            "action": "survey.feeders_assigned",
+            "bytes": 714,
+            "old_bytes": 0,
+            "new_bytes": 603
+        },
+        {
+            "id": 12,
+            "action": "mdb.generation_mode_changed",
+            "bytes": 670,
+            "old_bytes": 238,
+            "new_bytes": 254
+        },
+        {
+            "id": 3,
+            "action": "mdb.source_uploaded",
+            "bytes": 628,
+            "old_bytes": 0,
+            "new_bytes": 503
+        },
+        {
+            "id": 6,
+            "action": "mdb.source_uploaded",
+            "bytes": 628,
+            "old_bytes": 0,
+            "new_bytes": 503
+        },
+        {
+            "id": 2,
+            "action": "mdb.source_uploaded",
+            "bytes": 614,
+            "old_bytes": 0,
+            "new_bytes": 489
+        },
+        {
+            "id": 5,
+            "action": "mdb.source_uploaded",
+            "bytes": 614,
+            "old_bytes": 0,
+            "new_bytes": 489
+        },
+        {
+            "id": 9,
+            "action": "mdb.source_uploaded",
+            "bytes": 583,
+            "old_bytes": 0,
+            "new_bytes": 503
+        },
+        {
+            "id": 8,
+            "action": "mdb.source_uploaded",
+            "bytes": 569,
+            "old_bytes": 0,
+            "new_bytes": 489
+        },
+        {
+            "id": 4,
+            "action": "mdb.batch_created",
+            "bytes": 373,
+            "old_bytes": 0,
+            "new_bytes": 248
+        },
+        {
+            "id": 7,
+            "action": "mdb.batch_created",
+            "bytes": 373,
+            "old_bytes": 0,
+            "new_bytes": 248
+        }
+    ],
+    "shape_counts": {
+        "batch_snapshots": 0,
+        "top_level_base64": 0,
+        "dataset_details": 0,
+        "equal_nonempty_details": 0
+    },
+    "allocated": {
+        "ENGINE": "InnoDB",
+        "estimated_rows": 10,
+        "data_bytes": 16384,
+        "index_bytes": 81920,
+        "free_bytes": 0
+    },
+    "columns": [
+        {
+            "COLUMN_NAME": "id",
+            "COLUMN_TYPE": "bigint(20) unsigned"
+        },
+        {
+            "COLUMN_NAME": "user_id",
+            "COLUMN_TYPE": "bigint(20) unsigned"
+        },
+        {
+            "COLUMN_NAME": "organization_id",
+            "COLUMN_TYPE": "bigint(20) unsigned"
+        },
+        {
+            "COLUMN_NAME": "action",
+            "COLUMN_TYPE": "varchar(80)"
+        },
+        {
+            "COLUMN_NAME": "auditable_type",
+            "COLUMN_TYPE": "varchar(255)"
+        },
+        {
+            "COLUMN_NAME": "auditable_id",
+            "COLUMN_TYPE": "bigint(20) unsigned"
+        },
+        {
+            "COLUMN_NAME": "old_values",
+            "COLUMN_TYPE": "longtext"
+        },
+        {
+            "COLUMN_NAME": "new_values",
+            "COLUMN_TYPE": "longtext"
+        },
+        {
+            "COLUMN_NAME": "reason",
+            "COLUMN_TYPE": "text"
+        },
+        {
+            "COLUMN_NAME": "ip_address",
+            "COLUMN_TYPE": "varchar(45)"
+        },
+        {
+            "COLUMN_NAME": "user_agent",
+            "COLUMN_TYPE": "text"
+        },
+        {
+            "COLUMN_NAME": "created_at",
+            "COLUMN_TYPE": "timestamp"
+        },
+        {
+            "COLUMN_NAME": "updated_at",
+            "COLUMN_TYPE": "timestamp"
+        }
+    ],
+    "indexes": [
+        {
+            "Table": "audit_logs",
+            "Non_unique": 0,
+            "Key_name": "PRIMARY",
+            "Seq_in_index": 1,
+            "Column_name": "id",
+            "Collation": "A",
+            "Cardinality": 10,
+            "Sub_part": null,
+            "Packed": null,
+            "Null": "",
+            "Index_type": "BTREE",
+            "Comment": "",
+            "Index_comment": ""
+        },
+        {
+            "Table": "audit_logs",
+            "Non_unique": 1,
+            "Key_name": "audit_logs_user_id_foreign",
+            "Seq_in_index": 1,
+            "Column_name": "user_id",
+            "Collation": "A",
+            "Cardinality": 5,
+            "Sub_part": null,
+            "Packed": null,
+            "Null": "YES",
+            "Index_type": "BTREE",
+            "Comment": "",
+            "Index_comment": ""
+        },
+        {
+            "Table": "audit_logs",
+            "Non_unique": 1,
+            "Key_name": "audit_logs_organization_id_foreign",
+            "Seq_in_index": 1,
+            "Column_name": "organization_id",
+            "Collation": "A",
+            "Cardinality": 2,
+            "Sub_part": null,
+            "Packed": null,
+            "Null": "YES",
+            "Index_type": "BTREE",
+            "Comment": "",
+            "Index_comment": ""
+        },
+        {
+            "Table": "audit_logs",
+            "Non_unique": 1,
+            "Key_name": "audit_logs_auditable_type_auditable_id_index",
+            "Seq_in_index": 1,
+            "Column_name": "auditable_type",
+            "Collation": "A",
+            "Cardinality": 10,
+            "Sub_part": null,
+            "Packed": null,
+            "Null": "",
+            "Index_type": "BTREE",
+            "Comment": "",
+            "Index_comment": ""
+        },
+        {
+            "Table": "audit_logs",
+            "Non_unique": 1,
+            "Key_name": "audit_logs_auditable_type_auditable_id_index",
+            "Seq_in_index": 2,
+            "Column_name": "auditable_id",
+            "Collation": "A",
+            "Cardinality": 10,
+            "Sub_part": null,
+            "Packed": null,
+            "Null": "",
+            "Index_type": "BTREE",
+            "Comment": "",
+            "Index_comment": ""
+        },
+        {
+            "Table": "audit_logs",
+            "Non_unique": 1,
+            "Key_name": "audit_logs_created_at_user_id_index",
+            "Seq_in_index": 1,
+            "Column_name": "created_at",
+            "Collation": "A",
+            "Cardinality": 10,
+            "Sub_part": null,
+            "Packed": null,
+            "Null": "YES",
+            "Index_type": "BTREE",
+            "Comment": "",
+            "Index_comment": ""
+        },
+        {
+            "Table": "audit_logs",
+            "Non_unique": 1,
+            "Key_name": "audit_logs_created_at_user_id_index",
+            "Seq_in_index": 2,
+            "Column_name": "user_id",
+            "Collation": "A",
+            "Cardinality": 10,
+            "Sub_part": null,
+            "Packed": null,
+            "Null": "YES",
+            "Index_type": "BTREE",
+            "Comment": "",
+            "Index_comment": ""
+        },
+        {
+            "Table": "audit_logs",
+            "Non_unique": 1,
+            "Key_name": "audit_logs_action_index",
+            "Seq_in_index": 1,
+            "Column_name": "action",
+            "Collation": "A",
+            "Cardinality": 10,
+            "Sub_part": null,
+            "Packed": null,
+            "Null": "",
+            "Index_type": "BTREE",
+            "Comment": "",
+            "Index_comment": ""
+        }
+    ],
+    "next_after_id": 12,
+    "complete_range": true,
+    "note": "Logical column bytes for the measured ID range only; not InnoDB allocated disk size. Batch/time limits are cooperative between queries."
+}

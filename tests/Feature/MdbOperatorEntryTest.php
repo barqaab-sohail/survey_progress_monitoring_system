@@ -240,6 +240,28 @@ class MdbOperatorEntryTest extends TestCase
         return $this->transformer->entryRows()->where('client_uuid', $payload['client_uuid'])->firstOrFail();
     }
 
+    public function test_entry_audit_keeps_only_edited_row_fields_without_copying_the_batch(): void
+    {
+        $row = $this->save();
+        $created = AuditLog::where('action', 'mdb.entry_row_saved')->latest('id')->firstOrFail();
+        $this->assertSame(EntryRow::class, $created->auditable_type);
+        $this->assertSame($row->id, $created->auditable_id);
+        $this->assertArrayNotHasKey('transformers', $created->new_values);
+        $this->assertArrayNotHasKey('waypoints', $created->new_values);
+        $this->assertLessThanOrEqual(config('audit.payload_bytes'), strlen(json_encode([$created->old_values, $created->new_values])));
+        $body = $this->payload(['client_uuid' => $row->client_uuid, 'pole_height' => 35]);
+        $this->putJson(route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $row]), $body)->assertOk();
+        $updated = AuditLog::where('action', 'mdb.entry_row_saved')->latest('id')->firstOrFail();
+        $this->assertEquals(31, $updated->old_values['pole_height']);
+        $this->assertEquals(35, $updated->new_values['pole_height']);
+        $this->assertArrayNotHasKey('conductors', $updated->new_values);
+        $this->assertArrayNotHasKey('consumers', $updated->new_values);
+        $count = AuditLog::where('action', 'mdb.entry_row_saved')->count();
+        $this->putJson(route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $row]),
+            $this->payload(['client_uuid' => $row->client_uuid, 'pole_height' => 35]))->assertOk();
+        $this->assertSame($count, AuditLog::where('action', 'mdb.entry_row_saved')->count());
+    }
+
     public function test_se_rows_require_group_gps_type_class_and_height(): void
     {
         foreach (['group_number', 'waypoint_reference', 'equipment_type', 'pole_class', 'pole_height'] as $field) {

@@ -68,10 +68,15 @@ class DuplicateFiles
                 $current->delete();
             });
         }
+        [, $auditDetails] = (new \App\Services\Audit\Payload)->prepare([], [
+            'sha256' => $plan['hash'], 'keeper_id' => $plan['keeper_id'],
+            'removed_duplicate_ids' => collect($plan['duplicates'])->pluck('id')->all(),
+            'removed_duplicate_count' => count($plan['duplicates']),
+            'recovered_bytes' => $plan['bytes'], 'completed_at' => now()->toIso8601String(),
+        ], false);
         AuditLog::where('action', 'drive.duplicate_cleanup_requested')->where('auditable_type', DriveStoredFile::class)
             ->where('auditable_id', $plan['keeper_id'])->latest('id')->limit(1)->update([
-                'new_values' => json_encode(['sha256' => $plan['hash'], 'keeper_id' => $plan['keeper_id'],
-                    'removed_duplicate_ids' => collect($plan['duplicates'])->pluck('id')->all(), 'recovered_bytes' => $plan['bytes'], 'completed_at' => now()->toIso8601String()]),
+                'new_values' => json_encode($auditDetails, JSON_THROW_ON_ERROR),
             ]);
     }
 
