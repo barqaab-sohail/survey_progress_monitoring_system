@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\Mdb\ApprovedSchema;
+use App\Services\Mdb\AccessPowerShell;
 use Illuminate\Support\Facades\File;
 use RuntimeException;
 use Symfony\Component\Process\Process;
@@ -10,14 +11,18 @@ use Tests\TestCase;
 
 class ApprovedMdbSchemaTest extends TestCase
 {
-    public function test_schema_manifest_records_the_identical_structure_of_all_fifteen_approved_samples(): void
+    public function test_schema_manifest_records_the_approved_export_schema_and_meter_demand_extension(): void
     {
         $manifest = json_decode(file_get_contents(resource_path('mdb/approved-schema.json')), true, 512, JSON_THROW_ON_ERROR);
         $this->assertCount(15, $manifest['references']);
-        $this->assertCount(50, $manifest['schema']['tables']);
-        $this->assertCount(41, $manifest['schema']['relationships']);
+        $this->assertCount(51, $manifest['schema']['tables']);
+        $this->assertCount(42, $manifest['schema']['relationships']);
         $this->assertCount(1, array_unique(array_column($manifest['references'], 'schema_sha256')));
-        $this->assertSame(ApprovedSchema::fingerprint(), $manifest['references'][0]['schema_sha256']);
+        $this->assertSame('InstMeterDmd', $manifest['schema_extension']['table']);
+        $meterDemand = collect($manifest['schema']['tables'])->firstWhere('name', 'InstMeterDmd');
+        $this->assertCount(100, $meterDemand['fields']);
+        $this->assertSame(['SectionId', 'Season', 'DayType'], array_column($meterDemand['indexes'][0]['fields'], 'name'));
+        $this->assertSame('InstMeterPoints', collect($manifest['schema']['relationships'])->firstWhere('foreign_table', 'InstMeterDmd')['table']);
         foreach ($manifest['schema']['tables'] as $table) {
             $this->assertFalse(str_starts_with($table['name'], 'Survey'));
         }
@@ -27,7 +32,7 @@ class ApprovedMdbSchemaTest extends TestCase
     {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('schema differs');
-        ApprovedSchema::assertReadback(['schema_sha256' => ApprovedSchema::fingerprint(), 'schema_table_count' => 50, 'schema_relationship_count' => 40]);
+        ApprovedSchema::assertReadback(['schema_sha256' => ApprovedSchema::fingerprint(), 'schema_table_count' => 51, 'schema_relationship_count' => 41]);
     }
 
     public function test_both_native_writers_preserve_exact_schema_and_allow_missing_engineering_values(): void
@@ -67,8 +72,9 @@ class ApprovedMdbSchemaTest extends TestCase
                 $reader->mustRun();
                 $database = json_decode(ltrim(file_get_contents($inspection), "\xEF\xBB\xBF"), true, 512, JSON_THROW_ON_ERROR);
                 $tables = array_column($database['tables'], null, 'name');
-                $this->assertCount(50, $tables);
-                $this->assertCount(41, $database['relationships']);
+                $this->assertCount(51, $tables);
+                $this->assertCount(42, $database['relationships']);
+                $this->assertSame(0, $tables['InstMeterDmd']['count']);
                 $this->assertNull($tables['SAI_Control']['rows'][0]['Frequency']);
                 $this->assertNull($tables['InstFeeders']['rows'][0]['NominalKvll']);
                 $this->assertSame('', $tables['InstPrimaryTransformers']['rows'][0]['TransformerType']);
@@ -102,9 +108,40 @@ class ApprovedMdbSchemaTest extends TestCase
                 file_put_contents($input, json_encode($payload, JSON_THROW_ON_ERROR));
                 $process = $this->write($shell, 'export-reviewed-mdb.ps1', $input, $template, $output);
                 $this->assertFalse($process->isSuccessful(), $drift);
-                $this->assertStringContainsString('schema does not match the 15 approved samples', $process->getErrorOutput());
+                $this->assertStringContainsString('schema does not match the approved export template', $process->getErrorOutput());
                 $this->assertFileDoesNotExist($output);
             }
+        } finally {
+            File::deleteDirectory($directory);
+        }
+    }
+
+    public function test_legacy_clean_template_is_extended_only_on_the_disposable_output_copy(): void
+    {
+        $shell = $this->nativeShell();
+        $directory = sys_get_temp_dir().'/hazeco-meter-demand-upgrade-'.bin2hex(random_bytes(8));
+        File::ensureDirectoryExists($directory);
+        $template = $directory.'/legacy-template.mdb';
+        $output = $directory.'/result.mdb';
+        try {
+            copy(resource_path('mdb/synergee-empty.mdb'), $template);
+            $command = '$ErrorActionPreference="Stop";$db=(New-Object -ComObject DAO.DBEngine.120).OpenDatabase('.$this->quote($template).');try{$db.Relations.Delete("{8295BFFE-7098-403E-A54D-DF88BD0BC8A2}");$db.TableDefs.Delete("InstMeterDmd")}finally{$db.Close()}';
+            (new Process([$shell, '-NoProfile', '-NonInteractive', '-Command', $command]))->mustRun();
+            $legacyHash = hash_file('sha256', $template);
+            $payload = $this->payload();
+            $payload['tables']['InstMeterDmd'] = [];
+            $payload['template']['sha256'] = $legacyHash;
+            $input = $directory.'/payload.json';
+            file_put_contents($input, json_encode($payload, JSON_THROW_ON_ERROR));
+
+            $process = $this->write($shell, 'export-reviewed-mdb.ps1', $input, $template, $output);
+
+            $this->assertTrue($process->isSuccessful(), $process->getErrorOutput());
+            $result = json_decode(trim($process->getOutput()), true, 512, JSON_THROW_ON_ERROR);
+            ApprovedSchema::assertReadback($result['readback']);
+            $this->assertSame(0, $result['readback']['counts']['InstMeterDmd']);
+            $this->assertSame($legacyHash, hash_file('sha256', $template));
+            $this->assertNotSame($legacyHash, hash_file('sha256', $output));
         } finally {
             File::deleteDirectory($directory);
         }
@@ -120,14 +157,14 @@ class ApprovedMdbSchemaTest extends TestCase
 
     private function nativeShell(): string
     {
-        $shell = (getenv('WINDIR') ?: 'C:\\Windows').'\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
+        $shell = AccessPowerShell::defaultPath();
         if (PHP_OS_FAMILY !== 'Windows' || ! is_file($shell)) {
             $this->markTestSkipped('Windows DAO/ACE is unavailable.');
         }
         $probe = new Process([$shell, '-NoProfile', '-NonInteractive', '-Command', '$ErrorActionPreference="Stop";$engine=New-Object -ComObject DAO.DBEngine.120']);
         $probe->run();
         if (! $probe->isSuccessful()) {
-            $this->markTestSkipped('64-bit DAO/ACE is unavailable.');
+            $this->markTestSkipped('Access DAO is unavailable.');
         }
 
         return $shell;

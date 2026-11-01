@@ -1,0 +1,9 @@
+{
+  "only_changed_field": "InstFeeders.SubstationId",
+  "before": "407",
+  "after": "132kV Abbottabad",
+  "other_39_feeder_fields_identical": true,
+  "all_other_table_rows_identical": true,
+  "schemas_indexes_relationships_identical": true,
+  "literal_pdf_match": false
+}

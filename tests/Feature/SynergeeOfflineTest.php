@@ -35,6 +35,20 @@ class SynergeeOfflineTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_transfer_reader_accepts_the_previous_approved_schema_package(): void
+    {
+        $package = SynergeeSnapshot::package();
+        $manifest = json_decode(file_get_contents(resource_path('mdb/approved-schema.json')), true, 512, JSON_THROW_ON_ERROR);
+        $package['schema_sha256'] = $manifest['schema_extension']['legacy_schema_sha256'];
+        $content = $package;
+        unset($content['sha256']);
+        $package['sha256'] = app(SnapshotService::class)->hash($content);
+
+        $read = app(SynergeeTransfer::class)->read(json_encode($package, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION));
+
+        $this->assertSame($manifest['schema_extension']['legacy_schema_sha256'], $read['schema_sha256']);
+    }
+
     private function productionBatch(bool $simple = false): SurveyBatch
     {
         Storage::fake('local');
@@ -176,7 +190,7 @@ class SynergeeOfflineTest extends TestCase
         $this->assertSame($before, $package);
     }
 
-    public function test_local_json_generation_uses_frozen_registered_coordinates_only_for_first_s(): void
+    public function test_local_json_generation_preserves_registered_span_evidence_with_mdb_node_placement(): void
     {
         $snapshot = SynergeeSnapshot::make();
         $transformer = &$snapshot['transformers'][0];
@@ -218,13 +232,18 @@ class SynergeeOfflineTest extends TestCase
             $entry['composite_identifier'] = '01091026'.$entry['waypoint_reference'];
         }
         unset($entry);
+        $snapshot['transformers'][0]['header']['feeder_identifier'] = '407';
+        $snapshot['transformers'][0]['sections'][0]['conductors'] += ['Y' => '', 'B' => ''];
         $snapshot['transformers'][0]['sections'][0]['original_entry']['start_survey_identifier'] = '01091026999';
         $snapshot['transformers'][0]['sections'][0]['original_entry']['end_survey_identifier'] = '01091026001';
         $identified = $transfer->read(json_encode(SynergeeSnapshot::package($snapshot), JSON_PRESERVE_ZERO_FRACTION));
         $identifiedReport = $transfer->inspect($identified, SynergeeSnapshot::gpx());
         $this->assertSame([], $identifiedReport['issues'], json_encode($identifiedReport['issues']));
         $identifiedNodes = array_column($identifiedReport['payload']['tables']['Node'], null, 'Description');
-        $this->assertEqualsWithDelta($projected['x'], $identifiedNodes['01091026999']['X'], 0.001);
+        $this->assertEqualsWithDelta($identifiedNodes['01091026001']['X'] - 0.02, $identifiedNodes['01091026999']['X'], 0.000001);
+        $this->assertEqualsWithDelta($identifiedNodes['01091026001']['Y'] - 0.02, $identifiedNodes['01091026999']['Y'], 0.000001);
+        $this->assertSame('91026999', $identifiedNodes['01091026999']['NodeId']);
+        $this->assertGreaterThan(0, $identifiedReport['payload']['tables']['InstSection'][2]['SectionLength_MUL']);
         $this->assertNotSame($identifiedNodes['01091026001']['X'], $identifiedNodes['01091026999']['X']);
     }
 
@@ -470,6 +489,7 @@ class SynergeeOfflineTest extends TestCase
         }
         unset($row);
         $snapshot['transformers'][0]['entry_rows'] = $rows;
+        $snapshot['transformers'][0]['header']['feeder_identifier'] = '407';
         $snapshot['transformers'][0]['header'] += ['division' => 'D', 'subdivision' => 'SD', 'subdivision_code' => '01', 'service_category' => 'General Duty'];
         $snapshot['configuration']['settings']['mapping']['networks']['T-SYNTHETIC']['source_sections'][1]['to'] = 'wp:2';
         $transfer = app(SynergeeTransfer::class);

@@ -25,11 +25,19 @@ class WindowsExporter implements Exporter
         }
         $inputPath = dirname($outputPath).'/payload.json';
         file_put_contents($inputPath, json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION));
+        $powershell = (string) config('mdb_workflow.export.powershell');
+        $processEnvironment = AccessPowerShell::processEnvironment(
+            $powershell,
+            getenv('SystemRoot') ?: null,
+            getenv('WINDIR') ?: null,
+            getenv('ComSpec') ?: null,
+            realpath(dirname($outputPath)) ?: dirname($outputPath),
+        );
         $process = new Process([
-            config('mdb_workflow.export.powershell'), '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+            $powershell, '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
             '-File', base_path('scripts/mdb/export-reviewed-mdb.ps1'), '-InputPath', $inputPath,
             '-TemplatePath', $templatePath, '-OutputPath', $outputPath,
-        ]);
+        ], null, $processEnvironment);
         $process->setTimeout((int) config('mdb_workflow.export.timeout', 180));
         $process->run();
         if (! $process->isSuccessful()) {

@@ -77,12 +77,23 @@ class WorkerProtocolTest(unittest.TestCase):
     def add_v2_devices(self):
         self.payload['mapping_version'] = 'synergee-reviewed-v2'
         section = self.payload['tables']['InstSection'][0]['SectionId']
+        source_load = self.payload['tables']['Loads'][0]
+        yearly_loads = []
+        phase_fields = [f'Phase{phase}{quantity}' for phase in (1, 2, 3)
+                        for quantity in ('Customers', 'Kw', 'Kvar', 'Kva', 'Kwh')]
+        for year in (0, 1):
+            yearly_loads.append({
+                'SectionId': source_load['SectionId'], 'IsSpotLoad': source_load['IsSpotLoad'],
+                **{field: source_load.get(field) for field in phase_fields},
+                'CapacityFactor': source_load['CapacityFactor'], 'YearNumber': year,
+            })
         self.payload['tables'].update({
             'InstMeterPoints': [{'SectionId': section}],
             'InstDGens': [{'SectionId': section, 'DGenOutputPct': 100, 'DGenVoltSet': 120}],
             'InstMymDGens': [dict(SectionId=section, YearNumber=year, Phase1Kw=1.25 + year,
                                  Phase2Kw=2.5, Phase3Kw=3.75, Phase1Kvar=-0.5,
                                  Phase2Kvar=0, Phase3Kvar=0, CapacityFactor=1) for year in (0, 1)],
+            'InstMymLoads': yearly_loads,
         })
 
     @unittest.skipUnless(Path(worker.POWERSHELL).is_file(), 'Windows Access worker unavailable')
@@ -95,6 +106,7 @@ class WorkerProtocolTest(unittest.TestCase):
         self.assertEqual(1, result['readback']['counts']['InstMeterPoints'])
         self.assertEqual(1, result['readback']['counts']['InstDGens'])
         self.assertEqual(2, result['readback']['counts']['InstMymDGens'])
+        self.assertEqual(2, result['readback']['counts']['InstMymLoads'])
 
     @unittest.skipUnless(Path(worker.POWERSHELL).is_file(), 'Windows Access worker unavailable')
     def test_v2_orphan_year_is_rejected_even_without_a_database_relationship(self):

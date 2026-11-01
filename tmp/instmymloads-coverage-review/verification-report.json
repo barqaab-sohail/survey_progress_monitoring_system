@@ -1,0 +1,15 @@
+{
+  "eligible_sections": 90,
+  "rows": 180,
+  "years": [
+    0,
+    1
+  ],
+  "duplicate_pairs": 0,
+  "missing_pairs": 0,
+  "fractional_customer_counts": 0,
+  "unknown_demand_blank": true,
+  "other_physical_tables_unchanged": 49,
+  "schema_unchanged": true,
+  "native_output": "E:\\xampp\\htdocs\\survey_progress_monitoring_system\\tmp\\instmymloads-coverage-review\\native-a943746753fa\\after.mdb"
+}

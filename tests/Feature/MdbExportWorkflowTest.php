@@ -22,6 +22,7 @@ use App\Services\Mdb\DisabledExporter;
 use App\Services\Mdb\Exporter;
 use App\Services\Mdb\ExportPayloadBuilder;
 use App\Services\Mdb\ExportService;
+use App\Services\Mdb\ProjectionService;
 use App\Services\Mdb\ReadbackVerifier;
 use App\Services\Mdb\SnapshotService;
 use App\Services\Mdb\WindowsExporter;
@@ -31,6 +32,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class MdbExportWorkflowTest extends TestCase
@@ -116,6 +118,29 @@ class MdbExportWorkflowTest extends TestCase
         $this->assertSame($job->id, $retried->id);
         $this->assertSame('queued', $retried->status);
         $this->assertDatabaseCount('mdb_workflow_exports', 1);
+    }
+
+    public static function previousTableExportRevisions(): array
+    {
+        return [['node-date-waypoint-placement-v1'], ['node-feeder-pdf-names-v1'], ['instmymloads-v1'], ['loads-section-coverage-v1'], ['instmymloads-section-years-v2'], ['instmymloads-zero-defaults-v3'], ['sai-control-reference-v1'], ['instmeterpoints-reference-v1'], ['instmymmeter-years-v1']];
+    }
+
+    #[DataProvider('previousTableExportRevisions')]
+    public function test_updated_mapping_does_not_reuse_a_previous_table_step_export(string $previousRevision): void
+    {
+        $exports = app(ExportService::class);
+        $old = $exports->request($this->batch, $this->actor);
+        $revision = $this->batch->approvedRevision;
+        $mapping = $revision->snapshot['configuration']['settings']['mapping']['version'] ?? ExportPayloadBuilder::VERSION;
+        $oldKey = hash('sha256', implode('|', [$revision->sha256, 'feeder', $this->template->sha256, $mapping,
+            ProjectionService::LENGTH_METHOD, $previousRevision]));
+        $old->update(['idempotency_key' => $oldKey]);
+
+        $updated = $exports->request($this->batch, $this->actor);
+        $this->assertNotSame($old->id, $updated->id);
+        $this->assertNotSame($oldKey, $updated->idempotency_key);
+        $this->assertSame($updated->id, $exports->request($this->batch, $this->actor)->id);
+        $this->assertDatabaseCount('mdb_workflow_exports', 2);
     }
 
     public function test_failure_is_retryable_and_duplicate_delivery_does_not_repeat_success(): void

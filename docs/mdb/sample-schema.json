@@ -1,5 +1,5 @@
 {
-  "sha256": "75075516545951cfbf290a3d521a3e312420f1b2a9d561f1e6aa6256e1e81861",
+  "sha256": "f4201a8bc5cdf9cb116261acd139bfb3ebb7a3e8934c82e8327240b19475c637",
   "tables": [
     {
       "name": "Gnodes",
@@ -4227,6 +4227,932 @@
         }
       ],
       "count": 1
+    },
+    {
+      "name": "InstMeterDmd",
+      "fields": [
+        {
+          "name": "SectionId",
+          "dao_type": 10,
+          "size": 50,
+          "required": true,
+          "allow_zero_length": true,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "Season",
+          "dao_type": 10,
+          "size": 32,
+          "required": true,
+          "allow_zero_length": true,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "DayType",
+          "dao_type": 10,
+          "size": 32,
+          "required": true,
+          "allow_zero_length": true,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour01",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour02",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour03",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour04",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour05",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour06",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour07",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour08",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour09",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour10",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour11",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour12",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour13",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour14",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour15",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour16",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour17",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour18",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour19",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour20",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour21",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour22",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour23",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwLoad_Hour24",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour01",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour02",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour03",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour04",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour05",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour06",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour07",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour08",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour09",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour10",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour11",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour12",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour13",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour14",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour15",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour16",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour17",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour18",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour19",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour20",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour21",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour22",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour23",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarLoad_Hour24",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctPf",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour01",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour02",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour03",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour04",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour05",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour06",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour07",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour08",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour09",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour10",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour11",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour12",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour13",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour14",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour15",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour16",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour17",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour18",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour19",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour20",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour21",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour22",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour23",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKwDmd_Hour24",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour01",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour02",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour03",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour04",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour05",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour06",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour07",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour08",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour09",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour10",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour11",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour12",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour13",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour14",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour15",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour16",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour17",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour18",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour19",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour20",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour21",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour22",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour23",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        },
+        {
+          "name": "PctKvarDmd_Hour24",
+          "dao_type": 7,
+          "size": 8,
+          "required": false,
+          "allow_zero_length": false,
+          "default": "",
+          "validation": ""
+        }
+      ],
+      "indexes": [
+        {
+          "name": "Index_6738B462_8D1F_43EF",
+          "primary": true,
+          "unique": true,
+          "fields": [
+            "SectionId",
+            "Season",
+            "DayType"
+          ]
+        },
+        {
+          "name": "{8295BFFE-7098-403E-A54D-DF88BD0BC8A2}",
+          "primary": false,
+          "unique": false,
+          "fields": [
+            "SectionId"
+          ]
+        }
+      ],
+      "count": 0
     },
     {
       "name": "InstMotors",
@@ -11583,6 +12509,18 @@
         {
           "name": "ProjectName",
           "foreign_name": "ProjectName"
+        }
+      ]
+    },
+    {
+      "name": "{8295BFFE-7098-403E-A54D-DF88BD0BC8A2}",
+      "table": "InstMeterPoints",
+      "foreign_table": "InstMeterDmd",
+      "attributes": 4352,
+      "fields": [
+        {
+          "name": "SectionId",
+          "foreign_name": "SectionId"
         }
       ]
     }

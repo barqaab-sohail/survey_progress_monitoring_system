@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="CLI Arguments" tests="2" assertions="195" errors="0" failures="1" skipped="0" time="4.578250">
+    <testsuite name="Tests\Unit\MdbNodeTableGenerationTest" file="E:\xampp\htdocs\survey_progress_monitoring_system\tests\Unit\MdbNodeTableGenerationTest.php" tests="1" assertions="193" errors="0" failures="1" skipped="0" time="0.784195">
+      <testcase name="test_normal_payload_matches_placement_rules_keeps_string_suffixes_and_all_references" file="E:\xampp\htdocs\survey_progress_monitoring_system\tests\Unit\MdbNodeTableGenerationTest.php" line="61" class="Tests\Unit\MdbNodeTableGenerationTest" classname="Tests.Unit.MdbNodeTableGenerationTest" assertions="193" time="0.784195">
+        <failure type="PHPUnit\Framework\ExpectationFailedException">Tests\Unit\MdbNodeTableGenerationTest::test_normal_payload_matches_placement_rules_keeps_string_suffixes_and_all_references&#13;
+InstMymLoads business values changed
+Failed asserting that two arrays are identical.
+--- Expected
++++ Actual
+@@ @@
+         'CapacityFactor' =&gt; 1.0,
+         'YearNumber' =&gt; 1,
+     ],
+-    4 =&gt; Array &amp;5 [
+-        'IsSpotLoad' =&gt; 0,
+-        'Phase1Customers' =&gt; 0.0,
+-        'Phase2Customers' =&gt; 0.0,
+-        'Phase3Customers' =&gt; 0.0,
+-        'Phase1Kw' =&gt; null,
+-        'Phase2Kw' =&gt; null,
+-        'Phase3Kw' =&gt; null,
+-        'Phase1Kvar' =&gt; null,
+-        'Phase2Kvar' =&gt; null,
+-        'Phase3Kvar' =&gt; null,
+-        'Phase1Kva' =&gt; 0.0,
+-        'Phase2Kva' =&gt; 0.0,
+-        'Phase3Kva' =&gt; 0.0,
+-        'Phase1Kwh' =&gt; null,
+-        'Phase2Kwh' =&gt; null,
+-        'Phase3Kwh' =&gt; null,
+-        'CapacityFactor' =&gt; 1.0,
+-        'YearNumber' =&gt; 0,
+-    ],
+-    5 =&gt; Array &amp;6 [
+-        'IsSpotLoad' =&gt; 0,
+-        'Phase1Customers' =&gt; 0.0,
+-        'Phase2Customers' =&gt; 0.0,
+-        'Phase3Customers' =&gt; 0.0,
+-        'Phase1Kw' =&gt; null,
+-        'Phase2Kw' =&gt; null,
+-        'Phase3Kw' =&gt; null,
+-        'Phase1Kvar' =&gt; null,
+-        'Phase2Kvar' =&gt; null,
+-        'Phase3Kvar' =&gt; null,
+-        'Phase1Kva' =&gt; 0.0,
+-        'Phase2Kva' =&gt; 0.0,
+-        'Phase3Kva' =&gt; 0.0,
+-        'Phase1Kwh' =&gt; null,
+-        'Phase2Kwh' =&gt; null,
+-        'Phase3Kwh' =&gt; null,
+-        'CapacityFactor' =&gt; 1.0,
+-        'YearNumber' =&gt; 1,
+-    ],
+ ]
+&#13;
+E:\xampp\htdocs\survey_progress_monitoring_system\tests\Unit\MdbNodeTableGenerationTest.php:125</failure>
+      </testcase>
+    </testsuite>
+    <testsuite name="Tests\Feature\MdbExportWorkflowTest" file="E:\xampp\htdocs\survey_progress_monitoring_system\tests\Feature\MdbExportWorkflowTest.php" tests="1" assertions="2" errors="0" failures="0" skipped="0" time="3.794054">
+      <testcase name="test_genuine_dao_writer_reopens_original_one_transformer_fixture" file="E:\xampp\htdocs\survey_progress_monitoring_system\tests\Feature\MdbExportWorkflowTest.php" line="255" class="Tests\Feature\MdbExportWorkflowTest" classname="Tests.Feature.MdbExportWorkflowTest" assertions="2" time="3.794054"/>
+    </testsuite>
+  </testsuite>
+</testsuites>

@@ -1,0 +1,15 @@
+{
+  "rows": 180,
+  "eligible_sections": 90,
+  "years": [
+    0,
+    1
+  ],
+  "blank_values": 0,
+  "blank_values_replaced_with_zero": 1620,
+  "duplicates": 0,
+  "nonblank_values_preserved": true,
+  "other_physical_tables_unchanged": 49,
+  "schema_unchanged": true,
+  "output": "E:\\xampp\\htdocs\\survey_progress_monitoring_system\\tmp\\instmymloads-zero-review\\native-85acecf48e89\\after.mdb"
+}

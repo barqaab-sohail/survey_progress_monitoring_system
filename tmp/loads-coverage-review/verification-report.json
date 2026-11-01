@@ -1,0 +1,34 @@
+{
+  "source_scope": {
+    "group": "08",
+    "waypoints": "027-038",
+    "InstSection_count": 91,
+    "excluded_feeder_ids": [
+      "00040711140223003"
+    ],
+    "eligible_count": 90,
+    "Loads_count": 90,
+    "duplicates": 0,
+    "missing": [],
+    "unexpected": []
+  },
+  "reference_scope": {
+    "group": "01",
+    "waypoints": "001-017",
+    "unique_SectionIds": 166,
+    "overlap_with_current_sections": 0
+  },
+  "source_consumers": 74,
+  "pole_aggregate_kva": 148,
+  "consumer_connection_count": 77,
+  "pv_only_zero_consumption_rows": 3,
+  "fractional_customer_fields": 0,
+  "other_physical_tables_unchanged": 49,
+  "schema_tables": 50,
+  "relationships": 41,
+  "schema_unchanged": true,
+  "column_order_matches_reference": true,
+  "source_kva_per_single_phase_customer": 2,
+  "unknown_kw_kvar_kwh_preserved": true,
+  "native_output": "E:\\xampp\\htdocs\\survey_progress_monitoring_system\\tmp\\loads-coverage-review\\native-4014476533cf\\after.mdb"
+}

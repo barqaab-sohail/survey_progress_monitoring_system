@@ -7,7 +7,7 @@ param(
 # This CLI is invoked only with server-owned paths. Remote clients call worker_server.py.
 $ErrorActionPreference = 'Stop'
 $db = $null
-$workspace = $null
+$engine = $null
 $inTransaction = $false
 $allowed = @('SAI_Control','Node','InstFeeders','InstSection','InstPrimaryTransformers','Loads')
 . (Join-Path $PSScriptRoot 'schema-contract.ps1')
@@ -27,6 +27,74 @@ function ExpectedFieldValue($row, $field) {
     if ($null -eq $value -and $field.Required -and $field.Type -eq 10 -and $field.AllowZeroLength) { return '' }
     return $value
 }
+function Add-InstMeterDmdSchemaToLegacyCopy($Database) {
+    if (@($Database.TableDefs | ForEach-Object {$_.Name}) -contains 'InstMeterDmd') { return }
+    $manifestPath = Join-Path $PSScriptRoot '../../resources/mdb/approved-schema.json'
+    $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $schema = Get-MdbSchemaContract $Database
+    $fingerprint = Get-MdbSchemaFingerprint $schema
+    if ($fingerprint -cne $manifest.schema_extension.legacy_schema_sha256 -or
+        @($schema.tables).Count -ne [int]$manifest.schema_extension.legacy_table_count -or
+        @($schema.relationships).Count -ne [int]$manifest.schema_extension.legacy_relationship_count) {
+        throw 'Template schema is neither the approved current schema nor the approved pre-InstMeterDmd schema.'
+    }
+
+    $definition = $manifest.schema.tables | Where-Object {$_.name -ceq 'InstMeterDmd'} | Select-Object -First 1
+    if (-not $definition) { throw 'Approved InstMeterDmd definition is missing.' }
+    $table = $Database.CreateTableDef('InstMeterDmd')
+    foreach ($spec in $definition.fields) {
+        if ([int]$spec.type -eq 10) { $field = $table.CreateField([string]$spec.name, [int]$spec.type, [int]$spec.size) }
+        else { $field = $table.CreateField([string]$spec.name, [int]$spec.type) }
+        if ([int]$spec.type -eq 10) {
+            $field.Required = [bool]$spec.required
+            $field.AllowZeroLength = [bool]$spec.allow_zero_length
+        }
+        if (-not [string]::IsNullOrEmpty([string]$spec.default)) { $field.DefaultValue = [string]$spec.default }
+        $table.Fields.Append($field)
+    }
+    $relation = $manifest.schema.relationships | Where-Object {$_.foreign_table -ceq 'InstMeterDmd'} | Select-Object -First 1
+    foreach ($indexSpec in $definition.indexes) {
+        # DAO creates this nonunique index when the relationship is appended.
+        if ($relation -and $indexSpec.name -ceq $relation.name) { continue }
+        $index = $table.CreateIndex([string]$indexSpec.name)
+        $index.Primary = [bool]$indexSpec.primary
+        $index.Unique = [bool]$indexSpec.unique
+        $index.Required = [bool]$indexSpec.required
+        $index.IgnoreNulls = [bool]$indexSpec.ignore_nulls
+        foreach ($indexField in $indexSpec.fields) { $index.Fields.Append($index.CreateField([string]$indexField.name)) }
+        $table.Indexes.Append($index)
+    }
+    $Database.TableDefs.Append($table)
+    if (-not $relation) { throw 'Approved InstMeterPoints-to-InstMeterDmd relationship is missing.' }
+    $newRelation = $Database.CreateRelation([string]$relation.name, [string]$relation.table, [string]$relation.foreign_table, [int]$relation.attributes)
+    foreach ($fieldSpec in $relation.fields) {
+        $relationField = $newRelation.CreateField([string]$fieldSpec.name)
+        $relationField.ForeignName = [string]$fieldSpec.foreign_name
+        $newRelation.Fields.Append($relationField)
+    }
+    $Database.Relations.Append($newRelation)
+    $meterTable = $Database.TableDefs.Item('InstMeterDmd')
+    $meterTable.Indexes.Refresh()
+    if (@($meterTable.Indexes | ForEach-Object {$_.Name}) -notcontains [string]$relation.name) {
+        $index = $meterTable.CreateIndex([string]$relation.name)
+        foreach ($fieldSpec in $relation.fields) { $index.Fields.Append($index.CreateField([string]$fieldSpec.foreign_name)) }
+        $meterTable.Indexes.Append($index)
+    }
+    $completed = Get-MdbSchemaContract $Database
+    if ((Get-MdbSchemaFingerprint $completed) -cne $manifest.schema_sha256) {
+        $expectedTable = $manifest.schema.tables | Where-Object {$_.name -ceq 'InstMeterDmd'} | Select-Object -First 1
+        $actualTable = $completed.tables | Where-Object {$_.name -ceq 'InstMeterDmd'} | Select-Object -First 1
+        $expectedRelation = $manifest.schema.relationships | Where-Object {$_.foreign_table -ceq 'InstMeterDmd'} | Select-Object -First 1
+        $actualRelation = $completed.relationships | Where-Object {$_.foreign_table -ceq 'InstMeterDmd'} | Select-Object -First 1
+        $tableDifferences = @()
+        foreach ($property in $expectedTable.PSObject.Properties) {
+            if ((ConvertTo-Json $property.Value -Depth 20 -Compress) -cne (ConvertTo-Json $actualTable.($property.Name) -Depth 20 -Compress)) { $tableDifferences += $property.Name }
+        }
+        throw ('InstMeterDmd schema extension differs from its approved definition (table fields/indexes={0}, relation={1}).' -f
+            ($tableDifferences -join ','),
+            ((ConvertTo-Json $expectedRelation -Depth 20 -Compress) -ceq (ConvertTo-Json $actualRelation -Depth 20 -Compress)))
+    }
+}
 try {
     $payload = Get-Content -LiteralPath $InputPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($LegacyNetwork) {
@@ -42,18 +110,30 @@ try {
     }
     if ($payload.payload_version -ne 1 -or $payload.mapping_version -notin @('synergee-reviewed-v1','synergee-reviewed-v2')) { throw 'Unsupported export payload or mapping version.' }
     if ($payload.mapping_version -eq 'synergee-reviewed-v2') { $allowed += @('InstMeterPoints','InstDGens','InstMymDGens') }
+    if ($payload.tables.PSObject.Properties.Name -contains 'InstMymLoads') { $allowed += 'InstMymLoads' }
+    if ($payload.tables.PSObject.Properties.Name -contains 'InstMymMeter') { $allowed += 'InstMymMeter' }
+    if ($payload.tables.PSObject.Properties.Name -contains 'InstMeterDmd') { $allowed += 'InstMeterDmd' }
     if ($payload.idempotency_key -notmatch '^[a-f0-9]{64}$') { throw 'Invalid idempotency key.' }
     if ($payload.revision.sha256 -notmatch '^[a-f0-9]{64}$') { throw 'Invalid revision identity.' }
     $templateHash = (Get-FileHash -LiteralPath $TemplatePath -Algorithm SHA256).Hash.ToLower()
     if ($templateHash -cne $payload.template.sha256) { throw 'Template SHA-256 differs from approved revision.' }
     if (Test-Path -LiteralPath $OutputPath) { throw 'Output path already exists.' }
     $outputFull = [IO.Path]::GetFullPath($OutputPath)
+    if ([string]::IsNullOrWhiteSpace($outputFull)) { throw 'Resolved output MDB path is blank.' }
     if ([IO.Path]::GetExtension($outputFull) -cne '.mdb') { throw 'Output must have MDB extension.' }
     Copy-Item -LiteralPath $TemplatePath -Destination $outputFull
+    if (-not (Test-Path -LiteralPath $outputFull -PathType Leaf)) { throw 'The disposable MDB copy was not created at its resolved output path.' }
     $engine = New-Object -ComObject DAO.DBEngine.120
-    $workspace = $engine.Workspaces.Item(0)
-    $db = $workspace.OpenDatabase($outputFull, $true, $false)
+    # DBEngine.OpenDatabase and its transaction methods use DAO's default
+    # workspace, avoiding workspace collection/custom-workspace COM lookups.
+    try {
+        $db = $engine.OpenDatabase([string]$outputFull, $true, $false)
+    } catch {
+        $systemDb = try { [string]$engine.SystemDB } catch { '(unavailable)' }
+        throw ("DAO could not open the disposable output MDB '{0}' (SystemDB='{1}'): {2}" -f $outputFull, $systemDb, $_.Exception.Message)
+    }
     if (-not $db.Transactions) { throw 'Template does not support transactional MDB writes.' }
+    Add-InstMeterDmdSchemaToLegacyCopy $db
     $schemaBefore = Assert-ApprovedMdbSchema $db
     $actualTables = @($db.TableDefs | ForEach-Object {$_.Name})
     foreach ($name in $allowed) {
@@ -72,7 +152,7 @@ try {
             if (@($payload.template.permitted_static_tables) -notcontains $table.Name) { throw ('Unreviewed static template data: '+$table.Name) }
         }
     }
-    $workspace.BeginTrans(); $inTransaction=$true
+    $engine.BeginTrans(); $inTransaction=$true
     # Ordering respects the sample relationships: Node -> Feeder -> Section -> Transformer / Loads.
     foreach ($name in $allowed) {
         $definition = $db.TableDefs.Item($name)
@@ -127,10 +207,10 @@ try {
         }
         $rs.Close()
     }
-    $workspace.CommitTrans(1); $inTransaction=$false
+    $engine.CommitTrans(1); $inTransaction=$false
     $db.Close(); $db=$null
     # Reopen through DAO and compare every field, row, count, reference and schema to the approved payload.
-    $db=$workspace.OpenDatabase($outputFull,$false,$true)
+    $db=$engine.OpenDatabase($outputFull,$false,$true)
     $schemaAfter = Assert-ApprovedMdbSchema $db
     if ($schemaAfter -cne $schemaBefore) { throw 'Output schema/relationships changed during export.' }
     $counts=[ordered]@{}
@@ -182,16 +262,34 @@ try {
             'SELECT COUNT(*) FROM InstMymDGens AS Y LEFT JOIN InstDGens AS G ON Y.SectionId=G.SectionId WHERE G.SectionId IS NULL'
         )
     }
+    if ($payload.tables.PSObject.Properties.Name -contains 'InstMymLoads') {
+        $referenceQueries += 'SELECT COUNT(*) FROM InstMymLoads AS L LEFT JOIN InstSection AS S ON L.SectionId=S.SectionId WHERE S.SectionId IS NULL'
+    }
+    if ($payload.tables.PSObject.Properties.Name -contains 'InstMymMeter') {
+        $referenceQueries += 'SELECT COUNT(*) FROM InstMymMeter AS M LEFT JOIN InstSection AS S ON M.SectionId=S.SectionId WHERE S.SectionId IS NULL'
+    }
+    if ($payload.tables.PSObject.Properties.Name -contains 'InstMeterDmd') {
+        $referenceQueries += @(
+            'SELECT COUNT(*) FROM InstMeterDmd AS D LEFT JOIN InstMeterPoints AS M ON D.SectionId=M.SectionId WHERE M.SectionId IS NULL',
+            'SELECT COUNT(*) FROM InstMeterPoints AS M LEFT JOIN InstMeterDmd AS D ON M.SectionId=D.SectionId WHERE D.SectionId IS NULL'
+        )
+    }
     foreach($query in $referenceQueries) { $rs=$db.OpenRecordset($query,4);if([int]$rs.Fields.Item(0).Value -ne 0){throw 'MDB reference validation failed.'};$rs.Close() }
     $db.Close();$db=$null
-    $result=[ordered]@{output_sha256=(Get-FileHash -LiteralPath $outputFull -Algorithm SHA256).Hash.ToLower();payload_sha256=(Get-FileHash -LiteralPath $InputPath -Algorithm SHA256).Hash.ToLower();readback=[ordered]@{readable=$true;schema_verified=$true;schema_sha256=$schemaAfter;schema_table_count=50;schema_relationship_count=41;references_verified=$true;mapped_values_verified=$true;counts=$counts;template_sha256=$templateHash;revision_sha256=$payload.revision.sha256};log='Access DAO reopened MDB; exact approved 15-sample schema, all 41 relationships, mapped values, counts and model references verified. SynerGEE engineering validation remains pending.'}
+    $result=[ordered]@{output_sha256=(Get-FileHash -LiteralPath $outputFull -Algorithm SHA256).Hash.ToLower();payload_sha256=(Get-FileHash -LiteralPath $InputPath -Algorithm SHA256).Hash.ToLower();readback=[ordered]@{readable=$true;schema_verified=$true;schema_sha256=$schemaAfter;schema_table_count=51;schema_relationship_count=42;references_verified=$true;mapped_values_verified=$true;counts=$counts;template_sha256=$templateHash;revision_sha256=$payload.revision.sha256};log='Access DAO reopened MDB; exact approved schema including InstMeterDmd and its relationship, mapped values, counts and model references verified. SynerGEE engineering validation remains pending.'}
     $result | ConvertTo-Json -Depth 10 -Compress
     exit 0
 } catch {
-    if ($inTransaction -and $workspace) { try {$workspace.Rollback()} catch {} }
+    $failure = $_
+    if ($inTransaction -and $engine) { try {$engine.Rollback()} catch {} }
     if ($db) { try {$db.Close()} catch {} }
     # Only the fully resolved output path provided by the trusted launcher can be removed; never recursively.
     if ($outputFull -and (Test-Path -LiteralPath $outputFull)) { Remove-Item -LiteralPath $outputFull -Force }
-    [Console]::Error.WriteLine($_.Exception.Message)
+    $location = $failure.InvocationInfo
+    $scriptName = if ($location.ScriptName) { [IO.Path]::GetFileName($location.ScriptName) } else { 'export-reviewed-mdb.ps1' }
+    $line = if ($location.ScriptLineNumber) { [int]$location.ScriptLineNumber } else { 0 }
+    $message = $failure.Exception.GetBaseException().Message
+    if ($line -gt 0) { $message += (' ['+$scriptName+':'+$line+']') }
+    [Console]::Error.WriteLine($message)
     exit 1
 }

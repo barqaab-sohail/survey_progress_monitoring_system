@@ -152,22 +152,7 @@ class TransformerMdbNetworkService
                 $parent = $links[$parent];
             }
         }
-        $year = (int) $project->survey_date->format('Y');
-        $control = $defaults['SAI_Control'];
-        $control['Frequency'] = (int) ($settings['frequency'] ?? 50);
-        $control['ProjectionFile'] = 'WGS 1984 UTM Zone '.$zone.'N';
-        $control['ProjectionWKT'] = '';
-        if ($central) {
-            $control = $defaults['SAI_Control'];
-            if ($simple) {
-                $control['Frequency'] = $settings['frequency'] ?? $control['Frequency'] ?? null;
-                $control['ProjectionFile'] = $engineering['crs_name'] ?? $control['ProjectionFile'] ?? null;
-                $control['ProjectionWKT'] = $engineering['projection_wkt'] ?? $control['ProjectionWKT'] ?? null;
-            }
-        }
-        foreach (['B' => 0, '1' => 1, '2' => 2, '3' => 3, '4' => 4, '5' => 5, '6' => 6, '7' => 7, '8' => 8, '9' => 9, '10' => 10] as $suffix => $offset) {
-            $control['MYM_YearDesc'.((string) $suffix === '10' ? '10' : '_'.$suffix)] = (string) ($year + $offset);
-        }
+        $control = (new \App\Services\Mdb\SaiControlTableGeneration)->row();
         $voltage = $simple ? $this->number($settings['nominal_kv']) : (float) ($settings['nominal_kv'] ?? 11);
         $feeder = array_replace($defaults['InstFeeders'], ['FeederId' => $feederId, 'SubstationId' => $this->identifier($project->header['substation']),
             'NominalKvll' => $voltage, 'BusVoltageLevel' => $voltage, 'ByPhVoltLevelPh1' => $voltage, 'ByPhVoltLevelPh2' => $voltage, 'ByPhVoltLevelPh3' => $voltage, 'Note_' => mb_substr($project->remarks ?? '', 0, 100)]);

@@ -122,7 +122,7 @@ class SynergeeTransfer
         $this->require($this->matchesTransferHash($package['source']['revision_sha256'], $package['snapshot']), 'Frozen survey revision checksum failed. Re-export from production.');
         $this->require($package['source']['batch_id'] === $package['snapshot']['batch']['id'], 'The package batch identity differs from its frozen survey.');
         $this->require($package['source']['revision_number'] === ($package['snapshot']['batch']['revision'] ?? null), 'The package revision number differs from its frozen survey.');
-        $this->require(hash_equals(ApprovedSchema::fingerprint(), $package['schema_sha256']), 'The package uses a different MDB schema. Update the local application from Git.');
+        $this->require(ApprovedSchema::acceptsTransferFingerprint($package['schema_sha256']), 'This package uses an unsupported MDB schema. Download a new SynerGEE JSON from an application version with the matching approved schema.');
         $this->require(empty($package['snapshot']['template']['metadata']['required_base_files']), 'This template requires external base files that this offline package does not carry. Configure a supported self-contained clean template and reapprove in production.');
         $this->require($package['scope']['transformer_codes'] === array_column($this->selected($package['snapshot'], $package['scope']['transformer_id']), 'code'), 'The selected transformers differ from the package scope.');
         $template = base64_decode($package['template_base64'], true);

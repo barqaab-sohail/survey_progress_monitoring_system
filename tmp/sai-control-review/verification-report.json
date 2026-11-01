@@ -1,0 +1,12 @@
+{
+  "reference_workbook": "C:\\Users\\sohai\\OneDrive\\Desktop\\HAZECO\\Tables\\InstMeterPoints.xlsx",
+  "header_count": 34,
+  "generated_rows": 1,
+  "section_id": "00040711140223003.1",
+  "section_description": "Transformer",
+  "non_id_fields_match_reference": true,
+  "formula_cells": 0,
+  "all_49_other_table_rows_unchanged": true,
+  "schema_and_relationships_unchanged": true,
+  "disposable_mdb": "E:\\xampp\\htdocs\\survey_progress_monitoring_system\\tmp\\sai-control-review\\native-bed9d8421e9d\\after.mdb"
+}

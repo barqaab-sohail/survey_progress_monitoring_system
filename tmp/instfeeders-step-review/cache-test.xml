@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="Tests\Feature\MdbExportWorkflowTest" file="E:\xampp\htdocs\survey_progress_monitoring_system\tests\Feature\MdbExportWorkflowTest.php" tests="1" assertions="4" errors="0" failures="0" skipped="0" time="1.313775">
+    <testcase name="test_pdf_feeder_name_mapping_does_not_reuse_a_previous_node_step_export" file="E:\xampp\htdocs\survey_progress_monitoring_system\tests\Feature\MdbExportWorkflowTest.php" line="122" class="Tests\Feature\MdbExportWorkflowTest" classname="Tests.Feature.MdbExportWorkflowTest" assertions="4" time="1.313775"/>
+  </testsuite>
+</testsuites>

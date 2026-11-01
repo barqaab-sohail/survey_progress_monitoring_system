@@ -130,7 +130,7 @@ class SimpleMdbExportWorkflowTest extends TestCase
         $job = $exports->request($this->batch, $this->actor);
         $payload = json_decode(Storage::disk('local')->get($job->payload_path), true);
         $this->assertTrue($payload['settings']['simple_mdb_generation']);
-        $this->assertNull($payload['tables']['SAI_Control'][0]['Frequency'] ?? null);
+        $this->assertSame(60, $payload['tables']['SAI_Control'][0]['Frequency']);
         $this->assertNull($payload['tables']['Node'][0]['X']);
         $this->assertNull($payload['tables']['Loads'][0]['Phase1Kva']);
         $this->assertArrayNotHasKey('SurveyRows', $payload['tables']);
@@ -163,8 +163,8 @@ class SimpleMdbExportWorkflowTest extends TestCase
         }
         $load = $payload['tables']['Loads'][0];
         $this->assertEqualsWithDelta(2, $load['Phase1Kva'], 1e-8);
-        $this->assertNull($load['Phase1Kw']);
-        $this->assertNull($load['Phase1Kvar']);
+        $this->assertSame(0, $load['Phase1Kw']);
+        $this->assertSame(0, $load['Phase1Kvar']);
         $this->assertEquals(1, $load['Phase1Customers']);
     }
 
@@ -215,13 +215,13 @@ class SimpleMdbExportWorkflowTest extends TestCase
         $exports->run($job->id);
         $job->refresh();
         $this->assertSame('generated', $job->status);
-        $this->assertSame(50, $job->readback['schema_table_count']);
-        $this->assertSame(41, $job->readback['schema_relationship_count']);
+        $this->assertSame(51, $job->readback['schema_table_count']);
+        $this->assertSame(42, $job->readback['schema_relationship_count']);
         $this->assertTrue($job->readback['mapped_values_verified']);
         $this->assertTrue($job->readback['references_verified']);
         $this->assertSame($job->output_sha256, hash('sha256', Storage::disk('local')->get($job->output_path)));
         $payload = json_decode(Storage::disk('local')->get($job->payload_path), true);
-        $this->assertSame('G1', $payload['tables']['InstFeeders'][0]['SubstationId']);
+        $this->assertSame('Survey substation', $payload['tables']['InstFeeders'][0]['SubstationId']);
         $this->assertNull($payload['tables']['InstFeeders'][0]['NominalKvll'] ?? null);
         $this->assertNull($this->template->fresh()->approved_by);
     }

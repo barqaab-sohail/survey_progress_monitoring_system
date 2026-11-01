@@ -17,7 +17,7 @@ class ExportPayloadBuilder
 
     public const EXTENDED_VERSION = 'synergee-reviewed-v2';
 
-    public const EXPORT_REVISION = 'section-loads-secondary-meter-v1';
+    public const EXPORT_REVISION = 'instmeterdmd-reference-v1';
 
     public const TABLES = ['SAI_Control', 'Node', 'InstFeeders', 'InstSection', 'InstPrimaryTransformers', 'Loads'];
 
@@ -52,10 +52,10 @@ class ExportPayloadBuilder
             }
             $this->require(isset($base[$table]) && is_array($base[$table]), 'Explicit reviewed table values are required for '.$table.'.');
         }
-        $control = $base['SAI_Control'];
-        $this->engineering(($control['LengthUnits'] ?? '') === 'Metric' && (float) ($control['Frequency'] ?? 0) === (float) ($settings['frequency_hz'] ?? 0), 'SAI_Control must use approved frequency and metric length units.');
-        $this->engineering(($control['Product'] ?? '') === $template->synergee_version && ! empty($control['ProjectionFile']), 'SAI_Control needs matching SynerGEE product and projection metadata.');
+        $control = (new SaiControlTableGeneration)->row();
         $tables = array_fill_keys(self::TABLES, []);
+        $tables['InstMymMeter'] = [];
+        $tables['InstMeterDmd'] = [];
         if ($version === self::EXTENDED_VERSION) {
             $tables += array_fill_keys(SupplementalMapping::TABLES, []);
         }
@@ -69,6 +69,7 @@ class ExportPayloadBuilder
         $transformerIds = $transformerCodes = $sectionIds = [];
         $provenance = $loadProvenance = [];
         $rawWaypoints = $waypoints;
+        $nodeContexts = [];
         foreach ($transformers as $transformer) {
             $transformer = app(SurveyWaypoint::class)->firstPairCoordinates($transformer, $rawWaypoints);
             $this->require(! empty($transformer['id']) && ! empty(trim((string) ($transformer['code'] ?? ''))) && ! isset($transformerIds[$transformer['id']]) && ! isset($transformerCodes[$transformer['code']]), 'Transformer identifiers and codes must be present and unique.');
@@ -191,13 +192,15 @@ class ExportPayloadBuilder
                     }
                 }
             }
-            $feederId = $aliases[$network['feeder_node'] ?? ''] ?? null;
-            $this->require($feederId !== null, 'Approved feeder source alias is missing.');
-            $feeder = array_replace($base['InstFeeders'], $network['feeder_fields'] ?? [], ['FeederId' => $feederId]);
-            if ($this->simple && empty($feeder['SubstationId'])) {
-                $feeder['SubstationId'] = $transformer['header']['substation_identifier'] ?? null;
-            }
-            $this->require(! empty(trim((string) ($feeder['SubstationId'] ?? ''))), 'A surveyed substation identifier is required.');
+            $feederNode = $aliases[$network['feeder_node'] ?? ''] ?? null;
+            $this->require($feederNode !== null && isset($nodes[$feederNode]), 'Approved feeder source Node is missing.');
+            // Use the actual Node identity; the final Node step remaps this and its dependent references together.
+            $feederId = $nodes[$feederNode]['NodeId'];
+            $substation = $transformer['header']['substation_name'] ?? null;
+            $this->require(is_string($substation) && trim($substation) !== '' && mb_strlen($substation) <= 32,
+                'Transformer '.$transformer['code'].': verify the source PDF substation name (required, at most 32 characters).');
+            // Copy the reviewed PDF name verbatim. Codes, global defaults and network overrides cannot replace it.
+            $feeder = array_replace($base['InstFeeders'], $network['feeder_fields'] ?? [], ['FeederId' => $feederId, 'SubstationId' => $substation]);
             $this->engineering((float) ($feeder['NominalKvll'] ?? 0) === (float) ($settings['nominal_voltage_kv'] ?? 0), 'Approved feeder nominal voltage is required.');
             $this->require(! isset($feeders[$feederId]) || $feeders[$feederId] === $feeder, 'Consolidated feeder settings conflict.');
             $feeders[$feederId] = $feeder;
@@ -320,6 +323,7 @@ class ExportPayloadBuilder
             foreach ($aliases as $nodeId) {
                 $this->require(isset($reachable[$nodeId]), 'A mapped node is disconnected from its feeder.');
             }
+            $nodeContexts[] = ['transformer' => $transformer, 'waypoints' => $waypoints, 'network' => $network, 'aliases' => $aliases, 'source_section_ids' => $sourceSectionIds];
         }
         $tables['Node'] = array_values($nodes);
         $tables['InstFeeders'] = array_values($feeders);
@@ -346,6 +350,21 @@ class ExportPayloadBuilder
             $this->require($fromRoot !== $toRoot, 'Approved source mapping creates a cycle requiring engineering correction.');
             $parent[$toRoot] = $fromRoot;
         }
+        $tables = (new NodeTableGeneration($this->projection))->apply($tables, $nodeContexts, $snapshot['sources'] ?? [], $epsg);
+        $generated = (new InstSectionGeneration)->apply($tables, $nodeContexts, $provenance, $loadProvenance);
+        $tables = $generated['tables'];
+        $provenance = $generated['provenance'];
+        $loadProvenance = $generated['loadProvenance'];
+        if (array_key_exists('InstMeterPoints', $tables)) {
+            $tables['InstMeterPoints'] = (new InstMeterPointsTableGeneration)->apply($tables['InstPrimaryTransformers'], $tables['InstSection']);
+            $tables['InstMeterDmd'] = (new InstMeterDmdTableGeneration)->apply($tables['InstMeterPoints'], $tables['InstSection']);
+        }
+        $tables['InstMymMeter'] = (new InstMymMeterTableGeneration)->apply($tables['InstPrimaryTransformers'], $tables['InstSection']);
+        // Annual records share the final whole-customer allocations and apply
+        // their own numeric blank-to-zero defaults.
+        $annualLoads = (new LoadsTableGeneration)->apply($tables, $nodeContexts, $provenance, $configuration, false);
+        $tables['InstMymLoads'] = (new InstMymLoadsGeneration)->apply($annualLoads, $tables['InstSection']);
+        $tables['Loads'] = (new LoadsTableGeneration)->apply($tables, $nodeContexts, $provenance, $configuration);
 
         return [
             'payload_version' => 1, 'mapping_version' => $version, 'idempotency_key' => $idempotencyKey,
@@ -365,7 +384,7 @@ class ExportPayloadBuilder
     private function combinedLoad(array $rows): array
     {
         $combined = $rows[0];
-        $combined['Description'] = implode(', ', array_unique(array_column($rows, 'Description')));
+        $combined['Description'] = '';
         foreach ([1, 2, 3] as $phase) {
             foreach (['Customers', 'Kw', 'Kvar', 'Kva', 'Kwh'] as $quantity) {
                 $field = 'Phase'.$phase.$quantity;
@@ -379,7 +398,7 @@ class ExportPayloadBuilder
 
     private function zeroLoad(string $sectionId, array $base, string $phases): array
     {
-        $row = array_replace($base, ['SectionId' => $sectionId, 'Description' => 'Transformer secondary link']);
+        $row = array_replace($base, ['SectionId' => $sectionId, 'Description' => '']);
         foreach (['R', 'Y', 'B'] as $i => $phase) {
             foreach (['Customers', 'Kva', 'Kw', 'Kvar', 'Kwh'] as $quantity) {
                 $row['Phase'.($i + 1).$quantity] = str_contains($phases, $phase) && in_array($quantity, ['Customers', 'Kva'], true) ? 0.0 : null;
@@ -393,7 +412,7 @@ class ExportPayloadBuilder
     {
         $demand = $consumer['demand'] ?? [];
         $this->engineering(! empty($demand['approved_by']) && ! empty($demand['method']) && ! empty($demand['evidence']), 'Every load needs an approved measured value or documented estimation method.');
-        $row = array_replace($base, ['SectionId' => $sectionId, 'Description' => (string) $consumer['category']]);
+        $row = array_replace($base, ['SectionId' => $sectionId, 'Description' => '']);
         if ($this->simple && empty($demand['phase_values'])) {
             foreach ([1, 2, 3] as $phase) {
                 foreach (['Customers', 'Kw', 'Kvar', 'Kva'] as $quantity) {

@@ -593,8 +593,8 @@ class EngineeringConfigurationTest extends TestCase
     {
         $configuration = $this->saveConfiguration();
         $network = app(TransformerMdbNetworkService::class)->build($this->workspace(), $configuration);
-        $this->assertSame('WGS 1984 UTM Zone 42N', $network['tables']['SAI_Control'][0]['ProjectionFile']);
-        $this->assertSame(50, $network['tables']['SAI_Control'][0]['Frequency']);
+        $this->assertSame('WGS 1984 UTM Zone 43N', $network['tables']['SAI_Control'][0]['ProjectionFile']);
+        $this->assertSame(60, $network['tables']['SAI_Control'][0]['Frequency']);
         $this->assertSame(11.0, $network['tables']['InstFeeders'][0]['NominalKvll']);
         $this->assertSame('approved-100', $network['tables']['InstPrimaryTransformers'][0]['TransformerType']);
         $load = $network['tables']['Loads'][0];

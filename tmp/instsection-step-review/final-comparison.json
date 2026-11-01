@@ -1,0 +1,22 @@
+{
+  "nodes": 92,
+  "sections": 91,
+  "old_nodes_preserved_exactly": 89,
+  "added_nodes": [
+    "81026028.1",
+    "81026028.2",
+    "81026028.3"
+  ],
+  "consumer_pv_connections": 77,
+  "pv_phases": [
+    "  BN",
+    " Y N",
+    "R  N"
+  ],
+  "no_orphans": true,
+  "schema_indexes_relationships_unchanged": true,
+  "instfeeders_unchanged": true,
+  "later_table_business_values_unchanged": true,
+  "fourteen_recorded_r_customers_preserved": true,
+  "remaining_source_review": "Saved substation header requires the literal PDF spelling; user data was not edited."
+}

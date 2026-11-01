@@ -1,0 +1,51 @@
+# InstSection step: inspection, resolved rules and pending decisions
+
+The user's request was read from the pasted text attachment. Workbook comments and sample data were treated as reference material within that request. All software-rule clarifications have now been received and implemented, including three-phase/PV expansion and required Node integration. The final implementation, exact 59-column mapping and current verification are documented in docs/mdb/INSTSECTION_GENERATION.md. The progress notes below retain the earlier inspection history.
+
+## Confirmed schema and flow
+
+Workbook: C:/Users/sohai/OneDrive/Desktop/HAZECO/Tables/InstSection.xlsx. Row 2 contains column explanations; row 6 has 59 headers from SectionId through CostZone; rows 7 onward contain 167 example sections. Every header matches the actual MDB's order exactly.
+
+The actual target is InstSection. SectionId is required Text(32) and the unique primary key. FromNodeId and ToNodeId are required Text(32), with enforced references to Node.NodeId. FeederId is nullable Text(32) in the schema (default "unfed"), but the normal exporter requires an actual feeder and verifies the matching InstFeeders record. SectionPhases is Text(5); Description is Text(100); the four conductor IDs and ConfigurationId are Text(32). SectionLength_MUL is Double. PositionCode is a Long Integer, default 0. Other original text, Long and Double field definitions/defaults remain intact. Complete field/index/relationship metadata is retained in template.json; no schema changes were made.
+
+The normal path remains MdbWorkflowController::export -> ExportService::request -> ExportPayloadBuilder::build -> GenerateMdbExport / ExportService::run -> configured exporter -> export-reviewed-mdb.ps1. Windows native readback checks the same 50 user tables and 41 relationships. Section IDs are also referenced by InstPrimaryTransformers, Loads, InstMeterPoints and generator tables; those identifier references must be remapped together when SectionId changes, without changing their business values.
+
+Current ExportPayloadBuilder creates hashed source/survey section IDs. Its normal automatic topology has two logical supply sections plus the survey S/E sections; it does not yet create consumer sections. NodeTableGeneration runs afterward and rewrites the related Node/feeder references together. Step 3 must run after actual Node identities exist and validate the rebuilt chain before writing the normal MDB.
+
+## Resolved findings
+
+- SectionId sample records and existing MDB fixtures concatenate their identity components without hyphen separators. The schema imposes a length/uniqueness constraint, not a separator convention. The formatter preserves literal code/group/waypoint zeros, a six-digit DDMMYY date and text decimal suffixes. The confirmed 13-Dec-2022 date is used instead of the obsolete workbook date.
+- Description is the destination for Feeder / Transformer / Secondary Pole. PositionCode is an integer and cannot contain those labels; its existing 0 is retained.
+- Native application phase strings use fixed R/Y/B/N positions (for example `R  N`, ` Y N`, `  BN`). The workbook's RN/YN/BN represent the same phase sets, but cannot simply replace the established encoding without breaking validation.
+- Consumer formula examples agree: 36 ft produces 14.62 m, 31 ft produces 12.34 m. The four-foot clearance is expressed in feet; an explicitly recorded metre height is converted equivalently. Missing/invalid heights or units must be reported. The associated E row's height is required: EntryService currently stores the S row's height on the survey section, and S/E heights can differ.
+- Pole spans retain ProjectionService's elevation-adjusted projected polyline length and the existing explicit sag/measured-length behavior. Drawing offsets are not span corrections. All supplied A GPX points contain elevation.
+- The source A081026.pdf pages 1-2 were visually reviewed. They establish the target's first E 001, the later pole heights/consumer counts and changes from RYB to RY and Y-only availability. The current H_081026_07.pdf / revision-101 dataset is a different transformer and has explicit recorded customer phase counts, including 14 commercial consumers on R at E 029.
+- The workbook has distinct SectionIds for .1 and .10, but eight numeric ToNodeId cells repeat .1 for the .10 section. The implementation must take the actual distinct Node values from step 1, preserving .10 as text, rather than copying these damaged sample references.
+
+## Decisions received
+
+1. **Identity prefix/group:** use each row's own group and a six-digit feeder code, left-padding a shorter code with zeros. Codes longer than six digits or nonnumeric codes are reported, not truncated. A saved code 407 therefore becomes 000407 without numerical conversion of the resulting ID.
+2. **Fixed settings:** apply the workbook's specified values. Feeder/transformer/first-pole lengths are NULL / 0 / 10. Feeder conductors are 500 MCM, transformer conductors 4/C 07/.052, and consumer conductors PVC 07/0.052. Pole conductors remain their actual PDF mapping (A -> ANT, GN -> GNAT, etc.). ExpFactRepair is 0. Other populated workbook configuration constants are applied to the described section roles; unspecified base values such as Note_/CostZone remain intact. No application configuration is edited.
+3. **Explicit customer phase allocation:** honor recorded PDF counts. Only single-phase consumers without a recorded allocation rotate across the available phases. The user additionally requested three phase rows per three-phase consumer and per PV installation; the example totals contradict that rule and have been sent back for clarification.
+
+The workbook's own customer order is grouped by phase in several places: at E 002 it lists RN, RN, YN, BN. The user's request explicitly calls for a circular RN, YN, BN, RN sequence for unallocated three-phase customers, so sample ordering is not a reason to abandon that explicit rule.
+
+## Implementation and current verification
+
+- app/Services/Mdb/InstSectionGeneration.php: rebuilds the feeder -> first S -> transformer -> first E chain, later pole spans and confirmed single-phase consumer sections. All endpoints resolve to actual Node records. Later-table business values remain unchanged; only SectionId references are remapped. Source span provenance is retained and the first pole's modeled length is explicitly marked workbook_static. Original topology is retained for historical networks lacking complete operator identities, consistent with step 1.
+- app/Services/Mdb/SectionGenerationRules.php: six-digit code padding, string-safe SectionId formatting and consumer cable calculation with explicit height/unit validation.
+- app/Services/Mdb/ExportPayloadBuilder.php: integrates the new section step after Node generation and passes the existing source-section identity mapping. The internal export revision prevents stale cached exports from being reused.
+- tests/Unit/MdbInstSectionGenerationTest.php and tests/Unit/MdbSectionGenerationRulesTest.php: confirmed chain, each row's group, leading zeros, .1 versus .10, NULL/0/10 lengths, both cable examples, explicit units, source allocations, RB rotation excluding Y, conductor role isolation, retained unspecified values, missing evidence, later-table business-value preservation and a native normal MDB write/readback.
+- Existing Node/offline fixtures and expectations were updated only for the new source-code/height evidence and the first pole's confirmed static model length. The cache regression now covers both preceding table-step revisions.
+- The 87-test regression run passed with 1,465 assertions. After adding the additional old-feeder-cache case, both cache cases passed with 8 assertions. The focused section run passed 10 tests with 177 assertions before the later provenance assertions were added; those provenance assertions passed in the 87-test run.
+- Native readback of the single-phase fixture verified 21 InstSection rows, the unchanged 50-table / 41-relationship schema, all mapped field values, all references and an unchanged template hash. Nodes, IDs, lengths and conductors are checked by focused assertions; no real user MDB was overwritten.
+- Pint and scoped diff whitespace checks pass.
+
+## Follow-up questions subsequently resolved
+
+1. The user confirmed RN=5, YN=2, BN=2 for three recorded RN customers + one three-phase consumer + one PV, with nine separate connection endpoints. They also confirmed RN=5, YN=5, BN=4 for eight unallocated single-phase customers plus the same two three-phase items. Both cases pass regression checks.
+2. The user explicitly authorized the necessary Node integration, preserving old IDs/placements and using established suffixes/offsets. ConsumerPhaseConnections now provides the same endpoint plan to both generators. Existing physical suffixes remain; extra phase/PV suffixes extend the sequence. Native comparison preserves all 89 old revision-101 Nodes and adds exactly three PV endpoints, yielding 92 Nodes and 91 sections with no orphans.
+
+During implementation the revision-101 PV record was deliberately blocked while these choices were pending. That temporary guard has been replaced by the confirmed expansion rule. The final full normal MDB passed native readback and exact preservation checks; see normal-r101-readback.json, normal-r101-final-inspection.json and final-comparison.json. The user subsequently resolved A081026.pdf E 014: its Y/neutral-only PV generates three distinct YN connections and Nodes, with no R/B conductor requirement or source-data correction. Focused assertions and native normal-export readback cover this exception. The existing substation-header literal-text correction remains a source-review prerequisite and was not silently applied to user data.
+
+The user's response on the earlier InstFeeders question was received during this inspection: the reviewed header must match the literal PDF text (132 KVA Abbottabad for transformer 11140223003), rather than accepting the saved normalized spelling. That decision is retained and does not authorize silently rewriting stored survey evidence during this separate InstSection step.

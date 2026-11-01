@@ -1,0 +1,1863 @@
+~t\'-\ 
+o \ 
+Evaluation of Distribution Losses of HAZECO Network for the FY 2025-26 
+Data Input Form for LT Survey 
+SUbstatlon: 
+rn k'lfJ 
+.Ahh,,fr7hrJJ.. 
+T/F cap: 
+I bl.:> 
+ls.Po1e I 
+ID.Polo V IPod I 
+Survey Dao: I ..a.)!--/ 0 ~ 
+Feeclw: 
+.Lll'\tuO.. ~h.PJ\'< 
+T/FMai.: 
+I a.-.i 0utyl v!Dod I 
+"" 5o1o</Nel-M-lng 0.• 
+TransfOfllW Code: 
+,,--_ fl I 1,(?_)_)fe>1. 
+Inspectors: 
+A/_/ !!11 ?/1 
+I 
+Location 
+N"oA A-<;c,o"<;. ( ~ s~J 
+Feeder Code: OOtJl/n 7 
+DMslon: 
+fl t.J../) I 
+£Jt. J.Ah'l J,,,,A/ 
+I Sub-Olvlalon: 
+I 
+cllM. u. l 11 
+, <H..J.. " 
+Sub Dlvloion COcM I ?.7/L/? 
+Conductor 
+E-Typo-
+C:-- T'y!IO 
+P'V loll< Son PV Sol., C.., lit _ 
+.. 
+Con~ R .. efen« 
+u; 
+llfp 
+..... 
+GPSWP 
+No. 
+LD(llWI 
+(kWI 
+-
+ST 
+PV 
+"'' 
+...... 
+R 
+y 
+I 
+..... ... 
+Typo 
+Po&eC•• 
+RS 
+RL 
+SC 
+LC " 
+u ... 
+A.G 
+• 
+I 
+d 
+d 
+.. .. 
+y 
+y 
+0 
+• 
+I 
+....... 
+1'1 
+s t> ( I B ., 2- 'L 'L-. I 6 
+~ IRtt 4 .4 
+~ 4- 7~ s ~ 
+I 
+I 
+It 
+"""" 
+E 0 ., b 9 ( D 
+)... k 
+0 c f 
+('"" 
+(')" 
+("' 
+~ IY sp 
+~ IJl. ~ 
+\/ 
+s 
+(!> 0 f 
+E 
+c) c) i... 
+rs I ~ 
+) 
+s 
+CJ c ?. 
+I/ 
+....., ~ 
+E 
+c:: 0 J 
+I/ 
+I/ ft 
+s 
+{) C) J 
+I 
+E 
+0 0 tr 
+" 
+! 
+32-99e2J¥i 
+s 
+0 
+0 y i 7f> 4-
+A-
+A-
+~ .s ~ _5 
+~I 
+E 
+0 0 s 
+'1 
+s 
+0 0 5' 
+E 
+le 
+' 
++ 
+b 
+0 
+s 
+(::;> 
+t) b 
+/ 
+-
+~ 
+E 
+e; O +-
+I 
+~ 
+~ 
+s 
+CJ 0 
+-:;.. 
+I 
+E 
+0 
+C> a. 
+I/ 
+8 
+J 
+. 
+() <6 
+I 
+s 
+0 
+0/ 
+v 
+r~ 
+E 
+C? 
+I 
+t) 1 
+t 
+s 
+CJ 
+E 
+D \ 0 
+fl· " 
+~ 
+• "' '""' • (N1 Woe> · (GNI Gna -20 '-IVG cPYC 7i0.052) (PYC 18''0.0!;21 (PVC l~'CeJJ (PVC.'0.043) MtC o.b11 (50tnm2~.m2J 
+!Ang· 
+Peto a...• Sl• I StNet.n(S) · PC 0.-<y;PCOI · PC Spu"<PC:Sf · Fla> St ... (RSf · l .i..a. s.. .. (T SJ Nola Thi S4.f-,,..yar d
+vbictMN;t, aflt'lll So&ril' PV1'WM MltMtwiQeor.uNu Mttand 
+MgloMn-l 
+Wllll<acbt rl/Bi 
+l'IClhl the atio .. pelatnfMit'l acoot6r'iJ1. 
+CO'tunW •RS · 1ps RM - RL·3pRM · SC . 1pCOrn - SI· tpnd - U . 3p hd - PS· f>Wk:B~ · AG -~ - sr. $ttMtLigN . py. PV SDW 
+..... Holghb.. s- SlllDH -1sspse .. .. 40.lll.31 PC Spun:-•S.•0.3'5.31 PC Cltdirwy;- 311.31 
+I 
+' 
+
+Evaluation of Distribution Losses of HAZECO Network for the FY 2025-26 
+Substation: 
+tf'J ///IA 
+Data lnpUI Form for LT Surwy 
+jf 
+h),~ I-/l }n,/ 
+T/f Cap: 
+I on 
+S.Pole 
+uf2r10r26 
+Fftdw: 
+AA, ....wi 1C.lv>h}, 
+• /\'\. 
+O.Pole v Pod 
+Sutvty 0110: 
+T/F Mike: 
+GeM<>I Duty v 
+Ded 
+TrMS!or_, Code: 
+7 -
+/ I . ~ I ') ')_'l-1 -
+Inspectors: 
+/..//; f!IJ ?tJ 
+Location 
+N/J/JJ. .fll...c,.,nc / ,...J bfri~ M:T-~°"'· 
+FHderCode: Ono !J() 7. 
+!Division: 
+I SID-OMslon: 
+llubDMllion~ 
+~ 
+~tnio 
+C-Typo 
+SoE. 
+°"' 
+0.. 
+OPS WP 
+Comd'Mf ,.,...,enu 
+,,,, __ 
+,,,,_ea., ·-
+• 
+I 
+d 
+d .. .. 
+-
+• 
+y 
+• ........ 
+T)'llO 
+Poh C'-t Pole 
+Ill 
+AL 
+SC 
+LC .. 
+u 
+pa .,. 
+IT 
+PV ... 
+No. 
+LD (t.W) 
+(llW) 
+J 
+J 
+• • ' 
+...... 
+s 0 I ~ 9 
+( 
+0 l. J. 
+b I t) ~~ f:.r A ~ A- sf s 31 
+E ~ I C> % I 6 1-/j, 0 l 1 
+llr 
+' 
+A 
+s 
+0 \ I 
+l/ 
+/ 
+E 
+t? I 
+)_.. 
+( 
+{O 
+s 
+() 0 2 
+~r ~ ~ - " 
+~~ 
+~ 1\ 
+E 
+t> \ 3 
+(V' 
+IY 
+~t, f O 
+2-
+s 
+0 0 I 'I -
+fit -
+(\-- >P s· ~t 
+E 
+0 l 
+~ 
+a 
+I 
+nco 2S4~~ 
+s 
+0 \ 4 
+I, I """' ,.j 0 , 
+~ 
+E 
+CJ \ r-
+J 
+ti" 
+-
+s 
+0 I ~ 
+.. 
+-· . 
+E 
+() I t> 
+'2-
+-
+(" 
+s 
+0 
+[ 
+~ 
+~ 
+. 
+E 
+C? 
+( } 
++-
+. 
+().-
+s 
+E 
+/ 
+11 
+s 
+·~ 
+E 
+I 
+l I 
+\. 
+s 
+E 
+~ •IA) M • (Wi Wuo . (CN) GM< . ~Q AWG !PVC 7.0.052) (PVC t ~'O.!l'
+..2) 11".IC 19.'C>'Cil3) (P\IC/a003) "8C c.i.. (50mtn:l-
+rn21 
+"'"9-
+Pcitt Olus•S.-1 ~S) ·PC Or6nuy(PCOI · PCS;arofPCSt · Raf Stffl(RSJ · Ta.bu9t ~ITS1 Nata: The Sw\4;adviM: Nttlol lf'll Sollw ,..../,ffttt ~CcNl.mlr 'MeWd 
+AnQloH .. __ 
+w.a erne1 r.·.·s1 
+ncl•h~~I'$~. 
+Ca~•RS • 1Pl" RM · FlL·~RH -SC • 1pCMi ·SI • tphit · U• 3p rld · PB• PuhkBuil!Mg"· AG ·~ - S T•St'"'41f · PV s PV Solilr 
+Polf Heightl .•• Stett StNl::N'o·· (SS) 58.45,40.36.31 PC SSU\:· 45., 0-3&.lt PC Ordirwly.· 38..31 
+----"""""'=;=--:--:---~=--=o==-- -
+-
+-
+=::::::::~:-=::.:.: - --
+
+·-
+l 
+Evaluation of Distribution Losses of HAZE CO Network for the FY 2025-26 
+I?? Jrl/.6 
+AJiA. " - ,,.,,. I 
+Data ~ 
+fon'll tor LT Surwy 
+-
+Tlt'C. 
+t...iSO "-
+~ 
+......... 
+s..r..,, 0.0: 
+())1 -1 0 -.2,_..,( 
+~ 
+~q..;h. S L- · • • 
+~-
+Tlf..._: 
+~, •••• \_Me..(_ 
+-Duty[ qOod 
+eo.: 
+~ • ) ~c.n1 xi, 
+'1V $0Mi'Jt .. M I Wiii 0.. 
+~ 
+JI f,· fl" .,,,, 
+i.oc.lon 
+or~~ r.a>\bM. 
+~QMI: ,.,.,,. ''"? 
+IDMlioa: 
+""-,_, /IJ..l 
+,h.L_ J 
+Sul>-OMslon: 
+NaL/'\)\ (W>. 
+-Div-~ 17/t/7 I l 
+c:oo.o.. 
+-.-... 
+c--r,,.. 
+v 
+s. .. 
+-
+--
+c-•--- ... --
+,.y SGNr°C. -
+• 
+-
+• 
+T 
+• _ 
+.. ...... -c.. - ... •• 
+SC 
+lC .. 
+u .. 
+AG 
+ST ... ... 
+""' 
+U) t"W) 
+C"WI 
+• .. 
+.. 
+• .. ' 
+' • • ' 
+-
+s 
+t ' 
+1. lJ ob f ). I a 
+}....-- ~~e w w w lJ) rfL s tJ6 
+E 0 I 
+0 )) I O 
+}... ,(. 
+t:/ I g 
+h" 5p 
+fY 
+,,... h I I 
+... 
+.,, ,; ,,. ... 
+s 
+et I i 
+I} 
+E 
+0 I ~ 
+'Jf 
+s 
+o I "f 
+E 
+0 
+1.. 0 
+~ 
+31 b 
+v 
+s 
+(!) '}.. 0 
+ES - - 17,. (,,1 ~sP 
+E 
+0 l.. H . 
+~ 
+~ 
+r 2-
+s 
+0 
+~ 
+ls'f u.>/fJ -
+H 
+E 
+2- ).... 
+~ 
+,. . 
+c. 
+0 
+s 
+0 j_ 0 f;,f) A- A- Pr A-
+('-' 
+5 
+3/ 
+E 
+0 'l.- J 
+r s 
+~I 17-
+s 
+0 2- J R1 ,+ A- -
+A <f 
+~ 31 
+E 
+0 
+1..- y 
+s 31 3 
+s 
+0 '2- 1 
+E 
+0 
+'2-- 6 
+3 
+s 
+(;; ').. JO 8/B 
+()> w w t.\? s<> 
+~ 3) 
+E 
+0 2- k 
+'~ 
+v 
+s 
+0 I- b 
+E 
+0 1-1-
+~ 
+~ . IA) ... · (Wi W-
+- j(;H)C- -:OAWG 1PYC 7.o.=i<PYC 1~.llSll (PVC 1~1:>a!3J l""C.1l.O«l; A8C Cal>lo ('50mn-.2J(OS<r'"'2J 
+........ 
+PIM a..»aS.-1 Scna.nCS) • PCOckoty~PCOj ·PC Sp.r•PCSI · Ftail StN \RSf • l..::...WS.... ITSJ Note. Thi ~tu .. Yilit MCfl ol N SOW P-,.'i.Nlt UMmg ecr.,,_, :.-.,_, 
+-~ .. -
+w .. Bracbt (WBt 
+l'dehabcweo~~-
+emun. •RS• 1P' RM · RL·~RK · SC .1pCon · SI• tphf · U·~hj·PB• Pl.dc:Bubnj·i\G•~ - ST• St .. .cL.y. - PV • ~ 
+SoW 
+--
+• S1ee1 ~···(SS. :.&.4S...CO,JG..31 PC Spun·· '5.40..J5.J1 PC Oiiirwy .. lG.Jt 
+
+r 
+Evaluation of Distribution Lo~ses of HAZE CO Network for the FY 2025-26 
+Dita lnpUI Form IOI' LT Surwy 
+SUbatellon: 
+I? y If JI 
+,/lb.h,., /',,-, J,,..,.J 
+T/F Cap: 
+?..Do 
+S.Polt 
+D.Polo V 
+IPoc1 
+Su<vty D•t: 
+,...,<.,!.-\ a-J,,i. 
+fe9cler: 
+7f} /l/./IJh 
+t <:.frJJi J.. 
+" 
+T/F Maka: 
+Yf Wi #'fi>f' 
+a.....11 °"'YI,/ 
+IDtd 
+, 
+l'V SOlltlllet·-«lnt D•• 
+nanator...., Code: 
+7 - /} ') ?f1/.. 
+"7 f''l'lv 
+lnlfMCIOI'&: 
+A f,· l/1t-i/1 
+Loe II Ion 
+nJi.eOi 
+r~ fAt. ... 1. 
+Fffder Code: ooo7lli7 
+IDMaion: 
+Sub-Di.talon: 
+Sub OM1lon Codo 
+If 
+~-
+E-T>l'O 
+eona......Typt 
+MO 
+"'• 
+ConwmerR.t ... .....c• ,,._,... ,.v Sol• c .., R.mwli1 
+Oooo 
+Gl'S WI' 
+LO(llWJ 
+(kWJ 
+-
+• 
+y 
+I 
+Ntutrll 
+T'ypt 
+Pot.ca. .. ..... •• 
+Rl 
+SC 
+LC .. 
+u •• "'° 
+IT 
+PY '"' 
+Ho 
+• ' • 
+d 
+.. 
+"' 
+y 
+y 
+0 
+0 
+' 
+....... 
+s C)' 
+l1' ~ I 
+0 
+)..f{, 
+{!) IL-- + ~~c v::: ~ t() v_) $0 <; 
+JI 
+E 
+0 ll.-- ~ r 
+fl/ ti/ 
+V' 
+"' 
+,., 
+,.. 
+,... 9 
+s 
+f) 1'2- s 
+~'1~ A f\ A- p.. s{) ~ )\ 
+E 
+c 1-. 0 
+£ 
+I 
+I) L-19 
+I 
+s 
+/ 
+E 
+t:> lJ 
+0 
+I 
+2-
+s 
+0 l3 D 
+E 
+lo .'.l ( 
+17' 
+s 
+C) '1 
+r ~ ft- 4- A A sO 5 
+>\ 
+E 
+15> 3 2..-
+I "l 
+s 
+0 I> Iv 
+I 
+E 
+r.> l3 1 
+I 
+s-
+s 
+() 3 3 
+E 
+C:) J <-r 
+I~ 
+"),, 
+v 
+s 
+0 J i f'i 
+A- A - Ct sP s ~
+I 
+E 
+0 J ~ 
+-
+I 
+g 
+• 
+s 
+ob 
+Lo---
+7 
+-
+/ 
+I> 
+E 
+olJ ~ 
+-
+r"l-
+s 
+() J ~ ~'f( A- -A-
+~ f\-
+~v ~ IS1 
+l3 + 
+IV 
+...... 
+E 
+0 
+K 
+~·I~ 
+.... · IWI w._ ·{GN)<IN< · 20AWG (PVC 7IO.cr.2) JP\/C 1111>=J(PVC tM>'ClllJJ (PltC"lOe:l)AllC Cobio (SO<M<2)(9Smm21 
+1""9-
+PoteC.SS·Sleot-SJ · f'COfdno<y lPCOJ · PCSp.r<PCSi · RMSl.,. (MSJ ·1-s-1/T91 Nott. Tt. Sww)O' d VM Httl d,. 6oW PV'""- ....,..,9 C«'*"WI lilllWI wd 
+""Glo~lrl-
+W" 8'Pet <WBI 
+l'U4tfw~c-wnewrs~. 
+CO'eunw·RS• 1,. RM · RL·~ R• · SC .1pCorn . 51.1phd - U•3p nt · PB• P\dcBUldtlg · AG·~ · sr. StrMtL.ic1'11 · PY· P\'5'* 
+-- .. Steo15"""'.f•··(l;Sl68.45,<0.31.31 PC Spun:. 45.40.36.31 PCo.n.y, JUt 
+
+I 
+I 
+\ 
+I 
+I 
+I 
+Evaluation of Distribution Losses of HAZE CO Network for the FY 2025-26 
+Data Input Form for LT Surwy 
+Subamlon: 
+/Z7_/1JJ J 
+.Ah},,, t;,Jvid 
+T/F Cap: 
+'U>n 
+$.Polo 
+O.Polo V 
+Pod 
+Survey Diiie: 
+,~....-, tr' l.-4 
+"-: 
+Ni, 1. 11'lh rkhh 
+·"' 
+TIF Make: 
+r.1 ro1>ft'r 
+Genofal Duty v 
+Ood 
+l'Y SOl.-INOl-•1"9 Data 
+TrMaformer Code: 
+,_- IJ?flf..!71f> V--
+Inspectors: 
+Af; f!,,,7,., 
+Location 
+fl ~p ch 
+r,, f,,. ,,..,~ 
+F-Cocle: DDll ZJ 07 I Division: 
+I Sub-Olvlslon: 
+Sub DNlston Code 
+tf 
+Conduaor 
+E-TJllO 
+C-Typo 
+eom...netR~• P'VSolMSon PV-C:.,. ......... 
+~ °"' 
+°"" 
+OPS-
+No . 
+LD ("W) 
+(kW) 
+....... 
+• 
+y 
+I -· '"'" 
+POleCln• ...... "' 
+RL 
+SC 
+LC .. 
+u 
+Pl 
+AG 
+ST 
+PY "" 
+0 
+t 
+d 
+d . m 
+y 
+y 
+.• 
+0 
+t 
+Holgt< 
+s D I 0 g I 0 1....... lo 0 ~ rr ~~S2 A-
+A ~ t\ s~ ~ 3.\ 
+E 
+C) .1 8 
+~ 
+s 
+0 1~ 
+. 
+E 
+() .3. ~ 
+I/ 
+~ 
+s 
+0 g 1 
+I 
+' 
+E 
+C> Lf 0 
+<6 
+s 
+b ~ 1- A Cl:. v\- A-
+J\: ~ ${) 
+<; 
+']\ 
+E 
+p 
+~ l 
+~ 
+( 
+2 
+'v _.. 
+s 
+b l-t r 
+N 
+I> 
+E 
+0 
+L( '2-
+w/~ -
+2 
+/ 
+s 
+c/' l-i )..... 
+I 
+""16 -
+~ 1 
+II 
+~ 11 ~ 
+E 
+C) 
+I 
+s 
+0 43 
+v 
+E 
+0 
+~ ~ 
+J 
+if 
+s 
+0 11 
+t1fl> 4- 4-
+(.'.)- 4 &P r sl 
+E 
+cJ ~ ) 
+J 
+s 
+0 ~ \ 
+E 
+c;; Lj b 
+.\"' 
+v .... 
+s 
+fP ~ I, t<_ 
+I+ -
+~ 
+A- ~ e 
+~ rJ I 
+E 
+CJ ~ :+-
+w/15 - I 
+~·W"" · (WiW- · (GNJ C... -2.0AWG(P>'C7.0.0!l>) (Pl/C1W=)(PVC1M>'CB3J(l'\IC.~C03i >!IJC~!'50n""21'0So-.n'2) 
+\Ang· 
+Pc.la Olw •Stw.I Scruclln{S)-PC Oukury(PCO) · PCSpiri(PCS~ - ~Sl...C (RS) . T .... Swd rrs1 Noc.: The~ 
+... ~ 
+_.vilic Net1 ofH SoW py, ._ "'~rig c:or..n.1 M9 .,_, 
+-~ .. -
+Wltl~(\"/8) 
+not•h~~tl~. 
+ec:riun. . RS-1ps RR - RL•~ R•-SC. 1pCon - SI • tp ~- u .:-ip hd - PB · P\dc"BU!din:i1· A.G -~- sr . SUMt Li(1i. PY. PY So&lw 
+Poi. ~··· 5""911 SWCN.:· {SSI 51.45.~.~31 PC SPY'!:· 45,40..36.31 PC Ordinwy:-34.31 
+
+s 
+F 
+i 
+~ 
+Evaluation of Distribution Losses of HAZECO Network for the FY 2025-26 
+, 
+Oa1a Input Form tor LT SUMly 
+~ 
+1?1- lt..VJ 
+.Ah hn I'll"""-' 
+TIFCap: 
+)_()CJ 
+ls.Polo I 
+lo.Polo v \Pod I 
+SumyD•e: I ,.y.j_,... / /) ...-? L 
+I'...-: 
+t1 J/l1,n n. 
+,( },,, ',}, 
+Tff Make: 
+t:/J,,, t> {;-/' 
+I-.. 0utyl v \Dod I 
+PV SolotiNet-M"'e<ing DaU 
+Tl' .nsf-Code: 
+1- II J 
+r1 (,,/7 /~ 2.. 
+lnspeaors: 
+!JI': fl/J?ll 
+I 
+local Ion 
+nJ,p,(fi /",n f /lh/,,,_ 
+F...w Code: '"'A /J /) 7 
+\OMsion: 
+I Sub-Oiv1s1on: 
+l 
+Sub Division COM I 
+(/ 
+~ 
+e.-r ... 
+C-T1llO 
+SOE 
+°"' 
+-
+eon-• ........ f'VSolo<Son py-cap . 
+........ 
+Gl'SWP 
+Ul("W) 
+(llWI 
+-
+• 
+y 
+• 
+.... 
+ST 
+f'V "" 
+No . 
+........ 
+Typo 
+PohC'-H 
+RS 
+Rl 
+SC 
+LC 
+SI 
+u 
+PB 
+AG 
+• 
+I 
+d 
+d 
+• .. 
+r 
+y • • 
+I 
+~ 
+s 'i) 1 01j f 
+0 
+l.-:b o K i+ ~ A-
+A-
+s~ W-l!B -
+-
+.__ 
+E 
+D 4 i 
+$. 
+'J l I ~ 
+s 
+f!) ~ b 0,t 4- tr- A- Pr- ~ (Y 1 '" 
+E 
+0 
+~ q 
+~ 
+s 
+0 
+~ q 
+E 
+() s 0 
+) 
+I 
+v 
+s 
+0 s--() 
+E 
+D ) 
+\ p_, ~d ~. ~ 
+-it Tl s;O r»/O -
+s 
+(!) ~' 
+(" 
+,r; 
+E 
+0 ~ 'l. 
+~ JI r+ 
+s 
+0 s- 2--
+,..., 
+/I 
+E 
+b s- ~ 
+lJ)I~ 
+~ k 
+s 
+0 $ J. 
+I'/ 
+/I 
+E 
+0 s- ~ 
+~ 31 ~ 
+s 
+c9 ~ e 
+0 s- ) 
+·1~ 
+, 
+E 
+s 
+1 
+/1 
+I 
+E 
+s 
+I 
+I 
+E 
+I 
+1 
+' 
+""""'-• IAI .... · (WJW- -{GH) Goa - 201.WG (1"WC 7<l.002)(PYC t"".(QjtpVC tM><i!3) ll'\'C'll083J"8c cai. {"'"'"'2)(1&".m2) """" 
+"""'Olw • s-&-S) - PC 0.-IPCO) - PC s,..-il'CS) • Ral St"" (RSI -l-S.... ml i Nobl. Tht Sw...;u _. \18 ..n of 1i11 SoW PV""* ......... eor..rn..--
+.m 
+--
+w"-IWBI 
+td.9 ... lbo-..~~-
+Cewt.V"Mt •RS• tP1 RM - RL·~Ra- SC a1pCorn -SI• tphd-U•lp hS -PB• P\dc"~-AG -=~ - ST• St..-Ui7t· PV • P-J 5cW' 
+-
+-
+··· $1oo1 Stod.no· (SS) 5'.• 5.40.31..31 PC5...,,. •5-40.35.J t PC a.on.y, Jll.31 
+
+Evaluation of Distribution Losses of HAZECO N ; ~ i 
+th 
+e o 
+or e FY 2025-26 
+s ('/ I :.. r 
+51 
+s 
+o ~ b 
+E 
+0 t_s- II 
+2 
+s 
+D ' 
+:). 
+E 
+(!) I.) g 
+~o ~ 
+IV 
+I 
+), 
+D ,::- 1.,) 
+· S 
+E 
+(!) s- ~ 
+~ c f:l. 
+}. 
+s 
+0 
+)~ 
+E 
+ObD 
+10 
+:s 
+s 
+oG t 
+p 
+I 
+s 
+() ~ ( 
+E 
+<9 b 11-
+3b Lt 
+s 
+I " 
+, E 
+.31 B 
+2.-
+s 
+J 
+b . & 7 
+I) 
+lJ I 
+E 
+I 
+0 b ~ 
+s 
+0 b ~ 
+I 
+b :r 
+I 
+0 
+5 
+31 
+i 
+j 
+
+1 
+Evaluation of Distribution Loss 
+... . " 
+m 
+// v JJ 
+, u 
+In L- J 
+' es of HAZE CO Network for the FY 2025-26 
+F..-r: 
+N ,,.1.nn 
+,{L~ 
+1 
+TJF~· 
+') ,...,.. 
+;m1np111FormlorLTSurwy 
+0 6 b 
+l
+0 
+(._.; ~} 
+E 
+s CJ r o a 
+s 
+obt 
+E 
+0 6 1-
+s 
+E 
+s 
+E 
+s 
+oGr~YA-
+lr
+-
+E 
+0 I 
+D 
+s 
+E 
+on I 
+s 
+07 1 r 
+E 
+I s 
+01 .3 
+E 
+0 l 3 
+s 
+I 
+
+Evaluation of Distribution Losses of HAZE CO 
+0 .. tnp 
+Network for the FY 2025-26 
+TIF <:ap: 
+I 
+Ill Form for LT Surwy 
+jS.Pott 
+O.Pott 
+PMI 
+TIF Make: 
+T ,- Ill ll ?~ 'J')_ Jn 7 
+lnapectota: 
+I 
+-
+--
+I Sub-Olvlalon: 
+I 
+I 
+...... 
+"' , , • • -
+I 
+Ill 
+"°L 
+SC 
+LC 
+D 2---t C;1 1 s A.D 
+s IJfc 
+E 
+D ' 
+b 
+$ 
+0 /f,, 
+0 7 7 
+I 
+40 ')... 
+r 
+$ 
+0 1 1-
+I/ 
+E 
+0/ i 
+I 
+~ 
+2.- l-
+s 
+0 78 
+I/ 
+E 
+(!) 'l ~ 
+'2 
+I 
+s 
+0 1 ~ 
+E 
+~ 
+~o 
+s 
+A-
+A- sr :f J6 
+E 
+o 9 I 
+lj i, Lr 
+I 
+I 
+I 
+I 
+I 
+s, 
+I 
+f 
+o ~ I 
+If' 
+I 
+3( {, 
+2.3 
+. 
+I 
+1 I I 
+I 
+I 
+I s I 
+I f I I 
+CJ 8 2-
+l 
+v 
+I 
+I 
+I 
+I 
+I 
+I I I 
+b Q '1 
+\).)1R - ll 
+I I j I j 
+I$ I 
+I 
+\ s- .3 
+I 
+I 
+~· ..... · I*• w- . fCHja...t · ~ Aw<l(l'VC 7.0.0Q/(1>11¢ ·~'O.oslj(F1/C llo'O.UIJl(l"ICtO.oe3)A8C Cable (50fnm21(1>5rr.n:I 
+'"'"'' "'"'can .s...1su-S)· PC Otd<ory lf'COl ·l'C Sp.6<PCSI. R>•St ... (llSJ .T ..... S....flS1 Note ThtSurwj«•""'a. .. ~1 ol ... Sotwl'V-Mowm;ea----
+I 
+_ 
+Anglolln......-.i 
+wa111<1eb1(WBI 
+...,. • .,.-,,.,.,._,._. 
+
+Evaluation of Distribution Losses of HAZE CO Network tor the FY 2025-26 
+~ 
+Data lnpUI Form f()( LT Survey 
+/1 
+,,, 
+TIF<:ap: 
+S.Pole 
+0.Pole 
+Pod 
+S<KvoyOae: 
+~
+......_ JO
+• 'l-16 
+Feeder: 
+_,,... 
+, , , ., ·1ri 
+!) ") 
+. ..-"""\ 
+T/F MJlke: 
+Gotwrlll Duty 
+Ded 
+T......,._Cacte: 
+1-
+11 1 / 
+c-
+( ~ + 
+Inspectors: 
+P'VSolar-inlJ O... 
+Location 
+fffderCacle: 
+Division: 
+Sub-Olvislon: 
+Sub Division Code 
+ConduaoJ 
+~T'ypo 
+C:O.-T'ypo 
+SE 
+°"' 
+°"'" 
+GPSWP 
+Const.mW R.t9r~ 
+PYSolo<Son ,..,,...c.p .......... 
+• • 
+d 
+d 
+-
+A 
+y 
+• -
+Type 
+PoleC1Ma ..... 
+RS 
+AL 
+SC 
+LC 
+5' 
+u 
+PB "" 
+ST 
+PY 
+IN I 
+No. 
+U> ('W) 
+(kWJ 
+. Ill 
+y 
+y 
+0 
+• • 
+Ho;p 
+s C> I D 8 I b 2--.--< 
+C> t 
+~ ~~D UJ w LJJ U) 5:P ~ Jb 
+E 
+t:> 8 b 
+~t ~ 
+) 
+s 
+() 8 " 
+I> 
+E 
+0 i + 
+tc 
+S"" 
+v 
+s 
+C> 8 )_ 
+l~t A-
+A- A 
+A sP 
+~ 
+E 
+D ~ Q 
+~ \ b 
+y \ 
+s 
+b Q -
+~() 
+~-
+.... 
+E 
+0 8 
+..,. 
+~ 1--
+ti 
+J 
+s 
+f) i q R 4- A 
+..-- A- )fl ~ ~} 
+E 
+0 1 D 
+9 
+g 
+s 
+! 
+E 
+s 
+E 
+I 
+s 
+E 
+s 
+E 
+s 
+E 
+~•IA! 
+M - !W1 w- . {GN} Gna - 2.0 ;.WG tPYC 7IO.MZ) (PVC li'tl=I (J'"JC !ll/OICJIJJ (PVC-11.C"3j A8C Coble (Sll<Nn2~.n'l2) 
+!Ang-
+PclO O...•s-l S<n£ow/S) · PC Oul.na.-y\PC()I · PC Spor<f'CS) . Ra< Stoel{RS1. T...._,S....,("S1 Note:: The ~"*YDI' d.-M NChdN ~PVn.t ~ca..n.r-. .. c 
+Aoglo~lrl--) 
+Wai Bracbl CWB} 
+........ --~-
+~ ·RS •1f.l'" Rws - RLa~RN - SC• ,p Ctm · 5' • fp ~ ·U•3p "1d - PB aPlekBUiditJJ · AG ·~-ST -aSu .. Lir;-.:·PY•PVSoW 
+Polo Hegl'rls ... Sleel SINc:lu4"- (SS)58,45,.0.3!1.31 PC Spo• 1'· 45,40.36.3 1 PC Clodlnory.- JG.31 
+•
+
+Evaluation of Distribution Losses of HAZECO Network for the FY 2025-26 
+A \ 
+I 
+I 
+0- llrc>Ut Form lor LT S....,.. 
+-
+-
+I 
+1-r<V 
+ffJJJ) l'l T 11.JJ/ V'I 
+TlFClp: 
+l.vu. 
+5J'o6o 
+o.-V ,.... 
+Sur...,.0-: 
+Clt) 
+Cr~~ 
+~ ' 
+TIF..._, 
+Id- r. Un 1, m , ,,J 
+Gonor>I °"'YI v 
+Dod 
+' 
+~ 
+"" _ 
+__.,._ 
+~ 
+f - I ft. .... '1 <D If J<J l'l 
+~ 
+l.oation 
+1\a \'h,O a 
+1v~)5 \1{j U<., Y': ~~ 
+t'A\lho.QO_n1" f.11'. 
+,_a..: 
+·-
+~ 
+I 
+'Sub-Ol.-...c 
+w;Dlvlsion ~ 
+·-
+c:--
+_.,.,. 
+eo--ry,.. 
+-
+~--..... ~ 
+,,.. __ 
+........ c:. -
+-
+-
+--
+LDl\Wl 
+(llW) 
+-
+... 
+AG 
+ST 
+,,.. "" 
+.... 
+-
+• 
+T 
+• -
+.,..... .... c-. 
+llS 
+·~ 
+IC 
+lC 
+SI 
+u 
+• • • • • 
+• 
+~ 
+~ • • , 
+...... 
+s I I 0 3 
+0 7 J + 2 l 1- ~C: A- A-
+~ (\ ~ 
+s. 
+~t. 
+E CJ f 0 8 I D '2-~ 0 <) i 
+' 
+Sf $ Bb \ 
+fl 
+s 
+t) °l , 
+I 
+('I 
+j.J 
+fo 
+E 
+tJ 4 2.-
+I 
+sf> s JI 1 
+f) 
+s 
+0 ~ 7- B - - A c;st... s;p ~ 31 
+tk#'J'f~ ~ 
+E 
+D 4 5 
+-
+A-Gj-SL 
+Yt ~ 
+i-
+t-i µe{;-
+......--
+s 
+0 1 I 01~ A P.-
+A-
+(+ 9r 
+~ 31: 
+E 
+CJ ~ i 
+5 
+~ I 
+s 
+t> ~ 1 
+E 
+0 ~ -
+\ '2. 
+"\ 
+~ 
+s 
+1} ~ ~ 
+E 
+C/ ~ lo 
+~ 
+I 
+s 
+0 ~ b 
+E 
+r; 1 1-
+9 
+s 
+0 
+~ 1 
+E 
+0 I~ 8 
+2 
+s 
+() ~ <6 '/£1 - It fr (;- Sf! s, 
+t1..b 
+E 
+0 q ~ 
+---
+1 
+9 9 
+-
+s 
+0 
+., 
+E 
+I (/ -t:? 
+--
+~ 
+~• '"! Id · !#1 W.. · IQlll C...- 2.lls.wG (FWC 71fJUIZj JPYC 1M>.0!:2J IJ"IC ~ 
+!P\f=.c"3;A8C ~ 
+(50ovr:Z~I """" 
+..... Closs• Si«I ~SJ · PC O.dnwyiPCO) ·PC Sp.r;PCS). Ra1 SI ... (RSj. ~- 5-1 ITSj Note::h~wilvilltHChd N 5*'P':;Ne1 ~ C<NuMr M9..i 
+..._.._ 
+Wal Br.d« (W8) 
+nol•ltw~~~. 
+~- RS • tpa RM- Rl..·3p RM- SC. tp CCl'n . Sf• fp ~ - U. 3p rd - PB · P\dcB'*klg-AG -~ - sr .. SttMt Ugt-. . PY. PV So&w 
+Polo....,;.. ... SOoo1 SC..CU• • (55 ) 6!.45.<0.311.31PCSpuno· 45.'11.311.31 PC ~· 311.3 1 
+
+~ 
+Evaluation of Distribution Losses of HAZE Ct> Network for the FY 2025-26 
+A • 
+• 
+. 
+n 
+-
+0- Input Form for LT Si.rwy 
+,, 
+. ......_ I'._<.."-- K \J 
+~ 
+f)~ t'Yb2J- ~ 
+Tlf c.p: 
+f\J,..ru 
+.ls.Pole I 
+ID.Polo ...... IPld I 
+s..rv.,D .. : 
+/!J)..1-1 v 'J- IO 
+~ N IUJJ!l.r-
+s;: k " ~ 
+T/F...._, 
++(ef .1J 0-L1nvv 1-... 11u1yl '-"!Did I 
+' 
+~~~~Mf o.&a 
+Ceok 
+·1- I O ~b l 
+]')')~ 
+A 
+I 
+Loc:Mion 
+N Qai{ r\o.'ft\"'Vta 
+~ 
+...... c:..da: 
+1 °"""""" 
+(} \1 fYJ'.J 
+J.l. J::Hr1A. lw..oi'fblon: 
+N lJ'' "::·· ~ 
+-Dlvloion~ 
+' 
+-
+~r,,... 
+\J 
+eon.-1,,.. 
+.. 
+°"' 
+-
+--
+~"--~ 
+,.., __ 
+,.., .... c.p -
+-
+• 
+• 
+• 
+,.,,.. 
+.... 
+,.., "" 
+No . 
+LD O<W) 
+°"" 
+" 
+\ 
+• • 
+_ 
+.. 
+Polee-
+RI 
+Rl 
+SC 
+LC .. 
+u ... 
+Al; .,. 
+• . y 
+1 
+• • 
+t 
+-
+s \ 
+0 .) 0 + I ) 
+'l. '.l. <, ~o Cl) w (..() 
+]{}_ ~ 
+(l 
+u. 
+f 
+E 
+l 
+f;; ~
+I rD 'L " f D I 
+,., 
+N-
+11 
+IV 
+~J 
+/'/ 
+lj 2-
+LY 
+Iv 
+I 
+s 
+r 0 I 
+: 
+. E 
+I 0 
+2--
+I 
+Jr b 
+' 
+s 
+1 0 I 
+I 
+E 
+r c:) J 
+/ 
+l I 
+s 
+l 0 > 
+( 
+E 
+' 
+0 4 
+1--
+• 
+s 
+r () ~ fl" r "' 
+~~ '6rt- ~tt.J g,p ~ 
+JI 
+E 
+I v ~ 
+~t-' 
+~"' ~rJ ~r.J 
+fJ 
+/'1.r v 
+2-
+s 
+I D ! l'il> w \,\) w I~ w ~ · 
+0£ 
+E 
+' 
+0 b r 
+I 
+r 
+t-
+"' 
+JV 
+/'/ J1 t--
+l 
+Iv 
+s 
+I 0 ~ i'iv A-. tr {\-- A- $n s 'SI 
+. .. 
+'E 
+\ 0 1--
+2 
+-
+s 
+r D -
+I 
+E 
+r 0 'b 
+I 
+9 
+t4-
+s 
+t 0 b 813 Pr A-
+A-- ft- sf 5: 
+)/ 
+E 
+I 0 
+~ 
+Vb 22__ 
+2... 
+' 
+s 
+t , 
+E 
+( r 0 
+31. to 
+~ 
+• ~ ....,. . ~ -.. - f('"M): C.-:- 21lSJ/llG Cf"wC 7.C..c62)~ 1M -OS2' (F".JC t»O(il3J (P'~j #.SC Olbie ~~ 
+...,,.. 
+PD-. cass a &-4 5'n.c.n\S) · PC Ocdrary\PCOJ · PC Sp.nPCS> · RM St..i {RSJ . T'AbJlm ~(TS 
+j Nott:Thr~pd:-.'isll:~d.-~P\~~~ 'Sftatd 
+--
+W .. _<WBI 
+nchhabo-JI'~~-
+~-RS• 
+1ps; R.M: -RLs~Ra - SC. s 1pCan · SI • 1phd-Ualpn::l•PB• PUk"Building · AG s~· 
+Sf•Stfffltl.igtl:. PV ·~So&il" 
+I 
+flrl::Mo ~ 
+• SICMI ~ 
+... ,ss) 51..4S.40.315..31 PC SP'6'·· 45.40..35.31 PC Ordirwy.- 36.31 
+--- - ------------
+-- - ~ 
+
+Evaluation of Distribution Losses of HAZECO N tw rk i 
+S.42 •lion: 
+e o 
+or the FY 2025-26 
+~ 
+I I IJ 7.n 11 /~_L_. -~ 
+Data lnp111 Form IO< LT Surwy 
+' 
+~ 
+TIFCap: 
+S.Polo 
+~ 
+i-,. ...... Code! 
+-
+D.Polo 
+,ad 
+( 
+TIF Malla: 
+Swvey Dae: 
+~-1 0- -,lb 
+I ' 
+-
+Gonorw 0utyf 
+"-<:om: 
+lnspectars: 
+Dod 
+Dhtsion: 
+l.ocallon 
+l'V Solotllie<--.go.., 
+Sle-OMsion: 
+a -
+c.r.i.c... 
+Wt DiYilion ~ 
+°'"'" 
+~T 
+.... 
+OPS-
+.,_T,,.. 
+• 
+I 
+• • • . y 
+y 
+• -
+• 
+y 
+• -.. 
+..... 
+• 
+I 
+T- .....c_ 
+~flffotlr..-.c.. ,..,,,_.., ,.,, .... Cap 
+0 I 
+-9 
+q 
+•c 
+SC 
+u: .. 
+u 
+-
+s 
+f}). 
+f D 
+...... 
+.. 
+AG 
+ST "' ... 
+No. 
+l.D (>W) 
+""" 
+-
+1- () r r D t,c A--A A-
+sP 
+~E 
+A. 
+~ JI 
+I r I 
+w;~ 
+s 
+I r ( 
+E 
+fRtt> 
+. 
+r I ). 
+4' 4 4- 4 sf! s ) I ,b 
+s 
+\ 
+'L-
+E 
+' ' 
+1 
+9 
+~ 
+v 
+s 
+I l 3 
+. 
+E 
+1 
+j 
+I f 
+r~ 
+s 
+I I 1 
+• 
+~ E 
+I I :\ 
+~J 
+I 
+-
+I 
+s 
+I r f) 
+L 
+E 
+1 I b 
+It 
+I. 
+s 
+l ( b 
+j ' I 
+..,j ~-
+E 
+r 1-
+~:..;;::~"' 
+t 
+?-
+. 
+s 
+t r +-
+E 
+' 
+r 8 
+,, 
+s 
+1 r g 
+E 
+I I 
+~ 
+ns-
+s 
+, 1 ~ ~'ff A- A-
+A-
+A- sf S' l)b 
+E 
+I 2-- -0 
+~ 
+~ ·<Al ,.. · (W1 W- · {GH)Clnlr • UI AWO!F'JC7'>.f!62Jl~ 1M>D"-l!t1''1Cl-(P'•~i A8C c.i.. (50<Ma)tV.AM>l! w... 
+f'uMI C.SS •S&.I ~S)- PCOrCM'8f"flPCO) · PC Spr~PCS I • RM&.ei{RS) . TilbJlll'S....(fSJ ~ 
+The ~)'Ql' .. 
+._M01 d n 5o9'P"/,,.._ ~~ ¥-.~ 
+..,.._ 
+W•U•xMICWBI 
+,,... ... .,,,...,,...,..~ . 
+~·RS• t,_ Rait- RL•~ RM- SC• 1pCcm · SI• fp nf - U • 3P .... . pg. Pl.dclWlding - A.C • Aqbttlllf. ST• SUMtlJlt' . PV • PYSollt 
+P1* ~··· S..,_ S4'ucM.:· (SS) "8.~S • .40.J&..31 PC SP'ft· -45.40.lG.31PCOrdirwy.- 36.31 
+
+----~=--~~-------
+A-o~ ID '2-~ 
+-Fe-~Q 
+~ ~ ~o_)JJ~ ~ ~ 
+..-- . 
+\ 

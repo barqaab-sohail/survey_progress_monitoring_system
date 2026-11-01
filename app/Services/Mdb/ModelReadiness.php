@@ -18,7 +18,8 @@ class ModelReadiness
         $add('Section lengths', $tables['InstSection'], fn ($r) => $number($r['SectionLength_MUL'] ?? null) && $r['SectionLength_MUL'] >= 0);
         $add('Transformer equipment type', $tables['InstPrimaryTransformers'], fn ($r) => trim((string) ($r['TransformerType'] ?? '')) !== '');
         $add('Line configuration ID', $tables['InstSection'], fn ($r) => trim((string) ($r['ConfigurationId'] ?? '')) !== '');
-        $add('Section phases', $tables['InstSection'], fn ($r) => preg_match('/^[R ][Y ][B ][N ]?$/D', $r['SectionPhases'] ?? '') === 1 && preg_match('/[RYB]/', $r['SectionPhases'] ?? '') === 1);
+        $add('Section phases', $tables['InstSection'], fn ($r) => (preg_match('/^[R ][Y ][B ][N ]?$/D', $r['SectionPhases'] ?? '') === 1
+            || in_array($r['SectionPhases'] ?? '', ['RN', 'YN', 'BN'], true)) && preg_match('/[RYB]/', $r['SectionPhases'] ?? '') === 1);
         $sections = array_column($tables['InstSection'], null, 'SectionId');
         $add('Load demand and customer allocation', $tables['Loads'], function ($row) use ($number, $sections) {
             $phases = $sections[$row['SectionId']]['SectionPhases'] ?? '';

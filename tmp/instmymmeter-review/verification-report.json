@@ -1,0 +1,17 @@
+{
+  "reference": "C:\\Users\\sohai\\OneDrive\\Desktop\\HAZECO\\Tables\\InstMymMeter.xlsx",
+  "columns": 15,
+  "generated_rows": 2,
+  "year_numbers": [
+    0,
+    1
+  ],
+  "section_id": "00040711140223003.1",
+  "transformer_description": "Transformer",
+  "all_other_fields_match_reference": true,
+  "no_blank_fields": true,
+  "formula_cells": 0,
+  "other_physical_table_rows_unchanged": 49,
+  "schema_and_relationships_unchanged": true,
+  "disposable_mdb": "E:\\xampp\\htdocs\\survey_progress_monitoring_system\\tmp\\instmymmeter-review\\native-093e316e2e9b\\after.mdb"
+}

@@ -233,8 +233,9 @@ class TransformerMdbBuilderTest extends TestCase
         $configuration = $this->simpleConfiguration();
         $network = app(TransformerMdbNetworkService::class)->build($project, $configuration);
         $this->assertTrue($network['simple_mdb_generation']);
-        $this->assertNull($network['tables']['SAI_Control'][0]['Frequency']);
-        $this->assertNull($network['tables']['SAI_Control'][0]['ProjectionFile']);
+        $this->assertSame(60, $network['tables']['SAI_Control'][0]['Frequency']);
+        $this->assertSame('WGS 1984 UTM Zone 43N', $network['tables']['SAI_Control'][0]['ProjectionFile']);
+        $this->assertNull($network['tables']['SAI_Control'][0]['ProjectionWKT']);
         $this->assertNull($network['tables']['InstFeeders'][0]['NominalKvll']);
         $this->assertNull($network['tables']['InstPrimaryTransformers'][0]['TransformerType']);
         $this->assertNull($network['tables']['InstSection'][0]['PhaseConductorId']);
@@ -251,7 +252,7 @@ class TransformerMdbBuilderTest extends TestCase
         $this->assertFalse($network['survey_audit']['header']['export_settings']['engineering_reviewed']);
         $this->assertSame(3, json_decode($network['survey_audit']['rows'][1]['SourceJson'], true)['consumers']['rs']);
         $this->assertNull($configuration->fresh()->approved_by);
-        $this->get(route('mdb-builder.preview', $project))->assertOk()->assertSee('Simple MDB Generation is ON')->assertSee('CRS not configured');
+        $this->get(route('mdb-builder.preview', $project))->assertOk()->assertSee('Simple MDB Generation is ON')->assertSee('WGS 1984 UTM Zone 43N');
     }
 
     public function test_simple_mode_can_save_missing_engineering_inputs_but_retains_numeric_validation(): void

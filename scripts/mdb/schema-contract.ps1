@@ -1,4 +1,4 @@
-# Shared, mode-independent schema contract for the fifteen approved reference MDBs.
+# Shared, mode-independent schema contract for the approved export template.
 # This file only inspects DAO metadata. It never changes database objects.
 function Get-MdbSchemaContract($Database) {
     $tables = [System.Collections.Generic.SortedDictionary[string,object]]::new([StringComparer]::Ordinal)
@@ -48,13 +48,13 @@ function Assert-ApprovedMdbSchema($Database) {
     $manifestPath = Join-Path $PSScriptRoot '../../resources/mdb/approved-schema.json'
     $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($manifest.schema_version -ne 1 -or $manifest.reference_count -ne 15 -or
-        @($manifest.schema.tables).Count -ne 50 -or @($manifest.schema.relationships).Count -ne 41 -or
+        @($manifest.schema.tables).Count -ne 51 -or @($manifest.schema.relationships).Count -ne 42 -or
         (Get-MdbSchemaFingerprint $manifest.schema) -cne $manifest.schema_sha256) {
         throw 'Approved MDB schema manifest is invalid.'
     }
     $fingerprint = Get-MdbSchemaFingerprint (Get-MdbSchemaContract $Database)
     if ($fingerprint -cne $manifest.schema_sha256) {
-        throw 'MDB schema does not match the 15 approved samples (tables, fields, types, defaults, indexes and relationships).'
+        throw 'MDB schema does not match the approved export template (tables, fields, types, defaults, indexes and relationships).'
     }
     return $fingerprint
 }

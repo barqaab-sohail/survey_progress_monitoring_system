@@ -6,7 +6,7 @@ New operator rows use GGDDMMYYWWW as survey identity while retaining the short G
 
 Project settings `entry.two_digit_year_start` define a 100-year paste window, and `entry.pole_height_unit` specifies the verified form unit. The configuration screen provides labelled inputs for both. These are explicit project choices, not inferred electrical defaults. Unit information stays with each row and legacy/copy-source units are preserved.
 
-An administrator enters project settings and equipment references; the verifier approves their engineering meaning. The configuration approval identifies the actual reviewer. Values shown below as strings beginning `REPLACE_` are placeholders, not valid export data. Empty dictionaries do not authorize default engineering values: every omitted MDB field is explicitly written as NULL, suppressing schema defaults. Enter every field required by the target SynerGEE workflow in `table_values` or the selected network's explicit fields, including optional engineering values that SynerGEE requires for your use case.
+An administrator enters project settings and equipment references; the verifier approves their engineering meaning. The configuration approval identifies the actual reviewer. Values shown below as strings beginning `REPLACE_` are placeholders, not valid export data. Empty dictionaries do not authorize default engineering values: every omitted MDB field is explicitly written as NULL, suppressing schema defaults. Enter every field required by the target SynerGEE workflow in `table_values` or the selected network's explicit fields, including optional engineering values that SynerGEE requires for your use case. `SAI_Control` is an exception: its generated row comes from the literal `SAI_Control.xlsx` reference described in [SAI_Control generation](SAI_CONTROL_GENERATION.md); per-project SAI_Control values do not replace that row.
 
 Settings require `frequency_hz`, `nominal_voltage_kv`, `conductor_library_revision`, `transformer_library_revision`; the separate EPSG field must identify an approved projected CRS in metres. The source-node aliases and supply sections below are explicit modeling decisions. They must not be inferred from transformer capacity, sample wiring or sorted waypoints.
 
@@ -22,13 +22,7 @@ Settings require `frequency_hz`, `nominal_voltage_kv`, `conductor_library_revisi
     "reviewed_at": "REPLACE_UTC_DATE",
     "consolidated_supported": false,
     "table_values": {
-      "SAI_Control": {
-        "Frequency": "REPLACE_SAME_APPROVED_FREQUENCY",
-        "LengthUnits": "Metric",
-        "Product": "REPLACE_SAME_APPROVED_TEMPLATE_SYNERGEE_VERSION",
-        "ProjectionFile": "REPLACE_APPROVED_CRS_NAME",
-        "ProjectionWKT": "REPLACE_APPROVED_WKT_WITHIN_FIELD_LIMIT"
-      },
+      "SAI_Control": {},
       "Node": {},
       "InstSection": {"ConfigurationId": "REPLACE_APPROVED_CONFIGURATION_ID"},
       "InstFeeders": {

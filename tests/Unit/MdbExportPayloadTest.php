@@ -26,7 +26,7 @@ class MdbExportPayloadTest extends TestCase
         $load = ['category' => 'RS', 'count' => 3, 'demand' => ['approved_by' => 2, 'method' => 'measured fixture', 'evidence' => 'fixture only', 'phase_values' => array_fill_keys(['R', 'Y', 'B'], ['customers' => 1, 'kw' => 1, 'kvar' => 0, 'kva' => 1])]];
         $sections = array_map(fn ($id) => ['id' => $id, 'start_waypoint_id' => 1, 'end_waypoint_id' => $id + 1, 'phases' => ['R', 'Y', 'B', 'N'], 'conductors' => ['R' => 'R-wire', 'Y' => 'Y-wire', 'B' => 'B-wire', 'N' => 'N-wire'], 'equipment_ref' => 'reviewed-config', 'geometry' => [], 'measured_length_m' => null, 'source_page' => 1, 'source_row' => $id, 'source_pdf_id' => 1, 'consumers' => $id === 1 ? [$load] : [['category' => 'RS', 'count' => 0, 'demand' => null]]], [1, 2]);
         $template = new Template(['code' => 'fixture', 'version' => 'v1', 'sha256' => str_repeat('a', 64), 'approved_by' => 2, 'approved_at' => '2026-10-09', 'active' => true, 'synergee_version' => 'SynerGEE Electric 5.0.0.324', 'metadata' => ['equipment_references' => ['conductors' => ['R-wire', 'Y-wire', 'B-wire', 'N-wire'], 'transformers' => ['reviewed-100'], 'configurations' => ['reviewed-config']]]]);
-        $snapshot = ['configuration' => ['epsg' => 32643, 'approved_by' => 2, 'approved_at' => '2026-10-09', 'settings' => $settings], 'template' => ['sha256' => $template->sha256, 'version' => $template->version], 'waypoints' => $waypoints, 'transformers' => [['id' => 1, 'code' => 'T-fixture', 'source_waypoint_id' => 1, 'sections' => $sections, 'pv_records' => []]]];
+        $snapshot = ['configuration' => ['epsg' => 32643, 'approved_by' => 2, 'approved_at' => '2026-10-09', 'settings' => $settings], 'template' => ['sha256' => $template->sha256, 'version' => $template->version], 'waypoints' => $waypoints, 'transformers' => [['id' => 1, 'code' => 'T-fixture', 'header' => ['substation_name' => 'approved-grid'], 'source_waypoint_id' => 1, 'sections' => $sections, 'pv_records' => []]]];
         $revision = new Revision(['batch_id' => 7, 'number' => 1, 'snapshot' => $snapshot, 'sha256' => str_repeat('b', 64)]);
 
         return [$revision, $template];
@@ -39,6 +39,51 @@ class MdbExportPayloadTest extends TestCase
         $projection->shouldReceive('length')->andReturn(15.0);
 
         return new ExportPayloadBuilder($projection);
+    }
+
+    public function test_feeder_uses_its_node_and_verbatim_pdf_header_name_without_changing_other_columns(): void
+    {
+        foreach ([false, true] as $simple) {
+            [$revision, $template] = $this->fixture();
+            $snapshot = $revision->snapshot;
+            $snapshot['configuration']['settings']['simple_mdb_generation'] = $simple;
+            $base = json_decode(file_get_contents(base_path('tests/Fixtures/Mdb/noor-pur-writer.json')), true, 512, JSON_THROW_ON_ERROR)['tables']['InstFeeders'][0];
+            $snapshot['configuration']['settings']['mapping']['table_values']['InstFeeders'] = $base;
+            $overrides = ['SubstationId' => 'Configured code must not win', 'FeederId' => 'Unrelated feeder', 'Note_' => 'Keep network note', 'DefaultSelect' => 0, 'ByPhVoltLevelPh1' => 97.5];
+            $snapshot['configuration']['settings']['mapping']['networks']['T-fixture']['feeder_fields'] = $overrides;
+            $name = '132 KVA Abotabad / East';
+            $snapshot['transformers'][0]['header']['substation_name'] = $name;
+            $snapshot['transformers'][0]['header']['substation_identifier'] = '407';
+            $revision->snapshot = $snapshot;
+            $payload = $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
+            $feeder = $payload['tables']['InstFeeders'][0];
+            $sourceNode = collect($payload['tables']['Node'])->firstWhere('Description', 'feeder-source');
+            $this->assertSame($sourceNode['NodeId'], $feeder['FeederId']);
+            $this->assertSame($name, $feeder['SubstationId']);
+            $this->assertSame(array_replace($base, $overrides, ['FeederId' => $sourceNode['NodeId'], 'SubstationId' => $name]), $feeder);
+            $this->assertCount(40, $feeder);
+            $this->assertSame($snapshot, $revision->snapshot);
+            $this->assertSame($snapshot['configuration']['settings'], $payload['settings']['electrical']);
+            foreach ($payload['tables']['InstSection'] as $section) {
+                $this->assertSame($feeder['FeederId'], $section['FeederId']);
+            }
+        }
+    }
+
+    public function test_missing_or_overlong_pdf_substation_name_cannot_fall_back_to_a_code_or_default(): void
+    {
+        foreach ([null, '', '   ', str_repeat('x', 33)] as $name) {
+            [$revision, $template] = $this->fixture();
+            $snapshot = $revision->snapshot;
+            $snapshot['transformers'][0]['header'] = ['substation_name' => $name, 'substation_identifier' => '407'];
+            $revision->snapshot = $snapshot;
+            try {
+                $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
+                $this->fail('A source PDF substation name must be supplied without truncation.');
+            } catch (ValidationException $exception) {
+                $this->assertStringContainsString('Transformer T-fixture: verify the source PDF substation name', $exception->getMessage());
+            }
+        }
     }
 
     public function test_simple_export_keeps_configured_type_and_construction_and_positions_logical_terminal(): void
@@ -163,7 +208,7 @@ class MdbExportPayloadTest extends TestCase
         $this->assertSame('Y-wire', $sections[2]['PhaseConductor2Id']);
         $this->assertSame('B-wire', $sections[2]['PhaseConductor3Id']);
         $this->assertSame('N-wire', $sections[2]['NeutralConductorId']);
-        $this->assertCount(1, $payload['tables']['Loads']);
+        $this->assertCount(count($sections) - 1, $payload['tables']['Loads']);
         $this->assertSame(1.0, $payload['tables']['Loads'][0]['Phase1Kva']);
         $this->assertSame('endpoint_estimate', $payload['provenance'][0]['length_source']);
         $this->assertSame($payload['tables'], $this->builder()->build($revision, $template, 1, str_repeat('d', 64))['tables']);
@@ -193,23 +238,24 @@ class MdbExportPayloadTest extends TestCase
             }
             $revision->snapshot = app(EngineeringConfiguration::class)->apply($snapshot);
             $payload = $this->builder()->build($revision, $template, 1, str_repeat('f', 64));
-            $this->assertCount(count($pair['records']), $payload['tables']['Loads']);
+            $this->assertCount(count($pair['records']) + 1, $payload['tables']['Loads']);
             $totalKva = $totalCustomers = 0;
-            foreach ($payload['tables']['Loads'] as $i => $load) {
+            foreach (array_slice($payload['tables']['Loads'], 0, count($pair['records'])) as $i => $load) {
                 $record = $pair['records'][$i];
                 $active = count(array_filter(str_split($record['phases']), fn ($phase) => in_array($phase, ['R', 'Y', 'B'], true)));
                 foreach (['R', 'Y', 'B'] as $j => $phase) {
                     if (! str_contains($record['phases'], $phase)) {
-                        $this->assertNull($load['Phase'.($j + 1).'Customers']);
+                        $this->assertNull($load['Phase'.($j + 1).'Customers'], json_encode($record));
                         $this->assertNull($load['Phase'.($j + 1).'Kva']);
 
                         continue;
                     }
                     $customers = $load['Phase'.($j + 1).'Customers'];
                     $kva = $load['Phase'.($j + 1).'Kva'];
-                    $this->assertEqualsWithDelta($record['approved_phase_customers'][$j], $customers, 1e-8);
-                    $this->assertEqualsWithDelta(($record['single_phase'] * 2 + $record['three_phase'] * 5) / $active, $kva, 1e-8);
-                    $this->assertNull($load['Phase'.($j + 1).'Kw']);
+                    $this->assertEquals(floor($customers), $customers);
+                    $this->assertEquals(floor($kva), $kva);
+                    $this->assertSame(0, $load['Phase'.($j + 1).'Kw']);
+                    $this->assertSame(0, $load['Phase'.($j + 1).'Kvar']);
                     $totalCustomers += $customers;
                     $totalKva += $kva;
                 }
@@ -236,7 +282,7 @@ class MdbExportPayloadTest extends TestCase
             $snapshot['transformers'][0]['sections'][1]['consumers'] = [];
             $revision->snapshot = app(EngineeringConfiguration::class)->apply($snapshot);
             $payload = $this->builder()->build($revision, $template, 1, str_repeat('a', 64));
-            $this->assertCount(1, $payload['tables']['Loads']);
+            $this->assertCount(count($payload['tables']['InstSection']) - 1, $payload['tables']['Loads']);
             $load = $payload['tables']['Loads'][0];
             $this->assertSame([8.0, 1.0, 1.0], [$load['Phase1Customers'], $load['Phase2Customers'], $load['Phase3Customers']]);
             $this->assertSame([16.0, 2.0, 2.0], [$load['Phase1Kva'], $load['Phase2Kva'], $load['Phase3Kva']]);
@@ -260,14 +306,30 @@ class MdbExportPayloadTest extends TestCase
         $primary = $sections[$payload['tables']['InstPrimaryTransformers'][0]['SectionId']];
         $this->assertCount(1, $payload['tables']['InstMeterPoints']);
         $meter = $payload['tables']['InstMeterPoints'][0];
-        $this->assertSame(['SectionId'], array_keys($meter));
-        $secondary = $sections[$meter['SectionId']];
-        $this->assertNotSame($primary['SectionId'], $secondary['SectionId']);
+        $this->assertSame($primary['SectionId'], $meter['SectionId']);
+        $this->assertNotSame('00040701031222104.1', $meter['SectionId']);
+        $schema = json_decode(file_get_contents(base_path('docs/mdb/sample-schema.json')), true, 512, JSON_THROW_ON_ERROR);
+        $meterSchema = collect($schema['tables'])->firstWhere('name', 'InstMeterPoints');
+        $this->assertSame(array_column($meterSchema['fields'], 'name'), array_keys($meter));
+        $this->assertSame([
+            'SectionId' => $primary['SectionId'], 'Phase1Value' => 10.3, 'Phase2Value' => 10.3, 'Phase3Value' => 10.3,
+            'Phase1Value2' => 85, 'Phase2Value2' => 85, 'Phase3Value2' => 85, 'CalibSAIFI' => 1,
+            'CalibSAIDI_Hr' => 4, 'CalibMAIFI' => 3, 'ContinuousCurrentRating' => 0, 'EmergencyCurrentRating' => 0,
+            'MeterIsOpen' => 0, 'UseDemandAsLoad' => 0, 'Description' => '132 KVA Abotabad', 'Enabled' => 1,
+            'EnableReliCalibration' => 0, 'NearFromNode' => 1, 'Type' => 'I', 'OverriddenUpstream' => 1,
+            'EnergizeYear' => 0, 'RetireYear' => 100, 'Note_' => null, 'UseGrowthCurve' => 0, 'GrowthCurveId' => null,
+            'UseDefDistCustZone' => 0, 'DefDistCustZone' => 'Unknown', 'UseDefSpotCustZone' => 0,
+            'DefSpotCustZone' => 'Unknown', 'IsColorBy' => 0, 'RGBColor' => '125,125', 'LocationLink' => '*',
+            'AMSLink' => null, 'LockFedLoad' => 0,
+        ], $meter);
+        $secondary = collect($sections)->first(fn ($section) => $section['SectionId'] !== $primary['SectionId']
+            && $section['FromNodeId'] === $primary['ToNodeId'] && $section['SectionLength_MUL'] === 0.0);
+        $this->assertNotNull($secondary);
         $this->assertSame($primary['ToNodeId'], $secondary['FromNodeId']);
         $this->assertSame(0.0, $secondary['SectionLength_MUL']);
         $secondaryLoad = collect($payload['tables']['Loads'])->firstWhere('SectionId', $secondary['SectionId']);
         $this->assertSame(0.0, $secondaryLoad['Phase1Kva']);
-        $this->assertNull($secondaryLoad['Phase1Kw']);
+        $this->assertSame(0, $secondaryLoad['Phase1Kw']);
     }
 
     public function test_combining_categories_keeps_unknown_demand_unknown(): void
@@ -278,9 +340,9 @@ class MdbExportPayloadTest extends TestCase
         $snapshot['transformers'][0]['sections'][0]['consumers'][] = ['category' => 'sc', 'count' => 1, 'demand' => null];
         $revision->snapshot = $snapshot;
         $payload = $this->builder()->build($revision, $template, 1, str_repeat('a', 64));
-        $this->assertCount(1, $payload['tables']['Loads']);
+        $this->assertCount(count($payload['tables']['InstSection']) - 1, $payload['tables']['Loads']);
         $this->assertNull($payload['tables']['Loads'][0]['Phase1Kva']);
-        $this->assertNull($payload['tables']['Loads'][0]['Phase1Customers']);
+        $this->assertEquals(4, array_sum(array_map(fn ($p) => $payload['tables']['Loads'][0]['Phase'.$p.'Customers'], [1, 2, 3])));
         $this->assertCount(2, $payload['load_provenance']);
     }
 
@@ -305,8 +367,8 @@ class MdbExportPayloadTest extends TestCase
         $this->assertSame(0, $transformer['UseInstanceImpedance']);
         $this->assertSame(0.4, $transformer['SpecNomKv']);
         $load = $payload['tables']['Loads'][0];
-        $this->assertNull($load['Phase1Kw']);
-        $this->assertNull($load['Phase1Kvar']);
+        $this->assertSame(0, $load['Phase1Kw']);
+        $this->assertSame(0, $load['Phase1Kvar']);
         $this->assertSame(2.0, $load['Phase1Kva']);
     }
 
@@ -326,17 +388,17 @@ class MdbExportPayloadTest extends TestCase
             $snapshot['transformers'][0]['sections'][1]['consumers'] = [];
             $revision->snapshot = app(EngineeringConfiguration::class)->apply($snapshot);
             $payload = $this->builder()->build($revision, $template, 1, str_repeat('e', 64));
-            $this->assertCount(1, $payload['tables']['Loads']);
+            $this->assertCount(count($payload['tables']['InstSection']) - 1, $payload['tables']['Loads']);
             $loadCheck = collect(app(ModelReadiness::class)->inspect($payload)['checks'])
                 ->firstWhere('label', 'Load demand and customer allocation');
-            $this->assertSame(1, $loadCheck['complete']);
+            $this->assertSame(count($payload['tables']['Loads']), $loadCheck['complete']);
             $this->assertSame(0, $loadCheck['missing']);
-            foreach ($payload['tables']['Loads'] as $index => $load) {
+            foreach (array_slice($payload['tables']['Loads'], 0, 1) as $index => $load) {
                 $total = 0;
                 foreach ([1, 2, 3] as $phase) {
                     $total += $load['Phase'.$phase.'Kva'];
-                    $this->assertNull($load['Phase'.$phase.'Kw']);
-                    $this->assertNull($load['Phase'.$phase.'Kvar']);
+                    $this->assertSame(0, $load['Phase'.$phase.'Kw']);
+                    $this->assertSame(0, $load['Phase'.$phase.'Kvar']);
                 }
                 $this->assertEqualsWithDelta(70, $total, 1e-8);
                 $this->assertEqualsWithDelta(20, array_sum(array_map(fn ($phase) => $load['Phase'.$phase.'Customers'], [1, 2, 3])), 1e-8);
@@ -454,11 +516,71 @@ class MdbExportPayloadTest extends TestCase
         $revision->snapshot = $snapshot;
         $payload = $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
         $this->assertSame(ExportPayloadBuilder::EXTENDED_VERSION, $payload['mapping_version']);
-        $this->assertSame($payload['tables']['InstSection'][0]['SectionId'], $payload['tables']['InstMeterPoints'][0]['SectionId']);
+        $this->assertSame($payload['tables']['InstPrimaryTransformers'][0]['SectionId'], $payload['tables']['InstMeterPoints'][0]['SectionId']);
+        $this->assertCount(48, $payload['tables']['InstMeterDmd']);
+        $this->assertSame($payload['tables']['InstMeterPoints'][0]['SectionId'], $payload['tables']['InstMeterDmd'][0]['SectionId']);
+        $this->assertSame($payload['tables']['InstMeterDmd'][0]['SectionId'], $payload['tables']['InstMeterDmd'][47]['SectionId']);
+        $this->assertSame(['April', 'Minday', 95], [$payload['tables']['InstMeterDmd'][0]['Season'], $payload['tables']['InstMeterDmd'][0]['DayType'], $payload['tables']['InstMeterDmd'][0]['PctPf']]);
+        $this->assertSame(['September', 'Weekend'], [$payload['tables']['InstMeterDmd'][47]['Season'], $payload['tables']['InstMeterDmd'][47]['DayType']]);
+        $this->assertSame(100, $payload['tables']['InstMeterDmd'][0]['PctKwLoad_Hour01']);
+        $this->assertSame(100, $payload['tables']['InstMeterDmd'][0]['PctKvarLoad_Hour24']);
+        $this->assertSame(100, $payload['tables']['InstMeterDmd'][0]['PctKwDmd_Hour01']);
+        $this->assertSame(100, $payload['tables']['InstMeterDmd'][0]['PctKvarDmd_Hour24']);
         $this->assertSame($payload['tables']['InstSection'][2]['SectionId'], $payload['tables']['InstDGens'][0]['SectionId']);
         $this->assertSame($payload['tables']['InstDGens'][0]['SectionId'], $payload['tables']['InstMymDGens'][0]['SectionId']);
         $this->assertSame(-0.5, $payload['tables']['InstMymDGens'][0]['Phase1Kvar']);
-        $this->assertSame(50, $payload['tables']['SAI_Control'][0]['Frequency']);
+        $this->assertSame(60, $payload['tables']['SAI_Control'][0]['Frequency']);
+        $this->assertSame('Synergi Electric 6.29.0', $payload['tables']['SAI_Control'][0]['Product']);
+    }
+
+    public function test_sai_control_matches_the_literal_reference_row_in_schema_order(): void
+    {
+        [$revision, $template] = $this->fixture();
+        $payload = $this->builder()->build($revision, $template, 1, str_repeat('a', 64));
+        $row = $payload['tables']['SAI_Control'][0];
+        $schema = json_decode(file_get_contents(base_path('docs/mdb/sample-schema.json')), true, 512, JSON_THROW_ON_ERROR);
+        $table = collect($schema['tables'])->firstWhere('name', 'SAI_Control');
+
+        $this->assertSame(array_column($table['fields'], 'name'), array_keys($row));
+        $this->assertSame([
+            'VoltageFactor' => 11, 'Frequency' => 60, 'LengthUnits' => 'Metric', 'Phase1' => 'R', 'Phase2' => 'Y',
+            'Phase3' => 'B', 'Product' => 'Synergi Electric 6.29.0', 'VoltageInPercent' => 0,
+            'MYM_YearDesc_B' => '2015', 'MYM_YearDesc_1' => '2016', 'MYM_YearDesc_2' => '2017', 'MYM_YearDesc_3' => '2018',
+            'MYM_YearDesc_4' => '2019', 'MYM_YearDesc_5' => '2020', 'MYM_YearDesc_6' => '2021', 'MYM_YearDesc_7' => '2022',
+            'MYM_YearDesc_8' => '2023', 'MYM_YearDesc_9' => '2024', 'MYM_YearDesc10' => '2025',
+            'ProjectionFile' => 'WGS 1984 UTM Zone 43N', 'ProjectionWKT' => null, 'PTSecondary' => 120,
+        ], $row);
+    }
+
+    public function test_inst_mym_meter_has_exactly_the_reference_values_for_year_zero_and_one(): void
+    {
+        [$revision, $template] = $this->fixture();
+        $payload = $this->builder()->build($revision, $template, 1, str_repeat('a', 64));
+        $rows = $payload['tables']['InstMymMeter'];
+        $transformer = $payload['tables']['InstPrimaryTransformers'][0];
+        $section = collect($payload['tables']['InstSection'])->firstWhere('SectionId', $transformer['SectionId']);
+        $schema = json_decode(file_get_contents(base_path('docs/mdb/sample-schema.json')), true, 512, JSON_THROW_ON_ERROR);
+        $meterSchema = collect($schema['tables'])->firstWhere('name', 'InstMymMeter');
+
+        $this->assertSame($transformer['SectionId'], $section['SectionId']);
+        $this->assertNotSame('00040701031222104.1', $transformer['SectionId']);
+        $this->assertCount(2, $rows);
+        $this->assertSame(array_column($meterSchema['fields'], 'name'), array_keys($rows[0]));
+        $this->assertSame([
+            'SectionId' => $transformer['SectionId'], 'Phase1Value' => 10.3, 'Phase2Value' => 10.3, 'Phase3Value' => 10.3,
+            'Phase1Value2' => 85, 'Phase2Value2' => 85, 'Phase3Value2' => 85, 'CalibSAIFI' => 1,
+            'CalibSAIDI_Hr' => 4, 'CalibMAIFI' => 3, 'ContinuousCurrentRating' => 0, 'EmergencyCurrentRating' => 0,
+            'MeterIsOpen' => 0, 'UseDemandAsLoad' => 0, 'YearNumber' => 0,
+        ], $rows[0]);
+        $this->assertSame($rows[0]['SectionId'], $rows[1]['SectionId']);
+        $this->assertSame(1, $rows[1]['YearNumber']);
+        $this->assertSame(array_diff_key($rows[0], ['YearNumber' => true]), array_diff_key($rows[1], ['YearNumber' => true]));
+        foreach ($rows as $row) {
+            foreach ($row as $field => $value) {
+                $this->assertNotNull($value, $field);
+                $this->assertNotSame('', $value, $field);
+            }
+        }
     }
 
     public function test_v1_cannot_silently_drop_requested_devices(): void
@@ -492,7 +614,8 @@ class MdbExportPayloadTest extends TestCase
         $payload = $this->builder()->build($revision, $template, 1, str_repeat('c', 64));
         $this->assertTrue($payload['settings']['simple_mdb_generation']);
         $this->assertNull($payload['settings']['epsg']);
-        $this->assertSame([[]], $payload['tables']['SAI_Control']);
+        $this->assertSame('Synergi Electric 6.29.0', $payload['tables']['SAI_Control'][0]['Product']);
+        $this->assertNull($payload['tables']['SAI_Control'][0]['ProjectionWKT']);
         $this->assertArrayNotHasKey('TransformerType', $payload['tables']['InstPrimaryTransformers'][0]);
         foreach ($payload['tables']['Node'] as $node) {
             $this->assertNull($node['X']);
@@ -537,7 +660,7 @@ class MdbExportPayloadTest extends TestCase
                 'disconnected' => $transformer['source_waypoint_id'] = 4,
                 'empty_network' => $transformer['sections'] = [],
                 'missing_root' => $transformer['source_waypoint_id'] = null,
-                'missing_substation' => $snapshot['configuration']['settings']['mapping']['table_values']['InstFeeders']['SubstationId'] = null,
+                'missing_substation' => $snapshot['transformers'][0]['header']['substation_name'] = null,
             };
             if ($problem === 'disconnected') {
                 $snapshot['waypoints'][] = ['id' => 4, 'name' => '004', 'latitude' => 30, 'longitude' => 71];

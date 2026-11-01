@@ -1,0 +1,23 @@
+{
+    "readable": true,
+    "schema_verified": true,
+    "schema_sha256": "a2659f32f858dbc0dc25ab75756e7f6d117cd9216a4a8839d938cb014c5bc4cf",
+    "schema_table_count": 50,
+    "schema_relationship_count": 41,
+    "references_verified": true,
+    "mapped_values_verified": true,
+    "counts": {
+        "SAI_Control": 1,
+        "Node": 92,
+        "InstFeeders": 1,
+        "InstSection": 91,
+        "InstPrimaryTransformers": 1,
+        "Loads": 13,
+        "InstMeterPoints": 1,
+        "InstDGens": 0,
+        "InstMymDGens": 0
+    },
+    "template_sha256": "5d4ebf8d307e1a9adf130d56c36706a4e63406ee628131f472850cb2897f6a39",
+    "revision_sha256": "7b51aa482441c75b70bb9b03a0c62f888871e6255c30514a693776d9e76ebf1b",
+    "synergee_validation": "pending"
+}

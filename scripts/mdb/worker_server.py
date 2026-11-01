@@ -62,6 +62,8 @@ def export_model(body: bytes) -> dict:
     tables = {"SAI_Control", "Node", "InstFeeders", "InstSection", "InstPrimaryTransformers", "Loads"}
     if payload["mapping_version"] == "synergee-reviewed-v2":
         tables.update({"InstMeterPoints", "InstDGens", "InstMymDGens"})
+    if "InstMymLoads" in payload.get("tables", {}):
+        tables.add("InstMymLoads")
     if set(payload.get("tables", {})) != tables:
         raise ValueError("Invalid MDB table allowlist.")
     template = resolve_template(payload["template"])

@@ -88,7 +88,7 @@ Checks: 81 focused PHP tests (582 assertions) and 4 targeted JavaScript tests pa
 
 | Frozen input | Output |
 | --- | --- |
-| Approved projection, frequency and product mapping | `SAI_Control`; values must match the chosen template/product. |
+| Static control row from the SAI_Control reference workbook | `SAI_Control`; includes the reference product string and blank ProjectionWKT. |
 | Explicit surveyed endpoints, source aliases and approved coordinates | `Node`, `InstFeeders`, `InstSection`; generated stable identifiers preserve actual graph references. FeederId references a real source node. |
 | Verified section phases/conductors, geometry and approved settings | Fixed R/Y/B/N phase slots, separate conductor columns, configuration and metre lengths in `InstSection`. |
 | Transformer code/capacity with approved equipment/connection/impedance mapping | `InstPrimaryTransformers`; no transformer type is inferred from a sample of the same capacity. |
