@@ -13,13 +13,27 @@ class NetworkValidator
     /** Validation never changes handwritten entries or infers electrical connections. */
     public function validate(SurveyBatch|array $input): array
     {
-        $data = $input instanceof SurveyBatch ? $this->snapshots->snapshot($input) : $input;
+        $snapshotErrors = [];
+        if ($input instanceof SurveyBatch) {
+            try {
+                $data = $this->snapshots->snapshot($input);
+            } catch (ValidationException $exception) {
+                // An invalid phase allocation must appear in the validation summary,
+                // not prevent reviewers from opening the page used to correct it.
+                $data = $this->snapshots->snapshot($input, false);
+                foreach (array_merge(...array_values($exception->errors())) as $message) {
+                    $snapshotErrors[] = ['code' => 'invalid_engineering_demand', 'message' => $message];
+                }
+            }
+        } else {
+            $data = $input;
+        }
         foreach ($data['transformers'] ?? [] as $index => $transformer) {
             $data['transformers'][$index] = app(SurveyWaypoint::class)->firstPairCoordinates($transformer, $data['waypoints'] ?? []);
         }
         $errors = [];
         $warnings = [];
-        $errors = app(EntryService::class)->issues($data);
+        $errors = [...$snapshotErrors, ...app(EntryService::class)->issues($data)];
         $simple = GenerationMode::simple($data['configuration'] ?? []);
         $optionalEngineering = ['unapproved_settings', 'missing_projection', 'missing_electrical_setting', 'missing_library_setting', 'missing_load_assumptions', 'unapproved_mapping', 'missing_template', 'missing_equipment_library', 'missing_source_mapping', 'unknown_transformer_equipment', 'missing_conductor', 'unknown_conductor', 'missing_equipment', 'unknown_equipment', 'missing_consumer_category', 'unapproved_demand', 'missing_phase_demand', 'customer_allocation_mismatch', 'projection_failed'];
         $issue = static function (string $code, string $message, array $context = [], bool $warning = false) use (&$errors, &$warnings, $simple, $optionalEngineering): void {

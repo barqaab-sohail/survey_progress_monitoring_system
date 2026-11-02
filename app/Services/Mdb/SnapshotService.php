@@ -50,7 +50,7 @@ class SnapshotService
         });
     }
 
-    public function snapshot(SurveyBatch $batch): array
+    public function snapshot(SurveyBatch $batch, bool $applyEngineering = true): array
     {
         $batch->load(['sources', 'generationInputs', 'waypoints', 'transformers.sections.consumers', 'transformers.sections.pvRecords', 'transformers.pvRecords', 'transformers.entryRows']);
         $configuration = Configuration::where('project_id', $batch->project_id)->first();
@@ -127,7 +127,10 @@ class SnapshotService
         unset($transformer);
 
         // Remove Carbon instances before applying the engineering settings.
-        $data = app(EngineeringConfiguration::class)->apply(json_decode(json_encode($data, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR));
+        $data = json_decode(json_encode($data, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+        if ($applyEngineering) {
+            $data = app(EngineeringConfiguration::class)->apply($data);
+        }
         // Derived demand introduces whole-number floats (for example 2.0 kVA).
         // Eloquent's JSON storage writes these as integers. Normalize the final
         // snapshot before hashing so the frozen checksum survives persistence.
