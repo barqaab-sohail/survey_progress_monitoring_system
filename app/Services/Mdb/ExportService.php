@@ -196,6 +196,9 @@ class ExportService
     {
         $revision = $batch->approvedRevision;
         $this->require($batch->status === 'approved' && $revision !== null && $revision->batch_id === $batch->id, 'Final MDB export requires a current approved immutable revision.');
+        foreach ($revision->snapshot['transformers'] ?? [] as $transformer) {
+            app(SurveyPhaseConsistency::class)->assertValid(app(SurveyPhaseConsistency::class)->transformer($transformer));
+        }
         if ($batch->staged_workflow) {
             $this->require($batch->survey_status === 'approved' && $batch->decisions()->where('revision_id', $revision->id)
                 ->where('decision', 'approve')->whereNotIn('decided_by', $batch->entry_actor_ids ?? [])->exists(),

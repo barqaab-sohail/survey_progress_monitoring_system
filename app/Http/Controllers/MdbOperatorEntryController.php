@@ -12,6 +12,7 @@ use App\Services\Mdb\EntryLookups;
 use App\Services\Mdb\EntryService;
 use App\Services\Mdb\SnapshotService;
 use App\Services\Mdb\StartingPoleCoordinates;
+use App\Services\Mdb\SurveyPhaseConsistency;
 use App\Services\Mdb\SurveyWaypoint;
 use App\Services\Mdb\TransformerIdentity;
 use App\Services\Mdb\WorkflowAccess;
@@ -161,6 +162,7 @@ class MdbOperatorEntryController extends Controller
         DB::transaction(function () use ($request, $batch, $transformer, $row, $validated, $data, $hash) {
             $locked = SurveyBatch::lockForUpdate()->findOrFail($batch->id);
             $existing = $row ? $transformer->entryRows()->findOrFail($row->id) : $transformer->entryRows()->where('client_uuid', $validated['client_uuid'])->first();
+            $this->assertCustomerPhases($transformer, $existing, $data);
             if ($existing && $existing->save_uuid === $validated['save_uuid'] && hash_equals($existing->save_hash, $hash)) {
                 return; // Repeated click/network retry, including a stale revision, is a no-op.
             }
@@ -240,6 +242,29 @@ class MdbOperatorEntryController extends Controller
         });
 
         return response()->json($this->entries->editorData($batch->fresh()));
+    }
+
+    private function assertCustomerPhases(NetworkTransformer $transformer, ?EntryRow $existing, array $data): void
+    {
+        $rule = app(SurveyPhaseConsistency::class);
+        $rows = $transformer->entryRows()->where('pair_number', $data['pair_number'])->get()
+            ->reject(fn ($entry) => $entry->id === $existing?->id)->map->surveyData()->values()->all();
+        $rows[] = $data;
+        $required = [];
+        foreach (['R', 'Y', 'B'] as $phase) {
+            if ($data['designation'] === 'S' && $rule->availability($existing?->conductors[$phase] ?? null) === true
+                && $rule->availability($data['conductors'][$phase] ?? null) !== true) {
+                $required[] = $phase;
+            }
+        }
+        $errors = [];
+        foreach ($rule->rows($rows, $transformer->code, $required) as $issue) {
+            $field = ($issue['row']['designation'] ?? null) === $data['designation'] ? $issue['field'] : 'conductors.'.$issue['phase'];
+            $errors[$field][] = $issue['message'];
+        }
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
     }
 
     public function destroy(Request $request, SurveyBatch $batch, NetworkTransformer $transformer, EntryRow $row)

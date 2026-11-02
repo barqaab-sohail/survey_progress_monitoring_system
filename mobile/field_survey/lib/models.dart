@@ -64,6 +64,61 @@ void updatePhaseConsumerTotals(Json row) {
   }
 }
 
+bool? recordedConductorAvailability(dynamic value) {
+  if (value == null || value.toString().trim().isEmpty) return null;
+  return ![
+    '__none__',
+    '+',
+    '-',
+    '–',
+    '—',
+    'x',
+    '×',
+  ].contains(value.toString().trim().toLowerCase());
+}
+
+Json? sectionStartRow(SurveyRecord record, int index) {
+  for (final group in surveyPairGroups(record.rows)) {
+    if (!group.contains(index)) continue;
+    for (final candidate in group) {
+      if (record.rows[candidate]['se'] == 'S') return record.rows[candidate];
+    }
+  }
+  return null;
+}
+
+Map<String, String> surveyPhaseConsistencyErrors(
+  SurveyRecord record, {
+  bool submitting = false,
+}) {
+  final errors = <String, String>{};
+  for (var index = 0; index < record.rows.length; index++) {
+    final row = record.rows[index], start = sectionStartRow(record, index);
+    if (start == null) continue;
+    final startIndex = record.rows.indexOf(start);
+    final counts = row['consumer_phases'] as Json? ?? {};
+    for (final category in ['rs', 'sc', 'st']) {
+      for (final phase in ['R', 'Y', 'B']) {
+        final count = num.tryParse(
+          ((counts[category] as Json?)?[phase] ?? '').toString(),
+        );
+        final available = recordedConductorAvailability(
+          start['conductor_${phase.toLowerCase()}'],
+        );
+        if (count != null &&
+            count > 0 &&
+            (available == false || (submitting && available != true))) {
+          final message =
+              'Transformer ${record.data['transformer_code'] ?? '(unrecorded)'}, ${row['se']} ${row['gps_waypoint'] ?? '(waypoint unrecorded)'}: ${category.toUpperCase()} $phase-phase customer count $count needs a recorded $phase conductor on the section S row. Check the conductor and customer count.';
+          errors['rows.$index.consumer_phases.$category.$phase'] = message;
+          errors['rows.$startIndex.conductor_${phase.toLowerCase()}'] = message;
+        }
+      }
+    }
+  }
+  return errors;
+}
+
 String dayString(DateTime date) => date.toIso8601String().substring(0, 10);
 Json copyJson(Json value) => jsonDecode(jsonEncode(value)) as Json;
 
@@ -732,6 +787,7 @@ class SurveyValidation {
       text('solar.$index.meter_number', item['meter_number'], 255);
       text('solar.$index.remarks', item['remarks'], 4000);
     }
+    result.addAll(surveyPhaseConsistencyErrors(record, submitting: submitting));
     return result;
   }
 }

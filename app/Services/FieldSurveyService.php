@@ -8,6 +8,7 @@ use App\Models\SurveyorAssignment;
 use App\Models\Transformer;
 use App\Models\User;
 use App\Services\DriveStorage\FileStorage;
+use App\Services\Mdb\SurveyPhaseConsistency;
 use App\Support\FieldTransformerIdentity;
 use App\Support\SurveyTeamGroup;
 use Illuminate\Database\QueryException;
@@ -44,6 +45,10 @@ class FieldSurveyService
                     abort_unless((int) $data['base_revision'] === $survey->revision, 409, 'The server has a newer revision. Your local data has been preserved; resolve the conflict before syncing.');
                 } else {
                     abort_unless((int) $data['base_revision'] === 0, 409, 'This survey was not found. A new survey must start at revision zero.');
+                }
+                $phaseErrors = app(SurveyPhaseConsistency::class)->fieldErrors($data['rows'], $data['transformer_code'] ?? '(unrecorded)', $data['status'] === 'submitted', $survey?->rows ?? []);
+                if ($phaseErrors) {
+                    throw ValidationException::withMessages($phaseErrors);
                 }
                 $transformer = empty($data['transformer_id']) ? null : Transformer::where('feeder_id', $feeder->id)->find($data['transformer_id']);
                 if (! empty($data['transformer_id']) && ! $transformer) {
@@ -138,6 +143,10 @@ class FieldSurveyService
                 }
             }
             $this->validateRowOwnershipAndGroups($data, $locked, SurveyTeamGroup::identifier($locked->team));
+            $phaseErrors = app(SurveyPhaseConsistency::class)->fieldErrors($data['rows'], $data['transformer_code'] ?? '(unrecorded)', $locked->status === 'submitted', $locked->rows);
+            if ($phaseErrors) {
+                throw ValidationException::withMessages($phaseErrors);
+            }
             $key = FieldTransformerIdentity::key($data['transformer_code'] ?? null);
             if ($key !== null && FieldSurvey::where('feeder_id', $locked->feeder_id)->where('id', '!=', $locked->id)->where('transformer_key', $key)->exists()) {
                 throw ValidationException::withMessages(['transformer_code' => 'This transformer already has another saved survey on this feeder.']);

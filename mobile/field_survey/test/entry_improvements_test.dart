@@ -64,6 +64,7 @@ void main() {
     'calculated consumer totals update without recreating the field',
     (tester) async {
       final record = readySurvey();
+      record.rows.first['conductor_r'] = 'A';
       await tester.pumpWidget(
         MaterialApp(
           home: RowEditor(

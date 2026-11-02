@@ -29,6 +29,7 @@ use App\Services\Mdb\ExportService;
 use App\Services\Mdb\NetworkValidator;
 use App\Services\Mdb\SnapshotService;
 use App\Services\Mdb\SourceService;
+use App\Services\Mdb\SurveyPhaseConsistency;
 use App\Services\Mdb\TransformerIdentity;
 use App\Services\Mdb\WorkflowAccess;
 use Illuminate\Http\Client\ConnectionException;
@@ -329,6 +330,7 @@ class MdbWorkflowController extends Controller
             $match = $uploadedSource->driveStoredFile->duplicate_details;
             $message .= ' This file has already been uploaded and will not be uploaded again. Existing file: '.$match['name'].'; feeder '.$match['feeder'].'; uploaded '.$match['uploaded_at'].'; uploader '.$match['uploader'].'.';
         }
+
         return back()->with('success', $message);
     }
 
@@ -451,7 +453,8 @@ class MdbWorkflowController extends Controller
             $request->validate(['original_entry.ditto_copy_confirmed' => 'accepted']);
             $data['original_entry']['ditto_copy_confirmed'] = true;
         }
-        $this->mutate($request, $batch, function () use ($data, $consumers, $transformer, $section) {
+        $previousConductors = $section?->conductors ?? [];
+        $this->mutate($request, $batch, function () use ($data, $consumers, $transformer, $section, $previousConductors) {
             $record = $section ? tap($section)->update($data) : $transformer->sections()->create($data);
             foreach ($consumers as $category => $consumer) {
                 if (! in_array($category, ['rs', 'rl', 'sc', 'lc', 'si', 'li', 'pb', 'ag', 'st'], true)) {
@@ -464,6 +467,12 @@ class MdbWorkflowController extends Controller
                 }
                 $record->consumers()->updateOrCreate(['category' => $category], ['count' => $consumer['count'] ?? null, 'original_value' => $consumer['original_value'] ?? null, 'demand' => $demand ?: null]);
             }
+
+            $phaseCheck = app(SurveyPhaseConsistency::class);
+            $requiredPhases = array_values(array_filter(['R', 'Y', 'B'], fn ($phase) => $phaseCheck->availability($previousConductors[$phase] ?? null) === true
+                && $phaseCheck->availability($record->conductors[$phase] ?? null) !== true));
+            $phaseCheck->assertValid($phaseCheck->section($record->fresh('consumers')->toArray(), $record->entryRows()->get()->map->surveyData()->all(),
+                'Transformer '.$transformer->code.', section '.$record->id.', E '.($record->end_reference ?? '?'), true, $requiredPhases));
 
             return $record;
         });

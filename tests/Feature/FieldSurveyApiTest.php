@@ -15,8 +15,8 @@ use App\Models\Organization;
 use App\Models\Project;
 use App\Models\SubDivision;
 use App\Models\SurveyDailyEntry;
-use App\Models\SurveyTeam;
 use App\Models\SurveyorAssignment;
+use App\Models\SurveyTeam;
 use App\Models\Transformer;
 use App\Models\User;
 use App\Services\Mdb\EntryLookups;
@@ -91,6 +91,40 @@ class FieldSurveyApiTest extends TestCase
         ];
     }
 
+    public function test_phase_customer_conflicts_are_rejected_for_drafts_and_submissions_using_the_s_row(): void
+    {
+        foreach (['draft', 'submitted'] as $status) {
+            $data = $this->payload($status);
+            $data['rows'][0]['conductor_r'] = '-';
+            $data['rows'][0]['conductor_y'] = 'A';
+            $data['rows'][1]['consumer_phases'] = ['rs' => ['R' => 2, 'Y' => null, 'B' => null]];
+            $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()
+                ->assertJsonValidationErrors(['rows.1.consumer_phases.rs.R', 'rows.0.conductor_r'])
+                ->assertSee('B2308')->assertSee('0009')->assertSee('R-phase customer count 2');
+        }
+        $this->assertDatabaseCount('field_surveys', 0);
+        $draft = $this->payload('draft');
+        $draft['rows'][0]['conductor_r'] = null;
+        $draft['rows'][1]['consumer_phases'] = ['rs' => ['R' => 2, 'Y' => null, 'B' => null]];
+        $this->postJson('/api/v1/field/surveys/sync', $draft)->assertCreated();
+        $this->assertSame(2, FieldSurvey::firstOrFail()->rows[1]['consumer_phases']['rs']['R']);
+    }
+
+    public function test_mobile_conductor_removal_cannot_hide_existing_customers_as_an_unknown_draft(): void
+    {
+        $data = $this->payload('draft');
+        $data['rows'][1]['consumer_phases'] = ['rs' => ['R' => 2, 'Y' => null, 'B' => null]];
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
+        $data['base_revision'] = 1;
+        $data['rows'][0]['conductor_r'] = null;
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()
+            ->assertJsonValidationErrors(['rows.1.consumer_phases.rs.R', 'rows.0.conductor_r']);
+        $saved = FieldSurvey::firstOrFail();
+        $this->assertSame('A', $saved->rows[0]['conductor_r']);
+        $this->assertSame(2, $saved->rows[1]['consumer_phases']['rs']['R']);
+        $this->assertSame(1, $saved->revision);
+    }
+
     public function test_login_uses_hashed_expiring_device_tokens_and_logout_revokes_only_current_device(): void
     {
         $login = $this->postJson('/api/v1/field/login', ['email' => $this->leader->email, 'password' => 'password', 'device_name' => 'Android phone'])->assertOk();
@@ -159,7 +193,10 @@ class FieldSurveyApiTest extends TestCase
     {
         $surveyor = User::factory()->create(['organization_id' => $this->organization->id, 'role' => UserRole::Surveyor]);
         $this->team->members()->attach($surveyor->id, ['is_leader' => false]);
-        $other = $this->feeder->replicate(); $other->feeder_code = '0022'; $other->feeder_name = 'Not assigned'; $other->save();
+        $other = $this->feeder->replicate();
+        $other->feeder_code = '0022';
+        $other->feeder_name = 'Not assigned';
+        $other->save();
         FeederAssignment::create(['feeder_id' => $other->id, 'survey_team_id' => $this->team->id, 'assigned_by' => $this->admin->id, 'start_date' => today(), 'status' => 'active']);
         $this->actingAs($this->leader)->post(route('team-work.survey.assign'), ['survey_team_id' => $this->team->id, 'surveyor_id' => $surveyor->id,
             'feeder_ids' => [$this->feeder->id], 'assigned_at' => today()->toDateString(), 'deadline' => today()->addDays(2)->toDateString(), 'priority' => 'high',
@@ -302,6 +339,7 @@ class FieldSurveyApiTest extends TestCase
     public function test_mobile_consumer_phases_survive_sync_and_recalculate_totals(): void
     {
         $data = $this->payload();
+        $data['rows'][0]['conductor_b'] = 'A';
         $data['rows'][0]['consumer_phases'] = [
             'rs' => ['R' => 2, 'Y' => null, 'B' => 3],
             'sc' => ['R' => 0, 'Y' => null, 'B' => null],

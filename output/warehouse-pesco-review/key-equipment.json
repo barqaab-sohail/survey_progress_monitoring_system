@@ -1,0 +1,2393 @@
+{
+  "SAI_Equ_Control": [
+    {
+      "VoltageFactor": 100,
+      "Frequency": 50,
+      "LengthUnits": "Metric",
+      "Phase1": "R",
+      "Phase2": "Y",
+      "Phase3": "B",
+      "Product": "Synergi Electric 6.29.0",
+      "VoltageInPercent": 0,
+      "MYM_YearDesc_B": "2012",
+      "MYM_YearDesc_1": "2013",
+      "MYM_YearDesc_2": "2014",
+      "MYM_YearDesc_3": "2015",
+      "MYM_YearDesc_4": "2016",
+      "MYM_YearDesc_5": "2017",
+      "MYM_YearDesc_6": "2018",
+      "MYM_YearDesc_7": "2019",
+      "MYM_YearDesc_8": "2020",
+      "MYM_YearDesc_9": "2021",
+      "MYM_YearDesc10": "2022",
+      "ProjectionFile": "",
+      "ProjectionWKT": "",
+      "PTSecondary": 120
+    }
+  ],
+  "DevTransformers": [
+    {
+      "TransformerName": "10 KVA",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 10,
+      "PercentImpedance": 4,
+      "PercentResistance": 3.2,
+      "NoLoadLosses": 0.06,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "10 KVA"
+    },
+    {
+      "TransformerName": "100 KVA",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 100,
+      "PercentImpedance": 4,
+      "PercentResistance": 2.02,
+      "NoLoadLosses": 0.31,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "100 KVA"
+    },
+    {
+      "TransformerName": "1000 KVA",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 1000,
+      "PercentImpedance": 5,
+      "PercentResistance": 1.35,
+      "NoLoadLosses": 1.8,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "1000 KVA"
+    },
+    {
+      "TransformerName": "1250 KVA",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 1250,
+      "PercentImpedance": 5,
+      "PercentResistance": 1.36,
+      "NoLoadLosses": 2.2,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "1250 KVA"
+    },
+    {
+      "TransformerName": "15 KVA",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 15,
+      "PercentImpedance": 4,
+      "PercentResistance": 2.9,
+      "NoLoadLosses": 0.08,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "15 KVA"
+    },
+    {
+      "TransformerName": "1500 KVA",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 1500,
+      "PercentImpedance": 6,
+      "PercentResistance": 1.33,
+      "NoLoadLosses": 2.5,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "1500 KVA"
+    },
+    {
+      "TransformerName": "1P 14.4/2.4 50",
+      "HighSideRatedKv": 14.4,
+      "LowSideRatedKv": 2.4,
+      "TransformerRatedKva": 50,
+      "PercentImpedance": 2.601,
+      "PercentResistance": 1.1,
+      "NoLoadLosses": 0,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "1P 14.4/2.8 250",
+      "HighSideRatedKv": 14.4,
+      "LowSideRatedKv": 2.77,
+      "TransformerRatedKva": 250,
+      "PercentImpedance": 3,
+      "PercentResistance": 1,
+      "NoLoadLosses": 0.8,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "1P 14.4/7.2 500",
+      "HighSideRatedKv": 14.4,
+      "LowSideRatedKv": 7.2,
+      "TransformerRatedKva": 500,
+      "PercentImpedance": 4,
+      "PercentResistance": 0.8,
+      "NoLoadLosses": 0.8,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "1P 19.9/7.2 500",
+      "HighSideRatedKv": 19.9,
+      "LowSideRatedKv": 7.2,
+      "TransformerRatedKva": 500,
+      "PercentImpedance": 5.2,
+      "PercentResistance": 0.8,
+      "NoLoadLosses": 0.8,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "1P 24.9/7.6 750",
+      "HighSideRatedKv": 24.9,
+      "LowSideRatedKv": 7.62,
+      "TransformerRatedKva": 750,
+      "PercentImpedance": 5,
+      "PercentResistance": 2,
+      "NoLoadLosses": 0.5,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "1P 34.5/7.6 500",
+      "HighSideRatedKv": 34.5,
+      "LowSideRatedKv": 7.6,
+      "TransformerRatedKva": 500,
+      "PercentImpedance": 5.2,
+      "PercentResistance": 0.8,
+      "NoLoadLosses": 0.8,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "200 KVA",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 200,
+      "PercentImpedance": 4,
+      "PercentResistance": 1.71,
+      "NoLoadLosses": 0.49,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "200 KVA"
+    },
+    {
+      "TransformerName": "2000 KVA",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 2000,
+      "PercentImpedance": 6,
+      "PercentResistance": 1.23,
+      "NoLoadLosses": 3.25,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "2000 KVA"
+    },
+    {
+      "TransformerName": "25 KVA",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 25,
+      "PercentImpedance": 4,
+      "PercentResistance": 2.56,
+      "NoLoadLosses": 0.12,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "25 KVA"
+    },
+    {
+      "TransformerName": "250 KVA",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 250,
+      "PercentImpedance": 4,
+      "PercentResistance": 1.6,
+      "NoLoadLosses": 3.67,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "250 KVA"
+    },
+    {
+      "TransformerName": "300 KVA",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 300,
+      "PercentImpedance": 4,
+      "PercentResistance": 1.7,
+      "NoLoadLosses": 3.62,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "300 KVA"
+    },
+    {
+      "TransformerName": "3P 24.9/4 1000",
+      "HighSideRatedKv": 24.9,
+      "LowSideRatedKv": 4.16,
+      "TransformerRatedKva": 1000,
+      "PercentImpedance": 5.2,
+      "PercentResistance": 0.8,
+      "NoLoadLosses": 0.8,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "3P 24/13 1500",
+      "HighSideRatedKv": 24.9,
+      "LowSideRatedKv": 13.2,
+      "TransformerRatedKva": 1500,
+      "PercentImpedance": 5.3,
+      "PercentResistance": 0.9,
+      "NoLoadLosses": 5,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "3P 24/13 2000",
+      "HighSideRatedKv": 24.9,
+      "LowSideRatedKv": 13.2,
+      "TransformerRatedKva": 2000,
+      "PercentImpedance": 5.5,
+      "PercentResistance": 0.85,
+      "NoLoadLosses": 10.9,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "3P 4.16/.48 1000",
+      "HighSideRatedKv": 4.16,
+      "LowSideRatedKv": 0.48,
+      "TransformerRatedKva": 1000,
+      "PercentImpedance": 5.2,
+      "PercentResistance": 0.8,
+      "NoLoadLosses": 0.8,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "3P 4.8/.48 500",
+      "HighSideRatedKv": 4.8,
+      "LowSideRatedKv": 0.48,
+      "TransformerRatedKva": 500,
+      "PercentImpedance": 2,
+      "PercentResistance": 0.85,
+      "NoLoadLosses": 0,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "D",
+      "Description": ""
+    },
+    {
+      "TransformerName": "400 KVA",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 400,
+      "PercentImpedance": 4,
+      "PercentResistance": 1.4,
+      "NoLoadLosses": 0.92,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "400 KVA"
+    },
+    {
+      "TransformerName": "50 KVA",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 50,
+      "PercentImpedance": 4,
+      "PercentResistance": 2.34,
+      "NoLoadLosses": 0.17,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "50 KVA"
+    },
+    {
+      "TransformerName": "50 KVA CSP",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.24,
+      "TransformerRatedKva": 50,
+      "PercentImpedance": 1.8,
+      "PercentResistance": 1.07,
+      "NoLoadLosses": 0.07,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "50 KVA CSP"
+    },
+    {
+      "TransformerName": "500 KVA",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 500,
+      "PercentImpedance": 6,
+      "PercentResistance": 1.33,
+      "NoLoadLosses": 2.5,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "500 KVA"
+    },
+    {
+      "TransformerName": "630 KVA",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 630,
+      "PercentImpedance": 4,
+      "PercentResistance": 1.29,
+      "NoLoadLosses": 1.35,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "630 KVA"
+    },
+    {
+      "TransformerName": "75 KVA CSP",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 75,
+      "PercentImpedance": 2,
+      "PercentResistance": 0.93,
+      "NoLoadLosses": 0.09,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "75 KVA CSP"
+    },
+    {
+      "TransformerName": "750 KVA",
+      "HighSideRatedKv": 11,
+      "LowSideRatedKv": 0.415,
+      "TransformerRatedKva": 750,
+      "PercentImpedance": 5,
+      "PercentResistance": 1.33,
+      "NoLoadLosses": 1.3,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": "750 KVA"
+    },
+    {
+      "TransformerName": "DT 13/.48 1000",
+      "HighSideRatedKv": 13.2,
+      "LowSideRatedKv": 0.48,
+      "TransformerRatedKva": 1000,
+      "PercentImpedance": 3,
+      "PercentResistance": 2.7,
+      "NoLoadLosses": 0.1,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "DT 13/.48 500",
+      "HighSideRatedKv": 13.2,
+      "LowSideRatedKv": 0.48,
+      "TransformerRatedKva": 500,
+      "PercentImpedance": 5,
+      "PercentResistance": 2,
+      "NoLoadLosses": 2,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "DT 13/4 100",
+      "HighSideRatedKv": 13.2,
+      "LowSideRatedKv": 4.16,
+      "TransformerRatedKva": 100,
+      "PercentImpedance": 3,
+      "PercentResistance": 1,
+      "NoLoadLosses": 1,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "DT 13/4 500",
+      "HighSideRatedKv": 13.2,
+      "LowSideRatedKv": 4.16,
+      "TransformerRatedKva": 500,
+      "PercentImpedance": 5.2,
+      "PercentResistance": 0.8,
+      "NoLoadLosses": 0.8,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "DT 13/4.16 5000",
+      "HighSideRatedKv": 13.2,
+      "LowSideRatedKv": 4.16,
+      "TransformerRatedKva": 5000,
+      "PercentImpedance": 5.2,
+      "PercentResistance": 0.8,
+      "NoLoadLosses": 0.8,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "DT Iso-Down 13/4 500",
+      "HighSideRatedKv": 13.2,
+      "LowSideRatedKv": 4.8,
+      "TransformerRatedKva": 1500,
+      "PercentImpedance": 5.2,
+      "PercentResistance": 0.8,
+      "NoLoadLosses": 0.8,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "D",
+      "Description": ""
+    },
+    {
+      "TransformerName": "PM 115/13 10MVA",
+      "HighSideRatedKv": 115,
+      "LowSideRatedKv": 13.2,
+      "TransformerRatedKva": 10000,
+      "PercentImpedance": 4,
+      "PercentResistance": 1.5,
+      "NoLoadLosses": 65,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "PM 115/13 12MVA",
+      "HighSideRatedKv": 115,
+      "LowSideRatedKv": 13.2,
+      "TransformerRatedKva": 12000,
+      "PercentImpedance": 4,
+      "PercentResistance": 1.5,
+      "NoLoadLosses": 65,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "PM 115/13 18MVA",
+      "HighSideRatedKv": 115,
+      "LowSideRatedKv": 13.2,
+      "TransformerRatedKva": 18000,
+      "PercentImpedance": 4,
+      "PercentResistance": 1.5,
+      "NoLoadLosses": 65,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "PM 115/13 20MVA",
+      "HighSideRatedKv": 115,
+      "LowSideRatedKv": 13.2,
+      "TransformerRatedKva": 20000,
+      "PercentImpedance": 4,
+      "PercentResistance": 1.5,
+      "NoLoadLosses": 65,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "PM 115/24 2MVA",
+      "HighSideRatedKv": 115,
+      "LowSideRatedKv": 24.9,
+      "TransformerRatedKva": 20000,
+      "PercentImpedance": 4,
+      "PercentResistance": 1.2,
+      "NoLoadLosses": 3,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "PM 115/24 30MVA",
+      "HighSideRatedKv": 115,
+      "LowSideRatedKv": 24.9,
+      "TransformerRatedKva": 30000,
+      "PercentImpedance": 4,
+      "PercentResistance": 0.8,
+      "NoLoadLosses": 2,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "PM 115/34.5 30MVA",
+      "HighSideRatedKv": 115,
+      "LowSideRatedKv": 34.5,
+      "TransformerRatedKva": 30000,
+      "PercentImpedance": 5.2,
+      "PercentResistance": 0.8,
+      "NoLoadLosses": 0.8,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "PM 115/4.8 4MVA",
+      "HighSideRatedKv": 115,
+      "LowSideRatedKv": 4.8,
+      "TransformerRatedKva": 4000,
+      "PercentImpedance": 1.21,
+      "PercentResistance": 0.18,
+      "NoLoadLosses": 0,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "D",
+      "Description": ""
+    },
+    {
+      "TransformerName": "PM 12.47/4 1.5M",
+      "HighSideRatedKv": 12.47,
+      "LowSideRatedKv": 4.1,
+      "TransformerRatedKva": 1500,
+      "PercentImpedance": 5.3,
+      "PercentResistance": 0.85,
+      "NoLoadLosses": 8.5,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "PM 24/13 500KVA",
+      "HighSideRatedKv": 24.9,
+      "LowSideRatedKv": 13.2,
+      "TransformerRatedKva": 500,
+      "PercentImpedance": 5,
+      "PercentResistance": 0.8,
+      "NoLoadLosses": 3,
+      "HighVoltageConnectionCode": "YG",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    },
+    {
+      "TransformerName": "PM 69/12.47 10MVA",
+      "HighSideRatedKv": 69,
+      "LowSideRatedKv": 12.47,
+      "TransformerRatedKva": 10000,
+      "PercentImpedance": 5.8,
+      "PercentResistance": 0.8,
+      "NoLoadLosses": 0.8,
+      "HighVoltageConnectionCode": "D",
+      "LowVoltageConnectionCode": "YG",
+      "Description": ""
+    }
+  ],
+  "DevConductors": [
+    {
+      "ConductorName": "1 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.8195538057742783,
+      "PosSequenceReactance_PerLUL": 0.34776902887139105,
+      "ContinuousCurrentRating": 200,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.857283464566929,
+      "PosSequenceReactance_PerLUL": 0.4130577427821523,
+      "ContinuousCurrentRating": 200,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1 AL-CN UG",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.9055118110236221,
+      "PosSequenceReactance_PerLUL": 0.2230971128608924,
+      "ContinuousCurrentRating": 177,
+      "ConductorType": "ActZ",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.4750656167979003,
+      "PosSequenceReactance_PerLUL": 0.34776902887139105,
+      "ContinuousCurrentRating": 270,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1/0 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.6499343832020997,
+      "PosSequenceReactance_PerLUL": 0.339238845144357,
+      "ContinuousCurrentRating": 230,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1/0 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.6958661417322836,
+      "PosSequenceReactance_PerLUL": 0.4074803149606299,
+      "ContinuousCurrentRating": 230,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1/0 AL-1/3N UG",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.7086614173228346,
+      "PosSequenceReactance_PerLUL": 0.21981627296587927,
+      "ContinuousCurrentRating": 202,
+      "ConductorType": "ActZ",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1/0 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.3769685039370078,
+      "PosSequenceReactance_PerLUL": 0.339238845144357,
+      "ContinuousCurrentRating": 310,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "100 MM2",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.0621,
+      "ContinuousCurrentRating": 167,
+      "ConductorType": "SepN",
+      "Description": "100 MM2"
+    },
+    {
+      "ConductorName": "1000 MCM",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.08999999999999998,
+      "PosSequenceReactance_PerLUL": 0.222,
+      "ContinuousCurrentRating": 795,
+      "ConductorType": "Tape",
+      "Description": "1000 MCM"
+    },
+    {
+      "ConductorName": "1000CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.04232283464566929,
+      "PosSequenceReactance_PerLUL": 0.24835958005249345,
+      "ContinuousCurrentRating": 1300,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1033AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.0688976377952756,
+      "PosSequenceReactance_PerLUL": 0.24770341207349078,
+      "ContinuousCurrentRating": 980,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1033ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.06430446194225721,
+      "PosSequenceReactance_PerLUL": 0.23917322834645668,
+      "ContinuousCurrentRating": 1060,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1113AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.0639763779527559,
+      "PosSequenceReactance_PerLUL": 0.24409448818897633,
+      "ContinuousCurrentRating": 1040,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1113ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.060039370078740155,
+      "PosSequenceReactance_PerLUL": 0.23589238845144356,
+      "ContinuousCurrentRating": 1110,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1192AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.060039370078740155,
+      "PosSequenceReactance_PerLUL": 0.24146981627296588,
+      "ContinuousCurrentRating": 1090,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1192ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.05610236220472441,
+      "PosSequenceReactance_PerLUL": 0.23359580052493437,
+      "ContinuousCurrentRating": 1160,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "12 CW",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 4.465223097112861,
+      "PosSequenceReactance_PerLUL": 2.319553805774278,
+      "ContinuousCurrentRating": 60,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1272AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.05675853018372703,
+      "PosSequenceReactance_PerLUL": 0.23917322834645668,
+      "ContinuousCurrentRating": 1130,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1272ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.05282152230971128,
+      "PosSequenceReactance_PerLUL": 0.2309711286089239,
+      "ContinuousCurrentRating": 1200,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1351AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.05380577427821523,
+      "PosSequenceReactance_PerLUL": 0.2372047244094488,
+      "ContinuousCurrentRating": 1180,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1351ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.049868766404199474,
+      "PosSequenceReactance_PerLUL": 0.229002624671916,
+      "ContinuousCurrentRating": 1250,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1431AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.05118110236220472,
+      "PosSequenceReactance_PerLUL": 0.23458005249343827,
+      "ContinuousCurrentRating": 1220,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1431ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.04691601049868766,
+      "PosSequenceReactance_PerLUL": 0.22670603674540682,
+      "ContinuousCurrentRating": 1300,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1510AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.04888451443569554,
+      "PosSequenceReactance_PerLUL": 0.23293963254593172,
+      "ContinuousCurrentRating": 1260,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1510ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.04461942257217847,
+      "PosSequenceReactance_PerLUL": 0.22473753280839898,
+      "ContinuousCurrentRating": 1340,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1590AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.04658792650918635,
+      "PosSequenceReactance_PerLUL": 0.23031496062992124,
+      "ContinuousCurrentRating": 1300,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "1590ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.04232283464566929,
+      "PosSequenceReactance_PerLUL": 0.2227690288713911,
+      "ContinuousCurrentRating": 1380,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "15kV 1/0 Conc. Neut.",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 215,
+      "ConductorType": "Conc",
+      "Description": ""
+    },
+    {
+      "ConductorName": "15kV 1000 Tape Shield",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 690,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "15kV 2/0 Conc. Neut.",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 245,
+      "ConductorType": "Conc",
+      "Description": ""
+    },
+    {
+      "ConductorName": "15kV 250 Tape Shield",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 345,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "15kV 350 Tape Shield",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 415,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "15kV 4/0 Sep. Neut.",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 315,
+      "ConductorType": "SepN",
+      "Description": ""
+    },
+    {
+      "ConductorName": "2 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 1.0337926509186353,
+      "PosSequenceReactance_PerLUL": 0.35662729658792647,
+      "ContinuousCurrentRating": 180,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "2 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 1.0498687664041995,
+      "PosSequenceReactance_PerLUL": 0.4130577427821523,
+      "ContinuousCurrentRating": 180,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "2 AL-CN UG",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 1.1220472440944882,
+      "PosSequenceReactance_PerLUL": 0.23293963254593172,
+      "ContinuousCurrentRating": 156,
+      "ConductorType": "ActZ",
+      "Description": ""
+    },
+    {
+      "ConductorName": "2 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.598753280839895,
+      "PosSequenceReactance_PerLUL": 0.35662729658792647,
+      "ContinuousCurrentRating": 230,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "2 FCWC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.6122047244094487,
+      "PosSequenceReactance_PerLUL": 0.35728346456692917,
+      "ContinuousCurrentRating": 230,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "2/0 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.5154199475065616,
+      "PosSequenceReactance_PerLUL": 0.3303805774278215,
+      "ContinuousCurrentRating": 270,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "2/0 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.5561023622047244,
+      "PosSequenceReactance_PerLUL": 0.39829396325459315,
+      "ContinuousCurrentRating": 270,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "2/0 AL-1/3N UG",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.5643044619422571,
+      "PosSequenceReactance_PerLUL": 0.2099737532808399,
+      "ContinuousCurrentRating": 230,
+      "ConductorType": "ActZ",
+      "Description": ""
+    },
+    {
+      "ConductorName": "2/0 AWG",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.8869999999999999,
+      "PosSequenceReactance_PerLUL": 0.271,
+      "ContinuousCurrentRating": 160,
+      "ConductorType": "Tape",
+      "Description": "2/0 AWG"
+    },
+    {
+      "ConductorName": "2/0 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.29855643044619423,
+      "PosSequenceReactance_PerLUL": 0.3303805774278215,
+      "ContinuousCurrentRating": 360,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "250 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.1594488188976378,
+      "PosSequenceReactance_PerLUL": 0.30249343832021,
+      "ContinuousCurrentRating": 540,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "266 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.2575459317585302,
+      "PosSequenceReactance_PerLUL": 0.29986876640419946,
+      "ContinuousCurrentRating": 420,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "266 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.23917322834645668,
+      "PosSequenceReactance_PerLUL": 0.2887139107611548,
+      "ContinuousCurrentRating": 460,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "3 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 1.3028215223097115,
+      "PosSequenceReactance_PerLUL": 0.3651574803149606,
+      "ContinuousCurrentRating": 140,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "3 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 1.2860892388451444,
+      "PosSequenceReactance_PerLUL": 0.4104330708661417,
+      "ContinuousCurrentRating": 160,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "3 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.7555774278215224,
+      "PosSequenceReactance_PerLUL": 0.3651574803149606,
+      "ContinuousCurrentRating": 200,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "3/0 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.40944881889763773,
+      "PosSequenceReactance_PerLUL": 0.32185039370078744,
+      "ContinuousCurrentRating": 310,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "3/0 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.4491469816272966,
+      "PosSequenceReactance_PerLUL": 0.3858267716535433,
+      "ContinuousCurrentRating": 300,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "3/0 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.2372047244094488,
+      "PosSequenceReactance_PerLUL": 0.32185039370078744,
+      "ContinuousCurrentRating": 420,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "300 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.21227034120734906,
+      "PosSequenceReactance_PerLUL": 0.2844488188976378,
+      "ContinuousCurrentRating": 490,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "300 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.13353018372703412,
+      "PosSequenceReactance_PerLUL": 0.2956036745406824,
+      "ContinuousCurrentRating": 610,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "336 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.20439632545931757,
+      "PosSequenceReactance_PerLUL": 0.2913385826771654,
+      "ContinuousCurrentRating": 480,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "336 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.18996062992125987,
+      "PosSequenceReactance_PerLUL": 0.28018372703412076,
+      "ContinuousCurrentRating": 530,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "350 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.114501312335958,
+      "PosSequenceReactance_PerLUL": 0.28937007874015747,
+      "ContinuousCurrentRating": 670,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "37/.083",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.232,
+      "PosSequenceReactance_PerLUL": 0.24,
+      "ContinuousCurrentRating": 175,
+      "ConductorType": "ActZ",
+      "Description": "PVC 37/0.083"
+    },
+    {
+      "ConductorName": "397 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.1732283464566929,
+      "PosSequenceReactance_PerLUL": 0.2844488188976378,
+      "ContinuousCurrentRating": 540,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "397 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.16076115485564305,
+      "PosSequenceReactance_PerLUL": 0.2739501312335958,
+      "ContinuousCurrentRating": 590,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "4 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 1.6427165354330708,
+      "PosSequenceReactance_PerLUL": 0.37401574803149606,
+      "ContinuousCurrentRating": 120,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "4 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 1.5967847769028871,
+      "PosSequenceReactance_PerLUL": 0.40944881889763773,
+      "ContinuousCurrentRating": 140,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "4 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.9432414698162731,
+      "PosSequenceReactance_PerLUL": 0.3720472440944882,
+      "ContinuousCurrentRating": 180,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "4/0 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.3241469816272966,
+      "PosSequenceReactance_PerLUL": 0.3123359580052494,
+      "ContinuousCurrentRating": 360,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "4/0 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.36778215223097116,
+      "PosSequenceReactance_PerLUL": 0.36089238845144356,
+      "ContinuousCurrentRating": 340,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "4/0 AWG",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.293,
+      "PosSequenceReactance_PerLUL": 0.24700000000000003,
+      "ContinuousCurrentRating": 335,
+      "ConductorType": "Tape",
+      "Description": "4/0 AWG"
+    },
+    {
+      "ConductorName": "4/0 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.18799212598425194,
+      "PosSequenceReactance_PerLUL": 0.3123359580052494,
+      "ContinuousCurrentRating": 480,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "400 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.10039370078740156,
+      "PosSequenceReactance_PerLUL": 0.2844488188976378,
+      "ContinuousCurrentRating": 730,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "450 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.08956692913385828,
+      "PosSequenceReactance_PerLUL": 0.28018372703412076,
+      "ContinuousCurrentRating": 780,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "477 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.14468503937007873,
+      "PosSequenceReactance_PerLUL": 0.2782152230971129,
+      "ContinuousCurrentRating": 610,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "477 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.13418635170603674,
+      "PosSequenceReactance_PerLUL": 0.26706036745406825,
+      "ContinuousCurrentRating": 670,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "5 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 1.9757217847769026,
+      "PosSequenceReactance_PerLUL": 0.4130577427821523,
+      "ContinuousCurrentRating": 120,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "5 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 1.1774934383202098,
+      "PosSequenceReactance_PerLUL": 0.3868110236220473,
+      "ContinuousCurrentRating": 140,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "500 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.08070866141732283,
+      "PosSequenceReactance_PerLUL": 0.27624671916010496,
+      "ContinuousCurrentRating": 840,
+      "ConductorType": "SepN",
+      "Description": ""
+    },
+    {
+      "ConductorName": "500 MCM",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.14,
+      "PosSequenceReactance_PerLUL": 0.232,
+      "ContinuousCurrentRating": 535,
+      "ConductorType": "Tape",
+      "Description": "500 MCM"
+    },
+    {
+      "ConductorName": "500AL",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.14041994750656167,
+      "PosSequenceReactance_PerLUL": 0.09120734908136482,
+      "ContinuousCurrentRating": 467,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "556 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.12401574803149606,
+      "PosSequenceReactance_PerLUL": 0.2719816272965879,
+      "ContinuousCurrentRating": 670,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "556 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.11548556430446195,
+      "PosSequenceReactance_PerLUL": 0.2608267716535433,
+      "ContinuousCurrentRating": 730,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "6 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 2.6138451443569553,
+      "PosSequenceReactance_PerLUL": 0.3914041994750656,
+      "ContinuousCurrentRating": 90,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "6 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 2.472769028871391,
+      "PosSequenceReactance_PerLUL": 0.4179790026246719,
+      "ContinuousCurrentRating": 100,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "6 ACWC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 1.5160761154855644,
+      "PosSequenceReactance_PerLUL": 0.40255905511811024,
+      "ContinuousCurrentRating": 140,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "6 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 1.4849081364829397,
+      "PosSequenceReactance_PerLUL": 0.39566929133858264,
+      "ContinuousCurrentRating": 120,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "600 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.06791338582677166,
+      "PosSequenceReactance_PerLUL": 0.2683727034120735,
+      "ContinuousCurrentRating": 940,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "600V 1000 MCM",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.03477690288713911,
+      "PosSequenceReactance_PerLUL": 1.3123359580052494,
+      "ContinuousCurrentRating": 1273,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "605 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.11023622047244094,
+      "PosSequenceReactance_PerLUL": 0.2588582677165354,
+      "ContinuousCurrentRating": 750,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "636 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.10925196850393702,
+      "PosSequenceReactance_PerLUL": 0.265748031496063,
+      "ContinuousCurrentRating": 730,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "636 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.10465879265091863,
+      "PosSequenceReactance_PerLUL": 0.25721784776902884,
+      "ContinuousCurrentRating": 770,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "666 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.09940944881889764,
+      "PosSequenceReactance_PerLUL": 0.2559055118110236,
+      "ContinuousCurrentRating": 800,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "7 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 1.8700787401574803,
+      "PosSequenceReactance_PerLUL": 0.4041994750656168,
+      "ContinuousCurrentRating": 110,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "700 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.058727034120734906,
+      "PosSequenceReactance_PerLUL": 0.26213910761154857,
+      "ContinuousCurrentRating": 1040,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "715 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.09744094488188976,
+      "PosSequenceReactance_PerLUL": 0.2614829396325459,
+      "ContinuousCurrentRating": 780,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "715 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.09186351706036745,
+      "PosSequenceReactance_PerLUL": 0.2526246719160105,
+      "ContinuousCurrentRating": 830,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "75 KVA CSP",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.0621,
+      "ContinuousCurrentRating": 100,
+      "ConductorType": "Conc",
+      "Description": "75 KVA CSP"
+    },
+    {
+      "ConductorName": "750 AL-1/3N UG",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.11482939632545933,
+      "PosSequenceReactance_PerLUL": 0.1377952755905512,
+      "ContinuousCurrentRating": 600,
+      "ConductorType": "ActZ",
+      "Description": ""
+    },
+    {
+      "ConductorName": "750 CN Al",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.0621371192237334,
+      "ContinuousCurrentRating": 100,
+      "ConductorType": "Conc",
+      "Description": ""
+    },
+    {
+      "ConductorName": "750 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.05511811023622047,
+      "PosSequenceReactance_PerLUL": 0.2588582677165354,
+      "ContinuousCurrentRating": 1090,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "795 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.08792650918635171,
+      "PosSequenceReactance_PerLUL": 0.2575459317585302,
+      "ContinuousCurrentRating": 840,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "795 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.08530183727034121,
+      "PosSequenceReactance_PerLUL": 0.24901574803149604,
+      "ContinuousCurrentRating": 900,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "8 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 3.379265091863517,
+      "PosSequenceReactance_PerLUL": 0.40879265091863515,
+      "ContinuousCurrentRating": 80,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "8 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 2.3608923884514437,
+      "PosSequenceReactance_PerLUL": 0.4130577427821523,
+      "ContinuousCurrentRating": 90,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "8 CWC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 2.404527559055118,
+      "PosSequenceReactance_PerLUL": 0.4137139107611548,
+      "ContinuousCurrentRating": 100,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "800 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.05183727034120735,
+      "PosSequenceReactance_PerLUL": 0.25656167979002625,
+      "ContinuousCurrentRating": 1130,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "874 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.08070866141732283,
+      "PosSequenceReactance_PerLUL": 0.25393700787401574,
+      "ContinuousCurrentRating": 890,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "874 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.07611548556430445,
+      "PosSequenceReactance_PerLUL": 0.24540682414698164,
+      "ContinuousCurrentRating": 950,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "8kV 4/0 Conc. Neut.",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 315,
+      "ConductorType": "Conc",
+      "Description": ""
+    },
+    {
+      "ConductorName": "900 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.07349081364829396,
+      "PosSequenceReactance_PerLUL": 0.24409448818897633,
+      "ContinuousCurrentRating": 970,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "900 CU",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.04658792650918635,
+      "PosSequenceReactance_PerLUL": 0.2519685039370078,
+      "ContinuousCurrentRating": 1220,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "954 AAC",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.07381889763779527,
+      "PosSequenceReactance_PerLUL": 0.25098425196850394,
+      "ContinuousCurrentRating": 940,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "954 ACSR",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0.06988188976377953,
+      "PosSequenceReactance_PerLUL": 0.24212598425196852,
+      "ContinuousCurrentRating": 1010,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "ABC",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 3.7000000000000006,
+      "PosSequenceReactance_PerLUL": 0.091,
+      "ContinuousCurrentRating": 40,
+      "ConductorType": "SepN",
+      "Description": "ABC"
+    },
+    {
+      "ConductorName": "ABC 10 MM2",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 3.7000000000000006,
+      "PosSequenceReactance_PerLUL": 0.091,
+      "ContinuousCurrentRating": 40,
+      "ConductorType": "SepN",
+      "Description": "ABC 10 MM2"
+    },
+    {
+      "ConductorName": "ABC 16 MM2",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 2.3,
+      "PosSequenceReactance_PerLUL": 0.086,
+      "ContinuousCurrentRating": 93,
+      "ConductorType": "SepN",
+      "Description": "ABC 16 MM2"
+    },
+    {
+      "ConductorName": "ABC 25 MM2",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 1.2,
+      "PosSequenceReactance_PerLUL": 0.085,
+      "ContinuousCurrentRating": 111,
+      "ConductorType": "SepN",
+      "Description": "ABC 25 MM2"
+    },
+    {
+      "ConductorName": "ABC 35 MM2",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 1.04,
+      "PosSequenceReactance_PerLUL": 0.083,
+      "ContinuousCurrentRating": 150,
+      "ConductorType": "SepN",
+      "Description": "ABC 35 MM2"
+    },
+    {
+      "ConductorName": "ABC 50 MM",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.641,
+      "PosSequenceReactance_PerLUL": 0.083,
+      "ContinuousCurrentRating": 168,
+      "ConductorType": "Bare",
+      "Description": "ABC 50 MM2"
+    },
+    {
+      "ConductorName": "ABC 50 MM2",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.641,
+      "PosSequenceReactance_PerLUL": 0.083,
+      "ContinuousCurrentRating": 168,
+      "ConductorType": "Bare",
+      "Description": "ABC 50 MM2"
+    },
+    {
+      "ConductorName": "ABC 70 MM2",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.533,
+      "PosSequenceReactance_PerLUL": 0.077,
+      "ContinuousCurrentRating": 213,
+      "ConductorType": "SepN",
+      "Description": "ABC 70 MM2"
+    },
+    {
+      "ConductorName": "ABC 95 MM",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.32,
+      "PosSequenceReactance_PerLUL": 0.077,
+      "ContinuousCurrentRating": 275,
+      "ConductorType": "Bare",
+      "Description": "ABC 95 MM2"
+    },
+    {
+      "ConductorName": "ABC 95 MM2",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.32,
+      "PosSequenceReactance_PerLUL": 0.077,
+      "ContinuousCurrentRating": 275,
+      "ConductorType": "Bare",
+      "Description": "ABC 95 MM2"
+    },
+    {
+      "ConductorName": "ANT",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.6550000000000001,
+      "PosSequenceReactance_PerLUL": 0.397,
+      "ContinuousCurrentRating": 211,
+      "ConductorType": "Bare",
+      "Description": "ANT"
+    },
+    {
+      "ConductorName": "Cable 12.5kV direct burial",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.0621371192237334,
+      "ContinuousCurrentRating": 100,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "DOG",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.273,
+      "PosSequenceReactance_PerLUL": 0.378,
+      "ContinuousCurrentRating": 265,
+      "ConductorType": "Bare",
+      "Description": "DOG"
+    },
+    {
+      "ConductorName": "Ex1_300sqmm",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.0621371192237334,
+      "ContinuousCurrentRating": 100,
+      "ConductorType": "Conc",
+      "Description": ""
+    },
+    {
+      "ConductorName": "GNAT",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 1.359,
+      "PosSequenceReactance_PerLUL": 0.421,
+      "ContinuousCurrentRating": 147,
+      "ConductorType": "Bare",
+      "Description": "GNAT"
+    },
+    {
+      "ConductorName": "GOHPER",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 1.33,
+      "PosSequenceReactance_PerLUL": 0.415,
+      "ContinuousCurrentRating": 169,
+      "ConductorType": "Bare",
+      "Description": "GOPHER"
+    },
+    {
+      "ConductorName": "GOPHER",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 1.33,
+      "PosSequenceReactance_PerLUL": 0.415,
+      "ContinuousCurrentRating": 169,
+      "ConductorType": "Bare",
+      "Description": "GOPHER"
+    },
+    {
+      "ConductorName": "GSL",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 9.498,
+      "PosSequenceReactance_PerLUL": 0.742,
+      "ContinuousCurrentRating": 5,
+      "ConductorType": "Bare",
+      "Description": "GSL"
+    },
+    {
+      "ConductorName": "INS 7/0.052",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 2.795,
+      "PosSequenceReactance_PerLUL": 0.4000000000000001,
+      "ContinuousCurrentRating": 32,
+      "ConductorType": "ActZ",
+      "Description": "INS 7/0.052"
+    },
+    {
+      "ConductorName": "INS ANT",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.6550000000000001,
+      "PosSequenceReactance_PerLUL": 0.397,
+      "ContinuousCurrentRating": 211,
+      "ConductorType": "Bare",
+      "Description": "INS ANT"
+    },
+    {
+      "ConductorName": "INS GNAT",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 1.359,
+      "PosSequenceReactance_PerLUL": 0.421,
+      "ContinuousCurrentRating": 147,
+      "ConductorType": "Bare",
+      "Description": "INS GNAT"
+    },
+    {
+      "ConductorName": "INS WASP",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.329,
+      "PosSequenceReactance_PerLUL": 0.366,
+      "ContinuousCurrentRating": 323,
+      "ConductorType": "Bare",
+      "Description": "INS WASP"
+    },
+    {
+      "ConductorName": "OSPRAY",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.123,
+      "PosSequenceReactance_PerLUL": 0.3,
+      "ContinuousCurrentRating": 492,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "OSPREY",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.123,
+      "PosSequenceReactance_PerLUL": 0.3,
+      "ContinuousCurrentRating": 492,
+      "ConductorType": "Bare",
+      "Description": "OSPREY"
+    },
+    {
+      "ConductorName": "PANTHER",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.168,
+      "PosSequenceReactance_PerLUL": 0.322,
+      "ContinuousCurrentRating": 520,
+      "ConductorType": "Bare",
+      "Description": "PANTHER"
+    },
+    {
+      "ConductorName": "PVC 07/0.052",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 2.795,
+      "PosSequenceReactance_PerLUL": 0.4000000000000001,
+      "ContinuousCurrentRating": 32,
+      "ConductorType": "ActZ",
+      "Description": "PVC 07/0.052"
+    },
+    {
+      "ConductorName": "PVC 17/0.083",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.45200000000000007,
+      "PosSequenceReactance_PerLUL": 0.23,
+      "ContinuousCurrentRating": 115,
+      "ConductorType": "ActZ",
+      "Description": "PVC 19/0.083"
+    },
+    {
+      "ConductorName": "PVC 17/083",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.45200000000000007,
+      "PosSequenceReactance_PerLUL": 0.23,
+      "ContinuousCurrentRating": 115,
+      "ConductorType": "ActZ",
+      "Description": "PVC 19/0.083"
+    },
+    {
+      "ConductorName": "PVC 19/0.052",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 1.031,
+      "PosSequenceReactance_PerLUL": 0.41,
+      "ContinuousCurrentRating": 77,
+      "ConductorType": "ActZ",
+      "Description": "PVC 19/0.052"
+    },
+    {
+      "ConductorName": "PVC 19/0.083",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.45200000000000007,
+      "PosSequenceReactance_PerLUL": 0.23,
+      "ContinuousCurrentRating": 115,
+      "ConductorType": "ActZ",
+      "Description": "PVC 19/0.083"
+    },
+    {
+      "ConductorName": "PVC 37/0.083",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.232,
+      "PosSequenceReactance_PerLUL": 0.24,
+      "ContinuousCurrentRating": 175,
+      "ConductorType": "ActZ",
+      "Description": "PVC 37/0.083"
+    },
+    {
+      "ConductorName": "PVC 37/0.83",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.232,
+      "PosSequenceReactance_PerLUL": 0.24,
+      "ContinuousCurrentRating": 175,
+      "ConductorType": "ActZ",
+      "Description": "PVC 37/0.083"
+    },
+    {
+      "ConductorName": "PVC 7/0.052",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 2.795,
+      "PosSequenceReactance_PerLUL": 0.4000000000000001,
+      "ContinuousCurrentRating": 32,
+      "ConductorType": "ActZ",
+      "Description": "PVC 7/0.052"
+    },
+    {
+      "ConductorName": "PVC19/.083",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.45200000000000007,
+      "PosSequenceReactance_PerLUL": 0.23,
+      "ContinuousCurrentRating": 115,
+      "ConductorType": "ActZ",
+      "Description": "PVC19/.083"
+    },
+    {
+      "ConductorName": "RABBIT",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.659,
+      "PosSequenceReactance_PerLUL": 0.202,
+      "ContinuousCurrentRating": 202,
+      "ConductorType": "Bare",
+      "Description": "RABBIT"
+    },
+    {
+      "ConductorName": "RACCOON",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.3657,
+      "PosSequenceReactance_PerLUL": 0.3579,
+      "ContinuousCurrentRating": 250,
+      "ConductorType": "Bare",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 15kV 1/0",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 215,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 15kV 1000",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 690,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 15kV 2/0",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 245,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 15kV 250",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 345,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 15kV 3/0",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 275,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 15kV 350",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 415,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 15kV 4/0",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 315,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 15kV 500",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 500,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 15kV 750",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 610,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 8kV 1/0",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 215,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 8kV 1000",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 690,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 8kV 2/0",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 245,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 8kV 250",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 345,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 8kV 3/0",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 275,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 8kV 350",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 415,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 8kV 4/0",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 315,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 8kV 500",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 500,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "Tape 8kV 750",
+      "ActualImpedance": 0,
+      "PosSequenceResistance_PerLUL": 0,
+      "PosSequenceReactance_PerLUL": 0.06201284498528593,
+      "ContinuousCurrentRating": 610,
+      "ConductorType": "Tape",
+      "Description": ""
+    },
+    {
+      "ConductorName": "WASP",
+      "ActualImpedance": 1,
+      "PosSequenceResistance_PerLUL": 0.329,
+      "PosSequenceReactance_PerLUL": 0.366,
+      "ContinuousCurrentRating": 323,
+      "ConductorType": "Bare",
+      "Description": "WASP"
+    }
+  ],
+  "DevConfig": [
+    {
+      "ConfigName": "12.5/7.2 kV  cross arm C1",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 0.6095999804928006,
+      "Neutral_X_MUL": 1.1582399629363211,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "12.5/7.2 kV cross arm C1-4",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 0.6095999804928006,
+      "Neutral_X_MUL": 1.1277599639116813,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "12.5/7.2 kV cross arm C2",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 0.6095999804928006,
+      "Neutral_X_MUL": 1.1582399629363211,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "12.5/7.2 kV cross arm C2-2",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 1.1887199619609612,
+      "Neutral_X_MUL": 1.5849599492812816,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "12.5/7.2 kV cross arm end C7",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 1.2191999609856012,
+      "Neutral_X_MUL": 0.914399970739201,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "12.5/7.2 kV cross arm end C8",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 0.6400799795174407,
+      "Neutral_X_MUL": 1.097279964887041,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "12.5/7.2 kV cross arm end C9",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 0,
+      "Neutral_X_MUL": 1.798319942453762,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "12.5/7.2 kV cross arm end C9-2",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 0,
+      "Neutral_X_MUL": 1.798319942453762,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "12.5/7.2 kV vertical C3",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 3.657599882956804,
+      "Neutral_X_MUL": 0,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "12.5/7.2 kV vertical C4",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 3.657599882956804,
+      "Neutral_X_MUL": 0,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "12.5/7.2 kV vertical C5",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 3.657599882956804,
+      "Neutral_X_MUL": 0,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "14.4/24.9 kV cross arm VC1",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 0.6095999804928006,
+      "Neutral_X_MUL": 1.1582399629363211,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "14.4/24.9 kV cross arm VC1-2",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 0.6095999804928006,
+      "Neutral_X_MUL": 1.1582399629363211,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "14.4/24.9 kV cross arm VC4",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 1.097279964887041,
+      "Neutral_X_MUL": 1.097279964887041,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "14.4/24.9 kV single supp VC1-5",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 0,
+      "Neutral_X_MUL": 2.1031199327001624,
+      "Neutral_Y_MUL": 1.1582399629363211
+    },
+    {
+      "ConfigName": "14.4/24.9 kv vertical VC3-2",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 3.657599882956804,
+      "Neutral_X_MUL": 0,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "14.4/24.9kV cross arm VC2",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 1.1887199619609612,
+      "Neutral_X_MUL": 1.4630399531827214,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "14.4/24.9kV cross arm VC8-1",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 0,
+      "Neutral_X_MUL": 1.4020799551334413,
+      "Neutral_Y_MUL": 0.48767998439424054
+    },
+    {
+      "ConfigName": "14.4/24.9kV vertical VC3",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 3.657599882956804,
+      "Neutral_X_MUL": 0,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "Cable 12.5kV duct",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 0,
+      "Neutral_X_MUL": 0,
+      "Neutral_Y_MUL": 0.914399970739201
+    },
+    {
+      "ConfigName": "Cable Direct burial",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 0,
+      "Neutral_X_MUL": 0,
+      "Neutral_Y_MUL": 0.5486399824435205
+    },
+    {
+      "ConfigName": "Cable duct 1 ft spacing",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 0.3047999902464003,
+      "Neutral_X_MUL": 0,
+      "Neutral_Y_MUL": 1.066799965862401
+    },
+    {
+      "ConfigName": "Cable Triplexed",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 0,
+      "Neutral_X_MUL": 0,
+      "Neutral_Y_MUL": 0.24383999219712027
+    },
+    {
+      "ConfigName": "HT",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 9.143999707392009,
+      "Neutral_X_MUL": 0,
+      "Neutral_Y_MUL": 0
+    },
+    {
+      "ConfigName": "LT",
+      "Position1_X_MUL": 0,
+      "Position1_Y_MUL": 7.8999999999999995,
+      "Neutral_X_MUL": 0,
+      "Neutral_Y_MUL": 7
+    }
+  ],
+  "DevCustClass": [
+    {
+      "Class": "Apartments",
+      "PercentConstImpedance": 30,
+      "PercentConstCurrent": 50,
+      "Description": ""
+    },
+    {
+      "Class": "High Rise",
+      "PercentConstImpedance": 30,
+      "PercentConstCurrent": 50,
+      "Description": ""
+    },
+    {
+      "Class": "Industrial",
+      "PercentConstImpedance": 30,
+      "PercentConstCurrent": 50,
+      "Description": ""
+    },
+    {
+      "Class": "Industrial (Heavy)",
+      "PercentConstImpedance": 30,
+      "PercentConstCurrent": 50,
+      "Description": ""
+    },
+    {
+      "Class": "Municipal",
+      "PercentConstImpedance": 30,
+      "PercentConstCurrent": 50,
+      "Description": ""
+    },
+    {
+      "Class": "Offices",
+      "PercentConstImpedance": 30,
+      "PercentConstCurrent": 50,
+      "Description": ""
+    },
+    {
+      "Class": "OLd Garray Wala Winter",
+      "PercentConstImpedance": 30,
+      "PercentConstCurrent": 50,
+      "Description": ""
+    },
+    {
+      "Class": "Residential All Electric",
+      "PercentConstImpedance": 30,
+      "PercentConstCurrent": 50,
+      "Description": ""
+    },
+    {
+      "Class": "Residential Gas",
+      "PercentConstImpedance": 30,
+      "PercentConstCurrent": 50,
+      "Description": ""
+    },
+    {
+      "Class": "Residential Misc.",
+      "PercentConstImpedance": 30,
+      "PercentConstCurrent": 50,
+      "Description": ""
+    },
+    {
+      "Class": "Retail Commercial",
+      "PercentConstImpedance": 30,
+      "PercentConstCurrent": 50,
+      "Description": ""
+    }
+  ],
+  "DevGenerators": [
+    {
+      "GeneratorName": "1MW Synch",
+      "GeneratorType": "Synchronous",
+      "KvRating": 13.2,
+      "KwRating": 1000,
+      "Description": ""
+    },
+    {
+      "GeneratorName": "3 MW Solar Park",
+      "GeneratorType": "PV",
+      "KvRating": 13.2,
+      "KwRating": 3000,
+      "Description": ""
+    },
+    {
+      "GeneratorName": "350 kW Rooftop Solar",
+      "GeneratorType": "PV",
+      "KvRating": 13.2,
+      "KwRating": 350,
+      "Description": ""
+    },
+    {
+      "GeneratorName": "3MW3",
+      "GeneratorType": "Synchronous",
+      "KvRating": 24.9,
+      "KwRating": 3000,
+      "Description": ""
+    },
+    {
+      "GeneratorName": "5 MW Solar Park",
+      "GeneratorType": "PV",
+      "KvRating": 13.2,
+      "KwRating": 5000,
+      "Description": ""
+    },
+    {
+      "GeneratorName": "500KW 13.2KV",
+      "GeneratorType": "Synchronous",
+      "KvRating": 13.2,
+      "KwRating": 500,
+      "Description": ""
+    },
+    {
+      "GeneratorName": "500KW3",
+      "GeneratorType": "Synchronous",
+      "KvRating": 24.9,
+      "KwRating": 500,
+      "Description": ""
+    },
+    {
+      "GeneratorName": "750KW3 480",
+      "GeneratorType": "Constant PQ",
+      "KvRating": 0.48,
+      "KwRating": 750,
+      "Description": ""
+    },
+    {
+      "GeneratorName": "Residential Solar",
+      "GeneratorType": "Constant PQ",
+      "KvRating": 7.62,
+      "KwRating": 10,
+      "Description": "Unit to represent solar panels on customer homes"
+    },
+    {
+      "GeneratorName": "small generator",
+      "GeneratorType": "Constant PQ",
+      "KvRating": 7.62,
+      "KwRating": 100,
+      "Description": ""
+    },
+    {
+      "GeneratorName": "WINDFARM",
+      "GeneratorType": "Induction",
+      "KvRating": 7.62,
+      "KwRating": 50,
+      "Description": ""
+    }
+  ]
+}

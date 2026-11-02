@@ -294,7 +294,7 @@ class TransformerMdbNetworkService
             $value = $end['consumers'][$category] ?? null;
             $this->require($value !== null || ! empty($settings['blank_consumers_zero']), "{$label}: enter all E row consumer counts, or explicitly treat blank consumer cells as zero.");
             $value = (int) ($value ?? 0);
-            $rate = EngineeringConfiguration::consumerKva($category);
+            $rate = (float) ($settings['consumer_kva'][$category] ?? EngineeringConfiguration::consumerKva($category));
             $count += $value;
             $kva += $value * $rate;
         }

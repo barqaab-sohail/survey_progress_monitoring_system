@@ -223,6 +223,113 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertSame($revision, $this->batch->fresh()->revision);
     }
 
+    public function test_customer_phase_save_uses_s_row_and_rejects_contradictions_without_losing_values(): void
+    {
+        $this->save(['conductors' => ['R' => '__none__', 'Y' => 'A', 'B' => 'A', 'N' => 'A']]);
+        $url = route('mdb-workflow.entry.rows.store', [$this->batch, $this->transformer]);
+        $counts = ['rs' => ['R' => 2, 'Y' => null, 'B' => null]];
+        $this->postJson($url, $this->payload(['designation' => 'E', 'waypoint_reference' => '010', 'consumer_phases' => $counts]))
+            ->assertUnprocessable()->assertJsonValidationErrors('consumer_phases.rs.R')
+            ->assertSee('T-entry')->assertSee('R-phase customer count 2')->assertSee('010');
+        $this->assertSame(1, $this->transformer->entryRows()->count());
+        $counts['rs']['R'] = 0;
+        $counts['rs']['Y'] = 2;
+        $end = $this->save(['designation' => 'E', 'waypoint_reference' => '010', 'consumer_phases' => $counts]);
+        $this->assertSame($counts, $end->surveyData()['consumer_phases']);
+    }
+
+    public function test_removing_a_conductor_checks_saved_e_counts_and_rolls_back_the_entire_save(): void
+    {
+        $start = $this->save();
+        $counts = ['sc' => ['R' => 2, 'Y' => null, 'B' => null]];
+        $end = $this->save(['designation' => 'E', 'waypoint_reference' => '010', 'consumer_phases' => $counts]);
+        $revision = $this->batch->fresh()->revision;
+        foreach (['__none__', null] as $removed) {
+            $this->putJson(route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $start]),
+                $this->payload(['client_uuid' => $start->client_uuid, 'conductors' => ['R' => $removed, 'Y' => '__none__', 'B' => '__none__', 'N' => 'A']]))
+                ->assertUnprocessable()->assertJsonValidationErrors('conductors.R')->assertSee('SC R-phase customer count 2');
+            $this->assertSame('A', $start->fresh()->conductors['R']);
+            $this->assertSame($counts, $end->fresh()->surveyData()['consumer_phases']);
+            $this->assertSame($revision, $this->batch->fresh()->revision);
+        }
+        $this->putJson(route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $end]),
+            $this->payload(['client_uuid' => $end->client_uuid, 'designation' => 'E', 'waypoint_reference' => '010',
+                'consumer_phases' => ['sc' => ['R' => 0, 'Y' => null, 'B' => null]]]))->assertOk();
+        $this->putJson(route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $start]),
+            $this->payload(['client_uuid' => $start->client_uuid, 'conductors' => ['R' => '__none__', 'Y' => '__none__', 'B' => '__none__', 'N' => 'A']]))->assertOk();
+    }
+
+    public function test_incomplete_draft_with_unrecorded_conductor_can_be_saved(): void
+    {
+        $row = $this->save(['conductors' => ['R' => null, 'Y' => null, 'B' => null, 'N' => null],
+            'consumer_phases' => ['rs' => ['R' => 2, 'Y' => null, 'B' => null]]]);
+        $this->assertNull($row->conductors['R']);
+        $this->assertSame(2, $row->surveyData()['consumer_phases']['rs']['R']);
+    }
+
+    public function test_submit_and_verification_approval_reject_historical_phase_conflicts(): void
+    {
+        $this->save();
+        $end = $this->save(['designation' => 'E', 'waypoint_reference' => '010']);
+        $end->update(['consumers' => array_replace($end->consumers, ['rs' => 2]),
+            'original_entry' => array_replace($end->original_entry, ['consumer_phases' => ['rs' => ['R' => 0, 'Y' => 2, 'B' => null]]])]);
+        $this->batch->update(['staged_workflow' => true, 'survey_status' => 'entry']);
+        $revision = $this->batch->fresh()->revision;
+        foreach (['submit' => 'entry', 'approve' => 'awaiting_verification'] as $action => $status) {
+            $this->batch->update(['survey_status' => $status]);
+            $this->postJson(route('mdb-workflow.survey.decision', $this->batch), ['revision' => $revision, 'action' => $action])
+                ->assertUnprocessable()->assertJsonValidationErrors('rows')->assertSee('Y-phase customer count 2');
+            $this->assertSame($status, $this->batch->fresh()->survey_status);
+            $this->assertSame($revision, $this->batch->fresh()->revision);
+        }
+        $issues = app(NetworkValidator::class)->validate($this->batch->fresh());
+        $this->assertContains('customer_phase_without_conductor', array_column($issues['errors'], 'code'));
+    }
+
+    public function test_verifier_correction_exposes_phase_fields_and_checks_the_section_s_row(): void
+    {
+        $this->save();
+        $end = $this->save(['designation' => 'E', 'waypoint_reference' => '010']);
+        $state = $this->getJson(route('mdb-workflow.verification.state', [$this->batch, $this->transformer]))->assertOk();
+        $fields = collect($state->json('pairs.0.rows.E.fields'))->keyBy('path');
+        $this->assertTrue($fields->has('consumer_phases.rs.R'));
+        $this->assertTrue($fields->has('consumer_phases.st.B'));
+        $body = $this->payload(['client_uuid' => $end->client_uuid, 'designation' => 'E', 'waypoint_reference' => '010',
+            'consumer_phases' => ['st' => ['R' => null, 'Y' => 2, 'B' => null]], 'correction_reason' => 'Checked the survey source']);
+        $this->putJson(route('mdb-workflow.verification.row', [$this->batch, $this->transformer, $end]), $body)
+            ->assertUnprocessable()->assertJsonValidationErrors('consumer_phases.st.Y');
+        $this->assertArrayNotHasKey('consumer_phases', $end->fresh()->surveyData());
+    }
+
+    public function test_advanced_demand_cannot_override_the_owned_s_row_conductors(): void
+    {
+        $this->save();
+        $this->save(['designation' => 'E', 'waypoint_reference' => '010']);
+        $section = $this->transformer->sections()->firstOrFail();
+        $revision = $this->batch->fresh()->revision;
+        $this->putJson(route('mdb-workflow.sections.update', [$this->batch, $this->transformer, $section]), [
+            'revision' => $revision, 'conductors' => ['R' => 'A', 'Y' => 'A', 'B' => 'A', 'N' => 'A'],
+            'consumers' => ['rs' => ['count' => 2, 'demand' => ['phase_values' => ['Y' => ['customers' => 2]]]]],
+        ])->assertUnprocessable()->assertJsonValidationErrors('rows')->assertSee('Y-phase customer count 2');
+        $this->assertSame('', $section->fresh()->conductors['Y']);
+        $this->assertNull($section->consumers()->where('category', 'rs')->firstOrFail()->demand);
+        $this->assertSame($revision, $this->batch->fresh()->revision);
+    }
+
+    public function test_idempotent_replay_rechecks_historical_phase_conflicts_without_changing_data(): void
+    {
+        $start = $this->save();
+        $body = $this->payload(['designation' => 'E', 'waypoint_reference' => '010',
+            'consumer_phases' => ['rs' => ['R' => 2, 'Y' => null, 'B' => null]]]);
+        $url = route('mdb-workflow.entry.rows.store', [$this->batch, $this->transformer]);
+        $this->postJson($url, $body)->assertOk();
+        $start->update(['conductors' => ['R' => '', 'Y' => '', 'B' => '', 'N' => 'A']]);
+        $revision = $this->batch->fresh()->revision;
+        $this->postJson($url, $body)->assertUnprocessable()->assertJsonValidationErrors('consumer_phases.rs.R');
+        $this->assertSame($revision, $this->batch->fresh()->revision);
+        $this->assertSame(2, $this->transformer->entryRows()->where('designation', 'E')->firstOrFail()->consumers['rs']);
+    }
+
     private function payload(array $changes = []): array
     {
         return array_replace(['revision' => $this->batch->fresh()->revision, 'client_uuid' => (string) Str::uuid(), 'save_uuid' => (string) Str::uuid(),
@@ -331,7 +438,7 @@ class MdbOperatorEntryTest extends TestCase
     {
         $phases = ['rs' => ['R' => 5, 'Y' => 2, 'B' => 7], 'sc' => ['R' => 0, 'Y' => null, 'B' => 3],
             'st' => ['R' => 1, 'Y' => null, 'B' => 0]];
-        $row = $this->save(['consumer_phases' => $phases, 'consumers' => ['rs' => 999, 'rl' => 4, 'sc' => 999, 'pv' => 2]]);
+        $row = $this->save(['consumer_phases' => $phases, 'conductors' => array_fill_keys(['R', 'Y', 'B', 'N'], 'A'), 'consumers' => ['rs' => 999, 'rl' => 4, 'sc' => 999, 'pv' => 2]]);
         $this->assertSame($phases, $row->original_entry['consumer_phases']);
         $this->assertSame(14, $row->consumers['rs']);
         $this->assertSame(3, $row->consumers['sc']);
@@ -344,7 +451,7 @@ class MdbOperatorEntryTest extends TestCase
 
         $phases['rs'] = ['R' => 0, 'Y' => null, 'B' => null];
         $this->putJson(route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $row]),
-            $this->payload(['client_uuid' => $row->client_uuid, 'consumer_phases' => $phases,
+            $this->payload(['client_uuid' => $row->client_uuid, 'consumer_phases' => $phases, 'conductors' => array_fill_keys(['R', 'Y', 'B', 'N'], 'A'),
                 'consumers' => ['rs' => 14, 'rl' => 4, 'pv' => 2]]))->assertOk();
         $row->refresh();
         $this->assertSame(0, $row->consumers['rs']);
@@ -369,10 +476,10 @@ class MdbOperatorEntryTest extends TestCase
 
         $phases = ['rs' => ['R' => 5, 'Y' => 2, 'B' => 7]];
         $this->putJson($url, $this->payload(['client_uuid' => $row->client_uuid,
-            'consumer_phases' => $phases, 'consumers' => ['rs' => 14, 'st' => 0]]))->assertOk();
+            'conductors' => array_fill_keys(['R', 'Y', 'B', 'N'], 'A'), 'consumer_phases' => $phases, 'consumers' => ['rs' => 14, 'st' => 0]]))->assertOk();
         // An older client omitting phase metadata must retain the recorded allocation.
         $this->putJson($url, $this->payload(['client_uuid' => $row->client_uuid,
-            'consumers' => ['rs' => 999, 'st' => 0]]))->assertOk();
+            'conductors' => array_fill_keys(['R', 'Y', 'B', 'N'], 'A'), 'consumers' => ['rs' => 999, 'st' => 0]]))->assertOk();
         $this->assertSame(14, $row->fresh()->consumers['rs']);
         $this->assertSame($phases, $row->fresh()->surveyData()['consumer_phases']);
     }
@@ -408,7 +515,7 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertSame(3, $row->consumers['st']);
         $url = route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $row]);
         $this->putJson($url, $this->payload(['client_uuid' => $row->client_uuid, 'consumers' => ['rs' => 99],
-            'consumer_phases' => ['rs' => ['R' => 5, 'Y' => 2, 'B' => 7]]]))->assertOk();
+            'conductors' => array_fill_keys(['R', 'Y', 'B', 'N'], 'A'), 'consumer_phases' => ['rs' => ['R' => 5, 'Y' => 2, 'B' => 7]]]))->assertOk();
         $this->assertSame(14, $row->fresh()->consumers['rs']);
         foreach ([25, 0, null] as $total) {
             $this->putJson($url, $this->payload(['client_uuid' => $row->client_uuid, 'consumers' => ['rs' => $total],

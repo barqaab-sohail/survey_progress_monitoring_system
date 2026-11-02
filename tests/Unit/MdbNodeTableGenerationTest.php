@@ -58,6 +58,16 @@ class MdbNodeTableGenerationTest extends TestCase
         return app(ExportPayloadBuilder::class)->build($revision, $template, 1, str_repeat('b', 64));
     }
 
+    public function test_frozen_export_rejects_customer_phase_conflict_even_in_simple_mode(): void
+    {
+        $snapshot = self::snapshot();
+        $snapshot['transformers'][0]['entry_rows'][0]['conductors']['R'] = '';
+        $snapshot['transformers'][0]['entry_rows'][1]['consumer_phases'] = ['rs' => ['R' => 2, 'Y' => null, 'B' => null]];
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('R-phase customer count 2');
+        $this->build($snapshot);
+    }
+
     public function test_normal_payload_matches_placement_rules_keeps_string_suffixes_and_all_references(): void
     {
         $snapshot = self::snapshot();

@@ -71,6 +71,12 @@ class ReviewService
                 $fields[] = $field('pole_height_unit','Height unit','ft','text',[],'Electrical',false);
                 foreach (EntryLookups::CONSUMERS as $key => $description) {
                     $fields[] = $field('consumers.'.$key,strtoupper($key).' — '.$description,$row->consumers[$key] ?? null,'number',[],'Consumers');
+                    if (in_array($key, EntryLookups::SINGLE_PHASE_CONSUMERS, true)) {
+                        foreach (['R', 'Y', 'B'] as $phase) {
+                            $fields[] = $field('consumer_phases.'.$key.'.'.$phase, strtoupper($key).' '.$phase.' phase customers',
+                                $data['consumer_phases'][$key][$phase] ?? null, 'number', [], 'Consumers');
+                        }
+                    }
                 }
                 $fields[] = $field('intersection','Intersection',$row->intersection,'boolean',[],'Consumers');
                 foreach ($row->pv_details ?? [] as $index => $pv) {

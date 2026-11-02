@@ -2,14 +2,14 @@
 
 namespace App\Services\Mdb;
 
-/** Literal SAI_Control values transcribed by field name from SAI_Control.xlsx. */
+/** Static SAI_Control values transcribed from SAI_Control.xlsx (SAI_Control!A1:V2). */
 class SaiControlTableGeneration
 {
     public function row(): array
     {
         return [
             'VoltageFactor' => 11,
-            'Frequency' => 60,
+            'Frequency' => 50,
             'LengthUnits' => 'Metric',
             'Phase1' => 'R',
             'Phase2' => 'Y',

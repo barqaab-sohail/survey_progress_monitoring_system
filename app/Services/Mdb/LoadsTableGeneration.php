@@ -40,15 +40,16 @@ class LoadsTableGeneration
                 $pole = $sections[$id];
                 $plan = $expanded ? (new ConsumerPhaseConnections)->build($survey, $entries, $transformer['pv_records'] ?? [], $label) : [];
                 $byCategory = [];
+                $pvConnections = [];
                 foreach ($plan as $connection) {
                     $endpoint = $pole['ToNodeId'].'.'.$connection['suffix'];
                     $connectionId = $connections[$pole['ToNodeId']][$endpoint] ?? null;
                     $this->check(is_string($connectionId) && isset($rows[$connectionId]), $label.': a generated consumer/PV section endpoint is missing.');
                     if ($connection['kind'] === 'consumer') {
                         $byCategory[$connection['category']][] = $connection + ['section_id' => $connectionId];
+                    } elseif ($connection['kind'] === 'pv') {
+                        $pvConnections[] = $connection + ['section_id' => $connectionId];
                     }
-                    // A PV-only connection has no recorded consumption demand. Its
-                    // Loads row stays zero-customer/zero-kVA; generation stays in DGens.
                 }
                 $parts = [];
                 foreach ($survey['consumers'] ?? [] as $consumer) {
@@ -174,6 +175,24 @@ class LoadsTableGeneration
                         $index = array_search($phase, self::PHASES, true) + 1;
                         $rows[$id]['Phase'.$index.'Customers'] = null;
                         $rows[$id]['Phase'.$index.'Kva'] = null;
+                    }
+                }
+
+                // PV consumers are balanced three-phase entries in Loads. Keep
+                // their fractional customer share and 5 kVA per customer on the
+                // aggregate span and on the single physical PV connection row.
+                foreach ($pvConnections as $connection) {
+                    foreach (self::PHASES as $i => $phase) {
+                        $customerField = 'Phase'.($i + 1).'Customers';
+                        $kvaField = 'Phase'.($i + 1).'Kva';
+                        $customerShare = 1 / 3;
+                        $kvaShare = EngineeringConfiguration::consumerKva('rl') / 3;
+                        $aggregateCustomers = $rows[$id][$customerField];
+                        $aggregateKva = $rows[$id][$kvaField];
+                        $rows[$id][$customerField] = $aggregateCustomers === null ? null : (float) $aggregateCustomers + $customerShare;
+                        $rows[$id][$kvaField] = $aggregateKva === null ? null : (float) $aggregateKva + $kvaShare;
+                        $rows[$connection['section_id']][$customerField] = $customerShare;
+                        $rows[$connection['section_id']][$kvaField] = $kvaShare;
                     }
                 }
             }

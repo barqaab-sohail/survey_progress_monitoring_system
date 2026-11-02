@@ -196,9 +196,9 @@ class EntryService
     public function issues(SurveyBatch|array $input): array
     {
         if ($input instanceof SurveyBatch) {
-            $input->loadMissing(['transformers.entryRows', 'waypoints', 'sources']);
+            $input->loadMissing(['transformers.entryRows', 'transformers.sections.consumers', 'waypoints', 'sources']);
             $data = ['transformers' => $input->transformers->map(fn ($t) => ['id' => $t->id, 'code' => $t->code, 'header' => $t->header, 'capacity_kva' => $t->capacity_kva,
-                'source_waypoint_id' => $t->source_waypoint_id, 'section_count' => $t->sections()->count(), 'entry_rows' => $t->entryRows->map->surveyData()->all()])->all(),
+                'source_waypoint_id' => $t->source_waypoint_id, 'sections' => $t->sections->toArray(), 'section_count' => $t->sections()->count(), 'entry_rows' => $t->entryRows->map->surveyData()->all()])->all(),
                 'waypoints' => $input->waypoints->toArray(), 'sources' => $input->sources->toArray(), 'entry_settings' => app(SurveyWaypoint::class)->settings($input->project_id),
                 'configuration' => Configuration::where('project_id', $input->project_id)->first()?->toArray()];
         } else {
@@ -213,6 +213,11 @@ class EntryService
         foreach ($data['transformers'] ?? [] as $transformerData) {
             $transformerData = app(SurveyWaypoint::class)->transformerLocation($transformerData, $data['waypoints'] ?? []);
             $transformer = (object) $transformerData;
+            foreach (app(SurveyPhaseConsistency::class)->transformer($transformerData) as $phaseIssue) {
+                $row = $phaseIssue['row'] ?? ['id' => null, 'transformer_id' => $transformer->id,
+                    'section_id' => $phaseIssue['section']['id'] ?? null, 'source_pdf_id' => null, 'source_page' => null, 'source_row' => null];
+                $add('customer_phase_without_conductor', $phaseIssue['message'], (object) $row);
+            }
             if (! empty($transformerData['entry_rows']) || ! empty($transformerData['header']['operator_entry'])) {
                 $headerIssue = function (string $code, string $message) use (&$issues, $transformer): void {
                     $issues[] = ['code' => $code, 'message' => $message, 'transformer_id' => $transformer->id,
@@ -325,8 +330,7 @@ class EntryService
                     $pdf = collect($data['sources'] ?? [])->firstWhere('id', $row->source_pdf_id);
                     if (! $pdf || $pdf['kind'] !== 'pdf' || ! $row->source_page || $row->source_page < 1 || ! $row->source_row || $row->source_page > ($pdf['metadata']['page_count'] ?? 0)) {
                         $add('invalid_entry_pdf_source', $label.'select a valid source PDF, page and survey row.', $row);
-                    } elseif (! collect($transformerData['header']['pages'] ?? [])->contains(fn ($page) =>
-                        (string) ($page['source_pdf_id'] ?? '') === (string) $row->source_pdf_id
+                    } elseif (! collect($transformerData['header']['pages'] ?? [])->contains(fn ($page) => (string) ($page['source_pdf_id'] ?? '') === (string) $row->source_pdf_id
                         && (int) ($page['page'] ?? 0) === (int) $row->source_page
                         && in_array($page['confirmed'] ?? false, [true, 1, '1'], true)
                         && in_array($page['role'] ?? '', ['header', 'continuation'], true))) {

@@ -44,6 +44,9 @@ class ExportPayloadBuilder
         $this->require(($frozenTemplate['sha256'] ?? '') === $template->sha256 && ($frozenTemplate['version'] ?? '') === $template->version, 'Template differs from the approved immutable revision.');
         $transformers = array_values(array_filter($snapshot['transformers'] ?? [], fn ($t) => $transformerId === null || (int) $t['id'] === $transformerId));
         $this->require($transformers !== [], 'The approved revision contains no selected transformer.');
+        foreach ($transformers as $transformer) {
+            app(SurveyPhaseConsistency::class)->assertValid(app(SurveyPhaseConsistency::class)->transformer($transformer));
+        }
         $this->engineering(count($transformers) === 1 || ($mapping['consolidated_supported'] ?? false) === true, 'This approved mapping does not permit a consolidated feeder export.');
         $base = $mapping['table_values'] ?? [];
         foreach (self::TABLES as $table) {
@@ -360,7 +363,7 @@ class ExportPayloadBuilder
             $tables['InstMeterDmd'] = (new InstMeterDmdTableGeneration)->apply($tables['InstMeterPoints'], $tables['InstSection']);
         }
         $tables['InstMymMeter'] = (new InstMymMeterTableGeneration)->apply($tables['InstPrimaryTransformers'], $tables['InstSection']);
-        // Annual records share the final whole-customer allocations and apply
+        // Annual records share the final phase allocations and apply
         // their own numeric blank-to-zero defaults.
         $annualLoads = (new LoadsTableGeneration)->apply($tables, $nodeContexts, $provenance, $configuration, false);
         $tables['InstMymLoads'] = (new InstMymLoadsGeneration)->apply($annualLoads, $tables['InstSection']);

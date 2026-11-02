@@ -30,6 +30,9 @@ class MdbInstSectionGenerationTest extends TestCase
         foreach ($t['entry_rows'] as &$row) {
             $row['pole_height'] = $row['designation'] === 'E' && $row['pair_number'] === 2 ? 31 : 36;
             $row['pole_height_unit'] = 'ft';
+            if ($row['designation'] === 'S') {
+                $row['conductors'] = array_fill_keys(['R', 'Y', 'B', 'N'], 'ANT');
+            }
         }
         unset($row);
         $s['configuration']['settings']['mapping']['table_values']['InstSection'] += ['Note_' => 'Keep notes', 'CostZone' => 'Keep zone', 'ExpFactRepair' => 99];
@@ -177,7 +180,7 @@ class MdbInstSectionGenerationTest extends TestCase
         return $s;
     }
 
-    public function test_y_and_neutral_only_pv_keeps_three_distinct_yn_connections_without_r_or_b_conductors(): void
+    public function test_y_and_neutral_only_pv_keeps_one_yn_connection_without_r_or_b_conductors(): void
     {
         $s = self::yOnlyPvSnapshot();
         $before = $s;
@@ -187,20 +190,51 @@ class MdbInstSectionGenerationTest extends TestCase
         $this->assertSame(' Y N', $rows['00040701081026014']['SectionPhases']);
         $this->assertNull($rows['00040701081026014']['PhaseConductorId']);
         $this->assertNull($rows['00040701081026014']['PhaseConductor3Id']);
-        foreach ([9, 10, 11] as $suffix) {
-            $row = $rows['00040701081026014.'.$suffix];
-            $this->assertSame('YN', $row['SectionPhases']);
-            $this->assertSame('81026014', $row['FromNodeId']);
-            $this->assertSame('81026014.'.$suffix, $row['ToNodeId']);
-            $this->assertNull($row['PhaseConductorId']);
-            $this->assertNull($row['PhaseConductor3Id']);
-            $this->assertSame('PVC 07/0.052', $row['PhaseConductor2Id']);
-            $this->assertSame('PVC 07/0.052', $row['NeutralConductorId']);
-            $this->assertSame(14.62, $row['SectionLength_MUL']);
-            $this->assertSame($nodes['81026014']['X'] + 0.01, $nodes[$row['ToNodeId']]['X']);
-            $this->assertSame($nodes['81026014']['Y'] + 0.01, $nodes[$row['ToNodeId']]['Y']);
-        }
+        $row = $rows['00040701081026014.9'];
+        $this->assertSame('YN', $row['SectionPhases']);
+        $this->assertSame('81026014', $row['FromNodeId']);
+        $this->assertSame('81026014.9', $row['ToNodeId']);
+        $this->assertNull($row['PhaseConductorId']);
+        $this->assertNull($row['PhaseConductor3Id']);
+        $this->assertSame('PVC 07/0.052', $row['PhaseConductor2Id']);
+        $this->assertSame('PVC 07/0.052', $row['NeutralConductorId']);
+        $this->assertSame(14.62, $row['SectionLength_MUL']);
+        $this->assertSame($nodes['81026014']['X'] + 0.01, $nodes[$row['ToNodeId']]['X']);
+        $this->assertSame($nodes['81026014']['Y'] + 0.01, $nodes[$row['ToNodeId']]['Y']);
+        $this->assertArrayNotHasKey('00040701081026014.10', $rows);
+        $this->assertArrayNotHasKey('00040701081026014.11', $rows);
         $this->assertSame($before, $s);
+    }
+
+    public function test_three_phase_pv_uses_only_suffix_one_and_balanced_loads_in_both_tables(): void
+    {
+        $s = self::mixedSnapshot();
+        $t = &$s['transformers'][0];
+        $t['sections'][0]['consumers'] = [];
+        $t['entry_rows'][1]['consumers'] = ['pv' => 1];
+        unset($t['entry_rows'][1]['consumer_phases']);
+        $payload = $this->build($s);
+        $sectionId = '00040701081026001.1';
+        $sections = array_column($payload['tables']['InstSection'], null, 'SectionId');
+        $this->assertArrayHasKey($sectionId, $sections);
+        $this->assertSame('RYBN', $sections[$sectionId]['SectionPhases']);
+        $this->assertArrayNotHasKey('00040701081026001.2', $sections);
+        $this->assertArrayNotHasKey('00040701081026001.3', $sections);
+
+        foreach (['00040701081026001', $sectionId] as $id) {
+            $load = collect($payload['tables']['Loads'])->firstWhere('SectionId', $id);
+            $this->assertNotNull($load);
+            foreach ([1, 2, 3] as $phase) {
+                $this->assertEqualsWithDelta(1 / 3, $load['Phase'.$phase.'Customers'], 1e-8);
+                $this->assertEqualsWithDelta(5 / 3, $load['Phase'.$phase.'Kva'], 1e-8);
+            }
+            $annual = collect($payload['tables']['InstMymLoads'])->first(fn ($row) => $row['SectionId'] === $id && $row['YearNumber'] === 1);
+            $this->assertNotNull($annual);
+            foreach ([1, 2, 3] as $phase) {
+                $this->assertEqualsWithDelta(1 / 3, $annual['Phase'.$phase.'Customers'], 1e-8);
+                $this->assertEqualsWithDelta(5 / 3, $annual['Phase'.$phase.'Kva'], 1e-8);
+            }
+        }
     }
 
     public function test_y_only_pv_still_requires_its_y_conductor_and_neutral(): void
@@ -217,7 +251,7 @@ class MdbInstSectionGenerationTest extends TestCase
         }
     }
 
-    public function test_recorded_rn_customers_and_three_phase_consumer_and_pv_have_nine_unique_connections(): void
+    public function test_recorded_rn_customers_and_three_phase_consumer_and_pv_have_seven_connections(): void
     {
         $s = self::mixedSnapshot();
         $before = $s;
@@ -225,36 +259,35 @@ class MdbInstSectionGenerationTest extends TestCase
         $children = array_values(array_filter($payload['tables']['InstSection'], fn ($r) => $r['FromNodeId'] === '81026001'));
         // Exclude the outgoing pole span: consumer/PV endpoints have a decimal suffix.
         $children = array_values(array_filter($children, fn ($r) => str_starts_with($r['ToNodeId'], '81026001.')));
-        $this->assertCount(9, $children);
-        $this->assertSame(['RN' => 3, 'YN' => 3, 'BN' => 3], array_count_values(array_column($children, 'SectionPhases')));
+        $this->assertCount(7, $children);
+        $this->assertSame(['RN' => 2, 'YN' => 2, 'BN' => 2, 'RYBN' => 1], array_count_values(array_column($children, 'SectionPhases')));
         $nodes = array_column($payload['tables']['Node'], null, 'NodeId');
-        foreach (range(1, 9) as $i) {
+        foreach (range(1, 7) as $i) {
             $this->assertArrayHasKey('81026001.'.$i, $nodes);
             $this->assertSame($nodes['81026001']['X'] + 0.01, $nodes['81026001.'.$i]['X']);
             $this->assertSame($nodes['81026001']['Y'] + 0.01, $nodes['81026001.'.$i]['Y']);
             $this->assertSame('', $nodes['81026001.'.$i]['Description']);
         }
-        foreach (range(1, 3) as $i) {
-            $this->assertSame(['RN', 'YN', 'BN'][$i - 1], $children[$i - 1]['SectionPhases']);
-        }
-        $this->assertCount(9, array_unique(array_column($children, 'ToNodeId')));
-        $this->assertCount(9, array_unique(array_column($children, 'SectionId')));
+        $this->assertSame('RYBN', $children[6]['SectionPhases']);
+        $this->assertCount(7, array_unique(array_column($children, 'ToNodeId')));
+        $this->assertCount(7, array_unique(array_column($children, 'SectionId')));
         $this->assertSame($before, $s);
     }
 
-    public function test_eight_unallocated_customers_plus_three_phase_consumer_and_pv_are_five_five_four(): void
+    public function test_eight_unallocated_customers_plus_three_phase_consumer_and_pv_keep_one_pv_connection(): void
     {
         $payload = $this->build(self::mixedSnapshot(8, false));
         $children = array_values(array_filter($payload['tables']['InstSection'], fn ($r) => $r['FromNodeId'] === '81026001'
             && str_starts_with($r['ToNodeId'], '81026001.')));
-        $this->assertCount(14, $children);
-        $this->assertSame(['RN' => 5, 'YN' => 5, 'BN' => 4], array_count_values(array_column($children, 'SectionPhases')));
+        $this->assertCount(12, $children);
+        $this->assertSame(['RN' => 4, 'YN' => 4, 'BN' => 3, 'RYBN' => 1], array_count_values(array_column($children, 'SectionPhases')));
         $nodes = array_column($payload['tables']['Node'], null, 'NodeId');
-        foreach (range(1, 14) as $i) {
+        foreach (range(1, 12) as $i) {
             $this->assertArrayHasKey('81026001.'.$i, $nodes);
         }
-        $this->assertSame('81026001.10', $children[9]['ToNodeId']);
-        $this->assertNotSame($children[0]['ToNodeId'], $children[9]['ToNodeId']);
+        $this->assertSame('81026001.12', $children[11]['ToNodeId']);
+        $this->assertSame('RYBN', $children[11]['SectionPhases']);
+        $this->assertNotSame($children[0]['ToNodeId'], $children[11]['ToNodeId']);
     }
 
     public function test_fourteen_single_phase_customers_rotate_compact_section_phase_codes(): void
@@ -296,7 +329,7 @@ class MdbInstSectionGenerationTest extends TestCase
         foreach ($before['tables']['Node'] as $node) {
             $this->assertSame($node, $nodes[$node['NodeId']]);
         }
-        $this->assertCount(count($before['tables']['Node']) + 5, $nodes);
+        $this->assertCount(count($before['tables']['Node']) + 3, $nodes);
     }
 
     public function test_three_phase_items_cannot_invent_an_unavailable_phase_or_ignore_conflicting_pv_counts(): void
@@ -317,7 +350,7 @@ class MdbInstSectionGenerationTest extends TestCase
                 $this->build($s);
                 $this->fail('Contradictory source evidence must be reported.');
             } catch (ValidationException $exception) {
-                $this->assertStringContainsString('Transformer T-SYNTHETIC, E 001', $exception->getMessage());
+                $this->assertStringContainsString('E 001', $exception->getMessage());
                 $this->assertStringContainsString($case === 'pv_count' ? 'disagree' : 'requires R, Y and B', $exception->getMessage());
             }
         }
@@ -427,13 +460,14 @@ class MdbInstSectionGenerationTest extends TestCase
         (new InstMymLoadsGeneration)->apply([$load, array_replace($load, ['IsSpotLoad' => 1])], [$section]);
     }
 
-    public function test_annual_loads_reject_fractional_customer_source_values(): void
+    public function test_annual_loads_preserve_fractional_balanced_pv_customer_values(): void
     {
-        $this->expectException(ValidationException::class);
-        (new InstMymLoadsGeneration)->apply(
-            [['SectionId' => '00040701081026001', 'Phase1Customers' => 14 / 3]],
+        $rows = (new InstMymLoadsGeneration)->apply(
+            [['SectionId' => '00040701081026001', 'Phase1Customers' => 1 / 3]],
             [['SectionId' => '00040701081026001']]
         );
+        $this->assertCount(2, $rows);
+        $this->assertEqualsWithDelta(1 / 3, $rows[1]['Phase1Customers'], 1e-8);
     }
 
     public function test_connection_load_reuses_its_text_section_id_and_current_values_in_both_years(): void
@@ -566,8 +600,8 @@ class MdbInstSectionGenerationTest extends TestCase
         $template = resource_path('mdb/synergee-empty.mdb');
         $hash = hash_file('sha256', $template);
         try {
-            foreach (['single' => [self::snapshot(), 21], 'expanded' => [self::mixedSnapshot(8, false), 32],
-                'y-only-pv' => [self::yOnlyPvSnapshot(), 18],
+            foreach (['single' => [self::snapshot(), 21], 'expanded' => [self::mixedSnapshot(8, false), 30],
+                'y-only-pv' => [self::yOnlyPvSnapshot(), 16],
                 'multiple-transformers' => [self::multipleTransformersSnapshot(), 42]] as $case => [$snapshot, $expectedSections]) {
                 $payload = $this->build($snapshot, null);
                 $input = $directory.'/'.$case.'.json';

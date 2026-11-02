@@ -5,7 +5,7 @@
     "configuration": {
         "epsg": 32643,
         "settings": {
-            "frequency_hz": 60,
+            "frequency_hz": 50,
             "nominal_voltage_kv": 11,
             "secondary_voltage_kv": null,
             "conductor_library_revision": null,
@@ -32,7 +32,7 @@
                 "table_values": {
                     "SAI_Control": {
                         "VoltageFactor": 11,
-                        "Frequency": 60,
+                        "Frequency": 50,
                         "LengthUnits": "Metric",
                         "Phase1": "R",
                         "Phase2": "Y",
@@ -188,13 +188,13 @@
             "evidence": "9 reference MDBs; see reference_import source SHA-256 and load evidence report.",
             "rates": {
                 "rs": {
-                    "kva": 2
+                    "kva": 3
                 },
                 "rl": {
                     "kva": 5
                 },
                 "sc": {
-                    "kva": 2
+                    "kva": 3
                 },
                 "lc": {
                     "kva": 5
@@ -212,7 +212,7 @@
                     "kva": 5
                 },
                 "st": {
-                    "kva": 2
+                    "kva": 3
                 }
             }
         },
@@ -840,7 +840,7 @@
         "notes": [
             "Files are user-supplied reference models. Imported observations do not constitute engineering approval for HAZECO.",
             "EPSG, when populated, is translated from the recorded WGS84 UTM label only. Coordinates have not independently verified that label.",
-            "Frequency is copied exactly from the references. Do not silently replace the recorded value with a locally expected frequency.",
+            "The reference MDBs recorded 60 Hz. New project defaults use 50 Hz as the selected local default; verify frequency for each project. The original 60 Hz observations remain recorded in this evidence.",
             "Spacing and height numbers are copied without conversion into the existing application mapping; the source only explicitly declares Metric length units.",
             "SpecNomKv is retained with NomKvMode in advanced mapping; it is not used to guess an LT secondary voltage.",
             "UseInstanceImpedance=0 means the numeric zero impedance fields do not establish physical zero impedance.",

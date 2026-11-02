@@ -12,6 +12,7 @@ class ConsumerPhaseConnections
         $rows = array_values(array_filter($entries, fn ($row) => isset($row['section_id'])
             ? $row['section_id'] == $section['id']
             : ($section['original_entry']['entry_pair_number'] ?? null) == $row['pair_number']));
+        (new SurveyPhaseConsistency)->assertValid((new SurveyPhaseConsistency)->section($section, $rows, $label));
         $phases = $section['phases'] ?? [];
         if (is_string($phases)) {
             $phases = str_split($phases);
@@ -85,17 +86,16 @@ class ConsumerPhaseConnections
             }
         }
         if ($pvCount > 0) {
-            // A confirmed Y/neutral-only PV keeps three distinct connections, all on YN.
+            // One PV installation has one physical section. Its Loads row carries
+            // the balanced per-phase customer and kVA allocation.
             $pvPhases = ['R', 'Y', 'B'];
             if ($available === ['Y']) {
-                $pvPhases = ['Y', 'Y', 'Y'];
+                $pvPhases = ['Y'];
             } else {
                 $this->threePhases($available, $label.' PV installation');
             }
             for ($i = 0; $i < $pvCount; $i++) {
-                foreach ($pvPhases as $phase) {
-                    $plan[] = ['suffix' => $extra++, 'phase' => $phase, 'kind' => 'pv', 'category' => 'pv'];
-                }
+                $plan[] = ['suffix' => $extra++, 'phase' => implode('', $pvPhases), 'kind' => 'pv', 'category' => 'pv'];
             }
         }
         usort($plan, fn ($a, $b) => $a['suffix'] <=> $b['suffix']);

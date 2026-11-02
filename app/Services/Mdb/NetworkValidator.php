@@ -279,6 +279,11 @@ class NetworkValidator
             foreach ($transformer['sections'] ?? [] as $section) {
                 $sid = $section['id'];
                 $sc = array_merge($tc, ['section_id' => $sid], array_intersect_key($section, array_flip(['source_pdf_id', 'source_page', 'source_row'])));
+                $entries = array_values(array_filter($transformer['entry_rows'] ?? $section['original_entry']['entry_rows'] ?? [], fn ($row) => isset($row['section_id'])
+                    ? $row['section_id'] == $sid : ($section['original_entry']['entry_pair_number'] ?? null) == ($row['pair_number'] ?? null)));
+                foreach (app(SurveyPhaseConsistency::class)->section($section, $entries, 'Transformer '.($transformer['code'] ?? '?').', section '.$sid.', E '.($section['end_reference'] ?? '?')) as $phaseIssue) {
+                    $issue('customer_phase_without_conductor', $phaseIssue['message'], $sc);
+                }
                 if (isset($sectionIds[(string) $sid])) {
                     $issue('duplicate_section_id', 'Section ID occurs more than once.', $sc);
                 }

@@ -1,5 +1,6 @@
 import {displayDate, isoDate} from './mdb-entry.js';
-import {paperHeader, paperRows} from './mdb-verification-sheet.js?v=2';
+import {paperHeader, paperRows} from './mdb-verification-sheet.js?v=3';
+import {phaseEntryState, updatePhaseFields} from './survey-phase-consistency.js?v=1';
 
 export function initializeVerification(boot, root = document) {
     const $ = id => root.getElementById('verification-' + id);
@@ -94,7 +95,8 @@ export function initializeVerification(boot, root = document) {
     }
     function inputFor(field) {
         const value = field.type === 'survey-date' ? displayDate(field.value) : field.value ?? '';
-        const attributes = `data-edit-path="${esc(field.path)}" aria-label="${esc(field.label)}"`;
+        const parts = field.path.split('.'), name = parts.shift()+parts.map(part=>`[${part}]`).join('');
+        const attributes = `name="${esc(name)}" data-edit-path="${esc(field.path)}" aria-label="${esc(field.label)}"`;
         if(field.type==='capacity' || field.type==='height') {
             const options=field.type==='height' ? ['31','36'] : ['5','10','15','25','37.5','50','63','75','100','125','160','200','250','315','400','500','630','750','800','1000','1250','1500','1600','2000','2500','3150','5000','6300','10000','12500','16000','20000','25000'];
             const text=String(value ?? ''), standard=options.find(option=>Number(option)===Number(text));
@@ -122,6 +124,7 @@ export function initializeVerification(boot, root = document) {
             const heading = group!==field.group ? `<h3 class="verification-editor-group">${esc(field.group)}</h3>` : '';group=field.group;
             return heading+`<label>${esc(field.label)}${inputFor(field)}</label>`;
         }).join('')+(row ? `<div id="verification-pv-fields" style="display:contents">${pvFields(editing.pv)}</div><button type="button" class="btn btn-light" id="verification-add-pv">Add PV record</button>` : '');
+        updateCorrectionPhases();
         $('editor-fields').querySelectorAll('[data-measurement-type]').forEach(select=>{
             const custom=select.closest('label').querySelector('[data-measurement-custom]');
             const sync=()=>{custom.hidden=select.value!=='__custom__';custom.required=select.value==='__custom__';if(select.value!=='__custom__')custom.value='';};
@@ -156,6 +159,22 @@ export function initializeVerification(boot, root = document) {
         });
         return target;
     }
+    const savedRows = () => state.pairs.flatMap(pair => Object.values(pair.rows).map(row => row.data));
+    function updateCorrectionPhases() {
+        if (!editing?.row) {
+            $('edit-form').querySelectorAll('[data-phase-consistency-summary]').forEach(note=>note.remove());
+            return;
+        }
+        const body = readInputs(structuredClone(editing.row.data));
+        updatePhaseFields($('edit-form'),body,savedRows(),state.header?.title || boot.transformer_code || '(unrecorded)',!busy);
+        const counts = body.consumer_phases || {};
+        for (const category of ['rs','sc','st']) {
+            const input=$('edit-form').elements.namedItem(`consumers[${category}]`);
+            if(input) input.readOnly=Object.values(counts[category] || {}).some(value=>value!==null && value!=='');
+        }
+    }
+    $('edit-form').addEventListener('input',updateCorrectionPhases);
+    $('edit-form').addEventListener('change',updateCorrectionPhases);
     $('edit-form').addEventListener('submit',async event=>{
         event.preventDefault();if(busy || !editing)return;
         $('editor-errors').hidden=true;
@@ -163,6 +182,10 @@ export function initializeVerification(boot, root = document) {
         const initial=editing.row ? structuredClone(editing.row.data) : {header:{}};
         if(editing.row)initial.pv_details=[];
         const body=readInputs(initial);
+        if(editing.row) {
+            const errors=phaseEntryState(body,savedRows(),state.header?.title || '(unrecorded)').errors;
+            if(Object.keys(errors).length){updateCorrectionPhases();errorBox($('editor-errors'),{message:'Correction not saved. Resolve the phase/conductor conflicts.',errors});return;}
+        }
         body.revision=state.revision;body.correction_reason=$('correction-reason').value;
         if(editing.row){body.inheritance={};body.manually_verified=false;body.pole_height_unit='ft';body.save_uuid=crypto.randomUUID();delete body.composite_identifier;}
         busy=true;$('save-correction').disabled=true;$('cancel-correction').disabled=true;

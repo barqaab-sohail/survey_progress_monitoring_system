@@ -22,6 +22,7 @@ class DataEntryPayload
         $transformers = $snapshot['transformers'] ?? [];
         usort($transformers, fn ($a, $b) => $a['id'] <=> $b['id']);
         foreach ($transformers as $transformer) {
+            app(SurveyPhaseConsistency::class)->assertValid(app(SurveyPhaseConsistency::class)->rows($transformer['entry_rows'] ?? [], $transformer['code'] ?? '(unrecorded)', ['R', 'Y', 'B']));
             $header = $transformer['header'] ?? [];
             $entries = $transformer['entry_rows'] ?? [];
             $this->require($entries !== [], 'A transformer has no original PDF entry rows; derived sections cannot be exported as observations.');

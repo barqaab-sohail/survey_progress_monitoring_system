@@ -160,6 +160,12 @@ class _SurveyEditorState extends State<SurveyEditor>
   }
 
   Future<void> saveDraft() async {
+    final conflicts = surveyPhaseConsistencyErrors(record);
+    if (conflicts.isNotEmpty) {
+      setState(() => errors = conflicts);
+      notice(conflicts.values.toSet().join('\n'));
+      return;
+    }
     try {
       await flush();
       notice('Draft saved on this phone. Submit when complete.');
@@ -1250,6 +1256,15 @@ class _RowEditorState extends State<RowEditor> {
 
   Future<void> done({bool complete = true}) async {
     if (finishing) return;
+    final conflicts = surveyPhaseConsistencyErrors(widget.record);
+    if (widget.editable &&
+        conflicts.keys.any((key) => key.startsWith('$prefix.'))) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(conflicts.values.toSet().join('\n'))),
+      );
+      return;
+    }
     finishing = true;
     int? nextIndex;
     try {
@@ -1338,6 +1353,12 @@ class _RowEditorState extends State<RowEditor> {
 
   Widget phaseConsumerFields(String category, String label) {
     final phases = (row['consumer_phases'] as Json?)?[category] as Json? ?? {};
+    final start = sectionStartRow(widget.record, widget.index);
+    bool available(String phase) =>
+        recordedConductorAvailability(
+          start?['conductor_${phase.toLowerCase()}'],
+        ) ==
+        true;
     final hasPhases = phases.values.any(
       (value) => (value ?? '').toString().trim().isNotEmpty,
     );
@@ -1356,7 +1377,14 @@ class _RowEditorState extends State<RowEditor> {
                   child: EntryField(
                     label: phase,
                     value: phases[phase],
-                    enabled: widget.editable,
+                    enabled:
+                        widget.editable &&
+                        (available(phase) ||
+                            (phases[phase] ?? '').toString().isNotEmpty),
+                    readOnly: !available(phase),
+                    helper: available(phase)
+                        ? null
+                        : 'Record the section S row $phase conductor first.',
                     integer: true,
                     error: errors['$prefix.consumer_phases.$category.$phase'],
                     onChanged: (value) {
@@ -1379,6 +1407,18 @@ class _RowEditorState extends State<RowEditor> {
           ],
         ),
         const SizedBox(height: 12),
+        for (final phase in ['R', 'Y', 'B'])
+          if (!available(phase) && (phases[phase] ?? '').toString().isNotEmpty)
+            TextButton(
+              onPressed: widget.editable
+                  ? () {
+                      phases[phase] = '';
+                      updatePhaseConsumerTotals(row);
+                      changed();
+                    }
+                  : null,
+              child: Text('Clear recorded $phase customer count'),
+            ),
         EntryField(
           key: ValueKey('$category-total'),
           label: 'Total',
@@ -1498,7 +1538,12 @@ class _RowEditorState extends State<RowEditor> {
                   enabled: widget.editable,
                   error: errors['$prefix.${entry.key}'],
                   onChanged: (value) {
-                    row[entry.key] = value;
+                    row[entry.key] =
+                        value.isEmpty &&
+                            recordedConductorAvailability(row[entry.key]) ==
+                                true
+                        ? '__none__'
+                        : value;
                     changed();
                   },
                 ),
@@ -1884,7 +1929,9 @@ class _ConductorEntryState extends State<ConductorEntry> {
     super.initState();
     other =
         widget.value == 'Other' ||
-        widget.value.isNotEmpty && !conductorChoices.contains(widget.value);
+        widget.value.isNotEmpty &&
+            widget.value != '__none__' &&
+            !conductorChoices.contains(widget.value);
   }
 
   @override
@@ -1895,7 +1942,8 @@ class _ConductorEntryState extends State<ConductorEntry> {
         error: widget.error,
         value: other ? 'Other' : widget.value,
         enabled: widget.enabled,
-        values: const ['', ...conductorChoices],
+        values: const ['', '__none__', ...conductorChoices],
+        labels: const {'__none__': 'None / Not Present'},
         onChanged: (value) {
           setState(() => other = value == 'Other');
           widget.onChanged(value);

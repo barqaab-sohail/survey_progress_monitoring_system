@@ -67,6 +67,7 @@ void main() {
     'consumer form displays all printed codes and preserves blank counts',
     (tester) async {
       final record = readySurvey();
+      record.rows.first['conductor_r'] = 'A';
       await tester.pumpWidget(
         MaterialApp(
           home: RowEditor(

@@ -4,7 +4,6 @@ namespace App\Http\Requests;
 
 use App\Models\Feeder;
 use App\Models\Mdb\Configuration;
-use App\Services\Mdb\EngineeringConfiguration;
 use App\Services\Mdb\GenerationMode;
 use App\Support\IntersectionFlag;
 use Illuminate\Foundation\Http\FormRequest;
@@ -40,9 +39,6 @@ class SaveTransformerMdbRequest extends FormRequest
                 }
             }
             unset($row);
-        }
-        if (is_array($data['export_settings'] ?? null)) {
-            $data['export_settings']['consumer_kva'] = array_map(fn ($rate) => $rate['kva'], EngineeringConfiguration::consumerRates());
         }
         $this->merge($data);
     }

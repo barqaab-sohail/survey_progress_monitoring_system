@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Feeder;
 use App\Services\Mdb\EntryLookups;
+use App\Services\Mdb\SurveyPhaseConsistency;
 use App\Support\ConductorPhase;
 use App\Support\FieldSurveyPairs;
 use App\Support\IntersectionFlag;
@@ -140,6 +141,11 @@ class SyncFieldSurveyRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
+            if ($validator->errors()->isEmpty() && is_array($this->input('rows'))) {
+                foreach (app(SurveyPhaseConsistency::class)->fieldErrors($this->input('rows'), $this->input('transformer_code') ?? '(unrecorded)', $this->input('status') === 'submitted') as $key => $message) {
+                    $validator->errors()->add($key, $message);
+                }
+            }
             if ($this->input('status') !== 'submitted' || ! is_array($this->input('rows'))) {
                 return;
             }

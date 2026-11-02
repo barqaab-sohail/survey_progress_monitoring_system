@@ -1,5 +1,6 @@
 import {installCompactSelects} from './mdb-entry-select.js?v=4';
 import {pdfLoadErrorMessage, clearPdfFallback, showPdfFallback} from './mdb-pdf-errors.js';
+import {phaseEntryState, updatePhaseFields} from './survey-phase-consistency.js?v=1';
 
 export function transformerCodeKey(code) {
     return String(code ?? '').toLowerCase().replace(/[\u2010-\u2014\u2212]/g,'-').replace(/\s+/gu,'');
@@ -305,6 +306,7 @@ function initialize(boot) {
         document.querySelectorAll('[data-entry-add-transformer],#entry-continue,#entry-submit-form button,#entry-transformer-submit,#entry-next-transformer button').forEach(el=>el.disabled=value || !editable() || (el.id==='entry-transformer-submit' && !active()));
         document.querySelectorAll('.entry-copy-bar button').forEach(el=>el.disabled=value || !editable());
         $('entry-refresh').disabled=value;
+        if(rowForm)updatePhaseFields(rowForm,rowPayload(),active()?.rows || [],active()?.code,editable() && !busy);
         if (!value) { updateAssociation(); if(rowId && rowForm){field(rowForm,'pair_number').disabled=true;field(rowForm,'designation').disabled=true;} }
         syncSelects();
         renderPdfRows();
@@ -346,7 +348,7 @@ function initialize(boot) {
         if (rowForm) {
             for (const key of ['R','Y','B','N']) {
                 const select = field(rowForm,`conductors[${key}]`), selected = select.value;
-                optionList(select, Object.entries(data.lookups.conductors), '', selected === '__none__' ? '' : selected);
+                optionList(select, [['__none__', 'None / Not Present'], ...Object.entries(data.lookups.conductors)], 'Unrecorded', selected);
             }
             optionList($('entry-equipment'), Object.entries(data.lookups.equipment_types), '', val(rowForm,'equipment_type'));
             optionList($('entry-pole-class'), Object.entries(data.lookups.pole_classes), '', val(rowForm,'pole_class'));
@@ -412,7 +414,7 @@ function initialize(boot) {
         }
         payload.pole_height=poleHeightValue();payload.pole_height_unit='ft';
         // Send the internal explicit-absence token so Laravel's empty-string middleware does not turn a blank select into unknown NULL.
-        payload.conductors=Object.fromEntries(['R','Y','B','N'].map(key=>[key,val(rowForm,`conductors[${key}]`) || '__none__']));
+        payload.conductors=Object.fromEntries(['R','Y','B','N'].map(key=>[key,val(rowForm,`conductors[${key}]`) || null]));
         payload.consumers=Object.fromEntries(Object.keys(data.lookups.consumers).map(key=>[key,number(val(rowForm,`consumers[${key}]`))]));
         const consumerPhases={};
         for(const category of singlePhaseConsumers) {
@@ -493,6 +495,7 @@ function initialize(boot) {
     function updateRowHints() {
         if (!rowForm) return;
         const payload=rowPayload(), phase=derivePhase(payload.conductors);
+        updatePhaseFields(rowForm,payload,active()?.rows || [],active()?.code,editable() && !busy);
         $('entry-phase').value=phase.display || '—';
         $('entry-phase-note').textContent=phase.complete ? '' : 'Incomplete';
         $('entry-phase').title=phase.complete ? 'R/Y/B phases derived; neutral stays separate.' : 'Incomplete: choose a conductor or None for each R/Y/B field.';
@@ -601,7 +604,7 @@ function initialize(boot) {
             if(['group_number','row_date'].includes(event.target.name))delete inheritance.group_date;
             if(['group_number','row_date','waypoint_reference'].includes(event.target.name))set(rowForm,'gpx_source_id',null);
         }
-        updateRowHints();clearCorrectedField(event.target,scope);status('Unsaved changes — kept in this browser. Save Draft to store them in the application.','dirty'); persist();
+        clearCorrectedField(event.target,scope);updateRowHints();status('Unsaved changes — kept in this browser. Save Draft to store them in the application.','dirty'); persist();
     }
     const allowSwitch = () => !busy && (!(headerDirty || rowDirty) || window.confirm('Some fields are unsaved. Continue and discard these fields? Use Save Draft first to retain them in the application.'));
     function updateAssociation() {
@@ -644,7 +647,8 @@ function initialize(boot) {
     async function saveRow(advance) {
         if(busy || !editable() || !rowForm || !active()) return;
         clearErrors();
-        const body=rowPayload(), validation=rowValidationErrors(body,data.entry_settings?.two_digit_year_start ?? 2000);
+        const body=rowPayload(), validation={...rowValidationErrors(body,data.entry_settings?.two_digit_year_start ?? 2000),
+            ...phaseEntryState(body,active()?.rows || [],active()?.code).errors};
         for(const element of Array.from(rowForm.elements).filter(el=>el.willValidate && !el.validity.valid)) {
             const pvKey=element.dataset.pvKey, index=pvKey ? Array.from($('entry-pv-records').children).indexOf(element.closest('.entry-pv-row')) : null;
             const key=pvKey ? `pv_details.${index}.${pvKey}` : element.name.replace(/\[([^\]]+)\]/g,'.$1');

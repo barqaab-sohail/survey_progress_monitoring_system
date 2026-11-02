@@ -30,9 +30,9 @@ class InstMymLoadsGeneration
             foreach (self::PHASE_FIELDS as $field) {
                 $value = $this->zeroIfBlank($load[$field] ?? null);
                 if (str_ends_with($field, 'Customers')) {
-                    $this->check($value === null || (is_numeric($value) && is_finite((float) $value)
-                        && $value >= 0 && floor((float) $value) === (float) $value),
-                        'InstMymLoads: customer counts must be nonnegative whole numbers.');
+                    // Balanced three-phase PV customers are apportioned as thirds.
+                    $this->check($value === null || (is_numeric($value) && is_finite((float) $value) && $value >= 0),
+                        'InstMymLoads: customer counts must be finite nonnegative numbers.');
                 }
                 $record[$field] = $value;
             }

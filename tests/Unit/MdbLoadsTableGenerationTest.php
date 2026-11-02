@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\Mdb\LoadsTableGeneration;
+use App\Services\Mdb\InstMymLoadsGeneration;
 use Tests\TestCase;
 
 class MdbLoadsTableGenerationTest extends TestCase
@@ -11,10 +12,11 @@ class MdbLoadsTableGenerationTest extends TestCase
     {
         $pole = '00040708081026029';
         $feeder = '00040711140223003';
+        $phaseCounts = $recorded ?? array_fill_keys(['R', 'Y', 'B'], $count / 3);
         $section = ['id' => 45, 'end_reference' => '029', 'phases' => $phases,
+            'conductors' => array_replace(array_fill_keys(['R', 'Y', 'B', 'N'], ''), array_fill_keys($phases, 'ANT')),
             'consumers' => [['category' => 'sc', 'count' => $count, 'demand' => ['quantity' => 'kva', 'allocation_basis' => 'equal',
-                'phase_values' => ['R' => ['customers' => $count / 3, 'kva' => $count * 2 / 3],
-                    'Y' => ['customers' => $count / 3, 'kva' => $count * 2 / 3], 'B' => ['customers' => $count / 3, 'kva' => $count * 2 / 3]]]]]];
+                'phase_values' => array_combine(['R', 'Y', 'B'], array_map(fn ($phase) => ['customers' => $phaseCounts[$phase] ?? 0, 'kva' => ($phaseCounts[$phase] ?? 0) * 2], ['R', 'Y', 'B']))]]]];
         $entries = [['section_id' => 45, 'designation' => 'E', 'composite_identifier' => '08081026029',
             'consumers' => ['sc' => $count], 'consumer_phases' => $recorded === null ? null : ['sc' => $recorded]]];
         $tables = ['InstFeeders' => [['FeederId' => 'NAWAN SHEHR']], 'InstSection' => [
@@ -128,10 +130,28 @@ class MdbLoadsTableGenerationTest extends TestCase
         $transformer['pv_records'] = [['section_id' => 45, 'installed_capacity_kw' => 5]];
         $rows = (new LoadsTableGeneration)->apply(...$args);
         $this->assertCount(5, $rows);
+        $byId = array_column($rows, null, 'SectionId');
+        $poleId = '00040708081026029';
+        $pvId = $poleId.'.1';
+        foreach ([$poleId, $pvId] as $id) {
+            $this->assertEqualsWithDelta(1 / 3, $byId[$id]['Phase1Customers'], 1e-8);
+            $this->assertEqualsWithDelta(1 / 3, $byId[$id]['Phase2Customers'], 1e-8);
+            $this->assertEqualsWithDelta(1 / 3, $byId[$id]['Phase3Customers'], 1e-8);
+            $this->assertEqualsWithDelta(5 / 3, $byId[$id]['Phase1Kva'], 1e-8);
+            $this->assertEqualsWithDelta(5 / 3, $byId[$id]['Phase2Kva'], 1e-8);
+            $this->assertEqualsWithDelta(5 / 3, $byId[$id]['Phase3Kva'], 1e-8);
+        }
+        foreach ([$poleId.'.2', $poleId.'.3'] as $id) {
+            $this->assertEquals([0, 0, 0], [$byId[$id]['Phase1Customers'], $byId[$id]['Phase2Customers'], $byId[$id]['Phase3Customers']]);
+            $this->assertEquals([0, 0, 0], [$byId[$id]['Phase1Kva'], $byId[$id]['Phase2Kva'], $byId[$id]['Phase3Kva']]);
+        }
+        $annual = (new InstMymLoadsGeneration)->apply($rows, $args[0]['InstSection']);
+        $pvAnnual = array_values(array_filter($annual, fn ($row) => $row['SectionId'] === $pvId && $row['YearNumber'] === 1));
+        $this->assertCount(1, $pvAnnual);
+        $this->assertEqualsWithDelta(1 / 3, $pvAnnual[0]['Phase1Customers'], 1e-8);
+        $this->assertEqualsWithDelta(5 / 3, $pvAnnual[0]['Phase1Kva'], 1e-8);
         foreach ($rows as $row) {
             foreach ([1, 2, 3] as $phase) {
-                $this->assertEquals(0, $row['Phase'.$phase.'Customers']);
-                $this->assertEquals(0, $row['Phase'.$phase.'Kva']);
                 $this->assertSame(0, $row['Phase'.$phase.'Kw']);
             }
         }

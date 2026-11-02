@@ -8,17 +8,7 @@ class FieldSurveyPairs
     public static function errors(array $rows): array
     {
         $rows = array_values($rows);
-        $groups = [];
-        foreach ($rows as $index => $row) {
-            if (! is_array($row)) {
-                continue;
-            }
-            $id = $row['pair_id'] ?? null;
-            $legacyEnd = ! $id && $index > 0 && ($row['se'] ?? null) === 'E'
-                && ($rows[$index - 1]['se'] ?? null) === 'S' && empty($rows[$index - 1]['pair_id']);
-            $key = is_string($id) && $id !== '' ? 'id:'.$id : 'legacy:'.($legacyEnd ? $index - 1 : $index);
-            $groups[$key][] = $index;
-        }
+        $groups = self::groups($rows);
         $errors = [];
         if ($rows === []) {
             $errors['rows'] = 'Complete at least one S/E pair before submission.';
@@ -35,6 +25,24 @@ class FieldSurveyPairs
         }
 
         return $errors;
+    }
+
+    public static function groups(array $rows): array
+    {
+        $rows = array_values($rows);
+        $groups = [];
+        foreach ($rows as $index => $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $id = $row['pair_id'] ?? null;
+            $legacyEnd = ! $id && $index > 0 && ($row['se'] ?? null) === 'E'
+                && ($rows[$index - 1]['se'] ?? null) === 'S' && empty($rows[$index - 1]['pair_id']);
+            $key = is_string($id) && $id !== '' ? 'id:'.$id : 'legacy:'.($legacyEnd ? $index - 1 : $index);
+            $groups[$key][] = $index;
+        }
+
+        return $groups;
     }
 
     public static function hasConductor(array $row): bool

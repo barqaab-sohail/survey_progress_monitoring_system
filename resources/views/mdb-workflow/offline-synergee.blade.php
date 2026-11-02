@@ -49,7 +49,7 @@
                     <div class="alert alert-warning">
                         <p><strong>Load demand is incomplete.</strong> Demand method in this JSON: {{ ($package['snapshot']['configuration']['load_assumptions']['mode'] ?? null) === 'category_rates' ? 'Central category rates' : (($package['snapshot']['configuration']['load_assumptions']['mode'] ?? null) === 'manual' ? 'Verified per-phase demand' : 'Not selected') }}.</p>
                         <p>In the source project's Engineering Configuration, under Load-demand mapping, choose Apply central category rates automatically and confirm the demand-method evidence. In Simple mode, select Confirm and apply Simple mode settings. Then verify and approve the survey again and upload a fresh SynerGEE JSON. Alternatively, supply verified per-phase demand using the manual method.</p>
-                        <p>Category rates allocate 2 kVA per single-phase consumer and 5 kVA per three-phase consumer across connected phases. This check requires customer allocation and kVA on each connected phase; kW and kvar remain unset for this method.</p>
+                        <p>Configured per-category kVA rates are allocated across connected phases. This check requires customer allocation and kVA on each connected phase; kW and kvar remain unset for this method.</p>
                     </div>
                 @endif
                 <p>{{ $modelReadiness['acceptance'] }} @unless($modelReadiness['complete'])Simple mode can download this draft, but missing inputs must be completed before using it for electrical analysis.@endunless</p>
