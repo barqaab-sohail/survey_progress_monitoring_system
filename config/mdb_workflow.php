@@ -4,6 +4,7 @@ use App\Services\Mdb\AccessPowerShell;
 
 return [
     'offline_enabled' => (bool) env('SYNERGEE_OFFLINE_ENABLED', PHP_OS_FAMILY === 'Windows'),
+    'offline_timeout' => (int) env('MDB_OFFLINE_TIMEOUT', 900),
     'disk' => env('MDB_WORKFLOW_DISK', 'local'),
     'queue' => env('MDB_WORKFLOW_QUEUE', 'mdb'),
     'source_max_kb' => (int) env('MDB_SOURCE_MAX_KB', 102400),

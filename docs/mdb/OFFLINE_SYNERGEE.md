@@ -44,6 +44,7 @@ If auto-detection needs an explicit path, configure the local Laravel `.env`:
 MDB_EXPORT_POWERSHELL=C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe
 MDB_PROJECTION_PYTHON=python
 MDB_EXPORT_TIMEOUT=180
+MDB_OFFLINE_TIMEOUT=900
 SYNERGEE_OFFLINE_ENABLED=true
 ```
 
@@ -58,6 +59,8 @@ php artisan serve --host=127.0.0.1 --port=8000
 ```
 
 Sign in locally, choose **JSON to SynerGEE**, or open `http://127.0.0.1:8000/mdb-workflow/offline-synergee`.
+
+Local conversion uses `MDB_OFFLINE_TIMEOUT` (900 seconds by default), and the application extends PHP's execution limit for this operation. `MDB_EXPORT_TIMEOUT` continues to control queued/remote SynerGEE exports. See [Windows generation timeout troubleshooting](OFFLINE_TRANSFORMER_MDB.md#generation-timeout-on-windows) if PHP previously stopped the request after 120 seconds.
 
 1. Select the production SynerGEE JSON. Optionally select an original matching GPX to verify its SHA-256, waypoint names, coordinates and elevation against the frozen source. No GPX selection is needed when embedded verified coordinates are complete. An arbitrary GPX cannot fill missing coordinates or alter approved values locally.
 2. Select **Check survey and engineering inputs**. The preview lists all network validation issues, with transformer/section/PDF context when available. Resolve errors in production, obtain renewed verification and re-export. The local page does not guess or approve settings.

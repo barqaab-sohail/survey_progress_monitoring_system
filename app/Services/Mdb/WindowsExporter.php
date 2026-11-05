@@ -5,6 +5,7 @@ namespace App\Services\Mdb;
 use App\Models\Mdb\Template;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
+use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
 class WindowsExporter implements Exporter
@@ -14,11 +15,14 @@ class WindowsExporter implements Exporter
         return PHP_OS_FAMILY === 'Windows' && is_file((string) config('mdb_workflow.export.powershell'));
     }
 
-    public function export(array $payload, Template $template, string $outputPath): array
+    public function export(array $payload, Template $template, string $outputPath, ?int $timeout = null): array
     {
         if (! $this->configured()) {
             throw new WorkerNotConfigured('MDB export worker not configured: Windows PowerShell with Access DAO/ACE is required.');
         }
+        $offline = $timeout !== null;
+        $timeout = max(1, $timeout ?? (int) config('mdb_workflow.export.timeout', 180));
+        app(ExecutionTimeLimit::class)->extend($timeout);
         $templatePath = Storage::disk($template->disk)->path($template->path);
         if (! is_file($templatePath) || ! hash_equals($template->sha256, hash_file('sha256', $templatePath))) {
             throw new RuntimeException('Approved MDB template file is missing or its SHA-256 has changed.');
@@ -38,8 +42,12 @@ class WindowsExporter implements Exporter
             '-File', base_path('scripts/mdb/export-reviewed-mdb.ps1'), '-InputPath', $inputPath,
             '-TemplatePath', $templatePath, '-OutputPath', $outputPath,
         ], null, $processEnvironment);
-        $process->setTimeout((int) config('mdb_workflow.export.timeout', 180));
-        $process->run();
+        $process->setTimeout($timeout);
+        try {
+            $process->run();
+        } catch (ProcessTimedOutException $exception) {
+            throw new RuntimeException('MDB generation exceeded '.$timeout.' seconds. Retry with one transformer or a smaller batch, or increase '.($offline ? 'MDB_OFFLINE_TIMEOUT' : 'MDB_EXPORT_TIMEOUT').' and refresh the Laravel configuration cache.', 0, $exception);
+        }
         if (! $process->isSuccessful()) {
             throw new RuntimeException('MDB worker failed: '.mb_substr(trim($process->getErrorOutput()), 0, 4000));
         }

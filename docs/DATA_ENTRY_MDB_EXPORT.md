@@ -59,7 +59,7 @@ The exporter reproduces the reference **schema and applicable data conventions**
 
 ## Runtime and tests
 
-Requires Windows with Access DAO/ACE. The independent configuration auto-selects the compatible PowerShell architecture using the existing read-only runtime detector. Optional overrides: `DATA_ENTRY_MDB_POWERSHELL`, `DATA_ENTRY_MDB_TIMEOUT` (default 180 seconds). `MDB_EXPORT_DRIVER` and existing SynerGEE settings do not control this exporter. Refresh Laravel configuration and route caches when deploying.
+Requires Windows with Access DAO/ACE. The independent configuration auto-selects the compatible PowerShell architecture using the existing read-only runtime detector. Optional overrides: `DATA_ENTRY_MDB_POWERSHELL`, `MDB_OFFLINE_TIMEOUT` for local Windows generation (default 900 seconds), and `DATA_ENTRY_MDB_TIMEOUT` for HTTP workers (default 180 seconds). PHP's execution limit is extended for generation while the external worker retains its configured timeout. `MDB_EXPORT_DRIVER` does not select the Data Entry exporter. Refresh Laravel configuration and route caches when deploying.
 
 The feature tests use SQLite `:memory:` exclusively; the application MySQL database must never be used for tests. On this XAMPP installation, PDO SQLite needs enabling for the test process and existing production caches need bypassing through temporary `APP_CONFIG_CACHE` / `APP_ROUTES_CACHE` paths.
 

@@ -223,6 +223,8 @@ class SynergeeTransfer
     public function generate(array $package): string
     {
         $this->require(PHP_OS_FAMILY === 'Windows', 'Local SynerGEE MDB generation requires Windows with Access DAO/ACE.');
+        $timeout = max(1, (int) config('mdb_workflow.offline_timeout', 900));
+        app(ExecutionTimeLimit::class)->extend($timeout);
         $package = $this->read(json_encode($package, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION));
         $inspection = $this->inspect($package);
         $this->require($inspection['issues'] === [], 'Correct these inputs in production, obtain verification and download new JSON: '.implode(' ', array_column($inspection['issues'], 'message')));
@@ -236,7 +238,7 @@ class SynergeeTransfer
             $template = new Template($package['snapshot']['template']);
             $template->disk = 'local';
             $template->path = $directory.'/template.mdb';
-            $result = app(WindowsExporter::class)->export($payload, $template, $output);
+            $result = app(WindowsExporter::class)->export($payload, $template, $output, $timeout);
             app(ReadbackVerifier::class)->verify($output, $payload, $result);
 
             return $output;

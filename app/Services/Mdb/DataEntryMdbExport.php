@@ -8,6 +8,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 use Throwable;
 
@@ -47,6 +48,8 @@ class DataEntryMdbExport
         if ($driver === 'windows') {
             $this->require(PHP_OS_FAMILY === 'Windows' && is_file((string) $powershell), 'Local Data Entry MDB export requires Windows PowerShell and Access DAO/ACE. On Linux/cPanel, configure DATA_ENTRY_MDB_DRIVER=http and a Windows MDB worker.');
         }
+        $timeout = max(1, (int) ($driver === 'windows' ? config('mdb_workflow.offline_timeout', 900) : config('data_entry_mdb.timeout', 180)));
+        app(ExecutionTimeLimit::class)->extend($timeout);
         $directory = storage_path('app/private/data-entry-mdb');
         if (! is_dir($directory)) {
             mkdir($directory, 0700, true);
@@ -61,7 +64,7 @@ class DataEntryMdbExport
                 file_put_contents($input, json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION));
                 $process = new Process([$powershell, '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', base_path('scripts/mdb/export-data-entry.ps1'),
                     '-InputPath', $input, '-TemplatePath', resource_path('mdb/data-entry/empty.mdb'), '-SchemaPath', resource_path('mdb/data-entry/schema.json'), '-OutputPath', $output]);
-                $process->setTimeout(config('data_entry_mdb.timeout'));
+                $process->setTimeout($timeout);
                 $process->run();
                 $this->require($process->isSuccessful(), 'Data Entry MDB validation failed: '.mb_substr(trim($process->getErrorOutput()), 0, 1500));
                 $result = json_decode(trim($process->getOutput()), true, 512, JSON_THROW_ON_ERROR);
@@ -73,6 +76,9 @@ class DataEntryMdbExport
         } catch (Throwable $exception) {
             if (is_file($output)) {
                 unlink($output);
+            }
+            if ($exception instanceof ProcessTimedOutException) {
+                throw ValidationException::withMessages(['data_entry_mdb' => 'MDB generation exceeded '.$timeout.' seconds. Retry with fewer rows, or increase MDB_OFFLINE_TIMEOUT and refresh the Laravel configuration cache.']);
             }
             throw $exception;
         } finally {
@@ -93,7 +99,7 @@ class DataEntryMdbExport
         $stamp = (string) time();
         $signature = hash_hmac('sha256', $stamp."\n".hash('sha256', $body), $secret);
         try {
-            $response = Http::timeout((int) config('data_entry_mdb.timeout', 180))->connectTimeout(15)
+            $response = Http::timeout(max(1, (int) config('data_entry_mdb.timeout', 180)))->connectTimeout(15)
                 ->withOptions(['allow_redirects' => false])
                 ->withHeaders(['Authorization' => 'MDB-HMAC '.$stamp.':'.$signature])
                 ->withBody($body, 'application/json')->post(rtrim($url, '/').'/v1/data-entry-exports');

@@ -24,6 +24,20 @@ The converter uses local Windows PowerShell and Access DAO/ACE directly. No loca
 
 Invalid JSON, incompatible versions, checksum changes and incomplete S/E pairs are rejected. Maximum JSON size is 10 MB. If necessary, set local PHP `upload_max_filesize=10M` and `post_max_size=40M` and restart the local web server. The larger POST limit accommodates the preview form's encoded package. The converter is enabled by default only on Windows; `DATA_ENTRY_MDB_OFFLINE_ENABLED=false` disables it.
 
+## Generation timeout on Windows
+
+Both local JSON-to-MDB converters use `MDB_OFFLINE_TIMEOUT=900` by default (15 minutes). The application extends PHP's execution limit before generation and gives PHP another 60 seconds for cleanup, so a web request configured for 120 seconds can wait for the MDB writer. The external writer still has a finite timeout. Remote Data Entry workers continue to use `DATA_ENTRY_MDB_TIMEOUT`; queued SynerGEE exports continue to use `MDB_EXPORT_TIMEOUT`.
+
+If you receive `Maximum execution time of 120 seconds exceeded` in Symfony's `WindowsPipes.php`, install the updated application code and add this to the local application's `.env`:
+
+```dotenv
+MDB_OFFLINE_TIMEOUT=900
+```
+
+Run `php artisan config:clear` from the application directory, then restart the PHP/web server used by the browser (Apache in XAMPP, or stop and restart `php artisan serve`). Retry the original JSON; no re-entry or modification of the approved JSON is needed for a runtime timeout. Do not edit files under `vendor`.
+
+If the server disables `set_time_limit`, set `max_execution_time=1200` in the PHP configuration loaded by the **web server** and restart it. `php --ini` reports the CLI configuration, which can differ from Apache/FastCGI. If generation reaches the application's 900-second limit, it returns a validation message; retry a single transformer or increase `MDB_OFFLINE_TIMEOUT` and refresh configuration. Any upstream web-server/proxy timeout must also allow that request duration.
+
 ## Git deployment
 
 Pull the updated commit in both the production and local application directories. In each application directory run:
