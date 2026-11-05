@@ -184,10 +184,10 @@ class SynergeeTransfer
                 }
             }
         }
+        $payload = null;
         try {
             $validation = app(NetworkValidator::class)->validate($snapshot);
             $errors = [...$errors, ...$validation['errors']];
-            $payload = null;
             if ($errors === []) {
                 $revision = new Revision(['batch_id' => $package['source']['batch_id'], 'number' => $package['source']['revision_number'],
                     'snapshot' => $snapshot, 'sha256' => $package['source']['revision_sha256']]);

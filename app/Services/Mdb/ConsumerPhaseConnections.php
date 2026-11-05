@@ -76,26 +76,18 @@ class ConsumerPhaseConnections
                     $plan[] = ['suffix' => ++$physical, 'phase' => $phase, 'kind' => 'consumer', 'category' => $category];
                 }
             } else {
-                $this->threePhases($available, $label.' '.$category.' consumer');
                 for ($i = 0; $i < $consumer['count']; $i++) {
-                    $plan[] = ['suffix' => ++$physical, 'phase' => 'R', 'kind' => 'consumer', 'category' => $category];
-                    foreach (['Y', 'B'] as $phase) {
-                        $plan[] = ['suffix' => $extra++, 'phase' => $phase, 'kind' => 'consumer', 'category' => $category];
+                    foreach ($this->threePhaseLegs($available) as $leg => $phase) {
+                        $plan[] = ['suffix' => $leg === 0 ? ++$physical : $extra++, 'phase' => $phase, 'kind' => 'consumer', 'category' => $category];
                     }
                 }
             }
         }
         if ($pvCount > 0) {
-            // One PV installation has one physical section. Its Loads row carries
-            // the balanced per-phase customer and kVA allocation.
-            $pvPhases = ['R', 'Y', 'B'];
-            if ($available === ['Y']) {
-                $pvPhases = ['Y'];
-            } else {
-                $this->threePhases($available, $label.' PV installation');
-            }
+            // One physical PV section carries three load shares on the available conductors.
+            $legs = array_count_values($this->threePhaseLegs($available));
             for ($i = 0; $i < $pvCount; $i++) {
-                $plan[] = ['suffix' => $extra++, 'phase' => implode('', $pvPhases), 'kind' => 'pv', 'category' => 'pv'];
+                $plan[] = ['suffix' => $extra++, 'phase' => implode('', $available), 'phase_legs' => $legs, 'kind' => 'pv', 'category' => 'pv'];
             }
         }
         usort($plan, fn ($a, $b) => $a['suffix'] <=> $b['suffix']);
@@ -124,9 +116,9 @@ class ConsumerPhaseConnections
         return $observations[0] ?? 0;
     }
 
-    private function threePhases(array $available, string $label): void
+    private function threePhaseLegs(array $available): array
     {
-        $this->check($available === ['R', 'Y', 'B'], $label.': three-phase expansion requires R, Y and B conductors in the PDF; unavailable phases were not invented.');
+        return array_map(fn ($leg) => $available[$leg % count($available)], [0, 1, 2]);
     }
 
     private function count(mixed $value, string $label): int

@@ -63,8 +63,7 @@ class InstSectionGeneration
             $this->check(count($terminalIds) === 1, $label.': transformer terminal Node is ambiguous.');
             $terminal = $this->node($nodes, $terminalIds[0], $label);
             $this->check(isset($nodes[$feeder]) && $terminal['NodeId'] !== $s['NodeId'], $label.': feeder or transformer Node is unresolved.');
-            $firstConnections = (new ConsumerPhaseConnections)->build($firstSection, $entries, $transformer['pv_records'] ?? [], $label);
-            $phaseSet = $this->phases($firstSection, $label, $this->yOnlyPv($firstSection, $firstConnections));
+            $phaseSet = $this->phases($firstSection, $label);
             $feederId = $this->id($rules, $code, $pair['start']);
             $transformerId = $this->id($rules, $code, $pair['start'], 1);
             $firstPoleId = $this->id($rules, $code, $pair['end']);
@@ -72,9 +71,9 @@ class InstSectionGeneration
                 unset($sections[$old]);
             }
             $this->put($sections, $this->row($supply, $feederId, $feeder, $feeder, $s['NodeId'],
-                $this->phaseCode(array_values(array_diff($phaseSet, ['N']))), 'Feeder', null, $this->conductors('500 MCM', null)));
+                $this->phaseCode(array_values(array_diff($phaseSet, ['N']))), 'Feeder', null, $this->conductors('500 MCM', null, $phaseSet)));
             $this->put($sections, $this->row($supply, $transformerId, $feeder, $s['NodeId'], $terminal['NodeId'],
-                $this->phaseCode($phaseSet), 'Transformer', 0.0, $this->conductors('4/C 07/.052', '4/C 07/.052'), 0));
+                $this->phaseCode($phaseSet), 'Transformer', 0.0, $this->conductors('4/C 07/.052', '4/C 07/.052', $phaseSet), 0));
             $remap[$primaryOld] = $transformerId;
             // Reuse the section created for this relationship; never format a separate device ID.
             $primarySections[$primaryOld]['SectionId'] = $transformerId;
@@ -96,13 +95,12 @@ class InstSectionGeneration
                 $this->check($isFirst || ($length !== null && ($elevation === 'elevation_adjusted' || ($survey['measured_length_m'] ?? null) !== null)),
                     $label.', E '.$entry['waypoint_reference'].': pole span requires recorded elevation or an approved measured length.');
                 $assignments = (new ConsumerPhaseConnections)->build($survey, $entries, $transformer['pv_records'] ?? [], $label.', E '.$entry['waypoint_reference']);
-                $yOnlyPv = $this->yOnlyPv($survey, $assignments);
-                $phases = $this->phases($survey, $label, $yOnlyPv);
+                $phases = $this->phases($survey, $label);
                 $conductors = [];
                 foreach (['R' => 'PhaseConductorId', 'Y' => 'PhaseConductor2Id', 'B' => 'PhaseConductor3Id', 'N' => 'NeutralConductorId'] as $phase => $field) {
                     $value = $survey['conductors'][$phase] ?? null;
                     $this->check(! in_array($phase, $phases, true) || (is_string($value) && $value !== ''), $label.': missing PDF conductor '.$phase.' at E '.$entry['waypoint_reference'].'.');
-                    $conductors[$field] = $value;
+                    $conductors[$field] = in_array($phase, $phases, true) ? $value : null;
                 }
                 $this->put($sections, $this->row($old, $id, $feeder, $isFirst ? $terminal['NodeId'] : $from['NodeId'], $to['NodeId'],
                     $this->phaseCode($phases), 'Secondary Pole', $length, $conductors));
@@ -118,11 +116,7 @@ class InstSectionGeneration
                         // Resolve the stored Node rather than manufacturing an endpoint from the workbook.
                         $customer = $this->node($nodes, $to['NodeId'].'.'.$suffix, $label);
                         $customerId = $this->id($rules, $code, $entry, $suffix);
-                        $cableConductors = $this->conductors('PVC 07/0.052', 'PVC 07/0.052');
-                        if ($yOnlyPv && $connection['kind'] === 'pv') {
-                            $cableConductors['PhaseConductorId'] = null;
-                            $cableConductors['PhaseConductor3Id'] = null;
-                        }
+                        $cableConductors = $this->conductors('PVC 07/0.052', 'PVC 07/0.052', str_split($connection['phase'].'N'));
                         $this->put($sections, $this->row($old, $customerId, $feeder, $to['NodeId'], $customer['NodeId'],
                             $connection['phase'].'N', 'Secondary Pole', $cable, $cableConductors));
                     }
@@ -210,18 +204,7 @@ class InstSectionGeneration
         return $section;
     }
 
-    private function yOnlyPv(array $section, array $connections): bool
-    {
-        $phases = $section['phases'] ?? [];
-        if (is_string($phases)) {
-            $phases = str_split($phases);
-        }
-
-        return is_array($phases) && array_values(array_intersect(['R', 'Y', 'B'], $phases)) === ['Y']
-            && in_array('N', $phases, true) && in_array('pv', array_column($connections, 'kind'), true);
-    }
-
-    private function phases(array $section, string $label, bool $yOnlyPv = false): array
+    private function phases(array $section, string $label): array
     {
         $phases = $section['phases'] ?? [];
         if (is_string($phases)) {
@@ -231,11 +214,14 @@ class InstSectionGeneration
         $this->check(array_intersect($phases, ['R', 'Y', 'B']) !== [] && array_diff($phases, ['R', 'Y', 'B', 'N']) === [],
             $label.': PDF phase availability is missing or ambiguous.');
         foreach (['R', 'Y', 'B'] as $phase) {
-            if ($yOnlyPv && $phase !== 'Y') {
+            // The verified phase list excludes inactive conductors. Older JSONs
+            // can omit those fields; only listed live phases require a conductor.
+            if (! in_array($phase, $phases, true)) {
                 continue;
             }
             $value = $section['conductors'][$phase] ?? null;
-            $this->check(is_string($value), $label.': PDF phase '.$phase.' availability is unknown; confirm its conductor or explicit absence.');
+            $this->check(is_string($value) && (new SurveyPhaseConsistency)->availability($value) === true,
+                $label.': PDF phase '.$phase.' availability is unknown; confirm its conductor or explicit absence.');
         }
 
         return $phases;
@@ -246,9 +232,12 @@ class InstSectionGeneration
         return rtrim(implode('', array_map(fn ($p) => in_array($p, $phases, true) ? $p : ' ', ['R', 'Y', 'B', 'N'])));
     }
 
-    private function conductors(string $phase, ?string $neutral): array
+    private function conductors(string $phase, ?string $neutral, array $phases): array
     {
-        return ['PhaseConductorId' => $phase, 'PhaseConductor2Id' => $phase, 'PhaseConductor3Id' => $phase, 'NeutralConductorId' => $neutral];
+        return ['PhaseConductorId' => in_array('R', $phases, true) ? $phase : null,
+            'PhaseConductor2Id' => in_array('Y', $phases, true) ? $phase : null,
+            'PhaseConductor3Id' => in_array('B', $phases, true) ? $phase : null,
+            'NeutralConductorId' => in_array('N', $phases, true) ? $neutral : null];
     }
 
     private function node(array $nodes, string $id, string $label): array

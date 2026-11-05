@@ -49,6 +49,52 @@ class SynergeeOfflineTest extends TestCase
         $this->assertSame($manifest['schema_extension']['legacy_schema_sha256'], $read['schema_sha256']);
     }
 
+    public function test_json_upload_accepts_three_phase_consumers_and_pv_on_one_or_two_conductors(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $this->actingAs($admin);
+        foreach ([['Y'], ['Y', 'B']] as $phases) {
+            $snapshot = \Tests\Unit\MdbInstSectionGenerationTest::limitedPhaseSnapshot($phases);
+            $snapshot['transformers'][0]['header'] += ['division' => 'D', 'subdivision' => 'SD', 'subdivision_code' => '01'];
+            foreach ($snapshot['transformers'][0]['entry_rows'] as &$row) {
+                $source = $snapshot['transformers'][0]['sections'][$row['pair_number'] - 1];
+                $row += ['conductors' => $source['conductors'], 'source_pdf_id' => 2, 'source_page' => 1,
+                    'source_row' => (string) $row['id'], 'consumers' => [], 'pv_details' => [], 'manually_verified' => true,
+                    'original_entry' => [], 'pole_height' => 36, 'equipment_type' => null, 'pole_class' => null];
+                $row['conductors'] = $source['conductors'];
+            }
+            unset($row);
+            foreach ($snapshot['transformers'][0]['sections'] as &$section) {
+                $section['original_entry']['manually_verified'] = true;
+            }
+            unset($section);
+            $snapshot['transformers'][0]['pv_records'][0]['original_entry'] = ['manually_verified' => true, 'source_pdf_id' => 2, 'source_page' => 1, 'source_row' => '2'];
+            $snapshot['transformers'][0]['sections'][0]['pv_records'] = $snapshot['transformers'][0]['pv_records'];
+            $package = SynergeeSnapshot::package($snapshot);
+            $before = $package;
+            $transfer = app(SynergeeTransfer::class);
+            $read = $transfer->read(json_encode($package, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION));
+            $inspection = $transfer->inspect($read);
+            $this->assertSame([], $inspection['issues'], json_encode($inspection['issues']));
+            $this->assertNotNull($inspection['payload']);
+            $this->assertSame($before, $package);
+            $this->post(route('mdb-workflow.offline-synergee.preview'), [
+                'file' => UploadedFile::fake()->createWithContent('partial-conductors.json', json_encode($package, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION)),
+            ])->assertOk()->assertDontSee('Mandatory corrections')->assertDontSee('availability is unknown');
+            if (PHP_OS_FAMILY === 'Windows' && is_file(AccessPowerShell::defaultPath())) {
+                config(['mdb_workflow.export.powershell' => AccessPowerShell::defaultPath()]);
+                $output = $transfer->generate($read);
+                try {
+                    $this->assertFileExists($output);
+                    $this->assertGreaterThan(4096, filesize($output));
+                } finally {
+                    unlink($output);
+                }
+            }
+        }
+    }
+
     private function productionBatch(bool $simple = false): SurveyBatch
     {
         Storage::fake('local');

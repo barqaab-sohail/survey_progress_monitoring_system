@@ -178,15 +178,14 @@ class LoadsTableGeneration
                     }
                 }
 
-                // PV consumers are balanced three-phase entries in Loads. Keep
-                // their fractional customer share and 5 kVA per customer on the
-                // aggregate span and on the single physical PV connection row.
+                // Keep one physical PV connection and apportion its three load
+                // shares only to available conductors, preserving one customer / 5 kVA.
                 foreach ($pvConnections as $connection) {
                     foreach (self::PHASES as $i => $phase) {
                         $customerField = 'Phase'.($i + 1).'Customers';
                         $kvaField = 'Phase'.($i + 1).'Kva';
-                        $customerShare = 1 / 3;
-                        $kvaShare = EngineeringConfiguration::consumerKva('rl') / 3;
+                        $customerShare = ($connection['phase_legs'][$phase] ?? 0) / 3;
+                        $kvaShare = EngineeringConfiguration::consumerKva('rl') * $customerShare;
                         $aggregateCustomers = $rows[$id][$customerField];
                         $aggregateKva = $rows[$id][$kvaField];
                         $rows[$id][$customerField] = $aggregateCustomers === null ? null : (float) $aggregateCustomers + $customerShare;

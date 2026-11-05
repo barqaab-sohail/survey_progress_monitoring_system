@@ -12,6 +12,7 @@ use App\Services\Mdb\ProjectionService;
 use App\Services\Mdb\ReadbackVerifier;
 use Illuminate\Support\Facades\File;
 use Illuminate\Validation\ValidationException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Process\Process;
 use Tests\TestCase;
 
@@ -180,6 +181,71 @@ class MdbInstSectionGenerationTest extends TestCase
         return $s;
     }
 
+    public static function limitedPhaseSnapshot(array $phases): array
+    {
+        $s = self::mixedSnapshot(0, false);
+        $t = &$s['transformers'][0];
+        $t['sections'][0]['phases'] = [...$phases, 'N'];
+        $t['sections'][0]['conductors'] = array_fill_keys([...$phases, 'N'], 'ANT');
+        $t['entry_rows'][0]['conductors'] = array_fill_keys([...$phases, 'N'], 'A');
+        $t['sections'][0]['consumers'][1]['demand'] = ['method' => 'Synthetic category rate', 'evidence' => 'Test evidence', 'approved_by' => 1,
+            'quantity' => 'kva', 'allocation_basis' => 'equal', 'phase_values' => array_fill_keys($phases, ['customers' => 1 / count($phases), 'kva' => 5 / count($phases)])];
+
+        return $s;
+    }
+
+    public static function availablePhaseCases(): array
+    {
+        return ['R' => [['R'], ['RN', 'RN', 'RN']], 'Y' => [['Y'], ['YN', 'YN', 'YN']], 'B' => [['B'], ['BN', 'BN', 'BN']],
+            'RY' => [['R', 'Y'], ['RN', 'YN', 'RN']], 'RB' => [['R', 'B'], ['RN', 'BN', 'RN']],
+            'YB' => [['Y', 'B'], ['YN', 'BN', 'YN']], 'RYB' => [['R', 'Y', 'B'], ['RN', 'YN', 'BN']]];
+    }
+
+    #[DataProvider('availablePhaseCases')]
+    public function test_three_phase_consumers_and_pv_use_only_available_conductors_and_preserve_totals(array $phases, array $expected): void
+    {
+        $s = self::limitedPhaseSnapshot($phases);
+        $before = $s;
+        $payload = $this->build($s);
+        $sections = array_column($payload['tables']['InstSection'], null, 'SectionId');
+        $loads = array_column($payload['tables']['Loads'], null, 'SectionId');
+        $pole = '00040701081026001';
+        $pv = $pole.'.4';
+        $consumerKva = 0;
+        $nodes = array_column($payload['tables']['Node'], null, 'NodeId');
+        foreach ($expected as $index => $code) {
+            $id = $pole.'.'.($index + 1);
+            $this->assertSame($code, $sections[$id]['SectionPhases']);
+            $this->assertArrayHasKey($sections[$id]['ToNodeId'], $nodes);
+            $this->assertEquals(1, $loads[$id]['Phase1Customers'] + $loads[$id]['Phase2Customers'] + $loads[$id]['Phase3Customers']);
+            $consumerKva += $loads[$id]['Phase1Kva'] + $loads[$id]['Phase2Kva'] + $loads[$id]['Phase3Kva'];
+        }
+        $this->assertEqualsWithDelta(5, $consumerKva, 1e-8);
+        $this->assertSame(implode('', $phases).'N', $sections[$pv]['SectionPhases']);
+        $this->assertArrayNotHasKey($pole.'.5', $sections);
+        $this->assertEqualsWithDelta(1, $loads[$pv]['Phase1Customers'] + $loads[$pv]['Phase2Customers'] + $loads[$pv]['Phase3Customers'], 1e-8);
+        $this->assertEqualsWithDelta(5, $loads[$pv]['Phase1Kva'] + $loads[$pv]['Phase2Kva'] + $loads[$pv]['Phase3Kva'], 1e-8);
+        $this->assertEqualsWithDelta(10, $loads[$pole]['Phase1Kva'] + $loads[$pole]['Phase2Kva'] + $loads[$pole]['Phase3Kva'], 1e-8);
+        $this->assertEquals(4, $loads[$pole]['Phase1Customers'] + $loads[$pole]['Phase2Customers'] + $loads[$pole]['Phase3Customers']);
+        $weights = array_count_values(array_map(fn ($phase) => substr($phase, 0, 1), $expected));
+        $annual = collect($payload['tables']['InstMymLoads'])->first(fn ($row) => $row['SectionId'] === $pv && $row['YearNumber'] === 1);
+        foreach (['R', 'Y', 'B'] as $index => $phase) {
+            $share = ($weights[$phase] ?? 0) / 3;
+            $this->assertEqualsWithDelta($share, $loads[$pv]['Phase'.($index + 1).'Customers'], 1e-8);
+            $this->assertEqualsWithDelta(5 * $share, $loads[$pv]['Phase'.($index + 1).'Kva'], 1e-8);
+            $this->assertEqualsWithDelta(5 * $share, $annual['Phase'.($index + 1).'Kva'], 1e-8);
+            if (! in_array($phase, $phases, true)) {
+                $field = ['PhaseConductorId', 'PhaseConductor2Id', 'PhaseConductor3Id'][$index];
+                foreach ([$pole, $pv] as $id) {
+                    $this->assertNull($sections[$id][$field]);
+                    $this->assertEquals(0, $loads[$id]['Phase'.($index + 1).'Customers']);
+                    $this->assertEquals(0, $loads[$id]['Phase'.($index + 1).'Kva']);
+                }
+            }
+        }
+        $this->assertSame($before, $s);
+    }
+
     public function test_y_and_neutral_only_pv_keeps_one_yn_connection_without_r_or_b_conductors(): void
     {
         $s = self::yOnlyPvSnapshot();
@@ -332,28 +398,13 @@ class MdbInstSectionGenerationTest extends TestCase
         $this->assertCount(count($before['tables']['Node']) + 3, $nodes);
     }
 
-    public function test_three_phase_items_cannot_invent_an_unavailable_phase_or_ignore_conflicting_pv_counts(): void
+    public function test_three_phase_items_still_reject_conflicting_pv_counts(): void
     {
-        foreach (['consumer', 'pv', 'pv_count'] as $case) {
-            $s = self::mixedSnapshot();
-            if ($case === 'pv_count') {
-                $s['transformers'][0]['entry_rows'][1]['pv_details'][] = ['reference' => 'PV-conflict'];
-            } else {
-                $s['transformers'][0]['sections'][0]['phases'] = ['R', 'B', 'N'];
-                $s['transformers'][0]['sections'][0]['conductors']['Y'] = '';
-                if ($case === 'pv') {
-                    $s['transformers'][0]['sections'][0]['consumers'][1]['count'] = 0;
-                    $s['transformers'][0]['entry_rows'][1]['consumers']['rl'] = 0;
-                }
-            }
-            try {
-                $this->build($s);
-                $this->fail('Contradictory source evidence must be reported.');
-            } catch (ValidationException $exception) {
-                $this->assertStringContainsString('E 001', $exception->getMessage());
-                $this->assertStringContainsString($case === 'pv_count' ? 'disagree' : 'requires R, Y and B', $exception->getMessage());
-            }
-        }
+        $s = self::limitedPhaseSnapshot(['R', 'B']);
+        $s['transformers'][0]['entry_rows'][1]['pv_details'][] = ['reference' => 'PV-conflict'];
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('PV count and installation records disagree');
+        $this->build($s);
     }
 
     public function test_workbook_chain_ids_role_values_and_endpoint_heights_reach_normal_payload(): void
@@ -602,6 +653,8 @@ class MdbInstSectionGenerationTest extends TestCase
         try {
             foreach (['single' => [self::snapshot(), 21], 'expanded' => [self::mixedSnapshot(8, false), 30],
                 'y-only-pv' => [self::yOnlyPvSnapshot(), 16],
+                'one-conductor-three-phase' => [self::limitedPhaseSnapshot(['Y']), 22],
+                'two-conductor-three-phase' => [self::limitedPhaseSnapshot(['Y', 'B']), 22],
                 'multiple-transformers' => [self::multipleTransformersSnapshot(), 42]] as $case => [$snapshot, $expectedSections]) {
                 $payload = $this->build($snapshot, null);
                 $input = $directory.'/'.$case.'.json';

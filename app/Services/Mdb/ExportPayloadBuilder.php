@@ -17,7 +17,7 @@ class ExportPayloadBuilder
 
     public const EXTENDED_VERSION = 'synergee-reviewed-v2';
 
-    public const EXPORT_REVISION = 'instmeterdmd-reference-v1';
+    public const EXPORT_REVISION = 'available-conductor-connections-v2';
 
     public const TABLES = ['SAI_Control', 'Node', 'InstFeeders', 'InstSection', 'InstPrimaryTransformers', 'Loads'];
 
