@@ -2,7 +2,8 @@
 @section('title', 'MDB survey entry')
 @section('content')
 <div class="mdb-workflow mdb-entry" id="mdb-entry-workspace">
-    <div class="page-head"><div><span class="eyebrow">{{ $batch->project?->name }}</span><h1>PDF Data Entry</h1><p>{{ $batch->feeder?->feeder_name }} · Batch #{{ $batch->id }}</p></div><div class="actions"><a class="btn btn-light" href="{{ route('mdb-workflow.index') }}">All batches</a><a class="btn btn-primary" data-entry-leave href="{{ route('mdb-workflow.review', $batch) }}">Review saved survey</a></div></div>
+    <div class="page-head"><div><span class="eyebrow">{{ $batch->project?->name }}</span><h1>PDF Data Entry</h1><p>{{ $batch->feeder?->feeder_name }} · Batch #{{ $batch->id }}</p></div><div class="actions">@if(auth()->user()->role?->value === 'super_admin')<a class="btn btn-light" href="#replace-batch-sources" onclick="document.getElementById('replace-batch-sources').open=true">Replace PDF / GPX</a>@endif<a class="btn btn-light" href="{{ route('mdb-workflow.index') }}">All batches</a><a class="btn btn-primary" data-entry-leave href="{{ route('mdb-workflow.review', $batch) }}">Review saved survey</a></div></div>
+    @include('mdb-workflow.partials.replace-sources')
     <p class="mdb-note">Status: <strong id="entry-batch-status">{{ $batch->workflow_label }}</strong>@if($batch->survey_remarks) &middot; Verification / correction comments: {{ $batch->survey_remarks }}@endif</p>
     @include('mdb-workflow.partials.data-entry-export-button')
     <p class="entry-steps">1. Upload PDF + GPX <span>›</span> 2. Transformer header <span>›</span> 3. S/E rows <span>›</span> 4. Submit Transformer</p>

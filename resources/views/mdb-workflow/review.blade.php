@@ -76,6 +76,7 @@
         @endforeach
     </section>@endif
     <section class="card"><h2>Action history</h2><ul>@forelse($workflowHistory as $event)<li>{{ $event->created_at->timezone('Asia/Karachi')->format('d M Y H:i:s') }} PKT · {{ $event->user?->name ?? 'Deleted user' }} · {{ str($event->action)->after('mdb.')->after('mdb_workflow.')->replace('_', ' ')->title() }} @if($event->reason) · {{ $event->reason }} @endif</li>@empty<li>No workflow actions recorded.</li>@endforelse</ul></section>
+    @include('mdb-workflow.partials.replace-sources')
 </div>
 @endsection
 @push('styles')<link rel="stylesheet" href="{{ asset('css/mdb-workflow.css').'?v='.filemtime(public_path('css/mdb-workflow.css')) }}"><link rel="stylesheet" href="{{ asset('css/mdb-entry.css').'?v='.filemtime(public_path('css/mdb-entry.css')) }}">@endpush

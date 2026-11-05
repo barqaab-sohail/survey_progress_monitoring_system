@@ -1,4 +1,5 @@
 @php($branding = app(\App\Support\ProjectBranding::class))
+@php($dataEntryNavigation = !auth()->user()->hasRole('super_admin') && auth()->user()->hasAnyRole(['survey_data_entry_operator', 'survey_data_verifier']))
 <!doctype html>
 <html lang="en">
 <head>
@@ -33,6 +34,7 @@
     <div class="workspace">
         <aside class="sidebar" id="primary-navigation">
             <a class="nav-link {{ request()->routeIs('profile.*') ? 'active' : '' }}" href="{{ route('profile.edit') }}">My Profile</a>
+            @unless($dataEntryNavigation)
             @if(config('services.google_drive.enabled'))
                 <a class="nav-link {{ request()->routeIs('google-drive.*') ? 'active' : '' }}" href="{{ route('google-drive.index') }}">Google Drive</a>
             @endif
@@ -40,9 +42,11 @@
             @can('gpx-calculator.use')
                 <a class="nav-link {{ request()->routeIs('gpx-calculator.*') ? 'active' : '' }}" href="{{ route('gpx-calculator.index') }}">GPX Length &amp; KMZ Export</a>
             @endcan
+            @endunless
             @can('mdb-workflow.view')
                 <a class="nav-link {{ request()->routeIs('mdb-workflow.*') ? 'active' : '' }}" href="{{ route('mdb-workflow.index') }}">MDB Creation &amp; Validation</a>
             @endcan
+            @unless($dataEntryNavigation)
             @if(PHP_OS_FAMILY === 'Windows' && config('data_entry_mdb.offline_conversion_enabled'))
                 @can('mdb-workflow.export')<a class="nav-link {{ request()->routeIs('mdb-workflow.offline-mdb.*') ? 'active' : '' }}" href="{{ route('mdb-workflow.offline-mdb.index') }}">JSON to MDB</a>@endcan
             @endif
@@ -101,6 +105,7 @@
                 <div class="nav-label">Reporting</div>
                 <a class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" href="{{ route('reports.index') }}">Progress Reports</a>
             @endif
+            @endunless
         </aside>
         <main class="main">
             @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif

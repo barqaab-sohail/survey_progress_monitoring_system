@@ -37,7 +37,12 @@ class EntryService
                 'division' => $feeder?->division?->name, 'subdivision' => $feeder?->subDivision?->name,
                 'subdivision_code' => $feeder?->subDivision?->code, 'survey_date' => $batch->survey_date->format('Y-m-d'),
                 'team_group' => $batch->surveyTeam?->code],
-            'sources' => $batch->sources->map(fn ($source) => $source->only(['id', 'kind', 'original_name', 'status', 'version', 'metadata']))->values()->all(),
+            'sources' => $batch->sources->map(function ($source) {
+                $data = $source->only(['id', 'kind', 'original_name', 'status', 'version', 'metadata']);
+                unset($data['metadata']['replacement_history']);
+
+                return $data;
+            })->values()->all(),
             'registered_transformers' => $feeder?->transformers()->orderBy('transformer_code')->get(['id', 'transformer_code', 'capacity_kva'])
                 ->map(fn ($transformer) => ['id' => $transformer->id, 'code' => $transformer->transformer_code, 'capacity_kva' => $transformer->capacity_kva])->all() ?? [],
             'entry_settings' => app(SurveyWaypoint::class)->settings($batch->project_id),

@@ -17,6 +17,9 @@ class SourceService
 {
     public function store(SurveyBatch $batch, User $actor, UploadedFile $file, ?SourceFile $parent = null, array $metadata = []): SourceFile
     {
+        if ($parent) {
+            abort_unless($actor->role?->value === 'super_admin', 403);
+        }
         $kind = strtolower($file->getClientOriginalExtension());
         $size = $file->getSize();
         $max = $kind === 'gpx' ? 10 * 1024 * 1024 : (int) config('mdb_workflow.max_pdf_mb', 100) * 1024 * 1024;

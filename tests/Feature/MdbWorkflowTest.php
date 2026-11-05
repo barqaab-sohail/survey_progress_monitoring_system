@@ -253,6 +253,227 @@ class MdbWorkflowTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'mdb.survey_return']);
     }
 
+    private function replacementPdf(int $pages = 4): UploadedFile
+    {
+        $objects = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Count '.$pages.' /Kids ['.implode(' ', array_map(fn ($i) => ($i + 3).' 0 R', range(0, $pages - 1))).'] >>'];
+        for ($i = 0; $i < $pages; $i++) {
+            $objects[] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << >> >>';
+        }
+        $pdf = "%PDF-1.4\n";
+        $offsets = [0];
+        foreach ($objects as $i => $object) {
+            $offsets[] = strlen($pdf);
+            $pdf .= ($i + 1)." 0 obj\n".$object."\nendobj\n";
+        }
+        $start = strlen($pdf);
+        $pdf .= 'xref'."\n0 ".count($offsets)."\n0000000000 65535 f \n";
+        foreach (array_slice($offsets, 1) as $offset) {
+            $pdf .= sprintf("%010d 00000 n \n", $offset);
+        }
+        $pdf .= 'trailer << /Size '.count($offsets).' /Root 1 0 R >>'."\nstartxref\n".$start."\n%%EOF\n";
+
+        return UploadedFile::fake()->createWithContent('readable-survey.pdf', $pdf);
+    }
+
+    private function replaceablePdfSource(): SourceFile
+    {
+        $file = $this->replacementPdf();
+        $bytes = file_get_contents($file->getRealPath());
+        Storage::disk('local')->put('original-survey.pdf', $bytes);
+
+        return $this->batch->sources()->create(['kind' => 'pdf', 'disk' => 'local', 'path' => 'original-survey.pdf', 'original_name' => 'original-survey.pdf',
+            'sha256' => hash('sha256', $bytes), 'bytes' => strlen($bytes), 'mime' => 'application/pdf', 'version' => 1,
+            'status' => 'ready', 'uploaded_by' => $this->admin->id, 'metadata' => ['page_count' => 4]]);
+    }
+
+    public function test_super_admin_replaces_pdf_after_three_pages_without_losing_entries(): void
+    {
+        $source = $this->replaceablePdfSource();
+        $transformer = $this->batch->transformers()->create(['code' => 'KEEP-ENTRIES', 'header' => ['pdf_source_id' => $source->id,
+            'pdf_start_page' => 1, 'pages' => [['source_pdf_id' => $source->id, 'page' => 3, 'role' => 'continuation', 'confirmed' => true]]]]);
+        foreach (range(1, 3) as $page) {
+            $row = $transformer->entryRows()->create(['client_uuid' => (string) \Illuminate\Support\Str::uuid(), 'save_uuid' => (string) \Illuminate\Support\Str::uuid(),
+                'save_hash' => str_repeat('a', 64), 'pair_number' => $page, 'designation' => 'S', 'group_number' => '01', 'row_date' => '2026-10-09',
+                'source_pdf_id' => $source->id, 'source_page' => $page, 'source_row' => '1', 'waypoint_reference' => '00'.$page,
+                'conductors' => ['R' => 'A'], 'consumers' => ['rs' => 2]]);
+        }
+        $marker = \App\Models\Mdb\PdfRow::create(['source_file_id' => $source->id, 'page' => 3, 'row_number' => 1,
+            'bounds' => ['x' => 0, 'y' => 0, 'width' => 1, 'height' => 0.1], 'entered' => true, 'entry_row_id' => $row->id]);
+        $line = \App\Models\Mdb\PdfLine::create(['source_file_id' => $source->id, 'page' => 3, 'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'start' => ['x' => 0, 'y' => 0.2], 'end' => ['x' => 1, 'y' => 0.2], 'created_by' => $this->admin->id]);
+        $original = $row->fresh()->surveyData();
+        $frozen = app(SnapshotService::class)->capture($this->batch, $this->admin->id);
+        $frozenData = $frozen->snapshot;
+        $this->get(route('mdb-workflow.show', $this->batch))->assertOk()->assertSee('Replace PDF / GPX');
+        $this->put(route('mdb-workflow.sources.replace', [$this->batch, $source]), ['revision' => 1, 'reason' => 'Page four was unreadable', 'file' => $this->replacementPdf()])
+            ->assertRedirect(route('mdb-workflow.show', $this->batch))->assertSessionHasNoErrors();
+        $source->refresh();
+        $this->assertSame(2, $source->version);
+        $this->assertSame('ready', $source->status);
+        $this->assertSame(4, $source->metadata['page_count']);
+        $this->assertSame($original, $row->fresh()->surveyData());
+        $this->assertSame(3, $transformer->entryRows()->count());
+        $this->assertSame($source->id, $transformer->fresh()->header['pdf_source_id']);
+        $this->assertTrue($marker->fresh()->entered);
+        $this->assertSame($source->id, $line->fresh()->source_file_id);
+        $this->assertSame($frozenData, $frozen->fresh()->snapshot);
+        $this->assertSame(2, $this->batch->fresh()->revision);
+        Storage::disk('local')->assertExists('original-survey.pdf');
+        Storage::disk('local')->assertExists($source->path);
+        Storage::disk('local')->assertExists($source->metadata['replacement_history'][0]['archive_path']);
+        $this->get(route('mdb-workflow.source', [$this->batch, $source, 'version' => 1, 'download' => 1]))->assertOk()->assertDownload('original-survey.pdf');
+        $this->get(route('mdb-workflow.source', [$this->batch, $source]))->assertOk();
+        $this->get(route('mdb-workflow.show', $this->batch))->assertOk()->assertSee('Previous versions')->assertSee('readable-survey.pdf');
+        $this->assertDatabaseHas('audit_logs', ['action' => 'mdb.source_replaced', 'user_id' => $this->admin->id]);
+    }
+
+    public function test_source_replacement_rejects_short_invalid_or_wrong_type_pdfs_without_changing_the_batch(): void
+    {
+        $source = $this->replaceablePdfSource();
+        $this->batch->transformers()->create(['code' => 'PAGE-THREE', 'header' => ['pages' => [['source_pdf_id' => $source->id, 'page' => 3]]]]);
+        foreach ([$this->replacementPdf(1), UploadedFile::fake()->createWithContent('invalid.pdf', '%PDF-broken'),
+            UploadedFile::fake()->createWithContent('wrong.gpx', $this->gpx())] as $file) {
+            $this->putJson(route('mdb-workflow.sources.replace', [$this->batch, $source]), ['revision' => 1, 'reason' => 'Fix an unreadable page', 'file' => $file])
+                ->assertUnprocessable()->assertJsonValidationErrors('file');
+            $this->assertSame(1, $source->fresh()->version);
+            $this->assertSame(1, $this->batch->fresh()->revision);
+            $this->assertSame(['original-survey.pdf'], Storage::disk('local')->allFiles());
+        }
+    }
+
+    public function test_source_replacement_rejects_stale_revision_cross_batch_and_processing_sources(): void
+    {
+        $source = $this->replaceablePdfSource();
+        $url = route('mdb-workflow.sources.replace', [$this->batch, $source]);
+        $this->putJson($url, ['revision' => 0, 'reason' => 'Fix source PDF', 'file' => $this->replacementPdf()])->assertUnprocessable()->assertJsonValidationErrors('revision');
+        $source->update(['status' => 'queued']);
+        $this->putJson($url, ['revision' => 1, 'reason' => 'Fix source PDF', 'file' => $this->replacementPdf()])->assertUnprocessable()->assertJsonValidationErrors('file');
+        $other = $this->batch->replicate();
+        $other->save();
+        $this->put(route('mdb-workflow.sources.replace', [$other, $source]), ['revision' => 1, 'reason' => 'Fix source PDF', 'file' => $this->replacementPdf()])->assertNotFound();
+        $this->assertSame(1, $source->fresh()->version);
+        $this->assertSame(1, $this->batch->fresh()->revision);
+    }
+
+    public function test_source_replacement_is_hidden_and_forbidden_for_every_non_admin_role(): void
+    {
+        $source = $this->replaceablePdfSource();
+        foreach (UserRole::cases() as $role) {
+            if ($role === UserRole::SuperAdmin) {
+                continue;
+            }
+            $user = User::factory()->create(['role' => $role]);
+            $this->team->members()->attach($user);
+            $this->actingAs($user)->put(route('mdb-workflow.sources.replace', [$this->batch, $source]),
+                ['revision' => 1, 'reason' => 'Replace source PDF', 'file' => $this->replacementPdf()])->assertForbidden();
+            $this->post(route('mdb-workflow.sources.store', $this->batch), ['revision' => 1, 'parent_source_id' => $source->id,
+                'file' => $this->replacementPdf()])->assertForbidden();
+            $this->get(route('mdb-workflow.source', [$this->batch, $source, 'version' => 99]))->assertForbidden();
+            if ($user->can('mdb-workflow.view')) {
+                $this->get(route('mdb-workflow.show', $this->batch))->assertOk()->assertDontSee('Replace PDF / GPX');
+            }
+        }
+        $this->assertSame(1, $source->fresh()->version);
+    }
+
+    public function test_super_admin_replaces_gpx_and_preserves_waypoint_ids_and_saved_source_links(): void
+    {
+        $source = $this->source();
+        (new ProcessSourceFile($source->id))->handle(app(GpxParser::class), app(SnapshotService::class));
+        $point = $source->waypoints()->where('name', '0001')->firstOrFail();
+        $transformer = $this->batch->transformers()->create(['code' => 'GPS-KEEP', 'source_waypoint_id' => $point->id]);
+        $section = $transformer->sections()->create(['start_waypoint_id' => $point->id, 'end_waypoint_id' => $point->id, 'start_source_file_id' => $source->id, 'end_source_file_id' => $source->id]);
+        $gpx = str_replace('30.464656', '30.565656', $this->gpx());
+        $gpx = str_replace('</g:gpx>', '<g:wpt lat="30.6" lon="71.8"><g:name>NEW</g:name></g:wpt></g:gpx>', $gpx);
+        $this->put(route('mdb-workflow.sources.replace', [$this->batch, $source]), ['revision' => $this->batch->fresh()->revision,
+            'reason' => 'Corrected GPS coordinates', 'file' => UploadedFile::fake()->createWithContent('corrected.gpx', $gpx)])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertEquals(30.565656, $point->fresh()->latitude);
+        $this->assertSame($point->id, $transformer->fresh()->source_waypoint_id);
+        $this->assertSame($point->id, $section->fresh()->start_waypoint_id);
+        $this->assertSame($source->id, $section->fresh()->end_source_file_id);
+        $this->assertSame(3, $source->waypoints()->count());
+        $this->assertSame(2, $source->fresh()->version);
+        $this->getJson(route('mdb-workflow.entry.data', $this->batch))->assertOk()->assertJsonMissingPath('sources.0.metadata.replacement_history');
+    }
+
+    public function test_gpx_replacement_rejects_missing_waypoints_and_rolls_back_the_entire_change(): void
+    {
+        $source = $this->source();
+        (new ProcessSourceFile($source->id))->handle(app(GpxParser::class), app(SnapshotService::class));
+        $before = $source->waypoints()->get()->toArray();
+        $revision = $this->batch->fresh()->revision;
+        $files = Storage::disk('local')->allFiles();
+        $gpx = str_replace(['30.464656', '<g:name>SSS</g:name>'], ['30.565656', '<g:name>CHANGED</g:name>'], $this->gpx());
+        $this->putJson(route('mdb-workflow.sources.replace', [$this->batch, $source]), ['revision' => $revision,
+            'reason' => 'Correct GPS source', 'file' => UploadedFile::fake()->createWithContent('corrected.gpx', $gpx)])->assertUnprocessable()->assertJsonValidationErrors('file');
+        $this->assertSame($before, $source->waypoints()->get()->toArray());
+        $this->assertSame($revision, $this->batch->fresh()->revision);
+        $this->assertSame(1, $source->fresh()->version);
+        $this->assertSame($files, Storage::disk('local')->allFiles());
+    }
+
+    public function test_source_replacement_reopens_verified_surveys_and_clears_verification(): void
+    {
+        $source = $this->replaceablePdfSource();
+        $transformer = $this->batch->transformers()->create(['code' => 'REVIEW-AGAIN', 'header' => ['manually_verified' => true]]);
+        $frozen = app(SnapshotService::class)->capture($this->batch, $this->admin->id);
+        $this->batch->update(['staged_workflow' => true, 'survey_status' => 'approved', 'status' => 'approved', 'approved_revision_id' => $frozen->id,
+            'survey_verifier_id' => $this->admin->id, 'survey_verified_at' => now(), 'entry_completed_at' => now()]);
+        $template = Template::create(['code' => 'replacement', 'version' => '1', 'path' => 'unused', 'sha256' => str_repeat('a', 64), 'synergee_version' => '5']);
+        $export = ExportJob::create(['batch_id' => $this->batch->id, 'revision_id' => $frozen->id, 'template_id' => $template->id,
+            'idempotency_key' => str_repeat('e', 64), 'status' => 'generated', 'mapping_version' => '1', 'requested_by' => $this->admin->id]);
+        \Illuminate\Support\Facades\DB::table('mdb_review_checks')->insert(['batch_id' => $this->batch->id, 'transformer_id' => $transformer->id,
+            'reviewer_id' => $this->admin->id, 'field_key' => 'header.code', 'value_hash' => str_repeat('a', 64)]);
+        $this->put(route('mdb-workflow.sources.replace', [$this->batch, $source]), ['revision' => 1, 'reason' => 'Fix illegible scan', 'file' => $this->replacementPdf()])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('returned', $this->batch->fresh()->survey_status);
+        $this->assertNull($this->batch->fresh()->approved_revision_id);
+        $this->assertNull($this->batch->fresh()->entry_completed_at);
+        $this->assertNull($this->batch->fresh()->survey_verified_at);
+        $this->assertFalse($transformer->fresh()->header['manually_verified']);
+        $this->assertDatabaseCount('mdb_review_checks', 0);
+        $this->assertNotNull($export->fresh()->superseded_at);
+    }
+
+    public function test_source_replacement_preserves_successive_versions_with_drive_storage_enabled(): void
+    {
+        config(['drive_storage.enabled' => true]);
+        $source = $this->replaceablePdfSource();
+        foreach ([1, 2] as $version) {
+            $this->put(route('mdb-workflow.sources.replace', [$this->batch, $source]), ['revision' => $version,
+                'reason' => 'A clearer source scan', 'file' => $this->replacementPdf()])->assertRedirect()->assertSessionHasNoErrors();
+        }
+        $source->refresh();
+        $this->assertSame(3, $source->version);
+        $this->assertCount(2, $source->metadata['replacement_history']);
+        $this->assertNotNull($source->drive_stored_file_id);
+        $this->get(route('mdb-workflow.source', [$this->batch, $source]))->assertOk();
+        foreach ([1, 2] as $version) {
+            $this->get(route('mdb-workflow.source', [$this->batch, $source, 'version' => $version]))->assertOk();
+        }
+    }
+
+    public function test_gpx_replacement_matches_repeated_names_by_time_even_when_file_order_changes(): void
+    {
+        $xml = '<gpx xmlns="http://www.topografix.com/GPX/1/1"><wpt lat="30" lon="71"><name>001</name><time>2026-10-09T08:00:00Z</time></wpt><wpt lat="31" lon="72"><name>001</name><time>2026-10-10T08:00:00Z</time></wpt></gpx>';
+        $this->post(route('mdb-workflow.sources.store', $this->batch), ['revision' => 1,
+            'file' => UploadedFile::fake()->createWithContent('dates.gpx', $xml)])->assertRedirect()->assertSessionHasNoErrors();
+        $source = $this->batch->sources()->firstOrFail();
+        (new ProcessSourceFile($source->id))->handle(app(GpxParser::class), app(SnapshotService::class));
+        $points = $source->waypoints()->orderBy('id')->get();
+        $replacement = '<gpx xmlns="http://www.topografix.com/GPX/1/1"><wpt lat="31.5" lon="72"><name>001</name><time>2026-10-10T08:00:00Z</time></wpt><wpt lat="30.5" lon="71"><name>001</name><time>2026-10-09T08:00:00Z</time></wpt></gpx>';
+        $this->put(route('mdb-workflow.sources.replace', [$this->batch, $source]), ['revision' => $this->batch->fresh()->revision,
+            'reason' => 'Corrected dated GPS readings', 'file' => UploadedFile::fake()->createWithContent('dates-new.gpx', $replacement)])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertEquals(30.5, $points[0]->fresh()->latitude);
+        $this->assertEquals(31.5, $points[1]->fresh()->latitude);
+        $ambiguous = str_replace('2026-10-09T08:00:00Z', '2026-10-10T08:00:00Z', $replacement);
+        $this->putJson(route('mdb-workflow.sources.replace', [$this->batch, $source]), ['revision' => $this->batch->fresh()->revision,
+            'reason' => 'Ambiguous repeated GPS readings', 'file' => UploadedFile::fake()->createWithContent('ambiguous.gpx', $ambiguous)])
+            ->assertUnprocessable()->assertJsonValidationErrors('file');
+        $this->assertSame(2, $source->fresh()->version);
+    }
+
     private function source(): SourceFile
     {
         $this->post(route('mdb-workflow.sources.store', $this->batch), ['revision' => $this->batch->fresh()->revision,

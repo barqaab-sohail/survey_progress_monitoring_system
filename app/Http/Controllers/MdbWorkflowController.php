@@ -237,6 +237,14 @@ class MdbWorkflowController extends Controller
                 // Drive archive rows own their staging files. Other batches can
                 // reuse the same archive through the content hash claim.
                 $files = $sources->whereNull('drive_stored_file_id')->map(fn ($source) => ['disk' => $source->disk, 'path' => $source->path])->all();
+                foreach ($sources as $source) {
+                    foreach ($source->metadata['replacement_history'] ?? [] as $version) {
+                        $files[] = ['disk' => 'local', 'path' => $version['archive_path']];
+                        if (empty($version['drive_stored_file_id'])) {
+                            $files[] = ['disk' => $version['disk'], 'path' => $version['path']];
+                        }
+                    }
+                }
                 $files = array_merge($files, DB::table('mdb_workflow_generation_inputs')->where('batch_id', $locked->id)->get(['disk', 'path'])->map(fn ($file) => (array) $file)->all());
                 $files = array_merge($files, $locked->exports()->get(['output_disk', 'output_path', 'payload_path'])->flatMap(fn ($export) => collect([
                     ['disk' => $export->output_disk, 'path' => $export->output_path], ['disk' => $export->output_disk, 'path' => $export->payload_path],
@@ -316,6 +324,9 @@ class MdbWorkflowController extends Controller
 
     public function upload(Request $request, SurveyBatch $batch)
     {
+        if ($request->filled('parent_source_id')) {
+            abort_unless($request->user()->role?->value === 'super_admin', 403);
+        }
         $this->access->authorize($request->user(), $batch, 'upload');
         $request->validate(['file' => 'required_without:drive_file_id|file', 'drive_file_id' => 'required_without:file|nullable|string|max:200', 'parent_source_id' => 'nullable|integer']);
         $uploadedSource = null;
@@ -332,6 +343,17 @@ class MdbWorkflowController extends Controller
         }
 
         return back()->with('success', $message);
+    }
+
+    public function replaceSource(Request $request, SurveyBatch $batch, SourceFile $source)
+    {
+        abort_unless($request->user()->role?->value === 'super_admin', 403);
+        $this->access->authorize($request->user(), $batch);
+        abort_unless($source->batch_id === $batch->id, 404);
+        $data = $request->validate(['file' => 'required|file', 'revision' => 'required|integer', 'reason' => 'required|string|min:5|max:2000']);
+        app(\App\Services\Mdb\SourceReplacement::class)->replace($batch, $source, $request->user(), $request->file('file'), (int) $data['revision'], $data['reason']);
+
+        return to_route('mdb-workflow.show', $batch)->with('success', 'Source file replaced. Saved entries and source links were preserved. Review the entries against the new file; operators should refresh saved records before continuing.');
     }
 
     public function retrySource(Request $request, SurveyBatch $batch, SourceFile $source)
@@ -352,6 +374,12 @@ class MdbWorkflowController extends Controller
     {
         $this->access->authorize($request->user(), $batch);
         abort_unless($source->batch_id === $batch->id, 404);
+        if ($request->filled('version') && (int) $request->input('version') !== $source->version) {
+            abort_unless($request->user()->role?->value === 'super_admin', 403);
+            $version = collect($source->metadata['replacement_history'] ?? [])->firstWhere('version', (int) $request->input('version'));
+            abort_unless($version, 404);
+            $source = new SourceFile($version);
+        }
         if (! $source->drive_stored_file_id) {
             $disk = Storage::disk($source->disk);
             abort_unless($disk->exists($source->path), 404);
