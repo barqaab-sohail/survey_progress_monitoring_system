@@ -10,6 +10,7 @@ import time
 import unittest
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+from unittest.mock import patch
 
 BASE = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location("mdb_worker", BASE / "scripts/mdb/worker_server.py")
@@ -60,6 +61,37 @@ class WorkerProtocolTest(unittest.TestCase):
         self.payload["idempotency_key"] = "b" * 64
         self.payload["tables"]["arbitrary_table"] = []
         self.assertEqual(422, self.post()[0])
+
+    def test_optional_generated_transformer_tables_are_allowed_without_opening_the_allowlist(self):
+        for table in ('InstMymLoads', 'InstMymMeter', 'InstMeterDmd', 'InstMymSwDevPos'):
+            self.payload['tables'][table] = []
+            with patch.object(worker, 'resolve_template', side_effect=RuntimeError('validated table allowlist')):
+                with self.assertRaisesRegex(RuntimeError, 'validated table allowlist'):
+                    worker.export_model(json.dumps(self.payload).encode())
+        self.payload['tables']['arbitrary_table'] = []
+        with self.assertRaisesRegex(ValueError, 'table allowlist'):
+            worker.export_model(json.dumps(self.payload).encode())
+
+    @unittest.skipUnless(Path(worker.POWERSHELL).is_file(), 'Windows Access worker unavailable')
+    def test_switch_device_positions_write_all_years_and_reject_non_transformer_sections(self):
+        section = self.payload['tables']['InstPrimaryTransformers'][0]['SectionId']
+        self.payload['tables']['InstMymSwDevPos'] = [
+            {'SectionId': section, 'DeviceCode': 'M', 'YearNumber': year, 'IsOpen': 0}
+            for year in range(11)
+        ]
+        status, result = self.post()
+        self.assertEqual(200, status, result)
+        self.assertEqual(11, result['readback']['counts']['InstMymSwDevPos'])
+        self.assertTrue(result['readback']['mapped_values_verified'])
+        self.assertTrue(result['readback']['references_verified'])
+        non_transformer = next(row['SectionId'] for row in self.payload['tables']['InstSection'] if row['SectionId'] != section)
+        self.payload['idempotency_key'] = 'c' * 64
+        for row in self.payload['tables']['InstMymSwDevPos']:
+            row['SectionId'] = non_transformer
+        status, result = self.post()
+        self.assertEqual(503, status, result)
+        self.assertIn('reference validation failed', result['error'])
+        self.assertFalse((worker.ROOT / self.payload['idempotency_key'] / 'approved.mdb').exists())
 
     @unittest.skipUnless(Path(worker.POWERSHELL).is_file(), "Windows Access worker unavailable")
     def test_authenticated_export_is_readable_reused_and_bound_to_exact_payload(self):
@@ -124,6 +156,20 @@ class WorkerProtocolTest(unittest.TestCase):
         self.payload['mapping_version'] = 'synergee-reviewed-v2'
         del self.payload['tables']['InstMymDGens']
         self.assertEqual(422, self.post()[0])
+
+    @unittest.skipUnless(Path(worker.POWERSHELL).is_file(), 'Windows Access worker unavailable')
+    def test_v1_generated_meter_parent_and_configured_years_are_written_and_verified(self):
+        section = self.payload['tables']['InstSection'][0]['SectionId']
+        self.payload['tables']['InstMeterPoints'] = [{'SectionId': section, 'Description': 'Configured meter'}]
+        self.payload['tables']['InstMymMeter'] = [
+            {'SectionId': section, 'YearNumber': year, 'CalibSAIFI': 2.5} for year in (2, 3, 4)
+        ]
+        status, result = self.post()
+        self.assertEqual(200, status, result)
+        self.assertTrue(result['readback']['mapped_values_verified'])
+        self.assertTrue(result['readback']['references_verified'])
+        self.assertEqual(1, result['readback']['counts']['InstMeterPoints'])
+        self.assertEqual(3, result['readback']['counts']['InstMymMeter'])
 
 
 if __name__ == "__main__":

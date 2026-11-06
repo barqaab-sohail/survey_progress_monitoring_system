@@ -19,6 +19,7 @@ use App\Models\User;
 use App\Services\Mdb\AccessPowerShell;
 use App\Services\Mdb\EngineeringConfiguration;
 use App\Services\Mdb\ExportService;
+use App\Services\Mdb\MdbTableDefaults;
 use App\Services\Mdb\ProjectionService;
 use App\Services\Mdb\SnapshotService;
 use App\Services\Mdb\SynergeeTransfer;
@@ -30,10 +31,45 @@ use Illuminate\Validation\ValidationException;
 use Tests\Fixtures\DataEntrySnapshot;
 use Tests\Fixtures\SynergeeSnapshot;
 use Tests\TestCase;
+use Tests\Unit\MdbInstSectionGenerationTest;
+use Tests\Unit\MdbTableDefaultsTest;
 
 class SynergeeOfflineTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_frozen_static_table_defaults_travel_once_in_json_and_generate_a_verified_local_mdb(): void
+    {
+        Storage::fake('local');
+        $snapshot = SynergeeSnapshot::make();
+        $snapshot['configuration']['settings']['mdb_table_defaults'] = app(MdbTableDefaults::class)->validate(MdbTableDefaultsTest::changes());
+        $package = SynergeeSnapshot::package($snapshot);
+        $json = json_encode($package, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION);
+        $this->assertSame(1, substr_count($json, '"mdb_table_defaults"'));
+        $transfer = app(SynergeeTransfer::class);
+        $read = $transfer->read($json);
+        $inspection = $transfer->inspect($read);
+        $this->assertSame([], $inspection['issues'], json_encode($inspection['issues']));
+        $tables = $inspection['payload']['tables'];
+        $this->assertSame([2, 3, 4], array_column($tables['InstMymSwDevPos'], 'YearNumber'));
+        $this->assertSame(1, $tables['InstMymSwDevPos'][0]['IsOpen']);
+        $this->assertEquals(12, $tables['SAI_Control'][0]['VoltageFactor']);
+        $this->assertEquals(175, $tables['InstSection'][0]['AmpRating']);
+        $this->assertEquals(0.75, $tables['Loads'][0]['CapacityFactor']);
+        $this->assertEquals($package, $read);
+        if (PHP_OS_FAMILY === 'Windows' && is_file(AccessPowerShell::defaultPath())) {
+            config(['mdb_workflow.export.powershell' => AccessPowerShell::defaultPath()]);
+            // generate() performs schema, exact values and foreign-key readback verification.
+            $path = $transfer->generate($read);
+            try {
+                $this->assertFileExists($path);
+                $this->assertGreaterThan(4096, filesize($path));
+            } finally {
+                unlink($path);
+            }
+        }
+        $this->assertDatabaseCount('mdb_workflow_configurations', 0);
+    }
 
     public function test_transfer_reader_accepts_the_previous_approved_schema_package(): void
     {
@@ -55,7 +91,7 @@ class SynergeeOfflineTest extends TestCase
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         $this->actingAs($admin);
         foreach ([['Y'], ['Y', 'B']] as $phases) {
-            $snapshot = \Tests\Unit\MdbInstSectionGenerationTest::limitedPhaseSnapshot($phases);
+            $snapshot = MdbInstSectionGenerationTest::limitedPhaseSnapshot($phases);
             $snapshot['transformers'][0]['header'] += ['division' => 'D', 'subdivision' => 'SD', 'subdivision_code' => '01'];
             foreach ($snapshot['transformers'][0]['entry_rows'] as &$row) {
                 $source = $snapshot['transformers'][0]['sections'][$row['pair_number'] - 1];
@@ -78,6 +114,10 @@ class SynergeeOfflineTest extends TestCase
             $inspection = $transfer->inspect($read);
             $this->assertSame([], $inspection['issues'], json_encode($inspection['issues']));
             $this->assertNotNull($inspection['payload']);
+            $positions = $inspection['payload']['tables']['InstMymSwDevPos'];
+            $this->assertCount(11, $positions);
+            $this->assertSame(range(0, 10), array_column($positions, 'YearNumber'));
+            $this->assertSame($inspection['payload']['tables']['InstPrimaryTransformers'][0]['SectionId'], $positions[0]['SectionId']);
             $this->assertSame($before, $package);
             $this->post(route('mdb-workflow.offline-synergee.preview'), [
                 'file' => UploadedFile::fake()->createWithContent('partial-conductors.json', json_encode($package, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION)),

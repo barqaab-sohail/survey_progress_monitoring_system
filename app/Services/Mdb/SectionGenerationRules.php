@@ -23,16 +23,18 @@ class SectionGenerationRules
         return $id;
     }
 
-    public function consumerCableLength(array $pole, string $record): float
+    public function consumerCableLength(array $pole, string $record, ?array $options = null): float
     {
+        $options ??= (new MdbTableDefaults)->table('InstSection')['options'];
+        $clearance = $options['CableClearanceFt'] * 0.3048;
         $height = $pole['pole_height'] ?? null;
         $unit = $pole['pole_height_unit'] ?? null;
         $this->check(is_numeric($height) && is_finite((float) $height) && $height > 0 && in_array($unit, ['ft', 'm'], true),
             $record.': the consumer cable formula requires the recorded pole height and its explicit ft/m unit.');
         $metres = $unit === 'ft' ? (float) $height * 0.3048 : (float) $height;
-        $this->check($metres >= 4 * 0.3048, $record.': pole height is below the formula\'s four-foot clearance. Verify the source PDF.');
+        $this->check($metres >= $clearance, $record.': pole height is below the configured cable clearance. Verify the source PDF.');
 
-        return round(($metres - 4 * 0.3048) / 0.667, 2, PHP_ROUND_HALF_UP);
+        return round(($metres - $clearance) / $options['CableSlope'], 2, PHP_ROUND_HALF_UP);
     }
 
     private function check(bool $condition, string $message): void

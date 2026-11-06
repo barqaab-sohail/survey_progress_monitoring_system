@@ -66,6 +66,7 @@ class EngineeringDefaults
     {
         $payload = $preset->configuration;
         $settings = self::withSurveyDefaults($payload['settings']);
+        $settings['mdb_table_defaults'] = app(MdbTableDefaults::class)->forSettings($settings);
         $settings['reference_import'] = $preset->evidence;
         $settings['reference_import']['equipment_references'] = $payload['equipment_references'];
         $settings['reference_import']['status'] = 'needs_review';
@@ -86,8 +87,9 @@ class EngineeringDefaults
         $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
         $rules = [
             'epsg' => 'present|nullable|integer|between:1000,999999',
-            'settings' => 'required|array:frequency_hz,nominal_voltage_kv,secondary_voltage_kv,template_id,conductor_library_revision,transformer_library_revision,entry,engineering,mapping',
+            'settings' => 'required|array:frequency_hz,nominal_voltage_kv,secondary_voltage_kv,template_id,conductor_library_revision,transformer_library_revision,entry,engineering,mapping,mdb_table_defaults',
             'settings.frequency_hz' => ['nullable', Rule::in([50, 60])],
+            'settings.mdb_table_defaults' => 'sometimes|array',
             'settings.nominal_voltage_kv' => 'nullable|numeric|gt:0|max:1000',
             'settings.secondary_voltage_kv' => 'nullable|numeric|gt:0|max:1000',
             'settings.template_id' => ['nullable', 'integer', Rule::exists('mdb_workflow_templates', 'id')->where(fn ($q) => $q->where('active', true)->whereNotNull('approved_by')->whereNotNull('approved_at'))],
@@ -140,6 +142,9 @@ class EngineeringDefaults
             if (! is_numeric($capacity) || (float) $capacity <= 0) {
                 throw ValidationException::withMessages(['configuration_json' => 'Transformer type mappings need positive numeric kVA capacity keys.']);
             }
+        }
+        if (isset($data['settings']['mdb_table_defaults'])) {
+            $data['settings']['mdb_table_defaults'] = app(MdbTableDefaults::class)->validate($data['settings']['mdb_table_defaults']);
         }
         $this->validateMapping($data['settings']['mapping']);
         if ($data['epsg'] !== null) {

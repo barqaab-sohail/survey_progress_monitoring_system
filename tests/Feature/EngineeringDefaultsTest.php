@@ -22,6 +22,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
+use Tests\Unit\MdbTableDefaultsTest;
 
 class EngineeringDefaultsTest extends TestCase
 {
@@ -50,6 +51,21 @@ class EngineeringDefaultsTest extends TestCase
     {
         return ['revision' => $this->preset()->revision, 'name' => 'Reviewed defaults', 'enabled' => 1,
             'configuration_json' => json_encode($payload), 'reason' => 'Review reusable engineering defaults'];
+    }
+
+    public function test_friendly_table_defaults_in_library_apply_only_to_new_project_configurations(): void
+    {
+        $existing = app(EngineeringDefaults::class)->initialize($this->project, $this->admin);
+        $before = $existing->fresh()->getRawOriginal();
+        $data = $this->updateData($this->preset()->configuration);
+        $data['mdb_table_defaults'] = MdbTableDefaultsTest::changes();
+        $this->put(route('engineering.library.update'), $data)->assertSessionHasNoErrors();
+        $this->get(route('engineering.library'))->assertOk()->assertSee('Static values by table')->assertSee('InstMymSwDevPos');
+        $this->assertSame($before, $existing->fresh()->getRawOriginal());
+        $project = Project::create(['code' => 'NEW', 'name' => 'New project', 'status' => 'active', 'timezone' => 'Asia/Karachi']);
+        $fresh = app(EngineeringDefaults::class)->initialize($project, $this->admin);
+        $this->assertSame(1, $fresh->settings['mdb_table_defaults']['tables']['InstMymSwDevPos']['values']['IsOpen']);
+        $this->assertSame('Reviewed project meter', $fresh->settings['mdb_table_defaults']['tables']['InstMeterPoints']['values']['Description']);
     }
 
     public function test_seed_has_nine_sources_and_reseeding_preserves_admin_changes_and_disabled_state(): void

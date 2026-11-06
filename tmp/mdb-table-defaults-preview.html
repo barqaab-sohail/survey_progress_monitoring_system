@@ -1,0 +1,858 @@
+<!doctype html><html lang="en"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MDB table settings preview</title><style>:root{--navy:#0b1f3a;--blue:#1358a2;--sky:#e8f2fb;--green:#16835b;--amber:#c77800;--red:#b42318;--ink:#182230;--muted:#667085;--line:#d9e0e8;--bg:#f4f7fa;--white:#fff;--shadow:0 8px 24px rgba(11,31,58,.08)}
+*{box-sizing:border-box}html{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}body{margin:0}a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}button,input,select,textarea{font:inherit}.shell{min-height:100vh}.topbar{height:68px;background:var(--navy);color:#fff;display:flex;align-items:center;padding:0 24px;position:sticky;top:0;z-index:30;box-shadow:0 2px 10px rgba(0,0,0,.18)}.brand{display:flex;gap:12px;align-items:center;color:#fff;font-weight:800}.brand:hover{text-decoration:none}.brand-mark{display:grid;place-items:center;width:40px;height:40px;border-radius:10px;background:#fff;color:var(--navy);font-size:13px}.brand small{display:block;font-weight:500;opacity:.72}.nav-toggle{display:none;margin-left:auto}.workspace{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 68px)}.sidebar{background:#fff;border-right:1px solid var(--line);padding:20px 14px}.nav-label{padding:14px 12px 6px;font-size:11px;text-transform:uppercase;color:#98a2b3;font-weight:800;letter-spacing:.08em}.nav-link{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:9px;color:#344054;font-weight:650;margin:2px 0}.nav-link:hover,.nav-link.active{background:var(--sky);color:var(--blue);text-decoration:none}.main{padding:28px;min-width:0}.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px}.page-head h1{font-size:28px;margin:0 0 5px}.page-head p{margin:0;color:var(--muted)}.actions{display:flex;gap:10px;flex-wrap:wrap}.btn{min-height:44px;border:0;border-radius:9px;padding:10px 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:750;cursor:pointer}.btn:hover{text-decoration:none;filter:brightness(.97)}.btn-primary{background:var(--blue);color:#fff}.btn-success{background:var(--green);color:#fff}.btn-danger{background:var(--red);color:#fff}.btn-light{background:#fff;color:#344054;border:1px solid var(--line)}.btn-sm{min-height:36px;padding:7px 11px;font-size:13px}.card{background:#fff;border:1px solid #e5eaf0;border-radius:14px;box-shadow:var(--shadow);padding:20px;margin-bottom:18px}.grid{display:grid;gap:16px}.kpi-grid{grid-template-columns:repeat(5,minmax(150px,1fr))}.kpi{display:block;color:inherit;position:relative;overflow:hidden}.kpi:hover{text-decoration:none;transform:translateY(-1px)}.kpi-label{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.04em}.kpi-value{font-size:30px;font-weight:850;margin-top:8px}.kpi-accent{position:absolute;height:5px;left:0;right:0;top:0;background:var(--blue)}.kpi.accent-green .kpi-accent{background:var(--green)}.kpi.accent-amber .kpi-accent{background:var(--amber)}.kpi.accent-red .kpi-accent{background:var(--red)}.section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:28px 0 12px}.section-title h2{font-size:20px;margin:0}.progress-grid{grid-template-columns:repeat(4,1fr)}.progress-top{display:flex;justify-content:space-between;font-weight:750;margin-bottom:9px}.progress-track{height:10px;background:#e7edf3;border-radius:10px;overflow:hidden}.progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),#4a9ae8);border-radius:10px}.period-grid{grid-template-columns:repeat(3,1fr)}.period-card h3{margin:0 0 14px;font-size:16px}.mini-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}.mini-stat span{display:block;color:var(--muted);font-size:12px}.mini-stat strong{font-size:22px}.table-wrap{overflow-x:auto}.table{border-collapse:collapse;width:100%;min-width:900px}.table th{text-align:left;padding:12px;background:#f7f9fb;color:#475467;font-size:12px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}.table td{padding:12px;border-top:1px solid #e8edf2;vertical-align:top}.table tr:hover td{background:#fbfdff}.status{display:inline-flex;padding:5px 9px;border-radius:999px;background:#e8eef6;color:#344054;font-size:11px;font-weight:800;white-space:nowrap}.status-completed,.status-verified{background:#dcfae6;color:#087443}.status-returned{background:#fee4e2;color:#b42318}.status-pending{background:#fff1d6;color:#9a5b00}.alert{padding:14px 16px;border-radius:10px;margin-bottom:18px}.alert-success{background:#dcfae6;color:#087443}.alert-danger{background:#fee4e2;color:#912018}.alert ul{margin:6px 0 0;padding-left:20px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.field label{display:block;font-weight:750;margin-bottom:7px;color:#344054}.field input,.field select,.field textarea{width:100%;min-height:46px;border:1px solid #cfd7e1;border-radius:9px;padding:10px 12px;background:#fff;color:#182230}.field textarea{min-height:90px;resize:vertical}.field input:focus,.field select:focus,.field textarea:focus{outline:3px solid rgba(19,88,162,.13);border-color:var(--blue)}.field small{display:block;color:var(--muted);margin-top:5px}.row-card{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;background:#fbfcfe}.row-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.row-card-head strong{font-size:14px}.form-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}.form-total{font-size:18px}.empty{text-align:center;padding:46px 20px;color:var(--muted)}.drive-link{font-weight:750;white-space:nowrap}.auth-page{min-height:100vh;display:grid;grid-template-columns:1.15fr .85fr}.auth-brand{padding:64px;background:linear-gradient(140deg,#07172c,#114c89);color:#fff;display:flex;flex-direction:column;justify-content:center}.auth-brand h1{font-size:46px;line-height:1.08;margin:20px 0}.auth-brand p{font-size:18px;max-width:560px;color:#d1e4f7}.auth-form{display:grid;place-items:center;padding:28px}.auth-box{width:min(430px,100%)}.auth-box h2{font-size:30px;margin-bottom:8px}.auth-box>.muted{color:var(--muted);margin-bottom:28px}.user-area{margin-left:auto;display:flex;align-items:center;gap:12px}.user-meta{text-align:right}.user-meta small{display:block;opacity:.7}.logout-btn{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.18)}.chart{width:100%;height:260px;display:block}.legend{display:flex;gap:18px;font-size:12px;color:var(--muted)}.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}.mobile-cards{display:none}.pagination nav{display:flex;justify-content:center}.muted{color:var(--muted)}
+.eyebrow{display:block;color:var(--blue);font-size:11px;font-weight:850;letter-spacing:.11em;text-transform:uppercase;margin-bottom:6px}.management-page-head{margin-bottom:18px}.management-page-head h1{font-size:34px;letter-spacing:-.035em}.data-time{display:block;color:#98a2b3;font-size:12px;margin-top:8px}.dashboard-notice{display:flex;align-items:flex-start;gap:12px;border-radius:12px;padding:13px 16px;margin-bottom:12px;font-size:13px}.dashboard-notice strong{white-space:nowrap}.demo-notice{background:#edf4ff;border:1px solid #b9d7ff;color:#164b85}.baseline-notice{background:#fff8e7;border:1px solid #f1d69a;color:#744600}.management-hero{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(360px,.88fr);gap:18px;margin-top:18px}.decision-card{color:#fff;background:linear-gradient(135deg,#0b2748,#124f8c);border:0;min-height:300px;padding:28px;position:relative;overflow:hidden}.decision-card:after{content:"";position:absolute;width:220px;height:220px;border:45px solid rgba(255,255,255,.055);border-radius:50%;right:-70px;top:-95px}.decision-card.decision-danger{background:linear-gradient(135deg,#6c1d19,#b42318)}.decision-card.decision-warning{background:linear-gradient(135deg,#704100,#bd7200)}.decision-card.decision-success{background:linear-gradient(135deg,#07553b,#16835b)}.decision-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:850;opacity:.78}.decision-card h2{font-size:29px;line-height:1.12;margin:12px 0 10px;max-width:560px}.decision-card>p{font-size:16px;line-height:1.5;max-width:650px;margin:0 0 22px;color:rgba(255,255,255,.88)}.decision-card>small{display:block;margin-top:16px;color:rgba(255,255,255,.65)}.decision-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;position:relative;z-index:1}.decision-stats div{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.13);border-radius:10px;padding:11px}.decision-stats span{display:block;font-size:10px;text-transform:uppercase;opacity:.72}.decision-stats strong{display:block;margin-top:5px;font-size:17px}.card-heading{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px}.card-heading h2{font-size:20px;margin:0}.capacity-card{padding:25px}.capacity-row{margin-bottom:22px}.capacity-row.compact{margin-bottom:15px}.capacity-title{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:8px;color:#344054;font-size:13px}.capacity-title strong{font-size:19px;color:var(--ink)}.capacity-track{height:13px;border-radius:20px;background:#e8edf3;overflow:hidden}.capacity-fill{display:block;height:100%;border-radius:20px;min-width:3px}.survey-fill{background:linear-gradient(90deg,#1358a2,#58a5ed)}.mdb-fill{background:linear-gradient(90deg,#16835b,#49b487)}.verify-fill{background:linear-gradient(90deg,#c77800,#eeb45e)}.management-note{color:var(--muted);font-size:12px;line-height:1.5;margin:18px 0 0}.stage-grid{grid-template-columns:1fr 1fr}.stage-card{padding:25px}.stage-top{display:flex;align-items:center;justify-content:space-between;gap:20px}.stage-number{display:inline-grid;place-items:center;width:31px;height:31px;border-radius:8px;background:var(--sky);color:var(--blue);font-weight:850;font-size:12px}.stage-card h3{font-size:23px;margin:11px 0 4px}.stage-card p{color:var(--muted);font-size:13px;margin:0;max-width:330px}.donut{--value:0;--donut-color:var(--blue);width:142px;height:142px;flex:0 0 142px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--donut-color) calc(var(--value)*1%),#e8edf3 0);position:relative}.donut:before{content:"";position:absolute;inset:15px;background:#fff;border-radius:50%}.donut>div{position:relative;text-align:center}.donut strong{display:block;font-size:24px}.donut span{display:block;color:var(--muted);font-size:11px}.stage-split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:23px 0 17px}.stage-split>div{border-radius:10px;padding:13px 15px}.stage-split .complete{background:#ecf8f2;color:#106846}.stage-split .pending{background:#fff5e8;color:#8d5200}.stage-split span{display:block;font-size:11px;text-transform:uppercase;font-weight:800}.stage-split strong{display:block;font-size:26px;margin-top:5px}.stage-detail{display:flex;gap:13px;flex-wrap:wrap;color:#475467;font-size:12px;border-top:1px solid #e8edf2;padding-top:15px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px}.dot-green{background:var(--green)}.dot-amber{background:var(--amber)}.dot-slate{background:#667085}.dot-blue{background:var(--blue)}.dot-red{background:var(--red)}.pipeline-card{margin-top:0;padding:25px}.pipeline{display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;align-items:stretch;gap:13px}.pipeline-step{background:#f6f9fc;border:1px solid #e3eaf1;border-radius:11px;padding:16px}.pipeline-step span,.pipeline-step small{display:block;color:var(--muted);font-size:11px}.pipeline-step span{text-transform:uppercase;font-weight:800}.pipeline-step strong{display:block;font-size:25px;margin:5px 0}.pipeline-arrow{display:grid;place-items:center;color:#98a2b3;font-size:24px}.management-table td small{display:block;color:var(--muted);margin-top:4px}.mini-progress{width:130px;max-width:100%;height:6px;background:#e8edf3;border-radius:10px;overflow:hidden;margin-top:7px}.mini-progress i{display:block;height:100%;background:var(--blue)}.mini-progress.green i{background:var(--green)}.number-alert{font-size:18px;font-weight:850;color:#9a5b00}.focus-pill{display:inline-flex;border-radius:999px;padding:6px 10px;background:#edf2f7;color:#475467;font-weight:800;font-size:11px;white-space:nowrap}.focus-survey{background:#e8f2fb;color:#1358a2}.focus-mdb-creation{background:#e7f7ef;color:#087443}.priority-feeder-grid{grid-template-columns:repeat(4,1fr)}.priority-feeder{padding:17px}.priority-feeder-head{display:flex;justify-content:space-between;gap:10px}.priority-feeder-head strong,.priority-feeder-head span{display:block}.priority-feeder-head>div>span{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;max-width:155px;overflow:hidden;text-overflow:ellipsis}.backlog-total{font-size:11px;font-weight:850;color:#9a5b00;background:#fff1d6;border-radius:999px;padding:5px 8px;height:max-content;white-space:nowrap}.priority-metric{margin-top:13px}.priority-metric>span{display:flex;justify-content:space-between;font-size:11px;color:#475467}.priority-metric>div{height:6px;background:#e8edf3;border-radius:10px;overflow:hidden;margin-top:5px}.priority-metric i{display:block;height:100%;border-radius:10px}.priority-feeder>small{display:block;color:var(--muted);font-size:10px;margin-top:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.trend-card{padding-bottom:14px}.detail-panel{margin-top:28px}.detail-panel>summary{list-style:none;background:#fff;border:1px solid var(--line);border-radius:12px;padding:17px 20px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:var(--shadow)}.detail-panel>summary::-webkit-details-marker{display:none}.detail-panel>summary span>*{display:block}.detail-panel>summary small{color:var(--muted);font-weight:400;margin-top:3px}.detail-panel>summary b{font-size:12px;color:var(--blue)}.detail-panel[open]>summary{margin-bottom:12px}.detail-panel[open]>summary b{font-size:0}.detail-panel[open]>summary b:after{content:"Collapse";font-size:12px}.performance-panel{margin-bottom:30px}
+.executive-graph-grid{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(270px,.55fr);gap:18px;margin-top:18px}.graph-card{padding:24px}.graph-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:10px}.graph-card-head h2{font-size:20px;margin:0}.scope-total{text-align:right}.scope-total strong,.scope-total span{display:block}.scope-total strong{font-size:27px;color:var(--navy)}.scope-total span{font-size:10px;color:var(--muted);text-transform:uppercase;max-width:130px}.management-chart{display:block;width:100%}.overall-chart{height:278px}.visual-action{border:0;color:#fff;padding:25px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:linear-gradient(150deg,#6c1d19,#c22b22)}.visual-action-warning{background:linear-gradient(150deg,#6b4100,#d18400)}.visual-action-success{background:linear-gradient(150deg,#07553b,#1b9a6d)}.visual-action-label{font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:850;opacity:.75}.action-icon{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.28);font-size:25px;font-weight:900;margin:13px 0}.visual-action h2{font-size:22px;line-height:1.15;margin:0 0 17px}.action-backlog{border-top:1px solid rgba(255,255,255,.2);border-bottom:1px solid rgba(255,255,255,.2);width:100%;padding:12px}.action-backlog span,.action-backlog strong{display:block}.action-backlog span{font-size:10px;text-transform:uppercase;opacity:.7}.action-backlog strong{font-size:30px;margin-top:2px}.action-days{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;margin-top:17px;width:100%}.action-days>div:not(.versus){display:flex;align-items:center;justify-content:center;gap:7px}.action-days strong{font-size:25px}.action-days span{font-size:10px;text-transform:uppercase;text-align:left;opacity:.76}.action-days .versus{font-size:9px;font-weight:850;opacity:.55}.graph-summary-grid{display:grid;grid-template-columns:1fr 1fr .9fr;gap:18px;margin-top:0}.donut-graph-card,.clearance-graph-card{min-width:0}.graph-step{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:7px;color:#fff;font-size:11px;font-weight:850;margin-bottom:8px}.graph-step.blue{background:var(--blue)}.graph-step.green{background:var(--green)}.headline-percent{font-size:25px}.blue-text{color:var(--blue)}.green-text{color:var(--green)}.donut-chart{height:210px}.clearance-chart{height:210px}.chart-legend{display:grid;gap:7px;margin-top:10px}.chart-legend>div{display:flex;align-items:center;gap:9px;font-size:11px;color:#344054}.chart-legend i{width:10px;height:10px;border-radius:50%;flex:0 0 10px}.chart-legend span{display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px}.chart-legend small{color:var(--muted)}.rate-strip{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line);margin-top:10px;padding-top:12px}.rate-strip>div{text-align:center}.rate-strip>div+div{border-left:1px solid var(--line)}.rate-strip span,.rate-strip strong{display:block}.rate-strip span{font-size:10px;color:var(--muted);text-transform:uppercase}.rate-strip strong{font-size:20px;margin-top:3px}.wide-graph-card{padding:22px}.graph-key{display:flex;align-items:center;gap:18px;color:#475467;font-size:11px;margin-bottom:8px}.graph-key span{display:flex;align-items:center;gap:6px;font-weight:750}.graph-key i{width:12px;height:7px;border-radius:4px}.graph-key .survey-key{background:#2563eb}.graph-key .mdb-key{background:#ef4444}.graph-key small{margin-left:auto;color:var(--muted)}.comparison-chart{height:220px}.feeder-chart{height:430px}.compact-detail{margin-top:-7px}.compact-detail>summary{box-shadow:none;background:#f8fafc;padding:11px 16px}.compact-detail>summary strong{font-size:12px}
+.survey-overview-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,.55fr);gap:18px}.survey-progress-card{padding:25px}.survey-status-card{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:25px}.survey-progress-ring{--value:0;width:165px;height:165px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--blue) calc(var(--value)*1%),#e8edf3 0);position:relative}.survey-progress-ring:before{content:"";position:absolute;inset:17px;background:#fff;border-radius:50%}.survey-progress-ring>div{position:relative;text-align:center}.survey-progress-ring strong,.survey-progress-ring span{display:block}.survey-progress-ring strong{font-size:28px;color:var(--navy)}.survey-progress-ring span{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.08em}.survey-status-counts{display:grid;grid-template-columns:1fr 1fr;width:100%;margin-top:20px;border-top:1px solid var(--line);padding-top:16px}.survey-status-counts>div{text-align:center}.survey-status-counts>div+div{border-left:1px solid var(--line)}.survey-status-counts span,.survey-status-counts strong{display:block}.survey-status-counts span{font-size:10px;color:var(--muted);text-transform:uppercase}.survey-status-counts strong{font-size:22px;margin-top:4px}.survey-circle-grid{grid-template-columns:repeat(3,1fr)}.survey-circle-card{padding:18px}.survey-circle-stats{display:flex;justify-content:space-between;gap:10px;margin-top:12px;color:var(--muted);font-size:11px}.survey-circle-stats b{color:var(--ink)}.survey-table{min-width:820px}
+@media(max-width:1280px){.priority-feeder-grid{grid-template-columns:repeat(2,1fr)}.decision-stats{grid-template-columns:1fr 1fr}.graph-summary-grid{grid-template-columns:1fr 1fr}.clearance-graph-card{grid-column:1/-1}}
+@media(max-width:1180px){.kpi-grid{grid-template-columns:repeat(3,1fr)}.progress-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:820px){.topbar{height:62px;padding:0 14px}.brand small,.user-meta{display:none}.nav-toggle{display:inline-flex}.workspace{display:block;min-height:calc(100vh - 62px)}.sidebar{position:fixed;top:62px;left:0;bottom:0;width:280px;z-index:25;transform:translateX(-101%);transition:.2s;box-shadow:10px 0 30px rgba(0,0,0,.15);overflow-y:auto}.sidebar.open{transform:translateX(0)}.main{padding:18px 14px}.page-head{align-items:stretch;flex-direction:column}.page-head h1{font-size:24px}.actions .btn{flex:1}.kpi-grid{grid-template-columns:repeat(2,1fr);gap:10px}.kpi{padding:16px}.kpi-value{font-size:24px}.period-grid,.progress-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.form-footer{position:sticky;bottom:0;background:#fff;margin-left:-20px;margin-right:-20px;padding:14px 20px;border-radius:0 0 14px 14px;z-index:5}.desktop-table{display:none}.mobile-cards{display:block}.mobile-record{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:10px}.mobile-record h3{margin:0 0 5px}.mobile-record dl{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.mobile-record dt{color:var(--muted);font-size:11px;text-transform:uppercase}.mobile-record dd{margin:2px 0 0;font-weight:750}.auth-page{display:block}.auth-brand{min-height:260px;padding:32px 24px}.auth-brand h1{font-size:34px}.auth-form{padding:28px 20px}.chart{height:210px}}
+@media(max-width:900px){.management-hero,.stage-grid,.executive-graph-grid,.graph-summary-grid{grid-template-columns:1fr}.clearance-graph-card{grid-column:auto}.visual-action{min-height:310px}.pipeline{grid-template-columns:1fr}.pipeline-arrow{transform:rotate(90deg);height:14px}.dashboard-notice{display:block}.dashboard-notice strong{display:block;margin-bottom:4px}.priority-table-wrap{padding:0}.management-page-head h1{font-size:28px}}
+@media(max-width:560px){.priority-feeder-grid{grid-template-columns:1fr}.graph-card{padding:17px}.graph-card-head h2{font-size:17px}.scope-total strong{font-size:21px}.graph-key{align-items:flex-start;gap:8px;flex-wrap:wrap}.graph-key small{margin-left:0;width:100%}.overall-chart{height:255px}.stage-top{align-items:flex-start}.donut{width:105px;height:105px;flex-basis:105px}.donut:before{inset:11px}.donut strong{font-size:18px}.stage-card{padding:18px}.stage-split strong{font-size:21px}.decision-card{padding:22px}.decision-card h2{font-size:24px}.decision-stats{grid-template-columns:1fr 1fr}.decision-stats strong{font-size:14px}}
+@media(max-width:480px){.kpi-grid{grid-template-columns:1fr 1fr}.kpi-label{font-size:10px}.kpi-value{font-size:21px}.brand span:last-child{font-size:14px}.mini-stats{grid-template-columns:1fr 1fr}}
+@media(max-width:820px){
+  .main:has(.management-dashboard){padding:8px}
+  .management-dashboard>.management-page-head,
+  .management-dashboard>.dashboard-notice,
+  .management-dashboard .visual-action,
+  .management-dashboard>.section-title,
+  .management-dashboard>.period-grid,
+  .management-dashboard>.detail-panel{display:none!important}
+  .management-dashboard .executive-graph-grid,
+  .management-dashboard .graph-summary-grid{display:block;margin:0}
+  .management-dashboard .graph-card{margin:0 0 8px;padding:10px 8px;border-radius:10px;box-shadow:0 3px 10px rgba(11,31,58,.06)}
+  .management-dashboard .graph-card-head{display:none}
+  .management-dashboard .overall-chart{height:250px}
+  .management-dashboard .donut-chart{height:205px}
+  .management-dashboard .clearance-chart{height:210px}
+  .management-dashboard .comparison-chart{min-height:210px}
+  .management-dashboard .feeder-chart{min-height:390px}
+  .management-dashboard .chart-legend{padding:0 8px 6px}
+  .management-dashboard .rate-strip{margin:4px 8px 0}
+  .management-dashboard .graph-key{padding:3px 7px 0;margin-bottom:0}
+  .management-dashboard .graph-key small{display:none}
+  .management-dashboard .trend-card{padding:8px;margin-bottom:8px}
+  .management-dashboard .trend-card .chart{height:235px}
+  .management-dashboard .trend-card .legend{justify-content:center;padding:6px 0 2px}
+  .management-dashboard .compact-detail{display:none!important}
+}
+@media(max-width:900px){.survey-overview-grid{grid-template-columns:1fr}.survey-circle-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.survey-kpi-grid{grid-template-columns:1fr 1fr}.survey-overview-grid{gap:10px}.survey-circle-grid{grid-template-columns:1fr}.survey-progress-card,.survey-status-card{padding:18px}.survey-progress-ring{width:135px;height:135px}.survey-circle-stats{flex-wrap:wrap}.survey-page-head{margin-bottom:14px}}
+.brand-logo-mark{overflow:hidden;padding:2px;background:#fff}.brand-logo-mark img{width:100%;height:100%;object-fit:cover;border-radius:8px}.brand-copy{display:flex;flex-direction:column;min-width:0}.brand-copy strong{display:block;max-width:min(58vw,720px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}.auth-body{background:#eef4f1}.auth-login-page{grid-template-columns:minmax(520px,1.08fr) minmax(420px,.92fr);background:#f2f6f4}.auth-brand-showcase{position:relative;isolation:isolate;overflow:hidden;justify-content:flex-start;padding:48px 7%;background:linear-gradient(145deg,#043f2b 0%,#087049 48%,#075185 100%)}.auth-brand-showcase:before{content:"";position:absolute;inset:0;z-index:-2;background:radial-gradient(circle at 20% 10%,rgba(126,216,73,.28),transparent 28%),radial-gradient(circle at 90% 82%,rgba(18,155,232,.24),transparent 35%),linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:auto,auto,38px 38px,38px 38px}.auth-brand-showcase:after{content:"";position:absolute;z-index:-1;width:520px;height:520px;border:1px solid rgba(255,255,255,.1);border-radius:50%;right:-220px;top:-180px;box-shadow:0 0 0 70px rgba(255,255,255,.025),0 0 0 140px rgba(255,255,255,.018)}.auth-brand-orb{position:absolute;border-radius:50%;filter:blur(1px);pointer-events:none}.auth-brand-orb-one{width:180px;height:180px;background:rgba(111,198,55,.14);left:-70px;bottom:12%}.auth-brand-orb-two{width:120px;height:120px;background:rgba(43,169,231,.16);right:8%;bottom:18%}.auth-logo-frame{width:min(520px,94%);padding:18px 22px;border:1px solid rgba(255,255,255,.45);border-radius:24px;background:rgba(255,255,255,.96);box-shadow:0 24px 70px rgba(1,28,22,.3);backdrop-filter:blur(10px)}.auth-project-logo{display:block;width:100%;max-height:300px;object-fit:contain}.auth-brand-copy{position:relative;margin-top:34px;max-width:670px}.auth-kicker{display:inline-flex;padding:7px 11px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:rgba(255,255,255,.08);font-size:10px;font-weight:850;letter-spacing:.13em;text-transform:uppercase}.auth-brand-copy h1{font-size:clamp(30px,3vw,48px);line-height:1.08;letter-spacing:-.035em;margin:16px 0 13px}.auth-brand-copy p{font-size:16px;line-height:1.6;color:rgba(255,255,255,.8);max-width:610px;margin:0}.auth-feature-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}.auth-feature-row span{padding:8px 11px;border-radius:8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);font-size:11px;font-weight:750}.auth-brand-footer{position:absolute;left:7%;bottom:24px;margin:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.55)}.auth-login-page .auth-form{position:relative;padding:42px;background:radial-gradient(circle at 100% 0,#d9eee4,transparent 35%),#f3f7f5}.auth-login-page .auth-form:before{content:"";position:absolute;inset:24px;border:1px solid rgba(8,112,73,.08);border-radius:28px;pointer-events:none}.auth-login-box{position:relative;z-index:1;width:min(470px,100%);padding:42px;border:1px solid #dfe8e3;border-radius:22px;background:#fff;box-shadow:0 24px 70px rgba(6,57,39,.13)}.auth-login-box h2{font-size:32px;letter-spacing:-.025em;margin:5px 0 8px}.auth-login-box>.muted{margin:0 0 28px}.auth-field{margin-top:17px}.auth-input-wrap{display:flex;align-items:center;min-height:52px;border:1px solid #cbd8d1;border-radius:11px;background:#fbfdfc;transition:.18s}.auth-input-wrap:focus-within{border-color:#087049;box-shadow:0 0 0 4px rgba(8,112,73,.11);background:#fff}.auth-input-wrap>span{display:grid;place-items:center;width:46px;align-self:stretch;color:#6f8278;font-size:13px;border-right:1px solid #e3eae6}.auth-input-wrap input{min-width:0;min-height:50px;border:0!important;box-shadow:none!important;background:transparent!important}.password-toggle{border:0;background:transparent;color:#087049;font-size:12px;font-weight:800;padding:10px 14px;cursor:pointer}.auth-options{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:18px 0 24px;font-size:12px}.remember-option{display:flex;align-items:center;gap:7px;color:#475467}.remember-option input{accent-color:#087049}.auth-options a{font-weight:750;color:#087049}.auth-submit{width:100%;min-height:52px;justify-content:center;background:linear-gradient(135deg,#087049,#075185);box-shadow:0 10px 24px rgba(8,112,73,.18)}.auth-submit span{font-size:18px}.auth-security-note{text-align:center;margin:18px 0 0;color:#829087;font-size:10px}.auth-mobile-logo{display:none}.auth-mobile-logo img{display:block;width:100%;max-height:145px;object-fit:contain}
+@media(max-width:1050px){.auth-login-page{grid-template-columns:1fr 1fr}.auth-brand-showcase{padding:38px 6%}.auth-logo-frame{padding:12px}.auth-brand-copy h1{font-size:31px}.auth-feature-row span:nth-child(3){display:none}.auth-login-page .auth-form{padding:26px}.auth-login-box{padding:32px}}
+@media(max-width:820px){.brand-copy strong{max-width:210px;font-size:12px}.auth-login-page{display:block;min-height:100vh}.auth-login-page .auth-brand-showcase{display:none}.auth-login-page .auth-form{min-height:100vh;padding:22px 16px}.auth-login-page .auth-form:before{display:none}.auth-login-box{padding:28px 22px;border-radius:18px}.auth-mobile-logo{display:block;margin:0 auto 24px;padding:8px;width:min(265px,85%);border:1px solid #e1e8e4;border-radius:14px;background:#fff}.auth-login-box h2{font-size:28px}}
+@media(max-width:480px){.brand-copy strong{max-width:150px}.auth-options{align-items:flex-start;flex-direction:column}.auth-login-page .auth-form{padding:14px}.auth-login-box{padding:24px 18px}.auth-input-wrap>span{width:40px}}
+@media print{.topbar,.sidebar,.actions,.btn,.no-print{display:none!important}.workspace{display:block}.main{padding:0}.card{box-shadow:none;break-inside:avoid}.desktop-table{display:block}.table{min-width:0;font-size:10px}}
+.transformer-summary-grid{grid-template-columns:repeat(3,minmax(180px,1fr));margin-bottom:18px}.transformer-summary-grid .kpi-value small{font-size:15px;color:var(--muted)}.transformer-filter-grid{grid-template-columns:2fr 1.5fr 1fr auto;align-items:end}.transformer-filter-actions{padding-bottom:1px}.transformer-table td small{display:block;color:var(--muted);margin:4px 0}.transformer-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-list{display:grid;grid-template-columns:1fr 1fr;gap:0 22px;margin:0}.detail-list>div{padding:12px 0;border-top:1px solid var(--line)}.detail-list dt{color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:800}.detail-list dd{margin:4px 0 0;font-weight:700;overflow-wrap:anywhere}.detail-list-numbers dd{font-size:18px}@media(max-width:1050px){.transformer-filter-grid{grid-template-columns:1fr 1fr}.transformer-filter-actions{align-self:end}}@media(max-width:820px){.transformer-summary-grid{grid-template-columns:repeat(3,1fr);gap:10px}.transformer-detail-grid,.transformer-filter-grid{grid-template-columns:1fr}.transformer-filter-actions .btn{flex:1}}@media(max-width:560px){.transformer-summary-grid{grid-template-columns:1fr 1fr}.transformer-summary-grid .kpi:last-child{grid-column:1/-1}.detail-list{grid-template-columns:1fr}.transformer-filters{padding:16px}}
+
+.queue-link{color:inherit;text-decoration:none}.queue-link:hover,.queue-link:focus-visible{outline:2px solid #1358a2;outline-offset:2px}.draft-tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:18px}.field-error{color:#b42318}.field input:user-invalid,.field select:user-invalid{border-color:#b42318}
+
+.draft-tools [hidden]{display:none!important}
+
+.dashboard-queue-grid{grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin-bottom:22px}.dashboard-queue-grid .queue-link{display:flex;flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:0;min-height:145px}.dashboard-queue-grid .kpi-value{display:block;margin-top:0;line-height:1.15}.dashboard-queue-grid .queue-action{display:block;color:var(--blue);font-size:13px;font-weight:650;margin-top:auto}@media(max-width:560px){.dashboard-queue-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-queue-grid .queue-link{padding:16px}}
+
+.sidebar-collapse-toggle{margin-left:16px;white-space:nowrap}.workspace.sidebar-collapsed{grid-template-columns:minmax(0,1fr)}.workspace.sidebar-collapsed>.sidebar{display:none}.workspace.sidebar-collapsed>.main{width:100%}
+@media(max-width:820px){.sidebar-collapse-toggle{display:none!important}.workspace.sidebar-collapsed>.sidebar{display:block}.workspace.sidebar-collapsed{display:block}}
+
+.user-avatar{display:inline-flex;flex-shrink:0;border-radius:50%;object-fit:cover;vertical-align:middle}.user-avatar-initials{align-items:center;justify-content:center;background:#dbeafe;color:#153d68;font-size:20px;font-weight:750}.user-area>a{display:inline-flex;text-decoration:none}.user-area>a:focus-visible{outline:3px solid #93c5fd;border-radius:50%}
+.mdb-defaults-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}.mdb-defaults-heading h2{margin:4px 0}.mdb-defaults-badge{padding:6px 12px;border-radius:20px;background:#e9f1ff;color:#174a8b;white-space:nowrap}.mdb-defaults-guide{padding:14px 18px;background:#f0f6ff;border-left:4px solid #2874b8;border-radius:6px;line-height:1.6}.mdb-defaults-note{color:#53647c;line-height:1.6}.mdb-table-picker{display:flex;flex-direction:column;gap:6px;max-width:650px;margin:20px 0}.mdb-table-card{border:1px solid #d6e0ed;border-radius:10px;margin:12px 0;background:#fff}.mdb-table-card>summary{cursor:pointer;display:flex;align-items:center;gap:12px;padding:16px;background:#f5f8fc;border-radius:10px;color:#173b68}.mdb-table-card>summary:before{content:'▸'}.mdb-table-card[open]>summary:before{content:'▾'}.mdb-table-title{display:block;font-size:13px;margin-top:4px;color:#526680}.mdb-table-body{padding:0 20px 20px}.mdb-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:20px;margin-top:18px}.mdb-field{min-width:0}.mdb-defaults .mdb-field label,.mdb-defaults .mdb-year-range label{display:flex;flex-direction:column;gap:5px;margin-bottom:7px;font-weight:600}.mdb-defaults code{font-size:12px;overflow-wrap:anywhere;font-weight:400;color:#546c89}.mdb-field input,.mdb-field select,.mdb-year-range input{width:100%;box-sizing:border-box;min-height:40px}.mdb-field small,.mdb-year-range small,.mdb-selections small{display:block;color:#63748a;font-size:12px;line-height:1.6;margin-top:6px}.mdb-managed-value{background:#f2f5f9;padding:10px 12px;border-radius:6px;color:#526176;min-height:40px;box-sizing:border-box;overflow-wrap:anywhere}.mdb-automatic{padding:12px 16px;background:#f2f8f5;border-radius:6px;color:#305b48;font-size:13px}.mdb-automatic ul{padding-left:18px;margin:6px 0 0}.mdb-year-range,.mdb-selections fieldset{border:1px solid #d6e0ed;border-radius:8px;margin:18px 0 0;padding:12px 16px;min-width:0}.mdb-year-range legend,.mdb-selections legend{font-weight:600;padding:0 5px}.mdb-year-range .mdb-fields{margin-top:0;max-width:650px}.mdb-year-range p{margin:4px 0;color:#456180;font-size:13px}.mdb-checks{display:flex;flex-wrap:wrap;gap:10px 20px}.mdb-defaults .mdb-checks label{display:flex;align-items:center;gap:7px;margin:0;flex-direction:row}.mdb-checks input{width:auto}.mdb-hourly{margin-top:20px}.mdb-hourly>summary{cursor:pointer;font-weight:600;color:#174a8b}.mdb-hourly table{min-width:700px}.mdb-hourly th{white-space:normal}.mdb-hourly td{min-width:150px}.mdb-table-error{display:block;color:#b42318;font-size:13px;margin-top:5px}.mdb-defaults [hidden]{display:none!important}.mdb-defaults [data-year-label-message]{display:block;margin-top:8px;color:#526680}
+
+.mdb-field input,.mdb-field select,.mdb-year-range input,.mdb-table-picker select,.mdb-hourly input{padding:10px 12px;border:1px solid #cbd8ea;border-radius:8px;background:#fff;color:#17304f;font:inherit;box-sizing:border-box}.mdb-defaults input:focus,.mdb-defaults select:focus{outline:2px solid #bad5ff;outline-offset:1px;border-color:#2874b8}
+ body{padding:20px;background:#f3f6fa} main{max-width:1250px;margin:auto}</style><main><form><section class="card mdb-defaults" id="mdb-table-defaults" data-mdb-defaults>
+    <div class="mdb-defaults-heading"><div><span class="eyebrow">MDB Creation</span><h2>Static values by table</h2></div><span class="mdb-defaults-badge">8 tables</span></div>
+    <p>Choose the MDB table below, then enter the values to use for this project. The friendly label explains each setting; the column name matches Microsoft Access exactly.</p>
+    <div class="mdb-defaults-guide"><strong>Example: InstMymSwDevPos</strong> stores the switch status for each transformer. SectionId is filled from the transformer automatically. Device code <code>M</code>, position <strong>Closed (0)</strong> and year indexes <strong>0–10</strong> create 11 records per transformer.</div>
+    <p class="mdb-defaults-note">Year 0 means the base year in SAI_Control, not calendar year 0. Blank means NULL where permitted; 0 is a value.  Saving creates a configuration revision and requires fresh survey approval and JSON export. The settings are included once in the JSON used for local MDB generation.</p>
+    <label class="mdb-table-picker" for="mdb-table-picker">Find a table<select id="mdb-table-picker" data-table-picker><option value="">Show all tables</option><option value="InstMymSwDevPos">InstMymSwDevPos — Switch-device status by year</option><option value="SAI_Control">SAI_Control — Model-wide settings</option><option value="InstSection">InstSection — Line sections and connection defaults</option><option value="InstMeterPoints">InstMeterPoints — Transformer meter settings</option><option value="InstMymMeter">InstMymMeter — Meter settings by year</option><option value="InstMeterDmd">InstMeterDmd — Monthly and hourly meter profiles</option><option value="Loads">Loads — Load-record defaults</option><option value="InstMymLoads">InstMymLoads — Load records by year</option></select></label>
+    <input type="hidden" name="mdb_table_defaults[version]" value="1">
+            <details class="mdb-table-card" data-table="InstMymSwDevPos"  open >
+        <summary><span><strong>InstMymSwDevPos</strong><span class="mdb-table-title">Switch-device status by year</span></span></summary>
+        <div class="mdb-table-body"><p>Creates one status record for each transformer and selected year. The transformer link is assigned automatically.</p>
+            <div class="mdb-automatic"><strong>Filled automatically</strong><ul><li>SectionId comes from the transformer section.</li><li>YearNumber is generated from the year range.</li></ul></div>
+                        <fieldset class="mdb-year-range"><legend>Years to create</legend><div class="mdb-fields">
+                                                <label for="mdb-InstMymSwDevPos-first_year">First year index<input id="mdb-InstMymSwDevPos-first_year" name="mdb_table_defaults[tables][InstMymSwDevPos][first_year]" type="number" min="0" max="10" step="1" value="0" data-year="first_year" required><small>0 = base year; 1–10 = forecast years.</small></label>
+                                                <label for="mdb-InstMymSwDevPos-last_year">Last year index<input id="mdb-InstMymSwDevPos-last_year" name="mdb_table_defaults[tables][InstMymSwDevPos][last_year]" type="number" min="0" max="10" step="1" value="10" data-year="last_year" required><small>0 = base year; 1–10 = forecast years.</small></label>
+                            </div><p data-year-summary aria-live="polite"></p></fieldset>
+                        <div class="mdb-fields">
+                                                            <div class="mdb-field ">
+                    <label for="mdb-InstMymSwDevPos-DeviceCode">Device code<code>DeviceCode</code></label>
+                                            <input id="mdb-InstMymSwDevPos-DeviceCode" name="mdb_table_defaults[tables][InstMymSwDevPos][values][DeviceCode]" type="text" value="M" required  maxlength="32"  aria-describedby="mdb-InstMymSwDevPos-DeviceCode-help">
+                                        <small id="mdb-InstMymSwDevPos-DeviceCode-help">Enter the exact SynerGEE device code. The supplied reference uses M for transformer meter switching.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMymSwDevPos-IsOpen">Device position<code>IsOpen</code></label>
+                                            <select id="mdb-InstMymSwDevPos-IsOpen" name="mdb_table_defaults[tables][InstMymSwDevPos][values][IsOpen]"  aria-describedby="mdb-InstMymSwDevPos-IsOpen-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>Closed (0)</option><option value="1" >Open (1)</option>                        </select>
+                                        <small id="mdb-InstMymSwDevPos-IsOpen-help">Closed (0) keeps the device connected; Open (1) disconnects it in the model. Applies to every selected year. Blank stores NULL; 0 is an explicit value.</small>
+                                    </div>
+                                                                    </div>
+                                </div>
+    </details>
+            <details class="mdb-table-card" data-table="SAI_Control" >
+        <summary><span><strong>SAI_Control</strong><span class="mdb-table-title">Model-wide settings</span></span></summary>
+        <div class="mdb-table-body"><p>Stores the MDB model header, phase labels and year captions.</p>
+            <div class="mdb-automatic"><strong>Filled automatically</strong><ul><li>Database structure and phase mapping are managed by the application.</li></ul></div>
+                        <div class="mdb-fields">
+                                                            <div class="mdb-field ">
+                    <label for="mdb-SAI_Control-VoltageFactor">Voltage factor<code>VoltageFactor</code></label>
+                                            <input id="mdb-SAI_Control-VoltageFactor" name="mdb_table_defaults[tables][SAI_Control][values][VoltageFactor]" type="number" value="11"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-SAI_Control-VoltageFactor-help">
+                                        <small id="mdb-SAI_Control-VoltageFactor-help">Control-table voltage factor. This is separate from feeder nominal voltage in kV above. Blank stores NULL; 0 is an explicit value.</small>
+                                    </div>
+                                                <div class="mdb-field  mdb-field-managed ">
+                    <label for="mdb-SAI_Control-Frequency">System frequency (Hz)<code>Frequency</code></label>
+                                            <div class="mdb-managed-value" id="mdb-SAI_Control-Frequency">50</div>
+                        <small><a href="#engineering-general" data-managed-field="frequency_hz">Edit frequency hz above</a>. </small>
+                                        <small id="mdb-SAI_Control-Frequency-help">Uses the matching general engineering setting above; it is applied to this exact MDB column.</small>
+                                    </div>
+                                                <div class="mdb-field  mdb-field-managed ">
+                    <label for="mdb-SAI_Control-LengthUnits">Length units<code>LengthUnits</code></label>
+                                            <div class="mdb-managed-value" id="mdb-SAI_Control-LengthUnits">Metric</div>
+                        <small> Fixed to match the generated network.</small>
+                                        <small id="mdb-SAI_Control-LengthUnits-help">Kept consistent with the supported metric coordinate and R/Y/B phase mapping.</small>
+                                    </div>
+                                                <div class="mdb-field  mdb-field-managed ">
+                    <label for="mdb-SAI_Control-Phase1">Phase 1 label<code>Phase1</code></label>
+                                            <div class="mdb-managed-value" id="mdb-SAI_Control-Phase1">R</div>
+                        <small> Fixed to match the generated network.</small>
+                                        <small id="mdb-SAI_Control-Phase1-help">Kept consistent with the supported metric coordinate and R/Y/B phase mapping.</small>
+                                    </div>
+                                                <div class="mdb-field  mdb-field-managed ">
+                    <label for="mdb-SAI_Control-Phase2">Phase 2 label<code>Phase2</code></label>
+                                            <div class="mdb-managed-value" id="mdb-SAI_Control-Phase2">Y</div>
+                        <small> Fixed to match the generated network.</small>
+                                        <small id="mdb-SAI_Control-Phase2-help">Kept consistent with the supported metric coordinate and R/Y/B phase mapping.</small>
+                                    </div>
+                                                <div class="mdb-field  mdb-field-managed ">
+                    <label for="mdb-SAI_Control-Phase3">Phase 3 label<code>Phase3</code></label>
+                                            <div class="mdb-managed-value" id="mdb-SAI_Control-Phase3">B</div>
+                        <small> Fixed to match the generated network.</small>
+                                        <small id="mdb-SAI_Control-Phase3-help">Kept consistent with the supported metric coordinate and R/Y/B phase mapping.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-SAI_Control-Product">Synergi product / version<code>Product</code></label>
+                                            <input id="mdb-SAI_Control-Product" name="mdb_table_defaults[tables][SAI_Control][values][Product]" type="text" value="Synergi Electric 6.29.0"   maxlength="40"  aria-describedby="mdb-SAI_Control-Product-help">
+                                        <small id="mdb-SAI_Control-Product-help">Enter the product/version text required by your SynerGEE installation. Blank stores NULL; 0 is an explicit value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-SAI_Control-VoltageInPercent">Display voltage as a percentage<code>VoltageInPercent</code></label>
+                                            <select id="mdb-SAI_Control-VoltageInPercent" name="mdb_table_defaults[tables][SAI_Control][values][VoltageInPercent]"  aria-describedby="mdb-SAI_Control-VoltageInPercent-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-SAI_Control-VoltageInPercent-help">Exact MDB column: SAI_Control.VoltageInPercent. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-SAI_Control-MYM_YearDesc_B">Base-year label (year 0)<code>MYM_YearDesc_B</code></label>
+                                            <input id="mdb-SAI_Control-MYM_YearDesc_B" name="mdb_table_defaults[tables][SAI_Control][values][MYM_YearDesc_B]" type="text" value="2015"   maxlength="10"  aria-describedby="mdb-SAI_Control-MYM_YearDesc_B-help">
+                                        <small id="mdb-SAI_Control-MYM_YearDesc_B-help">Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-SAI_Control-MYM_YearDesc_1">Forecast-year 1 label<code>MYM_YearDesc_1</code></label>
+                                            <input id="mdb-SAI_Control-MYM_YearDesc_1" name="mdb_table_defaults[tables][SAI_Control][values][MYM_YearDesc_1]" type="text" value="2016"   maxlength="10"  aria-describedby="mdb-SAI_Control-MYM_YearDesc_1-help">
+                                        <small id="mdb-SAI_Control-MYM_YearDesc_1-help">Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-SAI_Control-MYM_YearDesc_2">Forecast-year 2 label<code>MYM_YearDesc_2</code></label>
+                                            <input id="mdb-SAI_Control-MYM_YearDesc_2" name="mdb_table_defaults[tables][SAI_Control][values][MYM_YearDesc_2]" type="text" value="2017"   maxlength="10"  aria-describedby="mdb-SAI_Control-MYM_YearDesc_2-help">
+                                        <small id="mdb-SAI_Control-MYM_YearDesc_2-help">Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-SAI_Control-MYM_YearDesc_3">Forecast-year 3 label<code>MYM_YearDesc_3</code></label>
+                                            <input id="mdb-SAI_Control-MYM_YearDesc_3" name="mdb_table_defaults[tables][SAI_Control][values][MYM_YearDesc_3]" type="text" value="2018"   maxlength="10"  aria-describedby="mdb-SAI_Control-MYM_YearDesc_3-help">
+                                        <small id="mdb-SAI_Control-MYM_YearDesc_3-help">Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-SAI_Control-MYM_YearDesc_4">Forecast-year 4 label<code>MYM_YearDesc_4</code></label>
+                                            <input id="mdb-SAI_Control-MYM_YearDesc_4" name="mdb_table_defaults[tables][SAI_Control][values][MYM_YearDesc_4]" type="text" value="2019"   maxlength="10"  aria-describedby="mdb-SAI_Control-MYM_YearDesc_4-help">
+                                        <small id="mdb-SAI_Control-MYM_YearDesc_4-help">Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-SAI_Control-MYM_YearDesc_5">Forecast-year 5 label<code>MYM_YearDesc_5</code></label>
+                                            <input id="mdb-SAI_Control-MYM_YearDesc_5" name="mdb_table_defaults[tables][SAI_Control][values][MYM_YearDesc_5]" type="text" value="2020"   maxlength="10"  aria-describedby="mdb-SAI_Control-MYM_YearDesc_5-help">
+                                        <small id="mdb-SAI_Control-MYM_YearDesc_5-help">Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-SAI_Control-MYM_YearDesc_6">Forecast-year 6 label<code>MYM_YearDesc_6</code></label>
+                                            <input id="mdb-SAI_Control-MYM_YearDesc_6" name="mdb_table_defaults[tables][SAI_Control][values][MYM_YearDesc_6]" type="text" value="2021"   maxlength="10"  aria-describedby="mdb-SAI_Control-MYM_YearDesc_6-help">
+                                        <small id="mdb-SAI_Control-MYM_YearDesc_6-help">Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-SAI_Control-MYM_YearDesc_7">Forecast-year 7 label<code>MYM_YearDesc_7</code></label>
+                                            <input id="mdb-SAI_Control-MYM_YearDesc_7" name="mdb_table_defaults[tables][SAI_Control][values][MYM_YearDesc_7]" type="text" value="2022"   maxlength="10"  aria-describedby="mdb-SAI_Control-MYM_YearDesc_7-help">
+                                        <small id="mdb-SAI_Control-MYM_YearDesc_7-help">Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-SAI_Control-MYM_YearDesc_8">Forecast-year 8 label<code>MYM_YearDesc_8</code></label>
+                                            <input id="mdb-SAI_Control-MYM_YearDesc_8" name="mdb_table_defaults[tables][SAI_Control][values][MYM_YearDesc_8]" type="text" value="2023"   maxlength="10"  aria-describedby="mdb-SAI_Control-MYM_YearDesc_8-help">
+                                        <small id="mdb-SAI_Control-MYM_YearDesc_8-help">Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-SAI_Control-MYM_YearDesc_9">Forecast-year 9 label<code>MYM_YearDesc_9</code></label>
+                                            <input id="mdb-SAI_Control-MYM_YearDesc_9" name="mdb_table_defaults[tables][SAI_Control][values][MYM_YearDesc_9]" type="text" value="2024"   maxlength="10"  aria-describedby="mdb-SAI_Control-MYM_YearDesc_9-help">
+                                        <small id="mdb-SAI_Control-MYM_YearDesc_9-help">Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-SAI_Control-MYM_YearDesc10">Forecast-year 10 label<code>MYM_YearDesc10</code></label>
+                                            <input id="mdb-SAI_Control-MYM_YearDesc10" name="mdb_table_defaults[tables][SAI_Control][values][MYM_YearDesc10]" type="text" value="2025"   maxlength="10"  aria-describedby="mdb-SAI_Control-MYM_YearDesc10-help">
+                                        <small id="mdb-SAI_Control-MYM_YearDesc10-help">Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.</small>
+                                    </div>
+                                                <div class="mdb-field  mdb-field-managed ">
+                    <label for="mdb-SAI_Control-ProjectionFile">Coordinate-system name<code>ProjectionFile</code></label>
+                                            <div class="mdb-managed-value" id="mdb-SAI_Control-ProjectionFile">WGS 1984 UTM Zone 43N</div>
+                        <small><a href="#engineering-general" data-managed-field="crs_name">Edit crs name above</a>. </small>
+                                        <small id="mdb-SAI_Control-ProjectionFile-help">Uses the matching general engineering setting above; it is applied to this exact MDB column.</small>
+                                    </div>
+                                                <div class="mdb-field  mdb-field-managed ">
+                    <label for="mdb-SAI_Control-ProjectionWKT">Coordinate-system WKT<code>ProjectionWKT</code></label>
+                                            <div class="mdb-managed-value" id="mdb-SAI_Control-ProjectionWKT">Unspecified</div>
+                        <small><a href="#engineering-general" data-managed-field="projection_wkt">Edit projection wkt above</a>. </small>
+                                        <small id="mdb-SAI_Control-ProjectionWKT-help">Uses the matching general engineering setting above; it is applied to this exact MDB column.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-SAI_Control-PTSecondary">Potential transformer secondary value<code>PTSecondary</code></label>
+                                            <input id="mdb-SAI_Control-PTSecondary" name="mdb_table_defaults[tables][SAI_Control][values][PTSecondary]" type="number" value="120"   step="1" min="-2147483648" max="2147483647"  aria-describedby="mdb-SAI_Control-PTSecondary-help">
+                                        <small id="mdb-SAI_Control-PTSecondary-help">Enter the approved potential-transformer secondary setting; the reference value is 120. Blank stores NULL; 0 is an explicit value.</small>
+                                    </div>
+                                                                    </div>
+            <p><button type="button" class="btn btn-light" data-fill-years>Fill forecast labels from the base-year label</button><span data-year-label-message role="status"></span></p>                    </div>
+    </details>
+            <details class="mdb-table-card" data-table="InstSection" >
+        <summary><span><strong>InstSection</strong><span class="mdb-table-title">Line sections and connection defaults</span></span></summary>
+        <div class="mdb-table-body"><p>Applies common electrical values and model connection defaults. Survey conductors, endpoints and measured span lengths remain source-derived.</p>
+            <div class="mdb-automatic"><strong>Filled automatically</strong><ul><li>SectionId, FeederId, FromNodeId and ToNodeId are generated.</li><li>SectionPhases and surveyed conductors come from verified entry.</li><li>Span lengths are calculated from approved coordinates or measured evidence.</li></ul></div>
+                        <div class="mdb-fields">
+                                                            <div class="mdb-field  mdb-field-managed ">
+                    <label for="mdb-InstSection-PhaseToPhaseSpacing_MUL">Phase-to-phase spacing (cm)<code>PhaseToPhaseSpacing_MUL</code></label>
+                                            <div class="mdb-managed-value" id="mdb-InstSection-PhaseToPhaseSpacing_MUL">121.9</div>
+                        <small><a href="#engineering-general" data-managed-field="phase_spacing_cm">Edit phase spacing cm above</a>. </small>
+                                        <small id="mdb-InstSection-PhaseToPhaseSpacing_MUL-help">Uses the matching general engineering setting above; it is applied to this exact MDB column.</small>
+                                    </div>
+                                                <div class="mdb-field  mdb-field-managed ">
+                    <label for="mdb-InstSection-PhaseToNeutralSpacing_MUL">Phase-to-neutral spacing (cm)<code>PhaseToNeutralSpacing_MUL</code></label>
+                                            <div class="mdb-managed-value" id="mdb-InstSection-PhaseToNeutralSpacing_MUL">91.4</div>
+                        <small><a href="#engineering-general" data-managed-field="neutral_spacing_cm">Edit neutral spacing cm above</a>. </small>
+                                        <small id="mdb-InstSection-PhaseToNeutralSpacing_MUL-help">Uses the matching general engineering setting above; it is applied to this exact MDB column.</small>
+                                    </div>
+                                                <div class="mdb-field  mdb-field-managed ">
+                    <label for="mdb-InstSection-AveHeightAboveGround_MUL">Average conductor height (m)<code>AveHeightAboveGround_MUL</code></label>
+                                            <div class="mdb-managed-value" id="mdb-InstSection-AveHeightAboveGround_MUL">9.1</div>
+                        <small><a href="#engineering-general" data-managed-field="conductor_height_m">Edit conductor height m above</a>. </small>
+                                        <small id="mdb-InstSection-AveHeightAboveGround_MUL-help">Uses the matching general engineering setting above; it is applied to this exact MDB column.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-PercentDistLoadConstImpedance">Distributed load: constant impedance (%)<code>PercentDistLoadConstImpedance</code></label>
+                                            <input id="mdb-InstSection-PercentDistLoadConstImpedance" name="mdb_table_defaults[tables][InstSection][values][PercentDistLoadConstImpedance]" type="number" value="40"   step="any" min="0" max="100"  aria-describedby="mdb-InstSection-PercentDistLoadConstImpedance-help">
+                                        <small id="mdb-InstSection-PercentDistLoadConstImpedance-help">Exact MDB column: InstSection.PercentDistLoadConstImpedance. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-PercentDistLoadConstCurrent">Distributed load: constant current (%)<code>PercentDistLoadConstCurrent</code></label>
+                                            <input id="mdb-InstSection-PercentDistLoadConstCurrent" name="mdb_table_defaults[tables][InstSection][values][PercentDistLoadConstCurrent]" type="number" value="10"   step="any" min="0" max="100"  aria-describedby="mdb-InstSection-PercentDistLoadConstCurrent-help">
+                                        <small id="mdb-InstSection-PercentDistLoadConstCurrent-help">Exact MDB column: InstSection.PercentDistLoadConstCurrent. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-PercentSpotLoadConstImpedance">Spot load: constant impedance (%)<code>PercentSpotLoadConstImpedance</code></label>
+                                            <input id="mdb-InstSection-PercentSpotLoadConstImpedance" name="mdb_table_defaults[tables][InstSection][values][PercentSpotLoadConstImpedance]" type="number" value="40"   step="any" min="0" max="100"  aria-describedby="mdb-InstSection-PercentSpotLoadConstImpedance-help">
+                                        <small id="mdb-InstSection-PercentSpotLoadConstImpedance-help">Exact MDB column: InstSection.PercentSpotLoadConstImpedance. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-PercentSpotLoadConstCurrent">Spot load: constant current (%)<code>PercentSpotLoadConstCurrent</code></label>
+                                            <input id="mdb-InstSection-PercentSpotLoadConstCurrent" name="mdb_table_defaults[tables][InstSection][values][PercentSpotLoadConstCurrent]" type="number" value="30"   step="any" min="0" max="100"  aria-describedby="mdb-InstSection-PercentSpotLoadConstCurrent-help">
+                                        <small id="mdb-InstSection-PercentSpotLoadConstCurrent-help">Exact MDB column: InstSection.PercentSpotLoadConstCurrent. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-PercentLoadGrowthRate">Annual load growth (%)<code>PercentLoadGrowthRate</code></label>
+                                            <input id="mdb-InstSection-PercentLoadGrowthRate" name="mdb_table_defaults[tables][InstSection][values][PercentLoadGrowthRate]" type="number" value="2"   step="any" min="0" max="1000"  aria-describedby="mdb-InstSection-PercentLoadGrowthRate-help">
+                                        <small id="mdb-InstSection-PercentLoadGrowthRate-help">Exact MDB column: InstSection.PercentLoadGrowthRate. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-MappingLink">Mapping link<code>MappingLink</code></label>
+                                            <input id="mdb-InstSection-MappingLink" name="mdb_table_defaults[tables][InstSection][values][MappingLink]" type="number" value="0"   step="1" min="-2147483648" max="2147483647"  aria-describedby="mdb-InstSection-MappingLink-help">
+                                        <small id="mdb-InstSection-MappingLink-help">Exact MDB column: InstSection.MappingLink. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-UseEquivSpacing">Use equivalent conductor spacing<code>UseEquivSpacing</code></label>
+                                            <select id="mdb-InstSection-UseEquivSpacing" name="mdb_table_defaults[tables][InstSection][values][UseEquivSpacing]"  aria-describedby="mdb-InstSection-UseEquivSpacing-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstSection-UseEquivSpacing-help">Exact MDB column: InstSection.UseEquivSpacing. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-IdenticalPhaseConductors">Identical phase conductors<code>IdenticalPhaseConductors</code></label>
+                                            <select id="mdb-InstSection-IdenticalPhaseConductors" name="mdb_table_defaults[tables][InstSection][values][IdenticalPhaseConductors]"  aria-describedby="mdb-InstSection-IdenticalPhaseConductors-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstSection-IdenticalPhaseConductors-help">Exact MDB column: InstSection.IdenticalPhaseConductors. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-PositionCode">Position code<code>PositionCode</code></label>
+                                            <input id="mdb-InstSection-PositionCode" name="mdb_table_defaults[tables][InstSection][values][PositionCode]" type="number" value="0"   step="1" min="-2147483648" max="2147483647"  aria-describedby="mdb-InstSection-PositionCode-help">
+                                        <small id="mdb-InstSection-PositionCode-help">Exact MDB column: InstSection.PositionCode. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field  mdb-field-managed ">
+                    <label for="mdb-InstSection-ConfigurationId">Line configuration library ID<code>ConfigurationId</code></label>
+                                            <div class="mdb-managed-value" id="mdb-InstSection-ConfigurationId">12.5/7.2 kV cross arm C2-2</div>
+                        <small><a href="#engineering-general" data-managed-field="configuration_id">Edit configuration id above</a>. </small>
+                                        <small id="mdb-InstSection-ConfigurationId-help">Uses the matching general engineering setting above; it is applied to this exact MDB column.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-IsContingency">Is contingency<code>IsContingency</code></label>
+                                            <select id="mdb-InstSection-IsContingency" name="mdb_table_defaults[tables][InstSection][values][IsContingency]"  aria-describedby="mdb-InstSection-IsContingency-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstSection-IsContingency-help">Exact MDB column: InstSection.IsContingency. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-UseSectAmpRating">Use section current rating<code>UseSectAmpRating</code></label>
+                                            <select id="mdb-InstSection-UseSectAmpRating" name="mdb_table_defaults[tables][InstSection][values][UseSectAmpRating]"  aria-describedby="mdb-InstSection-UseSectAmpRating-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstSection-UseSectAmpRating-help">Exact MDB column: InstSection.UseSectAmpRating. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-AmpRating">Section current rating (A)<code>AmpRating</code></label>
+                                            <input id="mdb-InstSection-AmpRating" name="mdb_table_defaults[tables][InstSection][values][AmpRating]" type="number" value="100"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstSection-AmpRating-help">
+                                        <small id="mdb-InstSection-AmpRating-help">Exact MDB column: InstSection.AmpRating. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-UseDistCustZone">Use distributed-customer zone<code>UseDistCustZone</code></label>
+                                            <select id="mdb-InstSection-UseDistCustZone" name="mdb_table_defaults[tables][InstSection][values][UseDistCustZone]"  aria-describedby="mdb-InstSection-UseDistCustZone-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstSection-UseDistCustZone-help">Exact MDB column: InstSection.UseDistCustZone. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-UseSpotCustZone">Use spot-customer zone<code>UseSpotCustZone</code></label>
+                                            <select id="mdb-InstSection-UseSpotCustZone" name="mdb_table_defaults[tables][InstSection][values][UseSpotCustZone]"  aria-describedby="mdb-InstSection-UseSpotCustZone-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstSection-UseSpotCustZone-help">Exact MDB column: InstSection.UseSpotCustZone. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-UseCustClassDistLoadIzpq">Use customer-class distributed-load model<code>UseCustClassDistLoadIzpq</code></label>
+                                            <select id="mdb-InstSection-UseCustClassDistLoadIzpq" name="mdb_table_defaults[tables][InstSection][values][UseCustClassDistLoadIzpq]"  aria-describedby="mdb-InstSection-UseCustClassDistLoadIzpq-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstSection-UseCustClassDistLoadIzpq-help">Exact MDB column: InstSection.UseCustClassDistLoadIzpq. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-UseCustClassSpotLoadIzpq">Use customer-class spot-load model<code>UseCustClassSpotLoadIzpq</code></label>
+                                            <select id="mdb-InstSection-UseCustClassSpotLoadIzpq" name="mdb_table_defaults[tables][InstSection][values][UseCustClassSpotLoadIzpq]"  aria-describedby="mdb-InstSection-UseCustClassSpotLoadIzpq-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstSection-UseCustClassSpotLoadIzpq-help">Exact MDB column: InstSection.UseCustClassSpotLoadIzpq. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-GrowthZone">Growth zone<code>GrowthZone</code></label>
+                                            <input id="mdb-InstSection-GrowthZone" name="mdb_table_defaults[tables][InstSection][values][GrowthZone]" type="text" value="Unknown"   maxlength="32"  aria-describedby="mdb-InstSection-GrowthZone-help">
+                                        <small id="mdb-InstSection-GrowthZone-help">Use the exact growth-zone name in the selected SynerGEE library; the reference uses Unknown. Blank stores NULL; 0 is an explicit value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-FromElbowOrBayStatus">Sending-end elbow / bay status code<code>FromElbowOrBayStatus</code></label>
+                                            <input id="mdb-InstSection-FromElbowOrBayStatus" name="mdb_table_defaults[tables][InstSection][values][FromElbowOrBayStatus]" type="text" value="N"   maxlength="1"  aria-describedby="mdb-InstSection-FromElbowOrBayStatus-help">
+                                        <small id="mdb-InstSection-FromElbowOrBayStatus-help">Exact MDB column: InstSection.FromElbowOrBayStatus. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-ToElbowOrBayStatus">Receiving-end elbow / bay status code<code>ToElbowOrBayStatus</code></label>
+                                            <input id="mdb-InstSection-ToElbowOrBayStatus" name="mdb_table_defaults[tables][InstSection][values][ToElbowOrBayStatus]" type="text" value="N"   maxlength="1"  aria-describedby="mdb-InstSection-ToElbowOrBayStatus-help">
+                                        <small id="mdb-InstSection-ToElbowOrBayStatus-help">Exact MDB column: InstSection.ToElbowOrBayStatus. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-ElbowOrBayAmpRating">Elbow / bay current rating (A)<code>ElbowOrBayAmpRating</code></label>
+                                            <input id="mdb-InstSection-ElbowOrBayAmpRating" name="mdb_table_defaults[tables][InstSection][values][ElbowOrBayAmpRating]" type="number" value="100"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstSection-ElbowOrBayAmpRating-help">
+                                        <small id="mdb-InstSection-ElbowOrBayAmpRating-help">Exact MDB column: InstSection.ElbowOrBayAmpRating. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-DuctBankCircuit">Duct bank circuit<code>DuctBankCircuit</code></label>
+                                            <input id="mdb-InstSection-DuctBankCircuit" name="mdb_table_defaults[tables][InstSection][values][DuctBankCircuit]" type="number" value="1"   step="1" min="-2147483648" max="2147483647"  aria-describedby="mdb-InstSection-DuctBankCircuit-help">
+                                        <small id="mdb-InstSection-DuctBankCircuit-help">Exact MDB column: InstSection.DuctBankCircuit. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-UseDuctBankAmpRating">Use duct-bank current rating<code>UseDuctBankAmpRating</code></label>
+                                            <select id="mdb-InstSection-UseDuctBankAmpRating" name="mdb_table_defaults[tables][InstSection][values][UseDuctBankAmpRating]"  aria-describedby="mdb-InstSection-UseDuctBankAmpRating-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstSection-UseDuctBankAmpRating-help">Exact MDB column: InstSection.UseDuctBankAmpRating. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-UseDuctBankConfiguration">Use duct bank configuration<code>UseDuctBankConfiguration</code></label>
+                                            <select id="mdb-InstSection-UseDuctBankConfiguration" name="mdb_table_defaults[tables][InstSection][values][UseDuctBankConfiguration]"  aria-describedby="mdb-InstSection-UseDuctBankConfiguration-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstSection-UseDuctBankConfiguration-help">Exact MDB column: InstSection.UseDuctBankConfiguration. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-SpotLoadIsOff">Spot load is off<code>SpotLoadIsOff</code></label>
+                                            <select id="mdb-InstSection-SpotLoadIsOff" name="mdb_table_defaults[tables][InstSection][values][SpotLoadIsOff]"  aria-describedby="mdb-InstSection-SpotLoadIsOff-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstSection-SpotLoadIsOff-help">Exact MDB column: InstSection.SpotLoadIsOff. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-EnergizeYear">Energize year<code>EnergizeYear</code></label>
+                                            <input id="mdb-InstSection-EnergizeYear" name="mdb_table_defaults[tables][InstSection][values][EnergizeYear]" type="number" value="0"   step="1" min="0" max="2147483647"  aria-describedby="mdb-InstSection-EnergizeYear-help">
+                                        <small id="mdb-InstSection-EnergizeYear-help">Model year index, not a calendar date. Use the engineering standard for when this device enters or leaves service.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-RetireYear">Retire year<code>RetireYear</code></label>
+                                            <input id="mdb-InstSection-RetireYear" name="mdb_table_defaults[tables][InstSection][values][RetireYear]" type="number" value="100"   step="1" min="0" max="2147483647"  aria-describedby="mdb-InstSection-RetireYear-help">
+                                        <small id="mdb-InstSection-RetireYear-help">Model year index, not a calendar date. Use the engineering standard for when this device enters or leaves service.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-LoadCategory">Load category<code>LoadCategory</code></label>
+                                            <input id="mdb-InstSection-LoadCategory" name="mdb_table_defaults[tables][InstSection][values][LoadCategory]" type="number" value="0"   step="1" min="-2147483648" max="2147483647"  aria-describedby="mdb-InstSection-LoadCategory-help">
+                                        <small id="mdb-InstSection-LoadCategory-help">Exact MDB column: InstSection.LoadCategory. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-NeutIsGrounded">Neutral is grounded<code>NeutIsGrounded</code></label>
+                                            <select id="mdb-InstSection-NeutIsGrounded" name="mdb_table_defaults[tables][InstSection][values][NeutIsGrounded]"  aria-describedby="mdb-InstSection-NeutIsGrounded-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" >No (0)</option><option value="1" selected>Yes (1)</option>                        </select>
+                                        <small id="mdb-InstSection-NeutIsGrounded-help">Exact MDB column: InstSection.NeutIsGrounded. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-HideMapResults">Hide map results<code>HideMapResults</code></label>
+                                            <select id="mdb-InstSection-HideMapResults" name="mdb_table_defaults[tables][InstSection][values][HideMapResults]"  aria-describedby="mdb-InstSection-HideMapResults-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstSection-HideMapResults-help">Exact MDB column: InstSection.HideMapResults. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-LocationLink">Location link<code>LocationLink</code></label>
+                                            <input id="mdb-InstSection-LocationLink" name="mdb_table_defaults[tables][InstSection][values][LocationLink]" type="text" value="*"   maxlength="200"  aria-describedby="mdb-InstSection-LocationLink-help">
+                                        <small id="mdb-InstSection-LocationLink-help">Exact MDB column: InstSection.LocationLink. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-ExpFactPermFail">Permanent-failure exposure factor<code>ExpFactPermFail</code></label>
+                                            <input id="mdb-InstSection-ExpFactPermFail" name="mdb_table_defaults[tables][InstSection][values][ExpFactPermFail]" type="number" value="1"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstSection-ExpFactPermFail-help">
+                                        <small id="mdb-InstSection-ExpFactPermFail-help">Exact MDB column: InstSection.ExpFactPermFail. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-ExpFactTempFail">Temporary-failure exposure factor<code>ExpFactTempFail</code></label>
+                                            <input id="mdb-InstSection-ExpFactTempFail" name="mdb_table_defaults[tables][InstSection][values][ExpFactTempFail]" type="number" value="1"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstSection-ExpFactTempFail-help">
+                                        <small id="mdb-InstSection-ExpFactTempFail-help">Exact MDB column: InstSection.ExpFactTempFail. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-ExpFactRepair">Repair exposure factor<code>ExpFactRepair</code></label>
+                                            <input id="mdb-InstSection-ExpFactRepair" name="mdb_table_defaults[tables][InstSection][values][ExpFactRepair]" type="number" value="0"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstSection-ExpFactRepair-help">
+                                        <small id="mdb-InstSection-ExpFactRepair-help">Exact MDB column: InstSection.ExpFactRepair. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field  mdb-field-managed ">
+                    <label for="mdb-InstSection-LoadConnectionPhaseGnd">Default load connection code<code>LoadConnectionPhaseGnd</code></label>
+                                            <div class="mdb-managed-value" id="mdb-InstSection-LoadConnectionPhaseGnd">1</div>
+                        <small><a href="#engineering-general" data-managed-field="section_load_connection">Edit section load connection above</a>. </small>
+                                        <small id="mdb-InstSection-LoadConnectionPhaseGnd-help">Uses the matching general engineering setting above; it is applied to this exact MDB column.</small>
+                                    </div>
+                                                                            <div class="mdb-field  mdb-field-managed ">
+                    <label for="mdb-InstSection-SupplyConductor">Feeder supply conductor library ID<code>SupplyConductor</code></label>
+                                            <div class="mdb-managed-value" id="mdb-InstSection-SupplyConductor">500 MCM</div>
+                        <small><a href="#engineering-general" data-managed-field="supply_conductor_id">Edit supply conductor id above</a>. </small>
+                                        <small id="mdb-InstSection-SupplyConductor-help">Uses the supply-conductor setting above when provided; otherwise retains the reference ID.</small>
+                                    </div>
+                                                <div class="mdb-field  mdb-field-managed ">
+                    <label for="mdb-InstSection-TransformerConductor">Transformer-link conductor library ID<code>TransformerConductor</code></label>
+                                            <div class="mdb-managed-value" id="mdb-InstSection-TransformerConductor">4/C 07/.052</div>
+                        <small><a href="#engineering-general" data-managed-field="secondary_conductor_id">Edit secondary conductor id above</a>. </small>
+                                        <small id="mdb-InstSection-TransformerConductor-help">Uses the secondary-link conductor setting above when provided.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-ConsumerConductor">Customer / PV service-cable library ID<code>ConsumerConductor</code></label>
+                                            <input id="mdb-InstSection-ConsumerConductor" name="mdb_table_defaults[tables][InstSection][options][ConsumerConductor]" type="text" value="PVC 07/0.052" required  maxlength="32"  aria-describedby="mdb-InstSection-ConsumerConductor-help">
+                                        <small id="mdb-InstSection-ConsumerConductor-help">Exact conductor library ID used for generated customer and PV connections.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-FirstPoleLengthM">First pole-link length (m)<code>FirstPoleLengthM</code></label>
+                                            <input id="mdb-InstSection-FirstPoleLengthM" name="mdb_table_defaults[tables][InstSection][options][FirstPoleLengthM]" type="number" value="10" required  step="any" min="0.001" max="1000000"  aria-describedby="mdb-InstSection-FirstPoleLengthM-help">
+                                        <small id="mdb-InstSection-FirstPoleLengthM-help">Fixed model link from the transformer to its first pole. Later survey spans use calculated or approved measured lengths.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-TransformerLengthM">Transformer-link length (m)<code>TransformerLengthM</code></label>
+                                            <input id="mdb-InstSection-TransformerLengthM" name="mdb_table_defaults[tables][InstSection][options][TransformerLengthM]" type="number" value="0" required  step="any" min="0" max="1000000"  aria-describedby="mdb-InstSection-TransformerLengthM-help">
+                                        <small id="mdb-InstSection-TransformerLengthM-help">Model length for the transformer link; the reference uses zero.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-TransformerLoadConnection">Transformer load connection code<code>TransformerLoadConnection</code></label>
+                                            <select id="mdb-InstSection-TransformerLoadConnection" name="mdb_table_defaults[tables][InstSection][options][TransformerLoadConnection]" required aria-describedby="mdb-InstSection-TransformerLoadConnection-help">
+                                                        <option value="0" selected>Code 0 (0)</option><option value="1" >Code 1 (1)</option>                        </select>
+                                        <small id="mdb-InstSection-TransformerLoadConnection-help">Transformer-link override. Survey spans and customer connections use the default connection setting above.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-CableClearanceFt">Service-cable clearance (ft)<code>CableClearanceFt</code></label>
+                                            <input id="mdb-InstSection-CableClearanceFt" name="mdb_table_defaults[tables][InstSection][options][CableClearanceFt]" type="number" value="4" required  step="any" min="0" max="100"  aria-describedby="mdb-InstSection-CableClearanceFt-help">
+                                        <small id="mdb-InstSection-CableClearanceFt-help">Cable length = (pole height in metres - clearance in metres) / cable slope.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstSection-CableSlope">Service-cable slope factor<code>CableSlope</code></label>
+                                            <input id="mdb-InstSection-CableSlope" name="mdb_table_defaults[tables][InstSection][options][CableSlope]" type="number" value="0.667" required  step="any" min="0.001" max="1"  aria-describedby="mdb-InstSection-CableSlope-help">
+                                        <small id="mdb-InstSection-CableSlope-help">Positive divisor in the approved service-cable length formula. Reference value: 0.667.</small>
+                                    </div>
+                                        </div>
+                                </div>
+    </details>
+            <details class="mdb-table-card" data-table="InstMeterPoints" >
+        <summary><span><strong>InstMeterPoints</strong><span class="mdb-table-title">Transformer meter settings</span></span></summary>
+        <div class="mdb-table-body"><p>Creates one meter record for each transformer. Values are model defaults from your meter reference.</p>
+            <div class="mdb-automatic"><strong>Filled automatically</strong><ul><li>SectionId comes from the transformer section.</li></ul></div>
+                        <div class="mdb-fields">
+                                                            <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-Phase1Value">Phase R: value 1<code>Phase1Value</code></label>
+                                            <input id="mdb-InstMeterPoints-Phase1Value" name="mdb_table_defaults[tables][InstMeterPoints][values][Phase1Value]" type="number" value="10.3"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstMeterPoints-Phase1Value-help">
+                                        <small id="mdb-InstMeterPoints-Phase1Value-help">Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-Phase2Value">Phase Y: value 1<code>Phase2Value</code></label>
+                                            <input id="mdb-InstMeterPoints-Phase2Value" name="mdb_table_defaults[tables][InstMeterPoints][values][Phase2Value]" type="number" value="10.3"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstMeterPoints-Phase2Value-help">
+                                        <small id="mdb-InstMeterPoints-Phase2Value-help">Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-Phase3Value">Phase B: value 1<code>Phase3Value</code></label>
+                                            <input id="mdb-InstMeterPoints-Phase3Value" name="mdb_table_defaults[tables][InstMeterPoints][values][Phase3Value]" type="number" value="10.3"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstMeterPoints-Phase3Value-help">
+                                        <small id="mdb-InstMeterPoints-Phase3Value-help">Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-Phase1Value2">Phase R: value 2<code>Phase1Value2</code></label>
+                                            <input id="mdb-InstMeterPoints-Phase1Value2" name="mdb_table_defaults[tables][InstMeterPoints][values][Phase1Value2]" type="number" value="85"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstMeterPoints-Phase1Value2-help">
+                                        <small id="mdb-InstMeterPoints-Phase1Value2-help">Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-Phase2Value2">Phase Y: value 2<code>Phase2Value2</code></label>
+                                            <input id="mdb-InstMeterPoints-Phase2Value2" name="mdb_table_defaults[tables][InstMeterPoints][values][Phase2Value2]" type="number" value="85"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstMeterPoints-Phase2Value2-help">
+                                        <small id="mdb-InstMeterPoints-Phase2Value2-help">Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-Phase3Value2">Phase B: value 2<code>Phase3Value2</code></label>
+                                            <input id="mdb-InstMeterPoints-Phase3Value2" name="mdb_table_defaults[tables][InstMeterPoints][values][Phase3Value2]" type="number" value="85"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstMeterPoints-Phase3Value2-help">
+                                        <small id="mdb-InstMeterPoints-Phase3Value2-help">Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-CalibSAIFI">SAIFI calibration<code>CalibSAIFI</code></label>
+                                            <input id="mdb-InstMeterPoints-CalibSAIFI" name="mdb_table_defaults[tables][InstMeterPoints][values][CalibSAIFI]" type="number" value="1"   step="any" min="0" max="1000000000"  aria-describedby="mdb-InstMeterPoints-CalibSAIFI-help">
+                                        <small id="mdb-InstMeterPoints-CalibSAIFI-help">Exact MDB column: InstMeterPoints.CalibSAIFI. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-CalibSAIDI_Hr">SAIDI calibration (hours)<code>CalibSAIDI_Hr</code></label>
+                                            <input id="mdb-InstMeterPoints-CalibSAIDI_Hr" name="mdb_table_defaults[tables][InstMeterPoints][values][CalibSAIDI_Hr]" type="number" value="4"   step="any" min="0" max="1000000000"  aria-describedby="mdb-InstMeterPoints-CalibSAIDI_Hr-help">
+                                        <small id="mdb-InstMeterPoints-CalibSAIDI_Hr-help">Exact MDB column: InstMeterPoints.CalibSAIDI_Hr. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-CalibMAIFI">MAIFI calibration<code>CalibMAIFI</code></label>
+                                            <input id="mdb-InstMeterPoints-CalibMAIFI" name="mdb_table_defaults[tables][InstMeterPoints][values][CalibMAIFI]" type="number" value="3"   step="any" min="0" max="1000000000"  aria-describedby="mdb-InstMeterPoints-CalibMAIFI-help">
+                                        <small id="mdb-InstMeterPoints-CalibMAIFI-help">Exact MDB column: InstMeterPoints.CalibMAIFI. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-ContinuousCurrentRating">Continuous current rating (A)<code>ContinuousCurrentRating</code></label>
+                                            <input id="mdb-InstMeterPoints-ContinuousCurrentRating" name="mdb_table_defaults[tables][InstMeterPoints][values][ContinuousCurrentRating]" type="number" value="0"   step="any" min="0" max="1000000000"  aria-describedby="mdb-InstMeterPoints-ContinuousCurrentRating-help">
+                                        <small id="mdb-InstMeterPoints-ContinuousCurrentRating-help">Exact MDB column: InstMeterPoints.ContinuousCurrentRating. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-EmergencyCurrentRating">Emergency current rating (A)<code>EmergencyCurrentRating</code></label>
+                                            <input id="mdb-InstMeterPoints-EmergencyCurrentRating" name="mdb_table_defaults[tables][InstMeterPoints][values][EmergencyCurrentRating]" type="number" value="0"   step="any" min="0" max="1000000000"  aria-describedby="mdb-InstMeterPoints-EmergencyCurrentRating-help">
+                                        <small id="mdb-InstMeterPoints-EmergencyCurrentRating-help">Exact MDB column: InstMeterPoints.EmergencyCurrentRating. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-MeterIsOpen">Meter position<code>MeterIsOpen</code></label>
+                                            <select id="mdb-InstMeterPoints-MeterIsOpen" name="mdb_table_defaults[tables][InstMeterPoints][values][MeterIsOpen]"  aria-describedby="mdb-InstMeterPoints-MeterIsOpen-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>Closed (0)</option><option value="1" >Open (1)</option>                        </select>
+                                        <small id="mdb-InstMeterPoints-MeterIsOpen-help">Exact MDB column: InstMeterPoints.MeterIsOpen. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-UseDemandAsLoad">Use meter demand as load<code>UseDemandAsLoad</code></label>
+                                            <select id="mdb-InstMeterPoints-UseDemandAsLoad" name="mdb_table_defaults[tables][InstMeterPoints][values][UseDemandAsLoad]"  aria-describedby="mdb-InstMeterPoints-UseDemandAsLoad-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstMeterPoints-UseDemandAsLoad-help">Exact MDB column: InstMeterPoints.UseDemandAsLoad. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-Description">Description<code>Description</code></label>
+                                            <input id="mdb-InstMeterPoints-Description" name="mdb_table_defaults[tables][InstMeterPoints][values][Description]" type="text" value="132 KVA Abotabad"   maxlength="100"  aria-describedby="mdb-InstMeterPoints-Description-help">
+                                        <small id="mdb-InstMeterPoints-Description-help">Shared meter description for every transformer. Replace the sample description with your approved wording. Blank stores NULL; 0 is an explicit value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-Enabled">Enabled<code>Enabled</code></label>
+                                            <select id="mdb-InstMeterPoints-Enabled" name="mdb_table_defaults[tables][InstMeterPoints][values][Enabled]"  aria-describedby="mdb-InstMeterPoints-Enabled-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" >No (0)</option><option value="1" selected>Yes (1)</option>                        </select>
+                                        <small id="mdb-InstMeterPoints-Enabled-help">Exact MDB column: InstMeterPoints.Enabled. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-EnableReliCalibration">Enable reliability calibration<code>EnableReliCalibration</code></label>
+                                            <select id="mdb-InstMeterPoints-EnableReliCalibration" name="mdb_table_defaults[tables][InstMeterPoints][values][EnableReliCalibration]"  aria-describedby="mdb-InstMeterPoints-EnableReliCalibration-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstMeterPoints-EnableReliCalibration-help">Exact MDB column: InstMeterPoints.EnableReliCalibration. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-NearFromNode">Meter location<code>NearFromNode</code></label>
+                                            <select id="mdb-InstMeterPoints-NearFromNode" name="mdb_table_defaults[tables][InstMeterPoints][values][NearFromNode]"  aria-describedby="mdb-InstMeterPoints-NearFromNode-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" >Near receiving end (0)</option><option value="1" selected>Near sending end (1)</option>                        </select>
+                                        <small id="mdb-InstMeterPoints-NearFromNode-help">Exact MDB column: InstMeterPoints.NearFromNode. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-Type">Meter type code<code>Type</code></label>
+                                            <input id="mdb-InstMeterPoints-Type" name="mdb_table_defaults[tables][InstMeterPoints][values][Type]" type="text" value="I"   maxlength="1"  aria-describedby="mdb-InstMeterPoints-Type-help">
+                                        <small id="mdb-InstMeterPoints-Type-help">Enter the exact meter type code supported by your installation. The supplied reference uses I. Blank stores NULL; 0 is an explicit value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-OverriddenUpstream">Overridden upstream<code>OverriddenUpstream</code></label>
+                                            <select id="mdb-InstMeterPoints-OverriddenUpstream" name="mdb_table_defaults[tables][InstMeterPoints][values][OverriddenUpstream]"  aria-describedby="mdb-InstMeterPoints-OverriddenUpstream-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" >No (0)</option><option value="1" selected>Yes (1)</option>                        </select>
+                                        <small id="mdb-InstMeterPoints-OverriddenUpstream-help">Exact MDB column: InstMeterPoints.OverriddenUpstream. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-EnergizeYear">Energize year<code>EnergizeYear</code></label>
+                                            <input id="mdb-InstMeterPoints-EnergizeYear" name="mdb_table_defaults[tables][InstMeterPoints][values][EnergizeYear]" type="number" value="0"   step="1" min="0" max="2147483647"  aria-describedby="mdb-InstMeterPoints-EnergizeYear-help">
+                                        <small id="mdb-InstMeterPoints-EnergizeYear-help">Model year index, not a calendar date. Use the engineering standard for when this device enters or leaves service.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-RetireYear">Retire year<code>RetireYear</code></label>
+                                            <input id="mdb-InstMeterPoints-RetireYear" name="mdb_table_defaults[tables][InstMeterPoints][values][RetireYear]" type="number" value="100"   step="1" min="0" max="2147483647"  aria-describedby="mdb-InstMeterPoints-RetireYear-help">
+                                        <small id="mdb-InstMeterPoints-RetireYear-help">Model year index, not a calendar date. Use the engineering standard for when this device enters or leaves service.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-Note_">Notes<code>Note_</code></label>
+                                            <input id="mdb-InstMeterPoints-Note_" name="mdb_table_defaults[tables][InstMeterPoints][values][Note_]" type="text" value=""   maxlength="100"  aria-describedby="mdb-InstMeterPoints-Note_-help">
+                                        <small id="mdb-InstMeterPoints-Note_-help">Exact MDB column: InstMeterPoints.Note_. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-UseGrowthCurve">Use growth curve<code>UseGrowthCurve</code></label>
+                                            <select id="mdb-InstMeterPoints-UseGrowthCurve" name="mdb_table_defaults[tables][InstMeterPoints][values][UseGrowthCurve]"  aria-describedby="mdb-InstMeterPoints-UseGrowthCurve-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstMeterPoints-UseGrowthCurve-help">Exact MDB column: InstMeterPoints.UseGrowthCurve. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-GrowthCurveId">Growth-curve library ID<code>GrowthCurveId</code></label>
+                                            <input id="mdb-InstMeterPoints-GrowthCurveId" name="mdb_table_defaults[tables][InstMeterPoints][values][GrowthCurveId]" type="text" value=""   maxlength="32"  aria-describedby="mdb-InstMeterPoints-GrowthCurveId-help">
+                                        <small id="mdb-InstMeterPoints-GrowthCurveId-help">Exact MDB column: InstMeterPoints.GrowthCurveId. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-UseDefDistCustZone">Use default distributed-customer zone<code>UseDefDistCustZone</code></label>
+                                            <select id="mdb-InstMeterPoints-UseDefDistCustZone" name="mdb_table_defaults[tables][InstMeterPoints][values][UseDefDistCustZone]"  aria-describedby="mdb-InstMeterPoints-UseDefDistCustZone-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstMeterPoints-UseDefDistCustZone-help">Exact MDB column: InstMeterPoints.UseDefDistCustZone. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-DefDistCustZone">Default distributed-customer zone<code>DefDistCustZone</code></label>
+                                            <input id="mdb-InstMeterPoints-DefDistCustZone" name="mdb_table_defaults[tables][InstMeterPoints][values][DefDistCustZone]" type="text" value="Unknown"   maxlength="32"  aria-describedby="mdb-InstMeterPoints-DefDistCustZone-help">
+                                        <small id="mdb-InstMeterPoints-DefDistCustZone-help">Exact MDB column: InstMeterPoints.DefDistCustZone. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-UseDefSpotCustZone">Use default spot-customer zone<code>UseDefSpotCustZone</code></label>
+                                            <select id="mdb-InstMeterPoints-UseDefSpotCustZone" name="mdb_table_defaults[tables][InstMeterPoints][values][UseDefSpotCustZone]"  aria-describedby="mdb-InstMeterPoints-UseDefSpotCustZone-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstMeterPoints-UseDefSpotCustZone-help">Exact MDB column: InstMeterPoints.UseDefSpotCustZone. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-DefSpotCustZone">Default spot-customer zone<code>DefSpotCustZone</code></label>
+                                            <input id="mdb-InstMeterPoints-DefSpotCustZone" name="mdb_table_defaults[tables][InstMeterPoints][values][DefSpotCustZone]" type="text" value="Unknown"   maxlength="32"  aria-describedby="mdb-InstMeterPoints-DefSpotCustZone-help">
+                                        <small id="mdb-InstMeterPoints-DefSpotCustZone-help">Exact MDB column: InstMeterPoints.DefSpotCustZone. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-IsColorBy">Enable colour override<code>IsColorBy</code></label>
+                                            <select id="mdb-InstMeterPoints-IsColorBy" name="mdb_table_defaults[tables][InstMeterPoints][values][IsColorBy]"  aria-describedby="mdb-InstMeterPoints-IsColorBy-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstMeterPoints-IsColorBy-help">Exact MDB column: InstMeterPoints.IsColorBy. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-RGBColor">Colour code<code>RGBColor</code></label>
+                                            <input id="mdb-InstMeterPoints-RGBColor" name="mdb_table_defaults[tables][InstMeterPoints][values][RGBColor]" type="text" value="125,125"   maxlength="11"  aria-describedby="mdb-InstMeterPoints-RGBColor-help">
+                                        <small id="mdb-InstMeterPoints-RGBColor-help">Enter the colour string in the format used by your SynerGEE reference. The supplied reference is 125,125. Blank stores NULL; 0 is an explicit value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-LocationLink">Location link<code>LocationLink</code></label>
+                                            <input id="mdb-InstMeterPoints-LocationLink" name="mdb_table_defaults[tables][InstMeterPoints][values][LocationLink]" type="text" value="*"   maxlength="200"  aria-describedby="mdb-InstMeterPoints-LocationLink-help">
+                                        <small id="mdb-InstMeterPoints-LocationLink-help">Exact MDB column: InstMeterPoints.LocationLink. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-AMSLink">Asset-management link<code>AMSLink</code></label>
+                                            <input id="mdb-InstMeterPoints-AMSLink" name="mdb_table_defaults[tables][InstMeterPoints][values][AMSLink]" type="text" value=""   maxlength="125"  aria-describedby="mdb-InstMeterPoints-AMSLink-help">
+                                        <small id="mdb-InstMeterPoints-AMSLink-help">Exact MDB column: InstMeterPoints.AMSLink. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterPoints-LockFedLoad">Lock feeder load<code>LockFedLoad</code></label>
+                                            <select id="mdb-InstMeterPoints-LockFedLoad" name="mdb_table_defaults[tables][InstMeterPoints][values][LockFedLoad]"  aria-describedby="mdb-InstMeterPoints-LockFedLoad-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstMeterPoints-LockFedLoad-help">Exact MDB column: InstMeterPoints.LockFedLoad. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                                    </div>
+                                </div>
+    </details>
+            <details class="mdb-table-card" data-table="InstMymMeter" >
+        <summary><span><strong>InstMymMeter</strong><span class="mdb-table-title">Meter settings by year</span></span></summary>
+        <div class="mdb-table-body"><p>Creates meter records for each transformer and selected year. These defaults can differ from the single meter record above.</p>
+            <div class="mdb-automatic"><strong>Filled automatically</strong><ul><li>SectionId comes from the transformer section.</li><li>YearNumber is generated from the year range.</li></ul></div>
+                        <fieldset class="mdb-year-range"><legend>Years to create</legend><div class="mdb-fields">
+                                                <label for="mdb-InstMymMeter-first_year">First year index<input id="mdb-InstMymMeter-first_year" name="mdb_table_defaults[tables][InstMymMeter][first_year]" type="number" min="0" max="10" step="1" value="0" data-year="first_year" required><small>0 = base year; 1–10 = forecast years.</small></label>
+                                                <label for="mdb-InstMymMeter-last_year">Last year index<input id="mdb-InstMymMeter-last_year" name="mdb_table_defaults[tables][InstMymMeter][last_year]" type="number" min="0" max="10" step="1" value="1" data-year="last_year" required><small>0 = base year; 1–10 = forecast years.</small></label>
+                            </div><p data-year-summary aria-live="polite"></p></fieldset>
+                        <div class="mdb-fields">
+                                                            <div class="mdb-field ">
+                    <label for="mdb-InstMymMeter-Phase1Value">Phase R: value 1<code>Phase1Value</code></label>
+                                            <input id="mdb-InstMymMeter-Phase1Value" name="mdb_table_defaults[tables][InstMymMeter][values][Phase1Value]" type="number" value="10.3"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstMymMeter-Phase1Value-help">
+                                        <small id="mdb-InstMymMeter-Phase1Value-help">Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMymMeter-Phase2Value">Phase Y: value 1<code>Phase2Value</code></label>
+                                            <input id="mdb-InstMymMeter-Phase2Value" name="mdb_table_defaults[tables][InstMymMeter][values][Phase2Value]" type="number" value="10.3"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstMymMeter-Phase2Value-help">
+                                        <small id="mdb-InstMymMeter-Phase2Value-help">Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMymMeter-Phase3Value">Phase B: value 1<code>Phase3Value</code></label>
+                                            <input id="mdb-InstMymMeter-Phase3Value" name="mdb_table_defaults[tables][InstMymMeter][values][Phase3Value]" type="number" value="10.3"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstMymMeter-Phase3Value-help">
+                                        <small id="mdb-InstMymMeter-Phase3Value-help">Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMymMeter-Phase1Value2">Phase R: value 2<code>Phase1Value2</code></label>
+                                            <input id="mdb-InstMymMeter-Phase1Value2" name="mdb_table_defaults[tables][InstMymMeter][values][Phase1Value2]" type="number" value="85"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstMymMeter-Phase1Value2-help">
+                                        <small id="mdb-InstMymMeter-Phase1Value2-help">Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMymMeter-Phase2Value2">Phase Y: value 2<code>Phase2Value2</code></label>
+                                            <input id="mdb-InstMymMeter-Phase2Value2" name="mdb_table_defaults[tables][InstMymMeter][values][Phase2Value2]" type="number" value="85"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstMymMeter-Phase2Value2-help">
+                                        <small id="mdb-InstMymMeter-Phase2Value2-help">Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMymMeter-Phase3Value2">Phase B: value 2<code>Phase3Value2</code></label>
+                                            <input id="mdb-InstMymMeter-Phase3Value2" name="mdb_table_defaults[tables][InstMymMeter][values][Phase3Value2]" type="number" value="85"   step="any" min="-1000000000" max="1000000000"  aria-describedby="mdb-InstMymMeter-Phase3Value2-help">
+                                        <small id="mdb-InstMymMeter-Phase3Value2-help">Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMymMeter-CalibSAIFI">SAIFI calibration<code>CalibSAIFI</code></label>
+                                            <input id="mdb-InstMymMeter-CalibSAIFI" name="mdb_table_defaults[tables][InstMymMeter][values][CalibSAIFI]" type="number" value="1"   step="any" min="0" max="1000000000"  aria-describedby="mdb-InstMymMeter-CalibSAIFI-help">
+                                        <small id="mdb-InstMymMeter-CalibSAIFI-help">Exact MDB column: InstMymMeter.CalibSAIFI. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMymMeter-CalibSAIDI_Hr">SAIDI calibration (hours)<code>CalibSAIDI_Hr</code></label>
+                                            <input id="mdb-InstMymMeter-CalibSAIDI_Hr" name="mdb_table_defaults[tables][InstMymMeter][values][CalibSAIDI_Hr]" type="number" value="4"   step="any" min="0" max="1000000000"  aria-describedby="mdb-InstMymMeter-CalibSAIDI_Hr-help">
+                                        <small id="mdb-InstMymMeter-CalibSAIDI_Hr-help">Exact MDB column: InstMymMeter.CalibSAIDI_Hr. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMymMeter-CalibMAIFI">MAIFI calibration<code>CalibMAIFI</code></label>
+                                            <input id="mdb-InstMymMeter-CalibMAIFI" name="mdb_table_defaults[tables][InstMymMeter][values][CalibMAIFI]" type="number" value="3"   step="any" min="0" max="1000000000"  aria-describedby="mdb-InstMymMeter-CalibMAIFI-help">
+                                        <small id="mdb-InstMymMeter-CalibMAIFI-help">Exact MDB column: InstMymMeter.CalibMAIFI. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMymMeter-ContinuousCurrentRating">Continuous current rating (A)<code>ContinuousCurrentRating</code></label>
+                                            <input id="mdb-InstMymMeter-ContinuousCurrentRating" name="mdb_table_defaults[tables][InstMymMeter][values][ContinuousCurrentRating]" type="number" value="0"   step="any" min="0" max="1000000000"  aria-describedby="mdb-InstMymMeter-ContinuousCurrentRating-help">
+                                        <small id="mdb-InstMymMeter-ContinuousCurrentRating-help">Exact MDB column: InstMymMeter.ContinuousCurrentRating. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMymMeter-EmergencyCurrentRating">Emergency current rating (A)<code>EmergencyCurrentRating</code></label>
+                                            <input id="mdb-InstMymMeter-EmergencyCurrentRating" name="mdb_table_defaults[tables][InstMymMeter][values][EmergencyCurrentRating]" type="number" value="0"   step="any" min="0" max="1000000000"  aria-describedby="mdb-InstMymMeter-EmergencyCurrentRating-help">
+                                        <small id="mdb-InstMymMeter-EmergencyCurrentRating-help">Exact MDB column: InstMymMeter.EmergencyCurrentRating. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMymMeter-MeterIsOpen">Meter position<code>MeterIsOpen</code></label>
+                                            <select id="mdb-InstMymMeter-MeterIsOpen" name="mdb_table_defaults[tables][InstMymMeter][values][MeterIsOpen]"  aria-describedby="mdb-InstMymMeter-MeterIsOpen-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>Closed (0)</option><option value="1" >Open (1)</option>                        </select>
+                                        <small id="mdb-InstMymMeter-MeterIsOpen-help">Exact MDB column: InstMymMeter.MeterIsOpen. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMymMeter-UseDemandAsLoad">Use meter demand as load<code>UseDemandAsLoad</code></label>
+                                            <select id="mdb-InstMymMeter-UseDemandAsLoad" name="mdb_table_defaults[tables][InstMymMeter][values][UseDemandAsLoad]"  aria-describedby="mdb-InstMymMeter-UseDemandAsLoad-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-InstMymMeter-UseDemandAsLoad-help">Exact MDB column: InstMymMeter.UseDemandAsLoad. Blank stores NULL; zero is a numeric value.</small>
+                                    </div>
+                                                                    </div>
+                                </div>
+    </details>
+            <details class="mdb-table-card" data-table="InstMeterDmd" >
+        <summary><span><strong>InstMeterDmd</strong><span class="mdb-table-title">Monthly and hourly meter profiles</span></span></summary>
+        <div class="mdb-table-body"><p>Repeats the selected profile for each month and day type. Hourly overrides are optional and remain compact in the JSON.</p>
+            <div class="mdb-automatic"><strong>Filled automatically</strong><ul><li>SectionId comes from the transformer meter point.</li><li>Season, DayType and hourly columns are expanded locally.</li></ul></div>
+                        <div class="mdb-fields">
+                                                            <div class="mdb-field ">
+                    <label for="mdb-InstMeterDmd-PctKwLoad">Active-load hourly level (%)<code>PctKwLoad</code></label>
+                                            <input id="mdb-InstMeterDmd-PctKwLoad" name="mdb_table_defaults[tables][InstMeterDmd][values][PctKwLoad]" type="number" value="100" required  step="any" min="0" max="1000"  aria-describedby="mdb-InstMeterDmd-PctKwLoad-help">
+                                        <small id="mdb-InstMeterDmd-PctKwLoad-help">100 = 100% of the baseline. Used for all 24 hours unless an hourly override is entered.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterDmd-PctKvarLoad">Reactive-load hourly level (%)<code>PctKvarLoad</code></label>
+                                            <input id="mdb-InstMeterDmd-PctKvarLoad" name="mdb_table_defaults[tables][InstMeterDmd][values][PctKvarLoad]" type="number" value="100" required  step="any" min="0" max="1000"  aria-describedby="mdb-InstMeterDmd-PctKvarLoad-help">
+                                        <small id="mdb-InstMeterDmd-PctKvarLoad-help">100 = 100% of the baseline. Used for all 24 hours unless an hourly override is entered.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterDmd-PctPf">Power factor (%)<code>PctPf</code></label>
+                                            <input id="mdb-InstMeterDmd-PctPf" name="mdb_table_defaults[tables][InstMeterDmd][values][PctPf]" type="number" value="95" required  step="any" min="1" max="100"  aria-describedby="mdb-InstMeterDmd-PctPf-help">
+                                        <small id="mdb-InstMeterDmd-PctPf-help">Power factor expressed as a percentage, from 1 to 100.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterDmd-PctKwDmd">Active-demand hourly level (%)<code>PctKwDmd</code></label>
+                                            <input id="mdb-InstMeterDmd-PctKwDmd" name="mdb_table_defaults[tables][InstMeterDmd][values][PctKwDmd]" type="number" value="100" required  step="any" min="0" max="1000"  aria-describedby="mdb-InstMeterDmd-PctKwDmd-help">
+                                        <small id="mdb-InstMeterDmd-PctKwDmd-help">100 = 100% of the baseline. Used for all 24 hours unless an hourly override is entered.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-InstMeterDmd-PctKvarDmd">Reactive-demand hourly level (%)<code>PctKvarDmd</code></label>
+                                            <input id="mdb-InstMeterDmd-PctKvarDmd" name="mdb_table_defaults[tables][InstMeterDmd][values][PctKvarDmd]" type="number" value="100" required  step="any" min="0" max="1000"  aria-describedby="mdb-InstMeterDmd-PctKvarDmd-help">
+                                        <small id="mdb-InstMeterDmd-PctKvarDmd-help">100 = 100% of the baseline. Used for all 24 hours unless an hourly override is entered.</small>
+                                    </div>
+                                                                    </div>
+                                        <div class="mdb-selections">
+                                <fieldset><legend>Months to create</legend><input type="hidden" name="mdb_table_defaults[tables][InstMeterDmd][seasons]" value=""><div class="mdb-checks">
+                    <label><input type="checkbox" name="mdb_table_defaults[tables][InstMeterDmd][seasons][]" value="April" checked>April</label><label><input type="checkbox" name="mdb_table_defaults[tables][InstMeterDmd][seasons][]" value="August" checked>August</label><label><input type="checkbox" name="mdb_table_defaults[tables][InstMeterDmd][seasons][]" value="December" checked>December</label><label><input type="checkbox" name="mdb_table_defaults[tables][InstMeterDmd][seasons][]" value="February" checked>February</label><label><input type="checkbox" name="mdb_table_defaults[tables][InstMeterDmd][seasons][]" value="January" checked>January</label><label><input type="checkbox" name="mdb_table_defaults[tables][InstMeterDmd][seasons][]" value="July" checked>July</label><label><input type="checkbox" name="mdb_table_defaults[tables][InstMeterDmd][seasons][]" value="June" checked>June</label><label><input type="checkbox" name="mdb_table_defaults[tables][InstMeterDmd][seasons][]" value="March" checked>March</label><label><input type="checkbox" name="mdb_table_defaults[tables][InstMeterDmd][seasons][]" value="May" checked>May</label><label><input type="checkbox" name="mdb_table_defaults[tables][InstMeterDmd][seasons][]" value="November" checked>November</label><label><input type="checkbox" name="mdb_table_defaults[tables][InstMeterDmd][seasons][]" value="October" checked>October</label><label><input type="checkbox" name="mdb_table_defaults[tables][InstMeterDmd][seasons][]" value="September" checked>September</label>                </div><small>Select at least one. One record is created for each selected month and day type, per meter.</small></fieldset>
+                                <fieldset><legend>Day types to create</legend><input type="hidden" name="mdb_table_defaults[tables][InstMeterDmd][day_types]" value=""><div class="mdb-checks">
+                    <label><input type="checkbox" name="mdb_table_defaults[tables][InstMeterDmd][day_types][]" value="Minday" checked>Minday</label><label><input type="checkbox" name="mdb_table_defaults[tables][InstMeterDmd][day_types][]" value="Peakday" checked>Peakday</label><label><input type="checkbox" name="mdb_table_defaults[tables][InstMeterDmd][day_types][]" value="Weekday" checked>Weekday</label><label><input type="checkbox" name="mdb_table_defaults[tables][InstMeterDmd][day_types][]" value="Weekend" checked>Weekend</label>                </div><small>Select at least one. One record is created for each selected month and day type, per meter.</small></fieldset>
+                                </div>
+                <details class="mdb-hourly" ><summary>Optional hourly percentages</summary><p>Leave an hour blank to use its hourly level above. Enter 0 to set that hour to zero. These percentages apply to every selected month and day type.</p><div class="table-wrap"><table class="table"><thead><tr><th>Hour</th><th>Active-load hourly level (%)</th><th>Reactive-load hourly level (%)</th><th>Active-demand hourly level (%)</th><th>Reactive-demand hourly level (%)</th></tr></thead><tbody>
+                <tr><th scope="row">01</th><td><input aria-label="PctKwLoad hour 01" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][01]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 01" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][01]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 01" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][01]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 01" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][01]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">02</th><td><input aria-label="PctKwLoad hour 02" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][02]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 02" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][02]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 02" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][02]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 02" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][02]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">03</th><td><input aria-label="PctKwLoad hour 03" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][03]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 03" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][03]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 03" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][03]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 03" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][03]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">04</th><td><input aria-label="PctKwLoad hour 04" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][04]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 04" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][04]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 04" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][04]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 04" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][04]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">05</th><td><input aria-label="PctKwLoad hour 05" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][05]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 05" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][05]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 05" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][05]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 05" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][05]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">06</th><td><input aria-label="PctKwLoad hour 06" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][06]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 06" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][06]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 06" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][06]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 06" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][06]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">07</th><td><input aria-label="PctKwLoad hour 07" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][07]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 07" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][07]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 07" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][07]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 07" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][07]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">08</th><td><input aria-label="PctKwLoad hour 08" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][08]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 08" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][08]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 08" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][08]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 08" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][08]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">09</th><td><input aria-label="PctKwLoad hour 09" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][09]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 09" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][09]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 09" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][09]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 09" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][09]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">10</th><td><input aria-label="PctKwLoad hour 10" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][10]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 10" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][10]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 10" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][10]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 10" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][10]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">11</th><td><input aria-label="PctKwLoad hour 11" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][11]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 11" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][11]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 11" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][11]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 11" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][11]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">12</th><td><input aria-label="PctKwLoad hour 12" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][12]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 12" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][12]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 12" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][12]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 12" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][12]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">13</th><td><input aria-label="PctKwLoad hour 13" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][13]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 13" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][13]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 13" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][13]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 13" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][13]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">14</th><td><input aria-label="PctKwLoad hour 14" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][14]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 14" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][14]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 14" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][14]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 14" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][14]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">15</th><td><input aria-label="PctKwLoad hour 15" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][15]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 15" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][15]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 15" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][15]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 15" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][15]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">16</th><td><input aria-label="PctKwLoad hour 16" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][16]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 16" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][16]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 16" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][16]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 16" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][16]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">17</th><td><input aria-label="PctKwLoad hour 17" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][17]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 17" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][17]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 17" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][17]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 17" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][17]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">18</th><td><input aria-label="PctKwLoad hour 18" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][18]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 18" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][18]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 18" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][18]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 18" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][18]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">19</th><td><input aria-label="PctKwLoad hour 19" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][19]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 19" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][19]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 19" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][19]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 19" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][19]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">20</th><td><input aria-label="PctKwLoad hour 20" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][20]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 20" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][20]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 20" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][20]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 20" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][20]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">21</th><td><input aria-label="PctKwLoad hour 21" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][21]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 21" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][21]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 21" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][21]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 21" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][21]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">22</th><td><input aria-label="PctKwLoad hour 22" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][22]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 22" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][22]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 22" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][22]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 22" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][22]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">23</th><td><input aria-label="PctKwLoad hour 23" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][23]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 23" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][23]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 23" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][23]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 23" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][23]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr><tr><th scope="row">24</th><td><input aria-label="PctKwLoad hour 24" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwLoad][24]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarLoad hour 24" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarLoad][24]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKwDmd hour 24" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKwDmd][24]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td><td><input aria-label="PctKvarDmd hour 24" name="mdb_table_defaults[tables][InstMeterDmd][hourly][PctKvarDmd][24]" type="number" min="0" max="1000" step="any" value="" placeholder="Use level above"></td></tr>                </tbody></table></div></details>
+                    </div>
+    </details>
+            <details class="mdb-table-card" data-table="Loads" >
+        <summary><span><strong>Loads</strong><span class="mdb-table-title">Load-record defaults</span></span></summary>
+        <div class="mdb-table-body"><p>Applies the load flag and capacity factor. Consumer counts and demand remain calculated from verified survey data and the approved demand method.</p>
+            <div class="mdb-automatic"><strong>Filled automatically</strong><ul><li>SectionId, phase customers and phase demand are generated from the verified survey.</li></ul></div>
+                        <div class="mdb-fields">
+                                                            <div class="mdb-field ">
+                    <label for="mdb-Loads-IsSpotLoad">Spot-load flag<code>IsSpotLoad</code></label>
+                                            <select id="mdb-Loads-IsSpotLoad" name="mdb_table_defaults[tables][Loads][values][IsSpotLoad]"  aria-describedby="mdb-Loads-IsSpotLoad-help">
+                            <option value="" >Unspecified (NULL)</option>                            <option value="0" selected>No (0)</option><option value="1" >Yes (1)</option>                        </select>
+                                        <small id="mdb-Loads-IsSpotLoad-help">0 creates distributed loads; 1 marks the generated loads as spot loads. Applies to all generated Loads records. Blank stores NULL; 0 is an explicit value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-Loads-CapacityFactor">Capacity factor<code>CapacityFactor</code></label>
+                                            <input id="mdb-Loads-CapacityFactor" name="mdb_table_defaults[tables][Loads][values][CapacityFactor]" type="number" value="1"   step="any" min="0" max="1"  aria-describedby="mdb-Loads-CapacityFactor-help">
+                                        <small id="mdb-Loads-CapacityFactor-help">Enter a fraction from 0 to 1: 1 means 100%, 0.5 means 50%. Annual load rows copy this value. Blank stores NULL; 0 is an explicit value.</small>
+                                    </div>
+                                                <div class="mdb-field ">
+                    <label for="mdb-Loads-LocationToModelSpotLoads">Spot-load location code<code>LocationToModelSpotLoads</code></label>
+                                            <input id="mdb-Loads-LocationToModelSpotLoads" name="mdb_table_defaults[tables][Loads][values][LocationToModelSpotLoads]" type="text" value="C"   maxlength="1"  aria-describedby="mdb-Loads-LocationToModelSpotLoads-help">
+                                        <small id="mdb-Loads-LocationToModelSpotLoads-help">Enter the exact SynerGEE spot-load location code. The reference uses C. Blank stores NULL; 0 is an explicit value.</small>
+                                    </div>
+                                                                    </div>
+                                </div>
+    </details>
+            <details class="mdb-table-card" data-table="InstMymLoads" >
+        <summary><span><strong>InstMymLoads</strong><span class="mdb-table-title">Load records by year</span></span></summary>
+        <div class="mdb-table-body"><p>Copies generated load values into the selected modelling years. The base-year aggregate keeps the established zero-load rule.</p>
+            <div class="mdb-automatic"><strong>Filled automatically</strong><ul><li>SectionId, customer counts, demand and capacity factor come from Loads.</li><li>YearNumber is generated from the year range.</li></ul></div>
+                        <fieldset class="mdb-year-range"><legend>Years to create</legend><div class="mdb-fields">
+                                                <label for="mdb-InstMymLoads-first_year">First year index<input id="mdb-InstMymLoads-first_year" name="mdb_table_defaults[tables][InstMymLoads][first_year]" type="number" min="0" max="10" step="1" value="0" data-year="first_year" required><small>0 = base year; 1–10 = forecast years.</small></label>
+                                                <label for="mdb-InstMymLoads-last_year">Last year index<input id="mdb-InstMymLoads-last_year" name="mdb_table_defaults[tables][InstMymLoads][last_year]" type="number" min="0" max="10" step="1" value="1" data-year="last_year" required><small>0 = base year; 1–10 = forecast years.</small></label>
+                            </div><p data-year-summary aria-live="polite"></p></fieldset>
+                        <div class="mdb-fields">
+                                                                                </div>
+                                </div>
+    </details>
+    </section>
+</form></main><script>document.querySelectorAll('[data-mdb-defaults]').forEach(root => {
+    const cards = [...root.querySelectorAll('[data-table]')];
+    const reveal = card => { card.hidden = false; card.open = true; };
+    root.querySelector('[data-table-picker]').addEventListener('change', event => {
+        cards.forEach(card => { card.hidden = !!event.target.value && card.dataset.table !== event.target.value; if (!card.hidden && event.target.value) card.open = true; });
+    });
+    root.addEventListener('invalid', event => {
+        const card = event.target.closest('[data-table]');
+        if (card) reveal(card);
+        const hourly = event.target.closest('.mdb-hourly');
+        if (hourly) hourly.open = true;
+    }, true);
+    cards.forEach(card => {
+        const first = card.querySelector('[data-year="first_year"]');
+        const last = card.querySelector('[data-year="last_year"]');
+        if (first && last) {
+            const update = () => {
+                const valid = first.value !== '' && last.value !== '' && +last.value >= +first.value;
+                last.setCustomValidity(valid ? '' : 'Last year index must be at least the first year index.');
+                card.querySelector('[data-year-summary]').textContent = valid ? `${+last.value - +first.value + 1} records per ${card.dataset.table === 'InstMymLoads' ? 'load' : 'transformer'} (year indexes ${first.value}–${last.value}).` : 'Check the year range.';
+            };
+            first.addEventListener('input', update); last.addEventListener('input', update); update();
+        }
+        card.querySelectorAll('.mdb-selections fieldset').forEach(group => {
+            const boxes = [...group.querySelectorAll('input[type=checkbox]')];
+            const update = () => boxes[0].setCustomValidity(boxes.some(box => box.checked) ? '' : 'Select at least one option.');
+            boxes.forEach(box => box.addEventListener('change', update)); update();
+        });
+    });
+    root.querySelectorAll('[data-managed-field]').forEach(link => link.addEventListener('click', event => {
+        const target = document.querySelector(`[name="${link.dataset.managedField}"]`);
+        if (target) { event.preventDefault(); target.scrollIntoView({block: 'center', behavior: 'smooth'}); target.focus({preventScroll: true}); }
+    }));
+    const fill = root.querySelector('[data-fill-years]');
+    fill.addEventListener('click', () => {
+        const base = root.querySelector('#mdb-SAI_Control-MYM_YearDesc_B').value;
+        const message = root.querySelector('[data-year-label-message]');
+        if (!/^\d{4}$/.test(base) || +base > 9989) { message.textContent = 'Enter a four-digit base year up to 9989 first.'; return; }
+        for (let index = 1; index <= 10; index++) root.querySelector(`#mdb-SAI_Control-${index === 10 ? 'MYM_YearDesc10' : `MYM_YearDesc_${index}`}`).value = +base + index;
+        message.textContent = `Forecast labels updated to ${+base + 1}–${+base + 10}. Save the configuration to apply.`;
+    });
+});
+</script></html>

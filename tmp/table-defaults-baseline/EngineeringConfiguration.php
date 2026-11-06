@@ -1,0 +1,483 @@
+<?php
+
+namespace App\Services\Mdb;
+
+use App\Models\Mdb\Configuration;
+use App\Models\Mdb\Template;
+use App\Models\Project;
+use App\Services\AuditService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+
+/** One engineering authority per project; derived values never overwrite survey observations. */
+class EngineeringConfiguration
+{
+    public const CATEGORIES = ['rs', 'rl', 'sc', 'lc', 'si', 'li', 'pb', 'ag', 'st'];
+
+    public const LOAD_METHOD = 'Configured kVA per consumer by category; equal allocation across connected phases; no power-factor conversion';
+
+    public static function loadMethod(array $assumptions): string
+    {
+        $rates = array_replace(self::consumerRates(), $assumptions['rates'] ?? []);
+        $summary = [];
+        foreach (self::CATEGORIES as $category) {
+            $summary[] = strtoupper($category).' '.(float) ($rates[$category]['kva'] ?? self::consumerKva($category)).' kVA';
+        }
+        $method = implode('; ', $summary).'; equal allocation across connected phases; no power-factor conversion';
+
+        return ($assumptions['single_phase_allocation'] ?? 'equal') === 'recorded_or_equal'
+            ? $method.'; recorded single-phase counts take priority; total-only counts shared equally across connected phases'
+            : $method;
+    }
+
+    public static function consumerKva(string $category): float
+    {
+        if (! in_array($category, self::CATEGORIES, true)) {
+            throw ValidationException::withMessages(['engineering' => 'Unknown consumer category.']);
+        }
+
+        return in_array($category, EntryLookups::SINGLE_PHASE_CONSUMERS, true) ? 3.0 : 5.0;
+    }
+
+    public static function consumerRates(): array
+    {
+        return array_combine(self::CATEGORIES, array_map(fn ($category) => ['kva' => self::consumerKva($category)], self::CATEGORIES));
+    }
+
+    /** Keep incomplete reference imports editable without granting engineering approval. */
+    public function saveDraft(Project $project, Request $request): Configuration
+    {
+        $rules = [
+            'revision' => 'required|integer|min:0', 'epsg' => 'nullable|integer|between:1000,999999',
+            'crs_name' => 'nullable|string|max:255', 'projection_wkt' => 'nullable|string|max:255',
+            'frequency_hz' => ['nullable', Rule::in([50, 60])],
+            'nominal_voltage_kv' => 'nullable|numeric|gt:0|max:1000',
+            'secondary_voltage_kv' => 'nullable|numeric|gt:0|max:1000',
+            'template_id' => 'nullable|integer|exists:mdb_workflow_templates,id',
+            'conductor_library_revision' => 'nullable|string|max:200',
+            'transformer_library_revision' => 'nullable|string|max:200',
+            'configuration_id' => 'nullable|string|max:200',
+            'supply_conductor_id' => 'nullable|string|max:200', 'secondary_conductor_id' => 'nullable|string|max:200',
+            'phase_spacing_cm' => 'nullable|numeric|gt:0|max:10000',
+            'neutral_spacing_cm' => 'nullable|numeric|gt:0|max:10000',
+            'conductor_height_m' => 'nullable|numeric|gt:0|max:200',
+            'sag_allowance_percent' => 'nullable|numeric|min:0|max:100',
+            'pole_height_unit' => 'nullable|in:ft,m', 'two_digit_year_start' => 'nullable|integer|between:1800,9900',
+            'load_mode' => 'nullable|in:manual,category_rates', 'load_evidence' => 'nullable|string|max:4000',
+            'single_phase_allocation' => 'sometimes|in:recorded_or_equal,equal',
+            'blank_consumers_zero' => 'nullable|boolean',
+            'section_load_connection' => 'nullable|integer|in:0,1',
+            'mapping_json' => 'nullable|json|max:262144', 'transformer_types_json' => 'nullable|json|max:65536',
+            'equipment_references_json' => 'nullable|json|max:262144',
+            'reason' => 'required|string|min:5|max:4000',
+            'confirm_simple_model' => 'sometimes|boolean',
+        ];
+        foreach (self::CATEGORIES as $category) {
+            $rules['rates.'.$category.'.kva'] = 'nullable|numeric|min:0|max:1000000';
+            $rules['rates.'.$category.'.power_factor'] = 'exclude';
+        }
+        $data = $request->validate($rules);
+        if (array_key_exists('sag_allowance_percent', $data)) {
+            $data['sag_allowance_percent'] = SagAllowance::percent($data['sag_allowance_percent']);
+        }
+        $objects = [];
+        foreach (['mapping_json', 'transformer_types_json', 'equipment_references_json'] as $field) {
+            if (isset($data[$field])) {
+                $objects[$field] = $this->object($data[$field], $field);
+            }
+        }
+        foreach ($objects['transformer_types_json'] ?? [] as $capacity => $type) {
+            if (! is_numeric($capacity) || (float) $capacity <= 0 || ! is_string($type) || trim($type) === '' || strlen($type) > 200) {
+                throw ValidationException::withMessages(['transformer_types_json' => 'Each positive kVA capacity must map to a nonempty equipment type ID. Library approval is checked when approving the configuration.']);
+            }
+        }
+        if (isset($objects['equipment_references_json'])) {
+            $objects['equipment_references_json'] = $this->equipmentReferences($objects['equipment_references_json']);
+        }
+        $storedEpsg = Configuration::where('project_id', $project->id)->value('epsg');
+        if (isset($data['epsg']) && (int) $data['epsg'] !== (int) $storedEpsg) {
+            try {
+                app(ProjectionService::class)->projectMany([], (int) $data['epsg']);
+            } catch (\Throwable $exception) {
+                throw ValidationException::withMessages(['epsg' => $exception->getMessage()]);
+            }
+        }
+
+        return DB::transaction(function () use ($project, $request, $data, $objects) {
+            Project::whereKey($project->id)->lockForUpdate()->firstOrFail();
+            $configuration = Configuration::where('project_id', $project->id)->lockForUpdate()->first();
+            if (($configuration?->revision ?? 0) !== (int) $data['revision']) {
+                throw ValidationException::withMessages(['revision' => 'Another Admin updated these settings. Reload before saving.']);
+            }
+            $before = $configuration?->toArray() ?? [];
+            $configuration ??= app(EngineeringDefaults::class)->preview($project) ?? new Configuration(['project_id' => $project->id]);
+            $settings = $configuration->settings ?? [];
+            foreach (['frequency_hz', 'nominal_voltage_kv', 'secondary_voltage_kv', 'template_id', 'conductor_library_revision', 'transformer_library_revision'] as $key) {
+                if (array_key_exists($key, $data)) {
+                    $settings[$key] = $data[$key];
+                }
+            }
+            foreach (['pole_height_unit', 'two_digit_year_start'] as $key) {
+                if (array_key_exists($key, $data)) {
+                    $settings['entry'][$key] = $data[$key];
+                }
+            }
+            foreach (['crs_name', 'projection_wkt', 'configuration_id', 'supply_conductor_id', 'secondary_conductor_id', 'phase_spacing_cm', 'neutral_spacing_cm', 'conductor_height_m', 'sag_allowance_percent', 'blank_consumers_zero'] as $key) {
+                if (array_key_exists($key, $data)) {
+                    $settings['engineering'][$key] = $data[$key];
+                }
+            }
+            $settings['engineering']['version'] = 1;
+            foreach (['mapping_json' => 'mapping', 'transformer_types_json' => 'transformer_types'] as $field => $key) {
+                if (array_key_exists($field, $data)) {
+                    if ($key === 'mapping') {
+                        $settings[$key] = $objects[$field] ?? null;
+                    } else {
+                        $settings['engineering'][$key] = $objects[$field] ?? null;
+                    }
+                }
+            }
+            if (array_key_exists('section_load_connection', $data)) {
+                $settings['mapping']['table_values']['InstSection']['LoadConnectionPhaseGnd'] = $data['section_load_connection'] === null ? null : (int) $data['section_load_connection'];
+            }
+            unset($settings['mapping']['reviewed_by'], $settings['mapping']['reviewed_at']);
+            if (array_key_exists('equipment_references_json', $data)) {
+                $settings['reference_import']['equipment_references'] = $objects['equipment_references_json'] ?? null;
+            }
+            if (isset($settings['reference_import'])) {
+                $settings['reference_import']['status'] = 'needs_review';
+            }
+            $loads = $configuration->load_assumptions ?? [];
+            foreach (['load_mode' => 'mode', 'load_evidence' => 'evidence', 'rates' => 'rates', 'single_phase_allocation' => 'single_phase_allocation'] as $field => $key) {
+                if (array_key_exists($field, $data)) {
+                    $loads[$key] = $data[$field];
+                }
+            }
+            $loads['rates'] = self::normalizeRates($data['rates'] ?? $loads['rates'] ?? []);
+            unset($loads['method']);
+            unset($settings['simple_model_review']);
+            if (! empty($data['confirm_simple_model'])) {
+                if (! GenerationMode::simple(['settings' => $settings])) {
+                    throw ValidationException::withMessages(['confirm_simple_model' => 'This confirmation is available only when Simple MDB Generation is ON.']);
+                }
+                validator(['configuration_id' => $settings['engineering']['configuration_id'] ?? null,
+                    'transformer_types' => $settings['engineering']['transformer_types'] ?? null], [
+                        'configuration_id' => 'required|string', 'transformer_types' => 'required|array|min:1',
+                    ])->validate();
+                if (($loads['mode'] ?? null) === 'category_rates') {
+                    $loadRules = ['evidence' => 'required|string'];
+                    foreach (self::CATEGORIES as $category) {
+                        $loadRules['rates.'.$category.'.kva'] = 'required|numeric|min:0|max:1000000';
+                    }
+                    validator($loads, $loadRules)->validate();
+                    $loads['method'] = self::loadMethod($loads);
+                }
+                $settings['simple_model_review'] = ['reviewed_by' => $request->user()->id,
+                    'reviewed_at' => now('UTC')->toIso8601String(), 'reason' => $data['reason']];
+            }
+            $configuration->fill(['settings' => $settings, 'load_assumptions' => $loads,
+                'revision' => ($configuration->revision ?? 0) + 1, 'approved_by' => null, 'approved_at' => null]);
+            if (array_key_exists('epsg', $data)) {
+                $configuration->epsg = $data['epsg'];
+            }
+            $configuration->save();
+            app(AuditService::class)->record($request->user(), 'mdb.configuration_draft_saved', $configuration, $before, $configuration->toArray(), $data['reason']);
+
+            return $configuration;
+        });
+    }
+
+    public function save(Project $project, Request $request): Configuration
+    {
+        $rules = [
+            'revision' => 'required|integer|min:0', 'epsg' => 'nullable|integer|between:1000,999999',
+            'crs_name' => 'nullable|string|max:255', 'projection_wkt' => 'nullable|string|max:255',
+            'frequency_hz' => ['nullable', Rule::in([50, 60])],
+            'nominal_voltage_kv' => 'nullable|numeric|gt:0|max:1000',
+            'secondary_voltage_kv' => 'nullable|numeric|gt:0|max:1000',
+            'template_id' => 'nullable|integer|exists:mdb_workflow_templates,id',
+            'conductor_library_revision' => 'nullable|string|max:200',
+            'transformer_library_revision' => 'nullable|string|max:200',
+            'configuration_id' => 'required|string|max:200',
+            'supply_conductor_id' => 'nullable|string|max:200', 'secondary_conductor_id' => 'nullable|string|max:200',
+            'phase_spacing_cm' => 'required|numeric|gt:0|max:10000',
+            'neutral_spacing_cm' => 'required|numeric|gt:0|max:10000',
+            'conductor_height_m' => 'required|numeric|gt:0|max:200',
+            'sag_allowance_percent' => 'nullable|numeric|min:0|max:100',
+            'pole_height_unit' => 'required|in:ft,m', 'two_digit_year_start' => 'required|integer|between:1800,9900',
+            'load_mode' => 'required|in:manual,category_rates', 'load_evidence' => 'required|string|max:4000',
+            'single_phase_allocation' => 'sometimes|in:recorded_or_equal,equal',
+            'blank_consumers_zero' => 'required|boolean',
+            'section_load_connection' => 'nullable|integer|in:0,1',
+            'mapping_json' => 'required|json|max:262144', 'transformer_types_json' => 'required|json|max:65536',
+            'equipment_references_json' => 'nullable|json|max:262144',
+            'reason' => 'required|string|min:5|max:4000', 'approved' => 'required|accepted',
+        ];
+        foreach (self::CATEGORIES as $category) {
+            $rules['rates.'.$category.'.kva'] = 'required|numeric|min:0|max:1000000';
+            $rules['rates.'.$category.'.power_factor'] = 'exclude';
+        }
+        $data = $request->validate($rules);
+        if (array_key_exists('sag_allowance_percent', $data)) {
+            $data['sag_allowance_percent'] = SagAllowance::percent($data['sag_allowance_percent']);
+        }
+        $mapping = $this->object($data['mapping_json'], 'mapping_json');
+        if (array_key_exists('section_load_connection', $data)) {
+            $mapping['table_values']['InstSection']['LoadConnectionPhaseGnd'] = $data['section_load_connection'] === null ? null : (int) $data['section_load_connection'];
+        }
+        $types = $this->object($data['transformer_types_json'], 'transformer_types_json');
+        $references = isset($data['equipment_references_json'])
+            ? $this->equipmentReferences($this->object($data['equipment_references_json'], 'equipment_references_json'))
+            : null;
+        $existingConfiguration = Configuration::where('project_id', $project->id)->first();
+        $templateId = $data['template_id'] ?? $existingConfiguration?->settings['template_id'] ?? null;
+        $template = $templateId ? Template::find($templateId) : null;
+        if ($templateId && ! $template) {
+            throw ValidationException::withMessages(['template_id' => 'Select an existing approved MDB template.']);
+        }
+        if ($template && (! $template->active || ! $template->approved_by || ! $template->approved_at)) {
+            throw ValidationException::withMessages(['template_id' => 'Select an active, approved MDB template.']);
+        }
+        $libraries = $template ? ($template->metadata['equipment_references'] ?? []) : [];
+        foreach ($template ? ['conductors', 'transformers', 'configurations'] : [] as $library) {
+            if (empty($libraries[$library]) || ! is_array($libraries[$library])) {
+                throw ValidationException::withMessages(['template_id' => 'Selected template '.$template->code.' v'.$template->version.' has no reviewed '.$library.' library IDs saved. Open MDB configuration → Clean SynerGEE MDB templates, create a reviewed version with its exact equipment_references JSON, then select that new version here.']);
+            }
+        }
+        if ($template && ! in_array($data['configuration_id'], $libraries['configurations'], true)) {
+            throw ValidationException::withMessages(['configuration_id' => 'Select a configuration in the approved template library.']);
+        }
+        foreach ($template ? ['supply_conductor_id', 'secondary_conductor_id'] : [] as $key) {
+            if (! in_array($data[$key], $libraries['conductors'], true)) {
+                throw ValidationException::withMessages([$key => 'Choose a conductor in the approved template library.']);
+            }
+        }
+        if ($template && $types === []) {
+            throw ValidationException::withMessages(['transformer_types_json' => 'Map at least one transformer capacity to its approved library type.']);
+        }
+        foreach ($types as $capacity => $type) {
+            if (! is_numeric($capacity) || (float) $capacity <= 0 || ! is_string($type) || trim($type) === ''
+                || ($template && ! in_array($type, $libraries['transformers'], true))) {
+                throw ValidationException::withMessages(['transformer_types_json' => 'Each positive kVA capacity must map to a type in the approved template library.']);
+            }
+        }
+        validator($mapping, [
+            'version' => ['required', Rule::in([ExportPayloadBuilder::VERSION, ExportPayloadBuilder::EXTENDED_VERSION])],
+            'table_values' => 'required|array', 'networks' => 'present|array',
+            'table_values.InstPrimaryTransformers' => 'present|array',
+            'table_values.InstPrimaryTransformers.UseInstanceImpedance' => 'required|in:0,1',
+        ])->validate();
+        if ((int) $mapping['table_values']['InstPrimaryTransformers']['UseInstanceImpedance'] === 1) {
+            validator($mapping['table_values']['InstPrimaryTransformers'], ['PercentImpedance' => 'required|numeric|gt:0', 'PercentResistance' => 'required|numeric|min:0'])->validate();
+        }
+        // PROJ also rejects geographic CRSs and units other than metres.
+        if (($data['epsg'] ?? null) !== null) {
+            try {
+                app(ProjectionService::class)->projectMany([], (int) $data['epsg']);
+            } catch (\Throwable $exception) {
+                throw ValidationException::withMessages(['epsg' => $exception->getMessage()]);
+            }
+        }
+
+        return DB::transaction(function () use ($project, $request, $data, $mapping, $types, $template, $references) {
+            // Serialize first setup as well as updates; project_id has a unique constraint.
+            Project::whereKey($project->id)->lockForUpdate()->firstOrFail();
+            $configuration = Configuration::where('project_id', $project->id)->lockForUpdate()->first();
+            if (($configuration?->revision ?? 0) !== (int) $data['revision']) {
+                throw ValidationException::withMessages(['revision' => 'Another Admin updated these settings. Reload before saving.']);
+            }
+            $before = $configuration?->toArray() ?? [];
+            $configuration ??= app(EngineeringDefaults::class)->preview($project) ?? new Configuration(['project_id' => $project->id]);
+            $settings = $configuration->settings ?? [];
+            if (array_key_exists('equipment_references_json', $data)) {
+                $settings['reference_import']['equipment_references'] = $references;
+            }
+            foreach (['frequency_hz', 'nominal_voltage_kv', 'secondary_voltage_kv', 'conductor_library_revision', 'transformer_library_revision'] as $key) {
+                if (($data[$key] ?? null) !== null) {
+                    $settings[$key] = $data[$key];
+                }
+            }
+            if ($template) {
+                $settings['template_id'] = $template->id;
+            }
+            $settings['entry'] = ['pole_height_unit' => $data['pole_height_unit'], 'two_digit_year_start' => (int) $data['two_digit_year_start']];
+            $previousSag = $settings['engineering']['sag_allowance_percent'] ?? null;
+            $settings['engineering'] = array_intersect_key($data, array_flip(['crs_name', 'projection_wkt', 'configuration_id', 'supply_conductor_id', 'secondary_conductor_id', 'phase_spacing_cm', 'neutral_spacing_cm', 'conductor_height_m', 'sag_allowance_percent', 'blank_consumers_zero']));
+            if (! array_key_exists('sag_allowance_percent', $data) && $previousSag !== null) {
+                $settings['engineering']['sag_allowance_percent'] = $previousSag;
+            }
+            $settings['engineering']['transformer_types'] = $types;
+            $settings['engineering']['version'] = 1;
+            $mapping['reviewed_by'] = $request->user()->id;
+            $mapping['reviewed_at'] = now('UTC')->toIso8601String();
+            foreach (ExportPayloadBuilder::TABLES as $table) {
+                if (! is_array($mapping['table_values'][$table] ?? null)) {
+                    throw ValidationException::withMessages(['mapping_json' => 'Provide an object for table_values.'.$table.'.']);
+                }
+            }
+            $controlValues = ['LengthUnits' => 'Metric', 'Product' => $template?->synergee_version ?? $mapping['table_values']['SAI_Control']['Product'] ?? '',
+                'ProjectionFile' => $data['crs_name'] ?? $settings['engineering']['crs_name'] ?? $mapping['table_values']['SAI_Control']['ProjectionFile'] ?? '',
+                'ProjectionWKT' => $data['projection_wkt'] ?? $settings['engineering']['projection_wkt'] ?? $mapping['table_values']['SAI_Control']['ProjectionWKT'] ?? ''];
+            $frequency = $data['frequency_hz'] ?? $settings['frequency_hz'] ?? null;
+            if ($frequency !== null) {
+                $controlValues['Frequency'] = (float) $frequency;
+            }
+            $mapping['table_values']['SAI_Control'] = array_replace($mapping['table_values']['SAI_Control'], $controlValues);
+            $nominalVoltage = $data['nominal_voltage_kv'] ?? $settings['nominal_voltage_kv'] ?? null;
+            if ($nominalVoltage !== null) {
+                $mapping['table_values']['InstFeeders']['NominalKvll'] = (float) $nominalVoltage;
+            }
+            if (($data['secondary_voltage_kv'] ?? null) !== null) {
+                $mapping['table_values']['InstPrimaryTransformers']['SpecNomKv'] = (float) $data['secondary_voltage_kv'];
+            }
+            $mapping['table_values']['InstSection'] = array_replace($mapping['table_values']['InstSection'], [
+                'ConfigurationId' => $data['configuration_id'], 'PhaseToPhaseSpacing_MUL' => (float) $data['phase_spacing_cm'],
+                'PhaseToNeutralSpacing_MUL' => (float) $data['neutral_spacing_cm'], 'AveHeightAboveGround_MUL' => (float) $data['conductor_height_m'],
+            ]);
+            $settings['mapping'] = $mapping;
+            $allocation = $data['single_phase_allocation'] ?? $configuration->load_assumptions['single_phase_allocation'] ?? 'equal';
+            $rates = self::normalizeRates($data['rates']);
+            $configuration->fill(['epsg' => $data['epsg'] ?? $configuration->epsg, 'settings' => $settings,
+                'load_assumptions' => ['mode' => $data['load_mode'], 'method' => $data['load_mode'] === 'category_rates' ? self::loadMethod(['single_phase_allocation' => $allocation, 'rates' => $rates]) : 'Explicit verified phase demand',
+                    'evidence' => $data['load_evidence'], 'rates' => $rates, 'single_phase_allocation' => $allocation],
+                'revision' => ($configuration->revision ?? 0) + 1, 'approved_by' => $request->user()->id, 'approved_at' => now('UTC')])->save();
+            app(AuditService::class)->record($request->user(), 'mdb.configuration_changed', $configuration, $before, $configuration->toArray(), $data['reason']);
+
+            return $configuration;
+        });
+    }
+
+    private function object(string $json, string $field): array
+    {
+        $object = json_decode($json, false, 64, JSON_THROW_ON_ERROR);
+        if (! $object instanceof \stdClass) {
+            throw ValidationException::withMessages([$field => 'Enter a JSON object.']);
+        }
+
+        return json_decode($json, true, 64, JSON_THROW_ON_ERROR);
+    }
+
+    private function equipmentReferences(array $references): array
+    {
+        $rules = [];
+        foreach (['conductors', 'transformers', 'configurations'] as $library) {
+            $rules[$library] = 'present|array|list|max:10000';
+            $rules[$library.'.*'] = 'required|string|max:200';
+        }
+        $validator = validator($references, $rules);
+        if ($validator->fails()) {
+            throw ValidationException::withMessages(['equipment_references_json' => $validator->errors()->all()]);
+        }
+
+        return array_intersect_key($references, array_flip(['conductors', 'transformers', 'configurations']));
+    }
+
+    /** Apply centrally approved defaults to the frozen modelling view, retaining original entry rows. */
+    public function apply(array $snapshot): array
+    {
+        $configuration = $snapshot['configuration'] ?? [];
+        if (($configuration['load_assumptions']['mode'] ?? null) === 'category_rates') {
+            $configuration['load_assumptions']['rates'] = self::normalizeRates($configuration['load_assumptions']['rates'] ?? []);
+            $configuration['load_assumptions']['method'] = self::loadMethod($configuration['load_assumptions']);
+            $snapshot['configuration'] = $configuration;
+        }
+        $settings = $configuration['settings'] ?? [];
+        $engineering = $settings['engineering'] ?? null;
+        $simpleReview = $settings['simple_model_review'] ?? [];
+        $reviewedSimple = GenerationMode::simple($configuration) && ! empty($simpleReview['reviewed_by']) && ! empty($simpleReview['reviewed_at']);
+        if (! $engineering || (! $reviewedSimple && (empty($configuration['approved_by']) || empty($configuration['approved_at'])))) {
+            return $snapshot;
+        }
+        foreach ($snapshot['transformers'] as &$transformer) {
+            foreach ($transformer['sections'] as &$section) {
+                $section['equipment_ref'] = ($section['equipment_ref'] ?? '') ?: ($engineering['configuration_id'] ?? null);
+                $phases = $section['phases'] ?? [];
+                $hasLivePhase = is_array($phases) ? count(array_intersect(['R', 'Y', 'B'], $phases)) > 0 : preg_match('/[RYB]/', $phases) === 1;
+                $entryRows = array_values(array_filter($transformer['entry_rows'] ?? [], fn ($row) => isset($row['section_id']) && (string) $row['section_id'] === (string) ($section['id'] ?? '')));
+                if ($entryRows === []) {
+                    $entryRows = $section['original_entry']['entry_rows'] ?? [];
+                }
+                foreach ($section['consumers'] as &$consumer) {
+                    if ($consumer['count'] === null && ! empty($engineering['blank_consumers_zero'])) {
+                        $consumer['count'] = 0;
+                    }
+                    if (($configuration['load_assumptions']['mode'] ?? '') === 'category_rates' && $consumer['count'] !== null && $consumer['count'] >= 0 && $hasLivePhase) {
+                        $recorded = ($configuration['load_assumptions']['single_phase_allocation'] ?? 'equal') === 'recorded_or_equal'
+                            ? app(RecordedConsumerPhases::class)->fromRows($entryRows, $consumer['category']) : null;
+                        $consumer['demand'] = $this->demand((int) $consumer['count'], $consumer['category'], $phases, $configuration, $recorded);
+                    }
+                }
+                unset($consumer);
+            }
+            unset($section);
+        }
+        unset($transformer);
+
+        return $snapshot;
+    }
+
+    public function demand(int $count, string $category, array|string $phases, array $configuration, ?array $recordedCounts = null): array
+    {
+        $method = $configuration['load_assumptions'];
+        $rate = (float) ($method['rates'][$category]['kva'] ?? self::consumerKva($category));
+        $connected = array_values(array_filter(['R', 'Y', 'B'], fn ($phase) => is_array($phases) ? in_array($phase, $phases, true) : str_contains($phases, $phase)));
+        if ($connected === []) {
+            throw ValidationException::withMessages(['engineering' => 'Demand requires at least one connected live phase.']);
+        }
+        $actual = ($method['single_phase_allocation'] ?? 'equal') === 'recorded_or_equal'
+            && in_array($category, EntryLookups::SINGLE_PHASE_CONSUMERS, true) ? $recordedCounts : null;
+        $recordedTotal = 0;
+        if ($actual !== null) {
+            foreach ($actual as $phase => $customers) {
+                if (! in_array($phase, ['R', 'Y', 'B'], true) || filter_var($customers, FILTER_VALIDATE_INT) === false || $customers < 0) {
+                    throw ValidationException::withMessages(['engineering' => 'Recorded phase customer counts must be nonnegative integers on R, Y or B.']);
+                }
+                if ($customers > 0 && ! in_array($phase, $connected, true)) {
+                    throw ValidationException::withMessages(['engineering' => strtoupper($category).' customers are recorded on disconnected '.$phase.' phase. Correct the phase or customer entry before export.']);
+                }
+                $recordedTotal += (int) $customers;
+            }
+            if ($recordedTotal > $count) {
+                throw ValidationException::withMessages(['engineering' => 'Recorded phase customer counts exceed the section survey total. Correct and reverify the survey.']);
+            }
+        }
+        $unallocated = $count - $recordedTotal;
+        $values = [];
+        foreach ($connected as $phase) {
+            // These are model allocations, not edits to the integer survey count.
+            $customers = ($actual[$phase] ?? 0) + $unallocated / count($connected);
+            $kva = $customers * $rate;
+            $values[$phase] = ['customers' => $customers, 'kw' => null, 'kvar' => null, 'kva' => $kva];
+        }
+
+        $reviewer = $configuration['approved_by'] ?? (GenerationMode::simple($configuration) ? ($configuration['settings']['simple_model_review']['reviewed_by'] ?? null) : null);
+
+        return ['method' => self::loadMethod($method), 'quantity' => 'kva', 'evidence' => $method['evidence'] ?? null, 'approved_by' => $reviewer,
+            'allocation_basis' => $actual === null ? 'equal' : ($unallocated > 0 ? 'recorded_plus_equal' : 'recorded'),
+            'configuration_revision' => $configuration['revision'], 'phase_values' => $values];
+    }
+
+    public static function normalizeRates(array $rates): array
+    {
+        $defaults = self::consumerRates();
+        foreach (self::CATEGORIES as $category) {
+            $categoryRate = $rates[$category] ?? null;
+            $value = is_array($categoryRate) ? ($categoryRate['kva'] ?? $defaults[$category]['kva']) : $defaults[$category]['kva'];
+            $defaults[$category]['kva'] = is_numeric($value) ? (float) $value : $defaults[$category]['kva'];
+        }
+
+        return $defaults;
+    }
+
+    public function approved(int $projectId): Configuration
+    {
+        $configuration = Configuration::where('project_id', $projectId)->first();
+        if (! $configuration?->approved_by || ! $configuration->approved_at || empty($configuration->settings['engineering'])) {
+            throw ValidationException::withMessages(['engineering' => 'An Admin must approve the central Engineering Configuration before generating MDB files.']);
+        }
+
+        return $configuration;
+    }
+}

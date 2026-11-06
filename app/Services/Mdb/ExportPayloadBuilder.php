@@ -17,7 +17,7 @@ class ExportPayloadBuilder
 
     public const EXTENDED_VERSION = 'synergee-reviewed-v2';
 
-    public const EXPORT_REVISION = 'available-conductor-connections-v2';
+    public const EXPORT_REVISION = 'engineering-table-defaults-v1';
 
     public const TABLES = ['SAI_Control', 'Node', 'InstFeeders', 'InstSection', 'InstPrimaryTransformers', 'Loads'];
 
@@ -48,16 +48,22 @@ class ExportPayloadBuilder
             app(SurveyPhaseConsistency::class)->assertValid(app(SurveyPhaseConsistency::class)->transformer($transformer));
         }
         $this->engineering(count($transformers) === 1 || ($mapping['consolidated_supported'] ?? false) === true, 'This approved mapping does not permit a consolidated feeder export.');
+        $profiles = (new MdbTableDefaults)->resolve($configuration)['tables'];
         $base = $mapping['table_values'] ?? [];
+        if (isset($settings['mdb_table_defaults'])) {
+            $base['Loads'] = array_replace($base['Loads'] ?? [], $profiles['Loads']['values']);
+            $configuration['settings']['mapping']['table_values']['Loads'] = $base['Loads'];
+        }
         foreach (self::TABLES as $table) {
             if ($this->simple && ! isset($base[$table])) {
                 $base[$table] = [];
             }
             $this->require(isset($base[$table]) && is_array($base[$table]), 'Explicit reviewed table values are required for '.$table.'.');
         }
-        $control = (new SaiControlTableGeneration)->row();
+        $control = (new SaiControlTableGeneration)->row($profiles['SAI_Control']);
         $tables = array_fill_keys(self::TABLES, []);
         $tables['InstMymMeter'] = [];
+        $tables['InstMymSwDevPos'] = [];
         $tables['InstMeterDmd'] = [];
         if ($version === self::EXTENDED_VERSION) {
             $tables += array_fill_keys(SupplementalMapping::TABLES, []);
@@ -354,19 +360,19 @@ class ExportPayloadBuilder
             $parent[$toRoot] = $fromRoot;
         }
         $tables = (new NodeTableGeneration($this->projection))->apply($tables, $nodeContexts, $snapshot['sources'] ?? [], $epsg);
-        $generated = (new InstSectionGeneration)->apply($tables, $nodeContexts, $provenance, $loadProvenance);
+        $generated = (new InstSectionGeneration)->apply($tables, $nodeContexts, $provenance, $loadProvenance, isset($settings['mdb_table_defaults']) ? $profiles['InstSection'] : null);
         $tables = $generated['tables'];
         $provenance = $generated['provenance'];
         $loadProvenance = $generated['loadProvenance'];
-        if (array_key_exists('InstMeterPoints', $tables)) {
-            $tables['InstMeterPoints'] = (new InstMeterPointsTableGeneration)->apply($tables['InstPrimaryTransformers'], $tables['InstSection']);
-            $tables['InstMeterDmd'] = (new InstMeterDmdTableGeneration)->apply($tables['InstMeterPoints'], $tables['InstSection']);
-        }
-        $tables['InstMymMeter'] = (new InstMymMeterTableGeneration)->apply($tables['InstPrimaryTransformers'], $tables['InstSection']);
+        // Yearly meter rows require their InstMeterPoints parent, including in older v1 JSON.
+        $tables['InstMeterPoints'] = (new InstMeterPointsTableGeneration)->apply($tables['InstPrimaryTransformers'], $tables['InstSection'], $profiles['InstMeterPoints']);
+        $tables['InstMeterDmd'] = (new InstMeterDmdTableGeneration)->apply($tables['InstMeterPoints'], $tables['InstSection'], $profiles['InstMeterDmd']);
+        $tables['InstMymMeter'] = (new InstMymMeterTableGeneration)->apply($tables['InstPrimaryTransformers'], $tables['InstSection'], $profiles['InstMymMeter']);
+        $tables['InstMymSwDevPos'] = (new InstMymSwDevPosTableGeneration)->apply($tables['InstPrimaryTransformers'], $tables['InstSection'], $profiles['InstMymSwDevPos']);
         // Annual records share the final phase allocations and apply
         // their own numeric blank-to-zero defaults.
         $annualLoads = (new LoadsTableGeneration)->apply($tables, $nodeContexts, $provenance, $configuration, false);
-        $tables['InstMymLoads'] = (new InstMymLoadsGeneration)->apply($annualLoads, $tables['InstSection']);
+        $tables['InstMymLoads'] = (new InstMymLoadsGeneration)->apply($annualLoads, $tables['InstSection'], $profiles['InstMymLoads']);
         $tables['Loads'] = (new LoadsTableGeneration)->apply($tables, $nodeContexts, $provenance, $configuration);
 
         return [

@@ -15,8 +15,10 @@ class InstMymLoadsGeneration
         'Phase1Kwh', 'Phase2Kwh', 'Phase3Kwh',
     ];
 
-    public function apply(array $loads, array $sections): array
+    public function apply(array $loads, array $sections, ?array $profile = null): array
     {
+        $profile ??= (new MdbTableDefaults)->table('InstMymLoads');
+        $loadDefaults = (new MdbTableDefaults)->table('Loads')['values'];
         $sectionsById = array_column($sections, null, 'SectionId');
         $loadsByKey = [];
         foreach ($loads as $load) {
@@ -24,8 +26,8 @@ class InstMymLoadsGeneration
             $this->check(is_string($id) && isset($sectionsById[$id])
                 && ($sectionsById[$id]['SectionId'] ?? null) === $id,
                 'InstMymLoads: Loads.SectionId does not match an InstSection.SectionId.');
-            $spot = (int) ($load['IsSpotLoad'] ?? 0);
-            $capacityFactor = $this->zeroIfBlank(array_key_exists('CapacityFactor', $load) ? $load['CapacityFactor'] : 1.0);
+            $spot = (int) ($load['IsSpotLoad'] ?? $loadDefaults['IsSpotLoad']);
+            $capacityFactor = $this->zeroIfBlank(array_key_exists('CapacityFactor', $load) ? $load['CapacityFactor'] : $loadDefaults['CapacityFactor']);
             $record = ['SectionId' => $id, 'IsSpotLoad' => $spot];
             foreach (self::PHASE_FIELDS as $field) {
                 $value = $this->zeroIfBlank($load[$field] ?? null);
@@ -54,7 +56,7 @@ class InstMymLoadsGeneration
                 && str_contains((string) ($section['ToNodeId'] ?? ''), '.');
             $spot = $load['IsSpotLoad'];
             $capacityFactor = $load['CapacityFactor'];
-            foreach ([0, 1] as $year) {
+            foreach (range($profile['first_year'], $profile['last_year']) as $year) {
                 $key = json_encode([$id, $year], JSON_THROW_ON_ERROR);
                 $this->check(! isset($keys[$key]), 'InstMymLoads: duplicate SectionId / YearNumber key.');
                 $keys[$key] = true;

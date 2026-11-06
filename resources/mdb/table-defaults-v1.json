@@ -1,0 +1,1357 @@
+{
+  "version": 1,
+  "tables": {
+    "InstMymSwDevPos": {
+      "title": "Switch-device status by year",
+      "description": "Creates one status record for each transformer and selected year. The transformer link is assigned automatically.",
+      "generated": [
+        "SectionId comes from the transformer section.",
+        "YearNumber is generated from the year range."
+      ],
+      "defaults": {
+        "values": {
+          "DeviceCode": "M",
+          "IsOpen": 0
+        },
+        "first_year": 0,
+        "last_year": 10
+      },
+      "fields": {
+        "DeviceCode": {
+          "label": "Device code",
+          "type": "text",
+          "nullable": false,
+          "help": "Enter the exact SynerGEE device code. The supplied reference uses M for transformer meter switching.",
+          "max": 32
+        },
+        "IsOpen": {
+          "label": "Device position",
+          "type": "choice",
+          "nullable": true,
+          "help": "Closed (0) keeps the device connected; Open (1) disconnects it in the model. Applies to every selected year. Blank stores NULL; 0 is an explicit value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "Closed",
+            "1": "Open"
+          }
+        }
+      }
+    },
+    "SAI_Control": {
+      "title": "Model-wide settings",
+      "description": "Stores the MDB model header, phase labels and year captions.",
+      "generated": [
+        "Database structure and phase mapping are managed by the application."
+      ],
+      "defaults": {
+        "values": {
+          "VoltageFactor": 11,
+          "Frequency": 50,
+          "LengthUnits": "Metric",
+          "Phase1": "R",
+          "Phase2": "Y",
+          "Phase3": "B",
+          "Product": "Synergi Electric 6.29.0",
+          "VoltageInPercent": 0,
+          "MYM_YearDesc_B": "2015",
+          "MYM_YearDesc_1": "2016",
+          "MYM_YearDesc_2": "2017",
+          "MYM_YearDesc_3": "2018",
+          "MYM_YearDesc_4": "2019",
+          "MYM_YearDesc_5": "2020",
+          "MYM_YearDesc_6": "2021",
+          "MYM_YearDesc_7": "2022",
+          "MYM_YearDesc_8": "2023",
+          "MYM_YearDesc_9": "2024",
+          "MYM_YearDesc10": "2025",
+          "ProjectionFile": "WGS 1984 UTM Zone 43N",
+          "ProjectionWKT": null,
+          "PTSecondary": 120
+        }
+      },
+      "fields": {
+        "VoltageFactor": {
+          "label": "Voltage factor",
+          "type": "number",
+          "nullable": true,
+          "help": "Control-table voltage factor. This is separate from feeder nominal voltage in kV above. Blank stores NULL; 0 is an explicit value.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "Frequency": {
+          "label": "System frequency (Hz)",
+          "type": "integer",
+          "nullable": true,
+          "help": "Uses the matching general engineering setting above; it is applied to this exact MDB column.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "managed_by": "frequency_hz"
+        },
+        "LengthUnits": {
+          "label": "Length units",
+          "type": "text",
+          "nullable": true,
+          "help": "Kept consistent with the supported metric coordinate and R/Y/B phase mapping.",
+          "max": 11,
+          "locked": true
+        },
+        "Phase1": {
+          "label": "Phase 1 label",
+          "type": "text",
+          "nullable": true,
+          "help": "Kept consistent with the supported metric coordinate and R/Y/B phase mapping.",
+          "max": 1,
+          "locked": true
+        },
+        "Phase2": {
+          "label": "Phase 2 label",
+          "type": "text",
+          "nullable": true,
+          "help": "Kept consistent with the supported metric coordinate and R/Y/B phase mapping.",
+          "max": 1,
+          "locked": true
+        },
+        "Phase3": {
+          "label": "Phase 3 label",
+          "type": "text",
+          "nullable": true,
+          "help": "Kept consistent with the supported metric coordinate and R/Y/B phase mapping.",
+          "max": 1,
+          "locked": true
+        },
+        "Product": {
+          "label": "Synergi product / version",
+          "type": "text",
+          "nullable": true,
+          "help": "Enter the product/version text required by your SynerGEE installation. Blank stores NULL; 0 is an explicit value.",
+          "max": 40
+        },
+        "VoltageInPercent": {
+          "label": "Display voltage as a percentage",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: SAI_Control.VoltageInPercent. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "MYM_YearDesc_B": {
+          "label": "Base-year label (year 0)",
+          "type": "text",
+          "nullable": true,
+          "help": "Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.",
+          "max": 10
+        },
+        "MYM_YearDesc_1": {
+          "label": "Forecast-year 1 label",
+          "type": "text",
+          "nullable": true,
+          "help": "Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.",
+          "max": 10
+        },
+        "MYM_YearDesc_2": {
+          "label": "Forecast-year 2 label",
+          "type": "text",
+          "nullable": true,
+          "help": "Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.",
+          "max": 10
+        },
+        "MYM_YearDesc_3": {
+          "label": "Forecast-year 3 label",
+          "type": "text",
+          "nullable": true,
+          "help": "Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.",
+          "max": 10
+        },
+        "MYM_YearDesc_4": {
+          "label": "Forecast-year 4 label",
+          "type": "text",
+          "nullable": true,
+          "help": "Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.",
+          "max": 10
+        },
+        "MYM_YearDesc_5": {
+          "label": "Forecast-year 5 label",
+          "type": "text",
+          "nullable": true,
+          "help": "Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.",
+          "max": 10
+        },
+        "MYM_YearDesc_6": {
+          "label": "Forecast-year 6 label",
+          "type": "text",
+          "nullable": true,
+          "help": "Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.",
+          "max": 10
+        },
+        "MYM_YearDesc_7": {
+          "label": "Forecast-year 7 label",
+          "type": "text",
+          "nullable": true,
+          "help": "Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.",
+          "max": 10
+        },
+        "MYM_YearDesc_8": {
+          "label": "Forecast-year 8 label",
+          "type": "text",
+          "nullable": true,
+          "help": "Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.",
+          "max": 10
+        },
+        "MYM_YearDesc_9": {
+          "label": "Forecast-year 9 label",
+          "type": "text",
+          "nullable": true,
+          "help": "Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.",
+          "max": 10
+        },
+        "MYM_YearDesc10": {
+          "label": "Forecast-year 10 label",
+          "type": "text",
+          "nullable": true,
+          "help": "Calendar-year label for the matching YearNumber index. For example, base year 2026 makes forecast year 1 label 2027.",
+          "max": 10
+        },
+        "ProjectionFile": {
+          "label": "Coordinate-system name",
+          "type": "text",
+          "nullable": true,
+          "help": "Uses the matching general engineering setting above; it is applied to this exact MDB column.",
+          "max": 100,
+          "managed_by": "crs_name"
+        },
+        "ProjectionWKT": {
+          "label": "Coordinate-system WKT",
+          "type": "text",
+          "nullable": true,
+          "help": "Uses the matching general engineering setting above; it is applied to this exact MDB column.",
+          "max": 250,
+          "managed_by": "projection_wkt"
+        },
+        "PTSecondary": {
+          "label": "Potential transformer secondary value",
+          "type": "integer",
+          "nullable": true,
+          "help": "Enter the approved potential-transformer secondary setting; the reference value is 120. Blank stores NULL; 0 is an explicit value.",
+          "min": -2147483648,
+          "max": 2147483647
+        }
+      }
+    },
+    "InstSection": {
+      "title": "Line sections and connection defaults",
+      "description": "Applies common electrical values and model connection defaults. Survey conductors, endpoints and measured span lengths remain source-derived.",
+      "generated": [
+        "SectionId, FeederId, FromNodeId and ToNodeId are generated.",
+        "SectionPhases and surveyed conductors come from verified entry.",
+        "Span lengths are calculated from approved coordinates or measured evidence."
+      ],
+      "defaults": {
+        "values": {
+          "PhaseToPhaseSpacing_MUL": 121.9,
+          "PhaseToNeutralSpacing_MUL": 91.4,
+          "AveHeightAboveGround_MUL": 9.1,
+          "PercentDistLoadConstImpedance": 40,
+          "PercentDistLoadConstCurrent": 10,
+          "PercentSpotLoadConstImpedance": 40,
+          "PercentSpotLoadConstCurrent": 30,
+          "PercentLoadGrowthRate": 2,
+          "MappingLink": 0,
+          "UseEquivSpacing": 0,
+          "IdenticalPhaseConductors": 0,
+          "PositionCode": 0,
+          "ConfigurationId": "12.5/7.2 kV cross arm C2-2",
+          "IsContingency": 0,
+          "UseSectAmpRating": 0,
+          "AmpRating": 100,
+          "UseDistCustZone": 0,
+          "UseSpotCustZone": 0,
+          "UseCustClassDistLoadIzpq": 0,
+          "UseCustClassSpotLoadIzpq": 0,
+          "GrowthZone": "Unknown",
+          "FromElbowOrBayStatus": "N",
+          "ToElbowOrBayStatus": "N",
+          "ElbowOrBayAmpRating": 100,
+          "DuctBankCircuit": 1,
+          "UseDuctBankAmpRating": 0,
+          "UseDuctBankConfiguration": 0,
+          "SpotLoadIsOff": 0,
+          "EnergizeYear": 0,
+          "RetireYear": 100,
+          "LoadCategory": 0,
+          "NeutIsGrounded": 1,
+          "HideMapResults": 0,
+          "LocationLink": "*",
+          "ExpFactPermFail": 1,
+          "ExpFactTempFail": 1,
+          "ExpFactRepair": 0,
+          "LoadConnectionPhaseGnd": 1
+        },
+        "options": {
+          "SupplyConductor": "500 MCM",
+          "TransformerConductor": "4/C 07/.052",
+          "ConsumerConductor": "PVC 07/0.052",
+          "FirstPoleLengthM": 10.0,
+          "TransformerLengthM": 0.0,
+          "TransformerLoadConnection": 0,
+          "CableClearanceFt": 4.0,
+          "CableSlope": 0.667
+        }
+      },
+      "fields": {
+        "PhaseToPhaseSpacing_MUL": {
+          "label": "Phase-to-phase spacing (cm)",
+          "type": "number",
+          "nullable": true,
+          "help": "Uses the matching general engineering setting above; it is applied to this exact MDB column.",
+          "min": -1000000000,
+          "max": 1000000000,
+          "managed_by": "phase_spacing_cm"
+        },
+        "PhaseToNeutralSpacing_MUL": {
+          "label": "Phase-to-neutral spacing (cm)",
+          "type": "number",
+          "nullable": true,
+          "help": "Uses the matching general engineering setting above; it is applied to this exact MDB column.",
+          "min": -1000000000,
+          "max": 1000000000,
+          "managed_by": "neutral_spacing_cm"
+        },
+        "AveHeightAboveGround_MUL": {
+          "label": "Average conductor height (m)",
+          "type": "number",
+          "nullable": true,
+          "help": "Uses the matching general engineering setting above; it is applied to this exact MDB column.",
+          "min": -1000000000,
+          "max": 1000000000,
+          "managed_by": "conductor_height_m"
+        },
+        "PercentDistLoadConstImpedance": {
+          "label": "Distributed load: constant impedance (%)",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.PercentDistLoadConstImpedance. Blank stores NULL; zero is a numeric value.",
+          "min": 0,
+          "max": 100
+        },
+        "PercentDistLoadConstCurrent": {
+          "label": "Distributed load: constant current (%)",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.PercentDistLoadConstCurrent. Blank stores NULL; zero is a numeric value.",
+          "min": 0,
+          "max": 100
+        },
+        "PercentSpotLoadConstImpedance": {
+          "label": "Spot load: constant impedance (%)",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.PercentSpotLoadConstImpedance. Blank stores NULL; zero is a numeric value.",
+          "min": 0,
+          "max": 100
+        },
+        "PercentSpotLoadConstCurrent": {
+          "label": "Spot load: constant current (%)",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.PercentSpotLoadConstCurrent. Blank stores NULL; zero is a numeric value.",
+          "min": 0,
+          "max": 100
+        },
+        "PercentLoadGrowthRate": {
+          "label": "Annual load growth (%)",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.PercentLoadGrowthRate. Blank stores NULL; zero is a numeric value.",
+          "min": 0,
+          "max": 1000
+        },
+        "MappingLink": {
+          "label": "Mapping link",
+          "type": "integer",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.MappingLink. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647
+        },
+        "UseEquivSpacing": {
+          "label": "Use equivalent conductor spacing",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.UseEquivSpacing. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "IdenticalPhaseConductors": {
+          "label": "Identical phase conductors",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.IdenticalPhaseConductors. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "PositionCode": {
+          "label": "Position code",
+          "type": "integer",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.PositionCode. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647
+        },
+        "ConfigurationId": {
+          "label": "Line configuration library ID",
+          "type": "text",
+          "nullable": true,
+          "help": "Uses the matching general engineering setting above; it is applied to this exact MDB column.",
+          "max": 32,
+          "managed_by": "configuration_id"
+        },
+        "IsContingency": {
+          "label": "Is contingency",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.IsContingency. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "UseSectAmpRating": {
+          "label": "Use section current rating",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.UseSectAmpRating. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "AmpRating": {
+          "label": "Section current rating (A)",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.AmpRating. Blank stores NULL; zero is a numeric value.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "UseDistCustZone": {
+          "label": "Use distributed-customer zone",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.UseDistCustZone. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "UseSpotCustZone": {
+          "label": "Use spot-customer zone",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.UseSpotCustZone. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "UseCustClassDistLoadIzpq": {
+          "label": "Use customer-class distributed-load model",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.UseCustClassDistLoadIzpq. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "UseCustClassSpotLoadIzpq": {
+          "label": "Use customer-class spot-load model",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.UseCustClassSpotLoadIzpq. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "GrowthZone": {
+          "label": "Growth zone",
+          "type": "text",
+          "nullable": true,
+          "help": "Use the exact growth-zone name in the selected SynerGEE library; the reference uses Unknown. Blank stores NULL; 0 is an explicit value.",
+          "max": 32
+        },
+        "FromElbowOrBayStatus": {
+          "label": "Sending-end elbow / bay status code",
+          "type": "text",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.FromElbowOrBayStatus. Blank stores NULL; zero is a numeric value.",
+          "max": 1
+        },
+        "ToElbowOrBayStatus": {
+          "label": "Receiving-end elbow / bay status code",
+          "type": "text",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.ToElbowOrBayStatus. Blank stores NULL; zero is a numeric value.",
+          "max": 1
+        },
+        "ElbowOrBayAmpRating": {
+          "label": "Elbow / bay current rating (A)",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.ElbowOrBayAmpRating. Blank stores NULL; zero is a numeric value.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "DuctBankCircuit": {
+          "label": "Duct bank circuit",
+          "type": "integer",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.DuctBankCircuit. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647
+        },
+        "UseDuctBankAmpRating": {
+          "label": "Use duct-bank current rating",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.UseDuctBankAmpRating. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "UseDuctBankConfiguration": {
+          "label": "Use duct bank configuration",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.UseDuctBankConfiguration. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "SpotLoadIsOff": {
+          "label": "Spot load is off",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.SpotLoadIsOff. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "EnergizeYear": {
+          "label": "Energize year",
+          "type": "integer",
+          "nullable": true,
+          "help": "Model year index, not a calendar date. Use the engineering standard for when this device enters or leaves service.",
+          "min": 0,
+          "max": 2147483647
+        },
+        "RetireYear": {
+          "label": "Retire year",
+          "type": "integer",
+          "nullable": true,
+          "help": "Model year index, not a calendar date. Use the engineering standard for when this device enters or leaves service.",
+          "min": 0,
+          "max": 2147483647
+        },
+        "LoadCategory": {
+          "label": "Load category",
+          "type": "integer",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.LoadCategory. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647
+        },
+        "NeutIsGrounded": {
+          "label": "Neutral is grounded",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.NeutIsGrounded. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "HideMapResults": {
+          "label": "Hide map results",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.HideMapResults. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "LocationLink": {
+          "label": "Location link",
+          "type": "text",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.LocationLink. Blank stores NULL; zero is a numeric value.",
+          "max": 200
+        },
+        "ExpFactPermFail": {
+          "label": "Permanent-failure exposure factor",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.ExpFactPermFail. Blank stores NULL; zero is a numeric value.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "ExpFactTempFail": {
+          "label": "Temporary-failure exposure factor",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.ExpFactTempFail. Blank stores NULL; zero is a numeric value.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "ExpFactRepair": {
+          "label": "Repair exposure factor",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstSection.ExpFactRepair. Blank stores NULL; zero is a numeric value.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "LoadConnectionPhaseGnd": {
+          "label": "Default load connection code",
+          "type": "choice",
+          "nullable": true,
+          "help": "Uses the matching general engineering setting above; it is applied to this exact MDB column.",
+          "managed_by": "section_load_connection",
+          "choices": {
+            "0": "Connection code 0",
+            "1": "Connection code 1"
+          }
+        }
+      },
+      "option_fields": {
+        "SupplyConductor": {
+          "label": "Feeder supply conductor library ID",
+          "type": "text",
+          "nullable": false,
+          "max": 32,
+          "managed_by": "supply_conductor_id",
+          "help": "Uses the supply-conductor setting above when provided; otherwise retains the reference ID."
+        },
+        "TransformerConductor": {
+          "label": "Transformer-link conductor library ID",
+          "type": "text",
+          "nullable": false,
+          "max": 32,
+          "managed_by": "secondary_conductor_id",
+          "help": "Uses the secondary-link conductor setting above when provided."
+        },
+        "ConsumerConductor": {
+          "label": "Customer / PV service-cable library ID",
+          "type": "text",
+          "nullable": false,
+          "max": 32,
+          "help": "Exact conductor library ID used for generated customer and PV connections."
+        },
+        "FirstPoleLengthM": {
+          "label": "First pole-link length (m)",
+          "type": "number",
+          "nullable": false,
+          "min": 0.001,
+          "max": 1000000,
+          "help": "Fixed model link from the transformer to its first pole. Later survey spans use calculated or approved measured lengths."
+        },
+        "TransformerLengthM": {
+          "label": "Transformer-link length (m)",
+          "type": "number",
+          "nullable": false,
+          "min": 0,
+          "max": 1000000,
+          "help": "Model length for the transformer link; the reference uses zero."
+        },
+        "TransformerLoadConnection": {
+          "label": "Transformer load connection code",
+          "type": "choice",
+          "nullable": false,
+          "choices": {
+            "0": "Code 0",
+            "1": "Code 1"
+          },
+          "help": "Transformer-link override. Survey spans and customer connections use the default connection setting above."
+        },
+        "CableClearanceFt": {
+          "label": "Service-cable clearance (ft)",
+          "type": "number",
+          "nullable": false,
+          "min": 0,
+          "max": 100,
+          "help": "Cable length = (pole height in metres - clearance in metres) / cable slope."
+        },
+        "CableSlope": {
+          "label": "Service-cable slope factor",
+          "type": "number",
+          "nullable": false,
+          "min": 0.001,
+          "max": 1,
+          "help": "Positive divisor in the approved service-cable length formula. Reference value: 0.667."
+        }
+      }
+    },
+    "InstMeterPoints": {
+      "title": "Transformer meter settings",
+      "description": "Creates one meter record for each transformer. Values are model defaults from your meter reference.",
+      "generated": [
+        "SectionId comes from the transformer section."
+      ],
+      "defaults": {
+        "values": {
+          "Phase1Value": 10.3,
+          "Phase2Value": 10.3,
+          "Phase3Value": 10.3,
+          "Phase1Value2": 85,
+          "Phase2Value2": 85,
+          "Phase3Value2": 85,
+          "CalibSAIFI": 1,
+          "CalibSAIDI_Hr": 4,
+          "CalibMAIFI": 3,
+          "ContinuousCurrentRating": 0,
+          "EmergencyCurrentRating": 0,
+          "MeterIsOpen": 0,
+          "UseDemandAsLoad": 0,
+          "Description": "132 KVA Abotabad",
+          "Enabled": 1,
+          "EnableReliCalibration": 0,
+          "NearFromNode": 1,
+          "Type": "I",
+          "OverriddenUpstream": 1,
+          "EnergizeYear": 0,
+          "RetireYear": 100,
+          "Note_": null,
+          "UseGrowthCurve": 0,
+          "GrowthCurveId": null,
+          "UseDefDistCustZone": 0,
+          "DefDistCustZone": "Unknown",
+          "UseDefSpotCustZone": 0,
+          "DefSpotCustZone": "Unknown",
+          "IsColorBy": 0,
+          "RGBColor": "125,125",
+          "LocationLink": "*",
+          "AMSLink": null,
+          "LockFedLoad": 0
+        }
+      },
+      "fields": {
+        "Phase1Value": {
+          "label": "Phase R: value 1",
+          "type": "number",
+          "nullable": true,
+          "help": "Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "Phase2Value": {
+          "label": "Phase Y: value 1",
+          "type": "number",
+          "nullable": true,
+          "help": "Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "Phase3Value": {
+          "label": "Phase B: value 1",
+          "type": "number",
+          "nullable": true,
+          "help": "Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "Phase1Value2": {
+          "label": "Phase R: value 2",
+          "type": "number",
+          "nullable": true,
+          "help": "Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "Phase2Value2": {
+          "label": "Phase Y: value 2",
+          "type": "number",
+          "nullable": true,
+          "help": "Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "Phase3Value2": {
+          "label": "Phase B: value 2",
+          "type": "number",
+          "nullable": true,
+          "help": "Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "CalibSAIFI": {
+          "label": "SAIFI calibration",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.CalibSAIFI. Blank stores NULL; zero is a numeric value.",
+          "min": 0,
+          "max": 1000000000
+        },
+        "CalibSAIDI_Hr": {
+          "label": "SAIDI calibration (hours)",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.CalibSAIDI_Hr. Blank stores NULL; zero is a numeric value.",
+          "min": 0,
+          "max": 1000000000
+        },
+        "CalibMAIFI": {
+          "label": "MAIFI calibration",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.CalibMAIFI. Blank stores NULL; zero is a numeric value.",
+          "min": 0,
+          "max": 1000000000
+        },
+        "ContinuousCurrentRating": {
+          "label": "Continuous current rating (A)",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.ContinuousCurrentRating. Blank stores NULL; zero is a numeric value.",
+          "min": 0,
+          "max": 1000000000
+        },
+        "EmergencyCurrentRating": {
+          "label": "Emergency current rating (A)",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.EmergencyCurrentRating. Blank stores NULL; zero is a numeric value.",
+          "min": 0,
+          "max": 1000000000
+        },
+        "MeterIsOpen": {
+          "label": "Meter position",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.MeterIsOpen. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "Closed",
+            "1": "Open"
+          }
+        },
+        "UseDemandAsLoad": {
+          "label": "Use meter demand as load",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.UseDemandAsLoad. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "Description": {
+          "label": "Description",
+          "type": "text",
+          "nullable": true,
+          "help": "Shared meter description for every transformer. Replace the sample description with your approved wording. Blank stores NULL; 0 is an explicit value.",
+          "max": 100
+        },
+        "Enabled": {
+          "label": "Enabled",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.Enabled. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "EnableReliCalibration": {
+          "label": "Enable reliability calibration",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.EnableReliCalibration. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "NearFromNode": {
+          "label": "Meter location",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.NearFromNode. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "Near receiving end",
+            "1": "Near sending end"
+          }
+        },
+        "Type": {
+          "label": "Meter type code",
+          "type": "text",
+          "nullable": true,
+          "help": "Enter the exact meter type code supported by your installation. The supplied reference uses I. Blank stores NULL; 0 is an explicit value.",
+          "max": 1
+        },
+        "OverriddenUpstream": {
+          "label": "Overridden upstream",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.OverriddenUpstream. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "EnergizeYear": {
+          "label": "Energize year",
+          "type": "integer",
+          "nullable": true,
+          "help": "Model year index, not a calendar date. Use the engineering standard for when this device enters or leaves service.",
+          "min": 0,
+          "max": 2147483647
+        },
+        "RetireYear": {
+          "label": "Retire year",
+          "type": "integer",
+          "nullable": true,
+          "help": "Model year index, not a calendar date. Use the engineering standard for when this device enters or leaves service.",
+          "min": 0,
+          "max": 2147483647
+        },
+        "Note_": {
+          "label": "Notes",
+          "type": "text",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.Note_. Blank stores NULL; zero is a numeric value.",
+          "max": 100
+        },
+        "UseGrowthCurve": {
+          "label": "Use growth curve",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.UseGrowthCurve. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "GrowthCurveId": {
+          "label": "Growth-curve library ID",
+          "type": "text",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.GrowthCurveId. Blank stores NULL; zero is a numeric value.",
+          "max": 32
+        },
+        "UseDefDistCustZone": {
+          "label": "Use default distributed-customer zone",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.UseDefDistCustZone. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "DefDistCustZone": {
+          "label": "Default distributed-customer zone",
+          "type": "text",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.DefDistCustZone. Blank stores NULL; zero is a numeric value.",
+          "max": 32
+        },
+        "UseDefSpotCustZone": {
+          "label": "Use default spot-customer zone",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.UseDefSpotCustZone. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "DefSpotCustZone": {
+          "label": "Default spot-customer zone",
+          "type": "text",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.DefSpotCustZone. Blank stores NULL; zero is a numeric value.",
+          "max": 32
+        },
+        "IsColorBy": {
+          "label": "Enable colour override",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.IsColorBy. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "RGBColor": {
+          "label": "Colour code",
+          "type": "text",
+          "nullable": true,
+          "help": "Enter the colour string in the format used by your SynerGEE reference. The supplied reference is 125,125. Blank stores NULL; 0 is an explicit value.",
+          "max": 11
+        },
+        "LocationLink": {
+          "label": "Location link",
+          "type": "text",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.LocationLink. Blank stores NULL; zero is a numeric value.",
+          "max": 200
+        },
+        "AMSLink": {
+          "label": "Asset-management link",
+          "type": "text",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.AMSLink. Blank stores NULL; zero is a numeric value.",
+          "max": 125
+        },
+        "LockFedLoad": {
+          "label": "Lock feeder load",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstMeterPoints.LockFedLoad. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        }
+      }
+    },
+    "InstMymMeter": {
+      "title": "Meter settings by year",
+      "description": "Creates meter records for each transformer and selected year. These defaults can differ from the single meter record above.",
+      "generated": [
+        "SectionId comes from the transformer section.",
+        "YearNumber is generated from the year range."
+      ],
+      "defaults": {
+        "values": {
+          "Phase1Value": 10.3,
+          "Phase2Value": 10.3,
+          "Phase3Value": 10.3,
+          "Phase1Value2": 85,
+          "Phase2Value2": 85,
+          "Phase3Value2": 85,
+          "CalibSAIFI": 1,
+          "CalibSAIDI_Hr": 4,
+          "CalibMAIFI": 3,
+          "ContinuousCurrentRating": 0,
+          "EmergencyCurrentRating": 0,
+          "MeterIsOpen": 0,
+          "UseDemandAsLoad": 0
+        },
+        "first_year": 0,
+        "last_year": 1
+      },
+      "fields": {
+        "Phase1Value": {
+          "label": "Phase R: value 1",
+          "type": "number",
+          "nullable": true,
+          "help": "Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "Phase2Value": {
+          "label": "Phase Y: value 1",
+          "type": "number",
+          "nullable": true,
+          "help": "Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "Phase3Value": {
+          "label": "Phase B: value 1",
+          "type": "number",
+          "nullable": true,
+          "help": "Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "Phase1Value2": {
+          "label": "Phase R: value 2",
+          "type": "number",
+          "nullable": true,
+          "help": "Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "Phase2Value2": {
+          "label": "Phase Y: value 2",
+          "type": "number",
+          "nullable": true,
+          "help": "Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "Phase3Value2": {
+          "label": "Phase B: value 2",
+          "type": "number",
+          "nullable": true,
+          "help": "Meter reading shared by this phase. Its interpretation follows the meter type and demand mode; use the approved reference reading.",
+          "min": -1000000000,
+          "max": 1000000000
+        },
+        "CalibSAIFI": {
+          "label": "SAIFI calibration",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstMymMeter.CalibSAIFI. Blank stores NULL; zero is a numeric value.",
+          "min": 0,
+          "max": 1000000000
+        },
+        "CalibSAIDI_Hr": {
+          "label": "SAIDI calibration (hours)",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstMymMeter.CalibSAIDI_Hr. Blank stores NULL; zero is a numeric value.",
+          "min": 0,
+          "max": 1000000000
+        },
+        "CalibMAIFI": {
+          "label": "MAIFI calibration",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstMymMeter.CalibMAIFI. Blank stores NULL; zero is a numeric value.",
+          "min": 0,
+          "max": 1000000000
+        },
+        "ContinuousCurrentRating": {
+          "label": "Continuous current rating (A)",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstMymMeter.ContinuousCurrentRating. Blank stores NULL; zero is a numeric value.",
+          "min": 0,
+          "max": 1000000000
+        },
+        "EmergencyCurrentRating": {
+          "label": "Emergency current rating (A)",
+          "type": "number",
+          "nullable": true,
+          "help": "Exact MDB column: InstMymMeter.EmergencyCurrentRating. Blank stores NULL; zero is a numeric value.",
+          "min": 0,
+          "max": 1000000000
+        },
+        "MeterIsOpen": {
+          "label": "Meter position",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstMymMeter.MeterIsOpen. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "Closed",
+            "1": "Open"
+          }
+        },
+        "UseDemandAsLoad": {
+          "label": "Use meter demand as load",
+          "type": "choice",
+          "nullable": true,
+          "help": "Exact MDB column: InstMymMeter.UseDemandAsLoad. Blank stores NULL; zero is a numeric value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        }
+      }
+    },
+    "InstMeterDmd": {
+      "title": "Monthly and hourly meter profiles",
+      "description": "Repeats the selected profile for each month and day type. Hourly overrides are optional and remain compact in the JSON.",
+      "generated": [
+        "SectionId comes from the transformer meter point.",
+        "Season, DayType and hourly columns are expanded locally."
+      ],
+      "defaults": {
+        "values": {
+          "PctKwLoad": 100,
+          "PctKvarLoad": 100,
+          "PctPf": 95,
+          "PctKwDmd": 100,
+          "PctKvarDmd": 100
+        },
+        "seasons": [
+          "April",
+          "August",
+          "December",
+          "February",
+          "January",
+          "July",
+          "June",
+          "March",
+          "May",
+          "November",
+          "October",
+          "September"
+        ],
+        "day_types": [
+          "Minday",
+          "Peakday",
+          "Weekday",
+          "Weekend"
+        ],
+        "hourly": {}
+      },
+      "fields": {
+        "PctKwLoad": {
+          "label": "Active-load hourly level (%)",
+          "type": "number",
+          "nullable": false,
+          "help": "100 = 100% of the baseline. Used for all 24 hours unless an hourly override is entered.",
+          "min": 0,
+          "max": 1000
+        },
+        "PctKvarLoad": {
+          "label": "Reactive-load hourly level (%)",
+          "type": "number",
+          "nullable": false,
+          "help": "100 = 100% of the baseline. Used for all 24 hours unless an hourly override is entered.",
+          "min": 0,
+          "max": 1000
+        },
+        "PctPf": {
+          "label": "Power factor (%)",
+          "type": "number",
+          "nullable": false,
+          "help": "Power factor expressed as a percentage, from 1 to 100.",
+          "min": 1,
+          "max": 100
+        },
+        "PctKwDmd": {
+          "label": "Active-demand hourly level (%)",
+          "type": "number",
+          "nullable": false,
+          "help": "100 = 100% of the baseline. Used for all 24 hours unless an hourly override is entered.",
+          "min": 0,
+          "max": 1000
+        },
+        "PctKvarDmd": {
+          "label": "Reactive-demand hourly level (%)",
+          "type": "number",
+          "nullable": false,
+          "help": "100 = 100% of the baseline. Used for all 24 hours unless an hourly override is entered.",
+          "min": 0,
+          "max": 1000
+        }
+      }
+    },
+    "Loads": {
+      "title": "Load-record defaults",
+      "description": "Applies the load flag and capacity factor. Consumer counts and demand remain calculated from verified survey data and the approved demand method.",
+      "generated": [
+        "SectionId, phase customers and phase demand are generated from the verified survey."
+      ],
+      "defaults": {
+        "values": {
+          "IsSpotLoad": 0,
+          "CapacityFactor": 1.0,
+          "LocationToModelSpotLoads": "C"
+        }
+      },
+      "fields": {
+        "IsSpotLoad": {
+          "label": "Spot-load flag",
+          "type": "choice",
+          "nullable": true,
+          "help": "0 creates distributed loads; 1 marks the generated loads as spot loads. Applies to all generated Loads records. Blank stores NULL; 0 is an explicit value.",
+          "min": -2147483648,
+          "max": 2147483647,
+          "choices": {
+            "0": "No",
+            "1": "Yes"
+          }
+        },
+        "CapacityFactor": {
+          "label": "Capacity factor",
+          "type": "number",
+          "nullable": true,
+          "help": "Enter a fraction from 0 to 1: 1 means 100%, 0.5 means 50%. Annual load rows copy this value. Blank stores NULL; 0 is an explicit value.",
+          "min": 0,
+          "max": 1
+        },
+        "LocationToModelSpotLoads": {
+          "label": "Spot-load location code",
+          "type": "text",
+          "nullable": true,
+          "help": "Enter the exact SynerGEE spot-load location code. The reference uses C. Blank stores NULL; 0 is an explicit value.",
+          "max": 1
+        }
+      }
+    },
+    "InstMymLoads": {
+      "title": "Load records by year",
+      "description": "Copies generated load values into the selected modelling years. The base-year aggregate keeps the established zero-load rule.",
+      "generated": [
+        "SectionId, customer counts, demand and capacity factor come from Loads.",
+        "YearNumber is generated from the year range."
+      ],
+      "defaults": {
+        "values": {},
+        "first_year": 0,
+        "last_year": 1
+      },
+      "fields": {}
+    }
+  }
+}

@@ -110,8 +110,10 @@ try {
     }
     if ($payload.payload_version -ne 1 -or $payload.mapping_version -notin @('synergee-reviewed-v1','synergee-reviewed-v2')) { throw 'Unsupported export payload or mapping version.' }
     if ($payload.mapping_version -eq 'synergee-reviewed-v2') { $allowed += @('InstMeterPoints','InstDGens','InstMymDGens') }
+    if ($payload.mapping_version -eq 'synergee-reviewed-v1' -and $payload.tables.PSObject.Properties.Name -contains 'InstMeterPoints') { $allowed += 'InstMeterPoints' }
     if ($payload.tables.PSObject.Properties.Name -contains 'InstMymLoads') { $allowed += 'InstMymLoads' }
     if ($payload.tables.PSObject.Properties.Name -contains 'InstMymMeter') { $allowed += 'InstMymMeter' }
+    if ($payload.tables.PSObject.Properties.Name -contains 'InstMymSwDevPos') { $allowed += 'InstMymSwDevPos' }
     if ($payload.tables.PSObject.Properties.Name -contains 'InstMeterDmd') { $allowed += 'InstMeterDmd' }
     if ($payload.idempotency_key -notmatch '^[a-f0-9]{64}$') { throw 'Invalid idempotency key.' }
     if ($payload.revision.sha256 -notmatch '^[a-f0-9]{64}$') { throw 'Invalid revision identity.' }
@@ -267,6 +269,9 @@ try {
     }
     if ($payload.tables.PSObject.Properties.Name -contains 'InstMymMeter') {
         $referenceQueries += 'SELECT COUNT(*) FROM InstMymMeter AS M LEFT JOIN InstSection AS S ON M.SectionId=S.SectionId WHERE S.SectionId IS NULL'
+    }
+    if ($payload.tables.PSObject.Properties.Name -contains 'InstMymSwDevPos') {
+        $referenceQueries += 'SELECT COUNT(*) FROM InstMymSwDevPos AS P LEFT JOIN InstPrimaryTransformers AS T ON P.SectionId=T.SectionId WHERE T.SectionId IS NULL'
     }
     if ($payload.tables.PSObject.Properties.Name -contains 'InstMeterDmd') {
         $referenceQueries += @(

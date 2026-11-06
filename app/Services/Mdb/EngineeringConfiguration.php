@@ -72,6 +72,7 @@ class EngineeringConfiguration
             'mapping_json' => 'nullable|json|max:262144', 'transformer_types_json' => 'nullable|json|max:65536',
             'equipment_references_json' => 'nullable|json|max:262144',
             'reason' => 'required|string|min:5|max:4000',
+            'mdb_table_defaults' => 'sometimes|array',
             'confirm_simple_model' => 'sometimes|boolean',
         ];
         foreach (self::CATEGORIES as $category) {
@@ -177,6 +178,7 @@ class EngineeringConfiguration
                 $settings['simple_model_review'] = ['reviewed_by' => $request->user()->id,
                     'reviewed_at' => now('UTC')->toIso8601String(), 'reason' => $data['reason']];
             }
+            $settings['mdb_table_defaults'] = app(MdbTableDefaults::class)->forSettings($settings, $data['mdb_table_defaults'] ?? null);
             $configuration->fill(['settings' => $settings, 'load_assumptions' => $loads,
                 'revision' => ($configuration->revision ?? 0) + 1, 'approved_by' => null, 'approved_at' => null]);
             if (array_key_exists('epsg', $data)) {
@@ -213,7 +215,8 @@ class EngineeringConfiguration
             'section_load_connection' => 'nullable|integer|in:0,1',
             'mapping_json' => 'required|json|max:262144', 'transformer_types_json' => 'required|json|max:65536',
             'equipment_references_json' => 'nullable|json|max:262144',
-            'reason' => 'required|string|min:5|max:4000', 'approved' => 'required|accepted',
+            'reason' => 'required|string|min:5|max:4000',
+            'mdb_table_defaults' => 'sometimes|array', 'approved' => 'required|accepted',
         ];
         foreach (self::CATEGORIES as $category) {
             $rules['rates.'.$category.'.kva'] = 'required|numeric|min:0|max:1000000';
@@ -339,6 +342,7 @@ class EngineeringConfiguration
             $settings['mapping'] = $mapping;
             $allocation = $data['single_phase_allocation'] ?? $configuration->load_assumptions['single_phase_allocation'] ?? 'equal';
             $rates = self::normalizeRates($data['rates']);
+            $settings['mdb_table_defaults'] = app(MdbTableDefaults::class)->forSettings($settings, $data['mdb_table_defaults'] ?? null);
             $configuration->fill(['epsg' => $data['epsg'] ?? $configuration->epsg, 'settings' => $settings,
                 'load_assumptions' => ['mode' => $data['load_mode'], 'method' => $data['load_mode'] === 'category_rates' ? self::loadMethod(['single_phase_allocation' => $allocation, 'rates' => $rates]) : 'Explicit verified phase demand',
                     'evidence' => $data['load_evidence'], 'rates' => $rates, 'single_phase_allocation' => $allocation],

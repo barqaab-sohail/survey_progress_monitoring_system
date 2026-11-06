@@ -26,6 +26,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
+use Tests\Unit\MdbTableDefaultsTest;
 
 class EngineeringConfigurationTest extends TestCase
 {
@@ -76,6 +77,43 @@ class EngineeringConfigurationTest extends TestCase
                 'InstPrimaryTransformers' => ['UseInstanceImpedance' => 0], 'Loads' => (object) [],
             ], 'networks' => (object) []]),
             'transformer_types_json' => '{"100":"approved-100"}', 'reason' => 'Approved fixture engineering standard', 'approved' => 1];
+    }
+
+    public function test_static_table_values_save_render_and_remain_frozen_in_historical_revisions(): void
+    {
+        $data = $this->payload();
+        $data['mdb_table_defaults'] = MdbTableDefaultsTest::changes();
+        $this->put(route('engineering.update', $this->project), $data)->assertSessionHasNoErrors();
+        $configuration = Configuration::firstOrFail();
+        $profile = $configuration->settings['mdb_table_defaults'];
+        $this->assertSame(1, $profile['tables']['InstMymSwDevPos']['values']['IsOpen']);
+        $this->assertSame('Reviewed project meter', $profile['tables']['InstMeterPoints']['values']['Description']);
+        $this->assertSame('ANT', $profile['tables']['InstSection']['options']['SupplyConductor']);
+        $response = $this->get(route('engineering.edit', $this->project))->assertOk()->assertSee('Static values by table')
+            ->assertSee('Switch-device status by year')->assertSee('Filled automatically')->assertSee('Closed (0)')
+            ->assertSee('mdb_table_defaults[tables][InstMymSwDevPos][values][IsOpen]', false)
+            ->assertDontSee('mdb_table_defaults[tables][InstMymSwDevPos][values][SectionId]', false);
+        $revision = app(SnapshotService::class)->capture($this->batch->fresh(), $this->admin->id);
+        $frozen = $revision->fresh()->snapshot;
+        $this->assertSame(1, substr_count(json_encode($frozen), '"mdb_table_defaults"'));
+        $data = ['revision' => $configuration->revision, 'save_action' => 'draft', 'reason' => 'Reviewed switch status change',
+            'mdb_table_defaults' => ['tables' => ['InstMymSwDevPos' => ['values' => ['IsOpen' => '0']]]]];
+        $this->put(route('engineering.update', $this->project), $data)->assertSessionHasNoErrors();
+        $this->assertSame(0, $configuration->fresh()->settings['mdb_table_defaults']['tables']['InstMymSwDevPos']['values']['IsOpen']);
+        $this->assertSame($frozen, $revision->fresh()->snapshot);
+        $this->assertNull($this->batch->fresh()->approved_revision_id);
+    }
+
+    public function test_invalid_static_table_values_do_not_change_configuration_or_revision(): void
+    {
+        $configuration = $this->saveConfiguration();
+        $before = $configuration->getRawOriginal();
+        foreach ([['values' => ['IsOpen' => 2]], ['first_year' => 5, 'last_year' => 2], ['values' => ['SectionId' => 'wrong']]] as $changes) {
+            $this->put(route('engineering.update', $this->project), ['revision' => $configuration->revision,
+                'save_action' => 'draft', 'reason' => 'Reject invalid static defaults',
+                'mdb_table_defaults' => ['tables' => ['InstMymSwDevPos' => $changes]]])->assertSessionHasErrors();
+            $this->assertSame($before, $configuration->fresh()->getRawOriginal());
+        }
     }
 
     public function test_confirmed_simple_model_rates_apply_without_full_engineering_approval(): void

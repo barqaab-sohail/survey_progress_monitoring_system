@@ -347,6 +347,39 @@ class MdbOperatorEntryTest extends TestCase
         return $this->transformer->entryRows()->where('client_uuid', $payload['client_uuid'])->firstOrFail();
     }
 
+    public function test_requested_warehouse_conductors_are_selectable_and_save_exact_section_references(): void
+    {
+        $codes = ['ABC 50 MM2', 'ABC 95 MM2', 'DOG', 'GOPHER', 'GSL', 'OSPREY', 'PANTHER', 'RABBIT', 'RACCOON',
+            'INS ANT', 'INS GNAT', 'INS WASP', 'INS 7/0.052', 'ABC', 'ABC 10 MM2', 'ABC 16 MM2',
+            'ABC 25 MM2', 'ABC 35 MM2', 'ABC 70 MM2', '4/0 AWG', '100 MM2', '1000 MCM'];
+        $response = $this->getJson(route('mdb-workflow.entry.data', $this->batch))->assertOk();
+        $options = $response->json('lookups.conductors');
+        foreach ($codes as $code) {
+            $this->assertArrayHasKey($code, $options);
+        }
+        $this->assertArrayNotHasKey('ABC 50mm2', $options);
+        $this->assertArrayNotHasKey('ABC 95mm2', $options);
+        $row = $this->save();
+        foreach ($codes as $code) {
+            $this->putJson(route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $row]),
+                $this->payload(['client_uuid' => $row->client_uuid, 'conductors' => ['R' => $code, 'Y' => '__none__', 'B' => '__none__', 'N' => $code]]))->assertOk();
+            $this->assertSame($code, $row->fresh()->conductors['R']);
+            $this->assertSame($code, $row->fresh()->section->conductors['R']);
+        }
+    }
+
+    public function test_historical_abc_codes_remain_editable_and_resolve_to_correct_warehouse_ids(): void
+    {
+        $row = $this->save();
+        foreach (['ABC 50mm2' => 'ABC 50 MM2', 'ABC 95mm2' => 'ABC 95 MM2'] as $legacy => $canonical) {
+            $row->update(['conductors' => ['R' => $legacy, 'Y' => '', 'B' => '', 'N' => $legacy]]);
+            $this->putJson(route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $row]),
+                $this->payload(['client_uuid' => $row->client_uuid, 'conductors' => ['R' => $legacy, 'Y' => '__none__', 'B' => '__none__', 'N' => $legacy]]))->assertOk();
+            $this->assertSame($legacy, $row->fresh()->conductors['R']);
+            $this->assertSame($canonical, $row->fresh()->section->conductors['R']);
+        }
+    }
+
     public function test_entry_audit_keeps_only_edited_row_fields_without_copying_the_batch(): void
     {
         $row = $this->save();

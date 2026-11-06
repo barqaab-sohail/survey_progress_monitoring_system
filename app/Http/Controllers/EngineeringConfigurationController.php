@@ -10,6 +10,7 @@ use App\Services\AuditService;
 use App\Services\Mdb\EngineeringConfiguration;
 use App\Services\Mdb\EngineeringDefaults;
 use App\Services\Mdb\GenerationMode;
+use App\Services\Mdb\MdbTableDefaults;
 use App\Services\Mdb\SchemaTemplate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -69,8 +70,9 @@ class EngineeringConfigurationController extends Controller
     {
         Gate::authorize('mdb-workflow.configure');
         $data = $request->validate(['revision' => 'required|integer|min:1', 'name' => 'required|string|max:255',
-            'enabled' => 'required|boolean', 'configuration_json' => 'required|json|max:262144', 'reason' => 'required|string|min:5|max:4000']);
+            'mdb_table_defaults' => 'sometimes|array', 'enabled' => 'required|boolean', 'configuration_json' => 'required|json|max:262144', 'reason' => 'required|string|min:5|max:4000']);
         $payload = $defaults->validate($data['configuration_json']);
+        $payload['settings']['mdb_table_defaults'] = app(MdbTableDefaults::class)->forSettings($payload['settings'], $data['mdb_table_defaults'] ?? null);
         DB::transaction(function () use ($request, $data, $payload, $audit) {
             $preset = EngineeringPreset::where('code', EngineeringDefaults::CODE)->lockForUpdate()->firstOrFail();
             if ($preset->revision !== (int) $data['revision']) {

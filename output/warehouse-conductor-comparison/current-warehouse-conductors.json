@@ -1,0 +1,831 @@
+﻿{
+    "source":  "C:\\Users\\sohai\\Downloads\\Warehouse_PESCO - 14DEC2025.mdb",
+    "sha256":  "1c25cbab6d6deb52910d0d888029660b7b28f3ccde32c7e7562fbe8849d651a3",
+    "conductors":  [
+                       {
+                           "id":  "1 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1 AL-CN UG",
+                           "description":  "",
+                           "type":  "ActZ"
+                       },
+                       {
+                           "id":  "1 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1/0 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1/0 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1/0 AL-1/3N UG",
+                           "description":  "",
+                           "type":  "ActZ"
+                       },
+                       {
+                           "id":  "1/0 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "100 MM2",
+                           "description":  "100 MM2",
+                           "type":  "SepN"
+                       },
+                       {
+                           "id":  "1000 MCM",
+                           "description":  "1000 MCM",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "1000CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1033AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1033ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1113AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1113ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1192AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1192ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "12 CW",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1272AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1272ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1351AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1351ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1431AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1431ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1510AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1510ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1590AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "1590ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "15kV 1/0 Conc. Neut.",
+                           "description":  "",
+                           "type":  "Conc"
+                       },
+                       {
+                           "id":  "15kV 1000 Tape Shield",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "15kV 2/0 Conc. Neut.",
+                           "description":  "",
+                           "type":  "Conc"
+                       },
+                       {
+                           "id":  "15kV 250 Tape Shield",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "15kV 350 Tape Shield",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "15kV 4/0 Sep. Neut.",
+                           "description":  "",
+                           "type":  "SepN"
+                       },
+                       {
+                           "id":  "2 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "2 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "2 AL-CN UG",
+                           "description":  "",
+                           "type":  "ActZ"
+                       },
+                       {
+                           "id":  "2 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "2 FCWC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "2/0 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "2/0 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "2/0 AL-1/3N UG",
+                           "description":  "",
+                           "type":  "ActZ"
+                       },
+                       {
+                           "id":  "2/0 AWG",
+                           "description":  "2/0 AWG",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "2/0 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "250 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "266 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "266 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "3 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "3 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "3 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "3/0 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "3/0 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "3/0 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "300 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "300 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "336 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "336 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "350 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "37/.083",
+                           "description":  "PVC 37/0.083",
+                           "type":  "ActZ"
+                       },
+                       {
+                           "id":  "397 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "397 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "4 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "4 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "4 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "4/0 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "4/0 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "4/0 AWG",
+                           "description":  "4/0 AWG",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "4/0 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "400 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "450 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "477 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "477 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "5 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "5 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "500 CU",
+                           "description":  "",
+                           "type":  "SepN"
+                       },
+                       {
+                           "id":  "500 MCM",
+                           "description":  "500 MCM",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "500AL",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "556 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "556 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "6 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "6 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "6 ACWC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "6 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "600 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "600V 1000 MCM",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "605 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "636 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "636 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "666 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "7 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "700 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "715 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "715 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "75 KVA CSP",
+                           "description":  "75 KVA CSP",
+                           "type":  "Conc"
+                       },
+                       {
+                           "id":  "750 AL-1/3N UG",
+                           "description":  "",
+                           "type":  "ActZ"
+                       },
+                       {
+                           "id":  "750 CN Al",
+                           "description":  "",
+                           "type":  "Conc"
+                       },
+                       {
+                           "id":  "750 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "795 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "795 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "8 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "8 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "8 CWC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "800 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "874 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "874 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "8kV 4/0 Conc. Neut.",
+                           "description":  "",
+                           "type":  "Conc"
+                       },
+                       {
+                           "id":  "900 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "900 CU",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "954 AAC",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "954 ACSR",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "ABC",
+                           "description":  "ABC",
+                           "type":  "SepN"
+                       },
+                       {
+                           "id":  "ABC 10 MM2",
+                           "description":  "ABC 10 MM2",
+                           "type":  "SepN"
+                       },
+                       {
+                           "id":  "ABC 16 MM2",
+                           "description":  "ABC 16 MM2",
+                           "type":  "SepN"
+                       },
+                       {
+                           "id":  "ABC 25 MM2",
+                           "description":  "ABC 25 MM2",
+                           "type":  "SepN"
+                       },
+                       {
+                           "id":  "ABC 35 MM2",
+                           "description":  "ABC 35 MM2",
+                           "type":  "SepN"
+                       },
+                       {
+                           "id":  "ABC 50 MM",
+                           "description":  "ABC 50 MM2",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "ABC 50 MM2",
+                           "description":  "ABC 50 MM2",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "ABC 70 MM2",
+                           "description":  "ABC 70 MM2",
+                           "type":  "SepN"
+                       },
+                       {
+                           "id":  "ABC 95 MM",
+                           "description":  "ABC 95 MM2",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "ABC 95 MM2",
+                           "description":  "ABC 95 MM2",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "ANT",
+                           "description":  "ANT",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "Cable 12.5kV direct burial",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "DOG",
+                           "description":  "DOG",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "Ex1_300sqmm",
+                           "description":  "",
+                           "type":  "Conc"
+                       },
+                       {
+                           "id":  "GNAT",
+                           "description":  "GNAT",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "GOHPER",
+                           "description":  "GOPHER",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "GOPHER",
+                           "description":  "GOPHER",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "GSL",
+                           "description":  "GSL",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "INS 7/0.052",
+                           "description":  "INS 7/0.052",
+                           "type":  "ActZ"
+                       },
+                       {
+                           "id":  "INS ANT",
+                           "description":  "INS ANT",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "INS GNAT",
+                           "description":  "INS GNAT",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "INS WASP",
+                           "description":  "INS WASP",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "OSPRAY",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "OSPREY",
+                           "description":  "OSPREY",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "PANTHER",
+                           "description":  "PANTHER",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "PVC 07/0.052",
+                           "description":  "PVC 07/0.052",
+                           "type":  "ActZ"
+                       },
+                       {
+                           "id":  "PVC 17/0.083",
+                           "description":  "PVC 19/0.083",
+                           "type":  "ActZ"
+                       },
+                       {
+                           "id":  "PVC 17/083",
+                           "description":  "PVC 19/0.083",
+                           "type":  "ActZ"
+                       },
+                       {
+                           "id":  "PVC 19/0.052",
+                           "description":  "PVC 19/0.052",
+                           "type":  "ActZ"
+                       },
+                       {
+                           "id":  "PVC 19/0.083",
+                           "description":  "PVC 19/0.083",
+                           "type":  "ActZ"
+                       },
+                       {
+                           "id":  "PVC 37/0.083",
+                           "description":  "PVC 37/0.083",
+                           "type":  "ActZ"
+                       },
+                       {
+                           "id":  "PVC 37/0.83",
+                           "description":  "PVC 37/0.083",
+                           "type":  "ActZ"
+                       },
+                       {
+                           "id":  "PVC 7/0.052",
+                           "description":  "PVC 7/0.052",
+                           "type":  "ActZ"
+                       },
+                       {
+                           "id":  "PVC19/.083",
+                           "description":  "PVC19/.083",
+                           "type":  "ActZ"
+                       },
+                       {
+                           "id":  "RABBIT",
+                           "description":  "RABBIT",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "RACCOON",
+                           "description":  "",
+                           "type":  "Bare"
+                       },
+                       {
+                           "id":  "Tape 15kV 1/0",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 15kV 1000",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 15kV 2/0",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 15kV 250",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 15kV 3/0",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 15kV 350",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 15kV 4/0",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 15kV 500",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 15kV 750",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 8kV 1/0",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 8kV 1000",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 8kV 2/0",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 8kV 250",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 8kV 3/0",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 8kV 350",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 8kV 4/0",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 8kV 500",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "Tape 8kV 750",
+                           "description":  "",
+                           "type":  "Tape"
+                       },
+                       {
+                           "id":  "WASP",
+                           "description":  "WASP",
+                           "type":  "Bare"
+                       }
+                   ]
+}

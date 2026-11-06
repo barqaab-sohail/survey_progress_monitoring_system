@@ -15,7 +15,7 @@ class LoadsTableGeneration
     {
         $feeders = array_column($tables['InstFeeders'], null, 'FeederId');
         $sections = $rows = $connections = [];
-        $base = $configuration['settings']['mapping']['table_values']['Loads'] ?? [];
+        $base = array_replace((new MdbTableDefaults)->table('Loads')['values'], $configuration['settings']['mapping']['table_values']['Loads'] ?? []);
         foreach ($tables['InstSection'] as $section) {
             $id = $section['SectionId'];
             $this->check(is_string($id) && ! isset($sections[$id]), 'Loads requires unique text InstSection identifiers.');
@@ -231,15 +231,15 @@ class LoadsTableGeneration
 
     private function emptyRow(string $id, array $base): array
     {
-        $row = ['SectionId' => $id, 'IsSpotLoad' => array_key_exists('IsSpotLoad', $base) ? $base['IsSpotLoad'] : 0];
+        $row = ['SectionId' => $id, 'IsSpotLoad' => $base['IsSpotLoad']];
         foreach (self::QUANTITIES as $quantity) {
             foreach ([1, 2, 3] as $phase) {
                 $field = 'Phase'.$phase.$quantity;
                 $row[$field] = in_array($quantity, ['Customers', 'Kva'], true) ? 0.0 : ($base[$field] ?? null);
             }
         }
-        $row['LocationToModelSpotLoads'] = array_key_exists('LocationToModelSpotLoads', $base) ? $base['LocationToModelSpotLoads'] : 'C';
-        $row['CapacityFactor'] = array_key_exists('CapacityFactor', $base) ? $base['CapacityFactor'] : 1.0;
+        $row['LocationToModelSpotLoads'] = $base['LocationToModelSpotLoads'];
+        $row['CapacityFactor'] = $base['CapacityFactor'];
         $row['Description'] = '';
 
         return $row;

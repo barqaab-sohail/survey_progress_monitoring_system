@@ -7,25 +7,16 @@ use Illuminate\Validation\ValidationException;
 /** Rebuild only the section table, resolving every endpoint against the already generated Nodes. */
 class InstSectionGeneration
 {
-    private const FIXED = [
-        'PhaseToPhaseSpacing_MUL' => 121.9, 'PhaseToNeutralSpacing_MUL' => 91.4, 'AveHeightAboveGround_MUL' => 9.1,
-        'PercentDistLoadConstImpedance' => 40, 'PercentDistLoadConstCurrent' => 10,
-        'PercentSpotLoadConstImpedance' => 40, 'PercentSpotLoadConstCurrent' => 30,
-        'PercentLoadGrowthRate' => 2, 'MappingLink' => 0, 'UseEquivSpacing' => 0, 'IdenticalPhaseConductors' => 0,
-        'PositionCode' => 0, 'ConfigurationId' => '12.5/7.2 kV cross arm C2-2', 'IsContingency' => 0,
-        'UseSectAmpRating' => 0, 'AmpRating' => 100, 'UseDistCustZone' => 0, 'UseSpotCustZone' => 0,
-        'UseCustClassDistLoadIzpq' => 0, 'UseCustClassSpotLoadIzpq' => 0, 'GrowthZone' => 'Unknown',
-        'FromElbowOrBayStatus' => 'N', 'ToElbowOrBayStatus' => 'N', 'ElbowOrBayAmpRating' => 100,
-        'DuctBankCircuit' => 1, 'UseDuctBankAmpRating' => 0, 'UseDuctBankConfiguration' => 0, 'SpotLoadIsOff' => 0,
-        'EnergizeYear' => 0, 'RetireYear' => 100, 'LoadCategory' => 0, 'NeutIsGrounded' => 1, 'HideMapResults' => 0,
-        'LocationLink' => '*', 'ExpFactPermFail' => 1, 'ExpFactTempFail' => 1, 'ExpFactRepair' => 0,
-    ];
+    private array $profile;
 
-    public function apply(array $tables, array $contexts, array $provenance, array $loadProvenance): array
+    public function apply(array $tables, array $contexts, array $provenance, array $loadProvenance, ?array $profile = null): array
     {
+        $this->profile = $profile ?? (new MdbTableDefaults)->table('InstSection');
+        $options = $this->profile['options'];
         $nodes = array_column($tables['Node'], null, 'NodeId');
         $original = array_column($tables['InstSection'], null, 'SectionId');
-        $sections = $original;
+        $sections = $profile === null ? $original
+            : array_map(fn ($row) => array_replace($row, $this->profile['values']), $original);
         $remap = $staticLengths = $primarySections = [];
         $rules = new SectionGenerationRules;
         foreach ($contexts as $context) {
@@ -71,9 +62,9 @@ class InstSectionGeneration
                 unset($sections[$old]);
             }
             $this->put($sections, $this->row($supply, $feederId, $feeder, $feeder, $s['NodeId'],
-                $this->phaseCode(array_values(array_diff($phaseSet, ['N']))), 'Feeder', null, $this->conductors('500 MCM', null, $phaseSet)));
+                $this->phaseCode(array_values(array_diff($phaseSet, ['N']))), 'Feeder', null, $this->conductors($options['SupplyConductor'], null, $phaseSet)));
             $this->put($sections, $this->row($supply, $transformerId, $feeder, $s['NodeId'], $terminal['NodeId'],
-                $this->phaseCode($phaseSet), 'Transformer', 0.0, $this->conductors('4/C 07/.052', '4/C 07/.052', $phaseSet), 0));
+                $this->phaseCode($phaseSet), 'Transformer', $options['TransformerLengthM'], $this->conductors($options['TransformerConductor'], $options['TransformerConductor'], $phaseSet), $options['TransformerLoadConnection']));
             $remap[$primaryOld] = $transformerId;
             // Reuse the section created for this relationship; never format a separate device ID.
             $primarySections[$primaryOld]['SectionId'] = $transformerId;
@@ -90,7 +81,7 @@ class InstSectionGeneration
                 $from = $this->node($nodes, $old['FromNodeId'], $label);
                 $id = $this->id($rules, $code, $entry);
                 $isFirst = $survey['id'] == $firstSection['id'];
-                $length = $isFirst ? 10.0 : ($old['SectionLength_MUL'] ?? null);
+                $length = $isFirst ? $options['FirstPoleLengthM'] : ($old['SectionLength_MUL'] ?? null);
                 $elevation = collect($provenance)->firstWhere('section_id', $oldId)['elevation_status'] ?? null;
                 $this->check($isFirst || ($length !== null && ($elevation === 'elevation_adjusted' || ($survey['measured_length_m'] ?? null) !== null)),
                     $label.', E '.$entry['waypoint_reference'].': pole span requires recorded elevation or an approved measured length.');
@@ -106,17 +97,17 @@ class InstSectionGeneration
                     $this->phaseCode($phases), 'Secondary Pole', $length, $conductors));
                 $remap[$oldId] = $id;
                 if ($isFirst) {
-                    $staticLengths[$oldId] = 10.0;
+                    $staticLengths[$oldId] = $options['FirstPoleLengthM'];
                 }
                 if ($assignments !== []) {
                     $this->check(in_array('N', $phases, true), $label.': consumer sections require confirmed neutral availability.');
-                    $cable = $rules->consumerCableLength($entry, $label.', E '.$entry['waypoint_reference']);
+                    $cable = $rules->consumerCableLength($entry, $label.', E '.$entry['waypoint_reference'], $options);
                     foreach ($assignments as $connection) {
                         $suffix = $connection['suffix'];
                         // Resolve the stored Node rather than manufacturing an endpoint from the workbook.
                         $customer = $this->node($nodes, $to['NodeId'].'.'.$suffix, $label);
                         $customerId = $this->id($rules, $code, $entry, $suffix);
-                        $cableConductors = $this->conductors('PVC 07/0.052', 'PVC 07/0.052', str_split($connection['phase'].'N'));
+                        $cableConductors = $this->conductors($options['ConsumerConductor'], $options['ConsumerConductor'], str_split($connection['phase'].'N'));
                         $this->put($sections, $this->row($old, $customerId, $feeder, $to['NodeId'], $customer['NodeId'],
                             $connection['phase'].'N', 'Secondary Pole', $cable, $cableConductors));
                     }
@@ -247,10 +238,10 @@ class InstSectionGeneration
         return $nodes[$id];
     }
 
-    private function row(array $base, string $id, string $feeder, string $from, string $to, string $phases, string $description, ?float $length, array $conductors, int $connection = 1): array
+    private function row(array $base, string $id, string $feeder, string $from, string $to, string $phases, string $description, ?float $length, array $conductors, ?int $connection = null): array
     {
-        return array_replace($base, self::FIXED, $conductors, ['SectionId' => $id, 'FeederId' => $feeder, 'FromNodeId' => $from,
-            'ToNodeId' => $to, 'SectionPhases' => $phases, 'Description' => $description, 'SectionLength_MUL' => $length, 'LoadConnectionPhaseGnd' => $connection]);
+        return array_replace($base, $this->profile['values'], $conductors, ['SectionId' => $id, 'FeederId' => $feeder, 'FromNodeId' => $from,
+            'ToNodeId' => $to, 'SectionPhases' => $phases, 'Description' => $description, 'SectionLength_MUL' => $length, 'LoadConnectionPhaseGnd' => $connection ?? $this->profile['values']['LoadConnectionPhaseGnd']]);
     }
 
     private function put(array &$sections, array $row): void

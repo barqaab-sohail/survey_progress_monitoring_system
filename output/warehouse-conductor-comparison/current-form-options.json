@@ -1,0 +1,25 @@
+[
+  {
+    "id": 1,
+    "code": "HAZECO-TDL",
+    "name": "HAZECO Transmission and Distribution Losses Calculation Project",
+    "options": {
+      "A": "A — Ant",
+      "W": "W — Wasp",
+      "GN": "GN — Gnat",
+      "2/0 AWG": "2/0 AWG",
+      "PVC 7/0.052": "PVC 7/0.052",
+      "PVC 19/0.052": "PVC 19/0.052",
+      "PVC 19/0.083": "PVC 19/0.083",
+      "PVC 0.083": "PVC 0.083",
+      "PVC 37/0.083": "PVC 37/0.083 — as written in form",
+      "ABC 50mm2": "ABC cable — 50 mm²",
+      "ABC 95mm2": "ABC cable — 95 mm²",
+      "4/C 07/.052": "4/C 07/.052 — approved library",
+      "500 MCM": "500 MCM — approved library",
+      "ANT": "ANT — approved library",
+      "GNAT": "GNAT — approved library",
+      "PVC 07/0.052": "PVC 07/0.052 — approved library"
+    }
+  }
+]

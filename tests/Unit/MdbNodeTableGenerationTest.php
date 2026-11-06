@@ -125,7 +125,7 @@ class MdbNodeTableGenerationTest extends TestCase
                     foreach ($table === 'InstSection' ? ['FeederId', 'FromNodeId', 'ToNodeId'] : ($table === 'InstFeeders' ? ['FeederId'] : []) as $field) {
                         unset($row[$field]);
                     }
-                    if (in_array($table, ['Loads', 'InstPrimaryTransformers', 'InstMeterPoints', 'InstDGens', 'InstMymDGens', 'InstMymLoads'], true)) {
+                    if (in_array($table, ['Loads', 'InstPrimaryTransformers', 'InstMeterPoints', 'InstDGens', 'InstMymDGens', 'InstMymLoads', 'InstMymMeter', 'InstMeterDmd', 'InstMymSwDevPos'], true)) {
                         unset($row['SectionId']);
                     }
                 }

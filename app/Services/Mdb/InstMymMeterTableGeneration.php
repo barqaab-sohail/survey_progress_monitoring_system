@@ -7,24 +7,9 @@ use Illuminate\Validation\ValidationException;
 /** Generate base and forecast meter rows from the literal InstMymMeter.xlsx pattern. */
 class InstMymMeterTableGeneration
 {
-    private const REFERENCE_VALUES = [
-        'Phase1Value' => 10.3,
-        'Phase2Value' => 10.3,
-        'Phase3Value' => 10.3,
-        'Phase1Value2' => 85,
-        'Phase2Value2' => 85,
-        'Phase3Value2' => 85,
-        'CalibSAIFI' => 1,
-        'CalibSAIDI_Hr' => 4,
-        'CalibMAIFI' => 3,
-        'ContinuousCurrentRating' => 0,
-        'EmergencyCurrentRating' => 0,
-        'MeterIsOpen' => 0,
-        'UseDemandAsLoad' => 0,
-    ];
-
-    public function apply(array $transformers, array $sections): array
+    public function apply(array $transformers, array $sections, ?array $profile = null): array
     {
+        $profile ??= (new MdbTableDefaults)->table('InstMymMeter');
         $sectionsById = array_column($sections, null, 'SectionId');
         $rows = $used = [];
         foreach ($transformers as $transformer) {
@@ -38,8 +23,8 @@ class InstMymMeterTableGeneration
             $this->check(! isset($used[$id]), 'InstMymMeter: duplicate transformer section reference.');
             $used[$id] = true;
 
-            foreach ([0, 1] as $year) {
-                $rows[] = ['SectionId' => $id, ...self::REFERENCE_VALUES, 'YearNumber' => $year];
+            foreach (range($profile['first_year'], $profile['last_year']) as $year) {
+                $rows[] = ['SectionId' => $id, ...$profile['values'], 'YearNumber' => $year];
             }
         }
 
