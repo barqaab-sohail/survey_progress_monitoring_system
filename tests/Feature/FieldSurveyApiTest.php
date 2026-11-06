@@ -51,7 +51,7 @@ class FieldSurveyApiTest extends TestCase
         parent::setUp();
         Storage::fake('local');
         $this->organization = Organization::create(['name' => 'Survey Organization', 'type' => 'internal', 'status' => 'active']);
-        $this->leader = User::factory()->create(['organization_id' => $this->organization->id, 'role' => UserRole::SurveyTeamLeader]);
+        $this->leader = User::factory()->create(['organization_id' => $this->organization->id, 'role' => UserRole::MobileSurveyUser]);
         $this->admin = User::factory()->create(['organization_id' => $this->organization->id, 'role' => UserRole::SuperAdmin]);
         $this->project = Project::create(['code' => 'FIELD', 'name' => 'Field project', 'timezone' => 'Asia/Karachi', 'status' => 'active']);
         $circle = Circle::create(['project_id' => $this->project->id, 'code' => 'C', 'name' => 'Circle']);
@@ -191,14 +191,14 @@ class FieldSurveyApiTest extends TestCase
 
     public function test_surveyor_mobile_access_is_limited_to_personal_assignments_and_sync_updates_task_audit(): void
     {
-        $surveyor = User::factory()->create(['organization_id' => $this->organization->id, 'role' => UserRole::Surveyor]);
+        $surveyor = User::factory()->create(['organization_id' => $this->organization->id, 'role' => UserRole::MobileSurveyUser]);
         $this->team->members()->attach($surveyor->id, ['is_leader' => false]);
         $other = $this->feeder->replicate();
         $other->feeder_code = '0022';
         $other->feeder_name = 'Not assigned';
         $other->save();
         FeederAssignment::create(['feeder_id' => $other->id, 'survey_team_id' => $this->team->id, 'assigned_by' => $this->admin->id, 'start_date' => today(), 'status' => 'active']);
-        $this->actingAs($this->leader)->post(route('team-work.survey.assign'), ['survey_team_id' => $this->team->id, 'surveyor_id' => $surveyor->id,
+        $this->actingAs($this->admin)->post(route('team-work.survey.assign'), ['survey_team_id' => $this->team->id, 'surveyor_id' => $surveyor->id,
             'feeder_ids' => [$this->feeder->id], 'assigned_at' => today()->toDateString(), 'deadline' => today()->addDays(2)->toDateString(), 'priority' => 'high',
             'instructions' => 'Photograph both pole labels.'])->assertRedirect()->assertSessionHasNoErrors();
         $task = SurveyorAssignment::firstOrFail();
@@ -216,7 +216,7 @@ class FieldSurveyApiTest extends TestCase
         $this->postJson('/api/v1/field/surveys/sync', $payload)->assertCreated();
         $this->assertSame('submitted', $task->fresh()->status);
         $this->assertDatabaseHas('audit_logs', ['action' => 'survey.task_status_changed', 'auditable_id' => $task->id]);
-        $this->actingAs($this->leader)->post(route('team-work.survey.return', $task), ['comments' => 'Please attach the pole label photograph.'])
+        $this->actingAs($this->admin)->post(route('team-work.survey.return', $task), ['comments' => 'Please attach the pole label photograph.'])
             ->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame('returned', $task->fresh()->status);
         $this->assertDatabaseHas('audit_logs', ['action' => 'survey.task_returned', 'auditable_id' => $task->id]);
@@ -226,9 +226,9 @@ class FieldSurveyApiTest extends TestCase
 
     public function test_survey_assignment_rejects_a_surveyor_who_is_not_in_the_selected_team(): void
     {
-        $surveyor = User::factory()->create(['organization_id' => $this->organization->id, 'role' => UserRole::Surveyor, 'status' => 'active']);
-        $this->actingAs($this->leader)->get(route('team-work.index'))->assertOk()->assertSee('Search feeder code or name')->assertSee('surveyTeamOptions');
-        $response = $this->actingAs($this->leader)->from(route('team-work.index'))->post(route('team-work.survey.assign'), [
+        $surveyor = User::factory()->create(['organization_id' => $this->organization->id, 'role' => UserRole::MobileSurveyUser, 'status' => 'active']);
+        $this->actingAs($this->admin)->get(route('team-work.index'))->assertOk()->assertSee('Search feeder code or name')->assertSee('surveyTeamOptions');
+        $response = $this->actingAs($this->admin)->from(route('team-work.index'))->post(route('team-work.survey.assign'), [
             'survey_team_id' => $this->team->id,
             'surveyor_id' => $surveyor->id,
             'feeder_ids' => [$this->feeder->id],
@@ -425,7 +425,7 @@ class FieldSurveyApiTest extends TestCase
     {
         $data = $this->payload();
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
-        $other = User::factory()->create(['organization_id' => $this->organization->id, 'role' => UserRole::SurveyTeamLeader]);
+        $other = User::factory()->create(['organization_id' => $this->organization->id, 'role' => UserRole::MobileSurveyUser]);
         $this->team->members()->attach($other->id);
         $this->withHeader('Authorization', 'Bearer '.$this->tokenFor($other));
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertConflict();
@@ -472,7 +472,7 @@ class FieldSurveyApiTest extends TestCase
         $this->team->update(['name' => 'Survey Team', 'code' => 'ST']);
         $new = $this->payload();
         $new['transformer_code'] = 'NEW';
-        $this->postJson('/api/v1/field/surveys/sync', $new)->assertCreated();
+        $this->postJson('/api/v1/field/surveys/sync', $new)->assertUnprocessable()->assertJsonValidationErrors('survey_team_id');
         $this->team->update(['name' => 'Survey Team 01', 'code' => 'ST12']);
         $this->assertNull(SurveyTeamGroup::identifier($this->team->fresh()));
         $this->team->update(['name' => 'Survey Team 101', 'code' => 'ST01']);
@@ -511,6 +511,7 @@ class FieldSurveyApiTest extends TestCase
     public function test_complete_mobile_contract_submits_and_preserves_all_fields_row_media_and_edited_groups(): void
     {
         $data = json_decode(file_get_contents(base_path('tests/Fixtures/FieldSurvey/mobile-submission.json')), true, 512, JSON_THROW_ON_ERROR);
+        $this->team->update(['group_code' => '09']);
         $data['survey_team_id'] = $this->team->id;
         $data['feeder_id'] = $this->feeder->id;
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated()->assertJsonPath('status', 'submitted');
@@ -602,7 +603,7 @@ class FieldSurveyApiTest extends TestCase
         $data['transformer_id'] = $transformer->id;
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
         $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonCount(0, 'transformers');
-        $other = User::factory()->create(['organization_id' => $this->organization->id, 'role' => UserRole::SurveyTeamLeader]);
+        $other = User::factory()->create(['organization_id' => $this->organization->id, 'role' => UserRole::MobileSurveyUser]);
         $this->team->members()->attach($other->id);
         $this->withHeader('Authorization', 'Bearer '.$this->tokenFor($other));
         $duplicate = $this->payload();
@@ -671,7 +672,7 @@ class FieldSurveyApiTest extends TestCase
         $url = '/api/v1/field/surveys/'.$data['client_uuid'].'/attachments';
         $this->post($url, ['client_uuid' => (string) Str::uuid(), 'kind' => 'photo', 'file' => UploadedFile::fake()->createWithContent('danger.php', '<?php echo 1;')], ['Accept' => 'application/json'])->assertUnprocessable();
         $this->post($url, ['client_uuid' => (string) Str::uuid(), 'kind' => 'photo', 'file' => UploadedFile::fake()->create('large.jpg', 10241, 'image/jpeg')], ['Accept' => 'application/json'])->assertUnprocessable();
-        $other = User::factory()->create(['role' => UserRole::SurveyTeamLeader]);
+        $other = User::factory()->create(['role' => UserRole::MobileSurveyUser]);
         $this->team->members()->attach($other->id);
         $this->withHeader('Authorization', 'Bearer '.$this->tokenFor($other));
         $this->post($url, ['client_uuid' => (string) Str::uuid(), 'kind' => 'sketch', 'file' => $this->pdf()], ['Accept' => 'application/json'])->assertForbidden();
@@ -685,7 +686,7 @@ class FieldSurveyApiTest extends TestCase
         $viewer = User::factory()->create(['role' => UserRole::ManagementViewer]);
         $this->actingAs($viewer)->get('/field-surveys')->assertOk()->assertSee('B2308')->assertSee('Mobile Field Surveys');
         $this->get('/field-surveys/'.$data['client_uuid'])->assertOk()->assertSee('0008')->assertSee('0000123')->assertSee('Intersection');
-        $other = User::factory()->create(['role' => UserRole::SurveyTeamLeader]);
+        $other = User::factory()->create(['role' => UserRole::MobileSurveyUser]);
         $this->actingAs($other)->get('/field-surveys/'.$data['client_uuid'])->assertNotFound();
         $this->actingAs($this->leader)->get('/field-surveys/'.$data['client_uuid'])->assertOk();
         FeederAssignment::query()->update(['status' => 'inactive']);

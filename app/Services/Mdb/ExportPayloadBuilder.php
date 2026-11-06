@@ -359,7 +359,7 @@ class ExportPayloadBuilder
             $this->require($fromRoot !== $toRoot, 'Approved source mapping creates a cycle requiring engineering correction.');
             $parent[$toRoot] = $fromRoot;
         }
-        $tables = (new NodeTableGeneration($this->projection))->apply($tables, $nodeContexts, $snapshot['sources'] ?? [], $epsg);
+        $tables = (new NodeTableGeneration($this->projection))->apply($tables, $nodeContexts, $snapshot['sources'] ?? [], $epsg, $snapshot);
         $generated = (new InstSectionGeneration)->apply($tables, $nodeContexts, $provenance, $loadProvenance, isset($settings['mdb_table_defaults']) ? $profiles['InstSection'] : null);
         $tables = $generated['tables'];
         $provenance = $generated['provenance'];

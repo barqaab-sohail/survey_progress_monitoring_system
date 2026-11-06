@@ -21,7 +21,7 @@ use Illuminate\View\View;
 class TeamController extends Controller
 {
     private const MEMBER_ROLES = [
-        'survey' => ['surveyor', 'survey_team_leader', 'data_entry_verification_team_leader', 'survey_data_entry_operator', 'survey_data_verifier', 'super_admin'],
+        'survey' => ['mobile_survey_user', 'surveyor', 'survey_team_leader', 'data_entry_verification_team_leader', 'survey_data_entry_operator', 'survey_data_verifier', 'super_admin'],
         'mdb' => ['mdb_generator', 'mdb_creation_team_leader', 'mdb_team_user', 'super_admin'],
     ];
 
@@ -39,14 +39,30 @@ class TeamController extends Controller
 
     public function store(Request $request, AuditService $audit): RedirectResponse
     {
-        $data = $request->validate(['type' => ['required', 'in:survey,mdb'], 'project_id' => ['required', 'exists:projects,id'], 'code' => ['required', 'string', 'max:50'], 'name' => ['required', 'string', 'max:255']]);
+        $data = $request->validate(['type' => ['required', 'in:survey,mdb'], 'project_id' => ['required', 'exists:projects,id'], 'code' => ['required', 'string', 'max:50'], 'name' => ['required', 'string', 'max:255'],
+            'group_code' => ['nullable', 'string', 'regex:/^[0-9]{2}$/D', Rule::unique('survey_teams')->where('project_id', $request->input('project_id'))],
+            'gpx_group_code' => ['nullable', 'string', 'regex:/^[A-Za-z0-9]{1,20}$/D', Rule::unique('survey_teams')->where('project_id', $request->input('project_id'))]]);
         $attributes = ['project_id' => $data['project_id'], 'code' => $data['code'], 'name' => $data['name'], 'status' => 'active'];
+        if ($data['type'] === 'survey') {
+            $attributes += ['group_code' => $data['group_code'] ?? null, 'gpx_group_code' => isset($data['gpx_group_code']) ? strtoupper($data['gpx_group_code']) : null];
+        }
         $team = match ($data['type']) {
             'survey' => SurveyTeam::create($attributes), 'mdb' => MdbTeam::create($attributes),
         };
         $audit->record($request->user(), 'team.created', $team, new: $team->toArray());
 
         return back()->with('success', 'Team created.');
+    }
+
+    public function group(Request $request, SurveyTeam $team, AuditService $audit): RedirectResponse
+    {
+        $data = $request->validate(['group_code' => ['required', 'string', 'regex:/^[0-9]{2}$/D', Rule::unique('survey_teams')->where('project_id', $team->project_id)->ignore($team)],
+            'gpx_group_code' => ['nullable', 'string', 'regex:/^[A-Za-z0-9]{1,20}$/D', Rule::unique('survey_teams')->where('project_id', $team->project_id)->ignore($team)]]);
+        $old = $team->only(['group_code', 'gpx_group_code']);
+        $team->update(['group_code' => $data['group_code'], 'gpx_group_code' => isset($data['gpx_group_code']) ? strtoupper($data['gpx_group_code']) : null]);
+        $audit->record($request->user(), 'team.group_configured', $team, $old, $team->only(['group_code', 'gpx_group_code']));
+
+        return back()->with('success', 'Group code saved. Existing survey rows keep their original group identifiers. Refresh mobile assignments before creating new surveys.');
     }
 
     public function member(Request $request, AuditService $audit): RedirectResponse
@@ -63,6 +79,9 @@ class TeamController extends Controller
             'survey' => SurveyTeam::findOrFail($data['team_id']), 'mdb' => MdbTeam::findOrFail($data['team_id'])
         };
         $member = User::findOrFail($data['user_id']);
+        if ($data['type'] === 'survey' && $member->hasRole('mobile_survey_user') && ! $team->group_code) {
+            throw ValidationException::withMessages(['team_id' => 'Configure an explicit two-digit group code before assigning a Mobile Survey User.']);
+        }
         if (! $member->hasAnyRole(self::MEMBER_ROLES[$data['type']])) {
             throw ValidationException::withMessages([
                 'user_id' => 'The selected user does not have a role allowed in '.($data['type'] === 'survey' ? 'Survey' : 'MDB').' teams. Choose an eligible user for this team type.',

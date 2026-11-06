@@ -58,6 +58,14 @@ class UserForm
                     ->options(collect(RecordStatus::cases())->mapWithKeys(fn (RecordStatus $status) => [$status->value => ucfirst($status->value)])->all())
                     ->default('active')
                     ->required(),
+                Select::make('surveyTeams')
+                    ->label('Mobile survey team / group')
+                    ->relationship('surveyTeams', 'name', modifyQueryUsing: fn (Builder $query) => $query->where('status', 'active')->whereNotNull('group_code')->whereHas('project', fn (Builder $q) => $q->where('status', 'active')))
+                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->name.' — Group '.$record->group_code)
+                    ->multiple()->maxItems(1)->preload()
+                    ->visible(fn (Get $get) => $get('role') === UserRole::MobileSurveyUser->value)
+                    ->required(fn (Get $get) => $get('role') === UserRole::MobileSurveyUser->value)
+                    ->helperText('Configure the two-digit group code in Teams & Assignments first. New S/E entries use this group automatically.'),
                 TextInput::make('password')
                     ->password()
                     ->revealable()

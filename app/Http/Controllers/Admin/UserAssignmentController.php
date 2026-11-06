@@ -63,7 +63,7 @@ class UserAssignmentController extends Controller
     public function candidates(SurveyorAssignment $assignment)
     {
         $users = $assignment->team->members()->with('roles')->where('status', 'active')->where('users.id', '!=', $assignment->surveyor_id)->orderBy('name')->get()
-            ->filter(fn ($user) => $user->hasAnyRole(['surveyor', 'survey_team_leader']))->map(fn ($user) => ['id' => $user->id, 'name' => $user->name])->values();
+            ->filter(fn ($user) => $user->hasAnyRole(['mobile_survey_user', 'super_admin']))->map(fn ($user) => ['id' => $user->id, 'name' => $user->name])->values();
 
         return response()->json(['users' => $users]);
     }

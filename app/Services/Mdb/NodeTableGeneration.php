@@ -9,7 +9,7 @@ class NodeTableGeneration
 {
     public function __construct(private readonly ProjectionService $projection) {}
 
-    public function apply(array $tables, array $contexts, array $sources, int $epsg): array
+    public function apply(array $tables, array $contexts, array $sources, int $epsg, array $snapshot = []): array
     {
         $original = array_column($tables['Node'], null, 'NodeId');
         $replacements = $extra = [];
@@ -22,7 +22,7 @@ class NodeTableGeneration
             }
             $label = 'Transformer '.$transformer['code'];
             $this->check($epsg === 32643, $label.': Node generation requires WGS 84 / UTM Zone 43N (EPSG:32643).');
-            $pad = $this->mounting($transformer, $sources);
+            $pad = $this->mounting($transformer, $sources, $snapshot);
             $pair = (new SurveyWaypoint)->firstPair($transformer);
             $this->check($pair['start'] && $pair['end'], $label.': a unique first S/E pair is required.');
             $firstSection = $this->section($transformer, $pair['end']);
@@ -132,7 +132,7 @@ class NodeTableGeneration
         return $matches[0];
     }
 
-    private function mounting(array $transformer, array $sources): int
+    private function mounting(array $transformer, array $sources, array $snapshot): int
     {
         $header = $transformer['header'] ?? [];
         $label = 'Transformer '.$transformer['code'];
@@ -143,6 +143,16 @@ class NodeTableGeneration
         };
         $this->check($flag !== null && in_array($header['manually_verified'] ?? false, [true, 1, '1'], true),
             $label.': mounting arrangement is missing, unreadable or ambiguous. Verify Single Pole, Double Pole or Pad against the source PDF before exporting.');
+        $mobileRows = MobileSurveyProvenance::rows($snapshot);
+        if ($mobileRows && ($header['verification_method'] ?? null) === 'mobile_gpx_confirmation'
+            && collect($transformer['entry_rows'] ?? [])->every(fn ($row) => MobileSurveyProvenance::row($snapshot, $row, $mobileRows))) {
+            $originalFlag = match ($snapshot['mobile_survey']['data']['header']['mounting'] ?? null) {
+                'S.Pole', 'D.Pole' => 0, 'Pad' => 1, default => null,
+            };
+            $this->check($originalFlag === $flag, $label.': mounting differs from the original mobile survey header.');
+
+            return $flag;
+        }
         $pages = array_values(array_filter($header['pages'] ?? [], fn ($page) => ($page['role'] ?? null) === 'header'));
         $this->check(count($pages) === 1 && in_array($pages[0]['confirmed'] ?? false, [true, 1, '1'], true),
             $label.': confirm one source PDF header page for mounting before exporting.');

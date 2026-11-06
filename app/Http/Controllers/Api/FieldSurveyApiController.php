@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\SyncFieldSurveyRequest;
 use App\Models\FieldSurvey;
 use App\Models\FieldSurveyAttachment;
-use App\Models\Transformer;
 use App\Models\SurveyorAssignment;
+use App\Models\Transformer;
 use App\Services\DriveStorage\FileStorage;
 use App\Services\FieldSurveyAccess;
 use App\Services\FieldSurveyService;
@@ -25,7 +25,7 @@ class FieldSurveyApiController extends Controller
     public function bootstrap(Request $request, FieldSurveyAccess $access): JsonResponse
     {
         $user = $request->user();
-        $teams = $access->teams($user)->orderBy('id')->get(['id', 'code', 'name', 'project_id']);
+        $teams = $access->teams($user)->orderBy('id')->get(['id', 'code', 'name', 'project_id', 'group_code', 'gpx_group_code']);
         $feeders = $access->feeders($user)->with(['gridStation', 'division', 'subDivision', 'assignments' => function ($query) use ($access, $teams): void {
             $access->activeAssignments($query->getQuery());
             $query->whereIn('survey_team_id', $teams->pluck('id'));

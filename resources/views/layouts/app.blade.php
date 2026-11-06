@@ -57,6 +57,12 @@
                 <a class="nav-link {{ request()->routeIs('survey-progress.*') ? 'active' : '' }}" href="{{ route('survey-progress.index') }}">Automatic Survey Progress</a>
                 <a class="nav-link {{ request()->routeIs('field-surveys.*') ? 'active' : '' }}" href="{{ route('field-surveys.index') }}">Mobile Field Surveys</a>
             @endif
+            @if(auth()->user()->hasAnyRole(['mobile_survey_user','mdb_generator']))
+                <a class="nav-link {{ request()->routeIs('field-surveys.*') ? 'active' : '' }}" href="{{ route('field-surveys.index') }}">Mobile Field Surveys</a>
+            @endif
+            @if(app(\App\Services\MobileGpxWorkflow::class)->canLink(auth()->user()))
+                <a class="nav-link {{ request()->routeIs('mobile-gpx.*') ? 'active' : '' }}" href="{{ route('mobile-gpx.index') }}">Mobile Survey GPX Linking</a>
+            @endif
             @if(auth()->user()->hasAnyRole(['survey_team_leader','surveyor','super_admin']))
                 <div class="nav-label">{{ auth()->user()->hasRole('survey_team_leader') ? 'Survey Team Leader' : 'Survey' }}</div>
                 @unless(config('survey_progress.automatic'))<a class="nav-link {{ request()->routeIs('survey.create') ? 'active' : '' }}" href="{{ route('survey.create') }}">Add Daily Survey</a>@endunless

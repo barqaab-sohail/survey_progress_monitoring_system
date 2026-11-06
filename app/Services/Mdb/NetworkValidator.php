@@ -182,6 +182,11 @@ class NetworkValidator
             $projected = $rawProjected;
             $tid = $transformer['id'];
             $tc = ['transformer_id' => $tid];
+            $mobile = $data['mobile_survey'] ?? null;
+            $mobileRows = MobileSurveyProvenance::rows($data);
+            $mobileProvenance = $mobileRows !== [] && count($data['transformers']) === 1
+                && count($mobileRows) === count($transformer['entry_rows'] ?? [])
+                && collect($transformer['entry_rows'] ?? [])->every(fn ($r) => MobileSurveyProvenance::row($data, $r, $mobileRows));
             foreach ($transformer['entry_rows'] ?? [] as $entry) {
                 if (empty($entry['manually_verified'])) {
                     $issue('unverified_entry_row', 'Check each S/E row against the PDF in Review & save.', $tc + ['section_id' => $entry['section_id'] ?? null, 'source_pdf_id' => $entry['source_pdf_id'] ?? null, 'source_page' => $entry['source_page'] ?? null, 'source_row' => $entry['source_row'] ?? null]);
@@ -275,7 +280,7 @@ class NetworkValidator
                     $issue('invalid_page_role', 'Explicitly classify this transformer page as header, continuation or PV.', $pc);
                 }
             }
-            if (! $hasHeaderSource) {
+            if (! $hasHeaderSource && ! $mobileProvenance) {
                 $issue('missing_header_provenance', 'Explicitly associate and confirm the source PDF header page for this transformer.', $tc);
             }
             $adjacency = [];
@@ -306,7 +311,12 @@ class NetworkValidator
                     $issue('unverified_survey_row', 'Manually verify this source PDF row before approval.', $sc);
                 }
                 $pdf = $sources[(string) ($section['source_pdf_id'] ?? '')] ?? null;
-                if (! $pdf || ($pdf['kind'] ?? '') !== 'pdf' || empty($section['source_page']) || empty($section['source_row'])) {
+                $mobileSection = $mobileProvenance && ($section['original_entry']['mobile_survey_uuid'] ?? null) === $mobile['uuid']
+                    && count($section['original_entry']['mobile_row_ids'] ?? []) === 2
+                    && count(array_intersect($section['original_entry']['mobile_row_ids'], array_keys($mobileRows))) === 2;
+                if ($mobileSection) {
+                    // Source is the frozen, identified mobile observations, not a synthetic PDF.
+                } elseif (! $pdf || ($pdf['kind'] ?? '') !== 'pdf' || empty($section['source_page']) || empty($section['source_row'])) {
                     $issue('missing_pdf_provenance', 'Select a source PDF, page and survey row.', $sc);
                 } elseif ($section['source_page'] < 1 || (isset($pdf['metadata']['page_count']) && $section['source_page'] > $pdf['metadata']['page_count'])) {
                     $issue('invalid_pdf_page', 'Survey page lies outside the uploaded PDF.', $sc);
@@ -417,7 +427,9 @@ class NetworkValidator
                 }
                 $pdf = $sources[(string) ($pv['original_entry']['source_pdf_id'] ?? '')] ?? [];
                 $page = $pv['original_entry']['source_page'] ?? null;
-                if (($pdf['kind'] ?? '') !== 'pdf' || ! is_numeric($page) || $page < 1 || empty($pv['original_entry']['source_row']) || (isset($pdf['metadata']['page_count']) && $page > $pdf['metadata']['page_count'])) {
+                $mobilePv = $mobileProvenance && ($pv['original_entry']['mobile_survey_uuid'] ?? null) === $mobile['uuid']
+                    && isset($mobileRows[$pv['original_entry']['mobile_row_id'] ?? '']);
+                if (! $mobilePv && (($pdf['kind'] ?? '') !== 'pdf' || ! is_numeric($page) || $page < 1 || empty($pv['original_entry']['source_row']) || (isset($pdf['metadata']['page_count']) && $page > $pdf['metadata']['page_count']))) {
                     $issue('missing_pv_provenance', 'PV observations require an authorized source PDF, page and row.', $pc);
                 }
                 if (! empty($pv['section_id']) && ! in_array($pv['section_id'], array_column($transformer['sections'] ?? [], 'id'))) {

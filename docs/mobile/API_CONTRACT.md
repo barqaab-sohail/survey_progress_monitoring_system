@@ -1,5 +1,7 @@
 # LT field survey mobile API contract (v1)
 
+Current access and GPX workflow: see [Mobile users and shared GPX linking](MOBILE_GPX_WORKFLOW.md). Mobile login/device requests now permit only Mobile Survey User and Super Admin; the earlier survey-team-leader login guidance below is historical. Explicit team group codes take precedence over legacy code/name-derived defaults. New nonhistorical mobile rows use that assigned group; the first historical S retains its original group/date.
+
 Reference: B2308.pdf, 27 scanned LT survey sheets. Use blank schema, not handwritten sample values. API base: `https://hazeco.barqaab.pk/api/v1/field`. Android uses the fixed application URL. Assigned survey-team-leader accounts or super admin can collect. First login and download require internet; collection afterwards is offline.
 
 ## Endpoints

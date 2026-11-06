@@ -8,6 +8,7 @@ enum UserRole: string
     case ProjectManager = 'project_manager';
     case SurveyTeamLeader = 'survey_team_leader';
     case Surveyor = 'surveyor';
+    case MobileSurveyUser = 'mobile_survey_user';
     case DataEntryVerificationTeamLeader = 'data_entry_verification_team_leader';
     case MdbCreationTeamLeader = 'mdb_creation_team_leader';
     case MdbTeamUser = 'mdb_team_user';
@@ -25,6 +26,7 @@ enum UserRole: string
             self::ProjectManager => 'Project Manager',
             self::SurveyTeamLeader => 'Survey Team Leader',
             self::Surveyor => 'Surveyor',
+            self::MobileSurveyUser => 'Mobile Survey User',
             self::DataEntryVerificationTeamLeader => 'Data Entry & Verification Team Leader',
             self::MdbCreationTeamLeader => 'MDB Creation Team Leader',
             self::MdbTeamUser => 'MDB User',

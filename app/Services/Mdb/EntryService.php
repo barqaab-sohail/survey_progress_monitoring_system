@@ -210,6 +210,7 @@ class EntryService
             $data = $input;
         }
         $simple = GenerationMode::simple($data['configuration'] ?? null);
+        $mobileRows = MobileSurveyProvenance::rows($data);
         $issues = [];
         $add = function (string $code, string $message, object $row) use (&$issues): void {
             $issues[] = ['code' => $code, 'message' => $message, 'entry_row_id' => $row->id, 'transformer_id' => $row->transformer_id,
@@ -333,7 +334,9 @@ class EntryService
                         $add('incomplete_entry_date_group', $label.'group/team and date need entry.', $row);
                     }
                     $pdf = collect($data['sources'] ?? [])->firstWhere('id', $row->source_pdf_id);
-                    if (! $pdf || $pdf['kind'] !== 'pdf' || ! $row->source_page || $row->source_page < 1 || ! $row->source_row || $row->source_page > ($pdf['metadata']['page_count'] ?? 0)) {
+                    if (MobileSurveyProvenance::row($data, (array) $row, $mobileRows)) {
+                        // The exact original mobile row is retained in the frozen source.
+                    } elseif (! $pdf || $pdf['kind'] !== 'pdf' || ! $row->source_page || $row->source_page < 1 || ! $row->source_row || $row->source_page > ($pdf['metadata']['page_count'] ?? 0)) {
                         $add('invalid_entry_pdf_source', $label.'select a valid source PDF, page and survey row.', $row);
                     } elseif (! collect($transformerData['header']['pages'] ?? [])->contains(fn ($page) => (string) ($page['source_pdf_id'] ?? '') === (string) $row->source_pdf_id
                         && (int) ($page['page'] ?? 0) === (int) $row->source_page

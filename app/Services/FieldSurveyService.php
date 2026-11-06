@@ -8,7 +8,9 @@ use App\Models\SurveyorAssignment;
 use App\Models\Transformer;
 use App\Models\User;
 use App\Services\DriveStorage\FileStorage;
+use App\Services\Mdb\StartingPoleCoordinates;
 use App\Services\Mdb\SurveyPhaseConsistency;
+use App\Support\FieldSurveyPairs;
 use App\Support\FieldTransformerIdentity;
 use App\Support\SurveyTeamGroup;
 use Illuminate\Database\QueryException;
@@ -33,6 +35,20 @@ class FieldSurveyService
                 abort_if($survey?->trashed(), 409, 'This survey was deleted on the server. Your phone copy cannot recreate it.');
                 abort_if($survey && $survey->collected_by !== $actor->id, 409, 'This survey UUID belongs to another account.');
                 $this->validateRowOwnershipAndGroups($data, $survey, SurveyTeamGroup::identifier($team));
+                if ($actor->hasRole('mobile_survey_user')) {
+                    $group = SurveyTeamGroup::identifier($team);
+                    if (! $group) {
+                        throw ValidationException::withMessages(['survey_team_id' => 'Your assigned team needs a two-digit group code. Contact the administrator.']);
+                    }
+                    $first = array_values(FieldSurveyPairs::groups($data['rows']))[0] ?? [];
+                    $firstS = collect($first)->first(fn ($i) => ($data['rows'][$i]['se'] ?? '') === 'S');
+                    foreach ($data['rows'] as $i => $row) {
+                        $old = ! empty($row['row_id']) ? collect($survey?->rows ?? [])->firstWhere('row_id', $row['row_id']) : null;
+                        if ($i !== $firstS && ! empty($row['group']) && $row['group'] !== $group && ($old['group'] ?? null) !== $row['group']) {
+                            throw ValidationException::withMessages(["rows.$i.group" => 'New observations use your assigned group '.$group.'. Only the historical first S may use another group.']);
+                        }
+                    }
+                }
                 $hashData = $data;
                 unset($hashData['base_revision']);
                 $hash = hash('sha256', json_encode($this->canonical($hashData), JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION));
@@ -81,6 +97,9 @@ class FieldSurveyService
                         'feeder_code' => $feeder->feeder_code,
                         'feeder_name' => $feeder->feeder_name,
                         'team_name' => $team->name,
+                        'group_code' => SurveyTeamGroup::identifier($team),
+                        'gpx_group_code' => $team->gpx_group_code,
+                        'starting_pole_coordinates' => app(StartingPoleCoordinates::class)->capture($transformer),
                         'transformer' => $transformer?->only(['id', 'transformer_code', 'capacity_kva', 'equipment_make', 'equipment_location']),
                     ];
                 }

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SurveyTeam extends Model
 {
-    protected $fillable = ['project_id', 'code', 'name', 'status'];
+    protected $fillable = ['project_id', 'code', 'name', 'status', 'group_code', 'gpx_group_code'];
 
     public function project(): BelongsTo
     {

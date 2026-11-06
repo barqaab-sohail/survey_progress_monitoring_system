@@ -190,6 +190,16 @@ class SurveyRecord {
   String state, error, updatedAt;
   Json? outbound;
   String get id => data['client_uuid'];
+  String get surveyName {
+    final date = DateTime.tryParse(data['survey_date'] ?? '');
+    final code = (data['transformer_code'] ?? '').toString();
+    if (code.isEmpty) return 'New transformer survey';
+    final stamp = date == null
+        ? '??????'
+        : '${date.day.toString().padLeft(2, '0')}${date.month.toString().padLeft(2, '0')}${(date.year % 100).toString().padLeft(2, '0')}';
+    return '${data['team_group'] ?? '??'}_${stamp}_$code';
+  }
+
   int get revision => data['base_revision'] as int? ?? 0;
   List<Json> get rows => (data['rows'] as List).cast<Json>();
   List<Json> get solar => (data['solar'] as List).cast<Json>();
@@ -274,7 +284,9 @@ class SurveyRecord {
     ensurePairIds();
     final previous = rows.lastOrNull;
     return newRow(
-        previous?['date'] ?? dayString(DateTime.now()),
+        rows.length == 1
+            ? data['survey_date']
+            : previous?['date'] ?? data['survey_date'],
         pairId: previous != null && previous['se'] == 'S'
             ? previous['pair_id']
             : null,
@@ -341,7 +353,9 @@ class SurveyRecord {
     rows.insert(
       insertAt,
       newRow(
-          start['date'] ?? dayString(DateTime.now()),
+          startIndex == 0
+              ? data['survey_date']
+              : start['date'] ?? data['survey_date'],
           pairId: start['pair_id'],
         )
         ..['se'] = partnerRole

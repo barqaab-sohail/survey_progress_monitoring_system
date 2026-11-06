@@ -7,23 +7,29 @@ use App\Http\Controllers\Admin\HierarchyController;
 use App\Http\Controllers\Admin\MasterDataController;
 use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\Admin\TeamController;
+use App\Http\Controllers\Admin\UserAssignmentController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Api\FieldSurveyApiController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AutomaticSurveyProgressController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FieldSurveyController;
 use App\Http\Controllers\FieldSurveyTestController;
 use App\Http\Controllers\GoogleDriveController;
+use App\Http\Controllers\GpxCalculatorController;
 use App\Http\Controllers\MdbEntryController;
 use App\Http\Controllers\MdbVerificationController;
+use App\Http\Controllers\MobileGpxController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProgressQueueController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SurveyEntryController;
 use App\Http\Controllers\SurveyVerificationController;
+use App\Http\Controllers\TeamWorkAssignmentController;
 use App\Http\Controllers\TransformerController;
 use App\Http\Controllers\TransformerMdbBuilderController;
+use App\Http\Middleware\AutomaticSurveyProgressReadOnly;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/privacy-policy', 'legal.privacy-policy')->name('privacy-policy');
@@ -39,7 +45,15 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', 'active'])->group(function () {
-    Route::prefix('gpx-calculator')->name('gpx-calculator.')->controller(\App\Http\Controllers\GpxCalculatorController::class)->group(function () {
+    Route::middleware('role:super_admin,mdb_generator')->prefix('mobile-gpx')->name('mobile-gpx.')->controller(MobileGpxController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/sources', 'upload')->middleware('throttle:20,1')->name('upload');
+        Route::get('/{clientUuid}', 'show')->whereUuid('clientUuid')->name('show');
+        Route::post('/{clientUuid}/preview', 'preview')->whereUuid('clientUuid')->name('preview');
+        Route::post('/{clientUuid}/confirm', 'confirm')->whereUuid('clientUuid')->name('confirm');
+        Route::post('/{clientUuid}/json', 'export')->whereUuid('clientUuid')->middleware('throttle:20,1')->name('export');
+    });
+    Route::prefix('gpx-calculator')->name('gpx-calculator.')->controller(GpxCalculatorController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->middleware('throttle:10,1')->name('store');
         Route::post('/verified-transformer', 'verified')->middleware('throttle:30,1')->name('verified');
@@ -68,7 +82,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/{project}/export', [TransformerMdbBuilderController::class, 'export'])->middleware('throttle:10,1')->name('export');
         Route::get('/{project}/source/{kind}', [TransformerMdbBuilderController::class, 'source'])->where('kind', 'pdf|gpx')->name('source');
     });
-    Route::middleware('role:survey_team_leader,super_admin,project_manager,management_viewer')->prefix('field-surveys')->name('field-surveys.')->group(function () {
+    Route::middleware('role:mobile_survey_user,mdb_generator,survey_team_leader,super_admin,project_manager,management_viewer')->prefix('field-surveys')->name('field-surveys.')->group(function () {
         Route::get('/', [FieldSurveyController::class, 'index'])->name('index');
         Route::get('/attachments/{clientUuid}', [FieldSurveyController::class, 'download'])->whereUuid('clientUuid')->name('attachment');
         Route::get('/{clientUuid}/edit', [FieldSurveyController::class, 'edit'])->whereUuid('clientUuid')->name('edit');
@@ -89,7 +103,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/{transformer}', [TransformerController::class, 'show'])->name('show');
     });
 
-    Route::middleware(['role:survey_team_leader,super_admin', \App\Http\Middleware\AutomaticSurveyProgressReadOnly::class])->prefix('survey')->name('survey.')->group(function () {
+    Route::middleware(['role:survey_team_leader,super_admin', AutomaticSurveyProgressReadOnly::class])->prefix('survey')->name('survey.')->group(function () {
         Route::get('/', [SurveyEntryController::class, 'index'])->name('index');
         Route::get('/create', [SurveyEntryController::class, 'create'])->name('create');
         Route::post('/', [SurveyEntryController::class, 'store'])->name('store');
@@ -99,10 +113,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::put('/items/{item}/resubmit', [SurveyEntryController::class, 'update'])->name('resubmit');
     });
 
-    Route::middleware('role:survey_team_leader,super_admin,project_manager,management_viewer')->prefix('survey-progress')->name('survey-progress.')->controller(\App\Http\Controllers\AutomaticSurveyProgressController::class)->group(function () {
+    Route::middleware('role:survey_team_leader,super_admin,project_manager,management_viewer')->prefix('survey-progress')->name('survey-progress.')->controller(AutomaticSurveyProgressController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::middleware('role:super_admin')->group(function () {
-            Route::get('/sync-status', [\App\Http\Controllers\AutomaticSurveyProgressController::class, 'syncStatus'])->name('sync-status');
+            Route::get('/sync-status', [AutomaticSurveyProgressController::class, 'syncStatus'])->name('sync-status');
             Route::post('/sync', 'sync')->middleware('throttle:5,1')->name('sync');
             Route::post('/feeders/{feeder}/length', 'calculate')->middleware('throttle:10,1')->name('length');
             Route::put('/feeders/{feeder}/mapping', 'mapping')->name('mapping');
@@ -143,10 +157,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::middleware('role:super_admin')->prefix('legacy-admin')->name('admin.')->group(function () {
-        Route::get('/assignments', [\App\Http\Controllers\Admin\UserAssignmentController::class, 'index'])->name('assignments.index');
-        Route::get('/assignments/options', [\App\Http\Controllers\Admin\UserAssignmentController::class, 'options'])->name('assignments.options');
-        Route::get('/assignments/survey/{assignment}/candidates', [\App\Http\Controllers\Admin\UserAssignmentController::class, 'candidates'])->name('assignments.candidates');
-        Route::post('/assignments', [\App\Http\Controllers\Admin\UserAssignmentController::class, 'store'])->name('assignments.store');
+        Route::get('/assignments', [UserAssignmentController::class, 'index'])->name('assignments.index');
+        Route::get('/assignments/options', [UserAssignmentController::class, 'options'])->name('assignments.options');
+        Route::get('/assignments/survey/{assignment}/candidates', [UserAssignmentController::class, 'candidates'])->name('assignments.candidates');
+        Route::post('/assignments', [UserAssignmentController::class, 'store'])->name('assignments.store');
         Route::get('/master-data', [MasterDataController::class, 'index'])->name('master.index');
         Route::get('/master-data/hierarchy', [HierarchyController::class, 'index'])->name('hierarchy.index');
         Route::post('/master-data/hierarchy/projects', [HierarchyController::class, 'project'])->name('hierarchy.projects.store');
@@ -166,6 +180,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::get('/teams', [TeamController::class, 'index'])->name('teams.index');
         Route::post('/teams', [TeamController::class, 'store'])->name('teams.store');
+        Route::put('/teams/{team}/group', [TeamController::class, 'group'])->name('teams.group');
         Route::post('/teams/member', [TeamController::class, 'member'])->name('teams.member');
         Route::post('/teams/assign-feeder', [TeamController::class, 'assignFeeder'])->name('teams.assign-feeder');
         Route::get('/audit-log', AuditLogController::class)->name('audit.index');
@@ -173,13 +188,13 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/audit-log/clear-records.csv', [AuditLogController::class, 'records'])->name('audit.records');
         Route::post('/audit-log/clear', [AuditLogController::class, 'clear'])->name('audit.clear');
     });
-    Route::middleware('role:survey_team_leader,super_admin')->prefix('team-work')->name('team-work.')->controller(\App\Http\Controllers\TeamWorkAssignmentController::class)->group(function () {
+    Route::middleware('role:survey_team_leader,super_admin')->prefix('team-work')->name('team-work.')->controller(TeamWorkAssignmentController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/survey', 'assignSurvey')->name('survey.assign');
         Route::post('/survey/{assignment}/reassign', 'reassignSurvey')->name('survey.reassign');
         Route::post('/survey/{assignment}/return', 'returnSurvey')->name('survey.return');
     });
-    Route::middleware('role:super_admin,data_entry_verification_team_leader,mdb_creation_team_leader')->prefix('team-work')->name('team-work.')->controller(\App\Http\Controllers\TeamWorkAssignmentController::class)->group(function () {
+    Route::middleware('role:super_admin,data_entry_verification_team_leader,mdb_creation_team_leader')->prefix('team-work')->name('team-work.')->controller(TeamWorkAssignmentController::class)->group(function () {
         Route::get('/workflow', 'workflowIndex')->name('workflow');
         Route::post('/workflow', 'assignWorkflow')->name('workflow.assign');
     });

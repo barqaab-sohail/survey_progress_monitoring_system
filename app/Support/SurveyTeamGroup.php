@@ -8,6 +8,9 @@ class SurveyTeamGroup
 {
     public static function identifier(SurveyTeam $team): ?string
     {
+        if ($team->group_code !== null) {
+            return preg_match('/^[0-9]{2}$/D', $team->group_code) ? $team->group_code : null;
+        }
         $numbers = [];
         foreach ([$team->code, $team->name] as $value) {
             if (preg_match('/([0-9]+)\s*$/D', (string) $value, $matches)) {

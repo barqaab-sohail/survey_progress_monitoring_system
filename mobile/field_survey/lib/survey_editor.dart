@@ -1333,12 +1333,13 @@ class _RowEditorState extends State<RowEditor> {
     String label, {
     bool number = false,
     bool digits = false,
+    bool enabled = true,
     String? helper,
   }) => EntryField(
     key: ValueKey('$key:$copyGeneration'),
     label: label,
     value: row[key],
-    enabled: widget.editable,
+    enabled: widget.editable && enabled,
     number: number,
     digits: digits,
     maxLength: key == 'group' ? 2 : null,
@@ -1481,8 +1482,10 @@ class _RowEditorState extends State<RowEditor> {
                 'group',
                 'Group identifier',
                 digits: true,
-                helper:
-                    'Defaults to your survey team. Enter exactly two digits; your edits are saved.',
+                enabled: widget.index == 0 && row['se'] == 'S',
+                helper: widget.index == 0 && row['se'] == 'S'
+                    ? 'For an old survey reference, enter its original two-digit group and row date.'
+                    : 'Assigned automatically from your survey team. Historical first S keeps its original group.',
               ),
               DateEntry(
                 label: 'Row date',

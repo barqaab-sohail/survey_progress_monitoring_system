@@ -193,7 +193,8 @@ void main() {
       final next = record.nextRow();
       expect(next['se'], 'E');
       expect(next['group'], '01');
-      expect(next['date'], '2024-02-29');
+      expect(next['date'], record.data['survey_date']);
+      expect(first['date'], '2024-02-29');
       expect(next['gps_waypoint'], '');
       record.rows.add(next);
       next['gps_waypoint'] = '017';

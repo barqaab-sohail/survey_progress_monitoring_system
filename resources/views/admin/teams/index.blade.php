@@ -23,6 +23,13 @@
             <strong>{{ $team->code }} | {{ $team->name }}</strong>
             <div class="muted">{{ $team->project?->name }} | {{ ucfirst($team->status) }}</div>
             <div class="muted">{{ $team->members->pluck('name')->join(', ') ?: 'No members' }}</div>
+            @if($label === 'Survey Teams')
+            <form method="POST" action="{{ route('admin.teams.group', $team) }}" class="form-grid" style="margin-top:10px">@csrf @method('PUT')
+                <label>Group code<input name="group_code" value="{{ $team->group_code }}" pattern="[0-9]{2}" minlength="2" maxlength="2" placeholder="02" required></label>
+                <label>GPX filename group<input name="gpx_group_code" value="{{ $team->gpx_group_code }}" pattern="[A-Za-z0-9]{1,20}" maxlength="20" placeholder="A (or leave blank for numeric group)"></label>
+                <button class="btn btn-light">Save group</button>
+            </form>
+            @endif
         </div>
         @empty
         <p class="muted">None configured.</p>
@@ -52,6 +59,8 @@
         </div>
         <div class="field"><label for="new-team-code">Code</label><input id="new-team-code" name="code" value="{{ old('code') }}" required></div>
         <div class="field"><label for="new-team-name">Name</label><input id="new-team-name" name="name" value="{{ old('name') }}" required></div>
+        <div class="field"><label>Survey group code (optional for legacy teams)</label><input name="group_code" pattern="[0-9]{2}" maxlength="2" placeholder="02"></div>
+        <div class="field"><label>GPX filename group</label><input name="gpx_group_code" pattern="[A-Za-z0-9]{1,20}" maxlength="20" placeholder="A"></div>
         <button class="btn btn-primary" style="margin-top:14px">Create team</button>
     </form>
 

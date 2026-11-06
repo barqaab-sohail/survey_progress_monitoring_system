@@ -402,7 +402,7 @@ void main() {
     expect(uiStore.saved[record.id]!.solar[1]['meter_number'], '001-A/9');
     expect(uiStore.saved[record.id]!.rows.map((row) => row['group']), [
       '07',
-      '09',
+      '01',
     ]);
     await tester.tap(find.textContaining('Row 1 ·'));
     await tester.pumpAndSettle();
@@ -619,7 +619,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(home: SurveyHome(controller: controller)),
       );
-      await tester.tap(find.text('001234'));
+      await tester.tap(find.text(record.surveyName));
       await tester.pumpAndSettle();
       await tester.tap(find.text('S/E rows'));
       await tester.pumpAndSettle();

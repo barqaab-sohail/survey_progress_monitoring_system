@@ -14,7 +14,9 @@
     <div class="page-head"><div><h2 style="margin:0 0 6px"><a href="{{ route('field-surveys.show', $survey->client_uuid) }}">{{ $survey->transformer_code ?: 'Untitled draft' }}</a></h2><p>{{ $survey->reference_snapshot['feeder_code'] ?? $survey->feeder->feeder_code }} &middot; {{ $survey->reference_snapshot['feeder_name'] ?? $survey->feeder->feeder_name }}</p></div><span class="status">{{ ucfirst($survey->status) }}</span></div>
     <p>{{ $survey->survey_date->format('d M Y') }} &middot; {{ $survey->team->name }} &middot; {{ $survey->collector->name }}</p>
     <p>{{ count($survey->rows) }} survey rows &middot; {{ count($survey->solar) }} solar entries &middot; {{ $survey->attachments_count }} attachments</p>
+    <p><strong>Survey name:</strong> {{ $survey->survey_name }}</p>
     <a class="btn btn-light" href="{{ route('field-surveys.show', $survey->client_uuid) }}">Open survey sheet</a>
+    @if(app(\App\Services\MobileGpxWorkflow::class)->canLink(auth()->user()))<a class="btn btn-primary" href="{{ route('mobile-gpx.show', $survey->client_uuid) }}">Link GPX / JSON</a>@endif
     @include('field-surveys.actions')
 </article>
 @empty

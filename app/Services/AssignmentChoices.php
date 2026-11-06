@@ -42,6 +42,7 @@ class AssignmentChoices
         } elseif (in_array($type, ['survey_team', 'mdb_team'], true)) {
             $model = $type === 'survey_team' ? SurveyTeam::class : MdbTeam::class;
             $rows = $model::with('project')->withExists(['members as already_member' => fn ($q) => $q->where('users.id', $user->id)])
+                ->when($type === 'survey_team' && $user->hasRole('mobile_survey_user'), fn ($q) => $q->whereNotNull('group_code'))
                 ->where('status', 'active')->whereHas('project', fn ($q) => $q->where('status', 'active'))
                 ->when($project, fn ($q) => $q->where('project_id', $project))
                 ->when($search !== '', fn ($q) => $q->where(fn ($q) => $q->where('code', 'like', "%{$search}%")->orWhere('name', 'like', "%{$search}%")))

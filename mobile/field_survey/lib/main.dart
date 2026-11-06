@@ -669,9 +669,7 @@ class _SurveyHomeState extends State<SurveyHome> {
                   contentPadding: const EdgeInsets.all(16),
                   onTap: () => open(record),
                   title: Text(
-                    record.data['transformer_code'].toString().isEmpty
-                        ? 'New transformer survey'
-                        : record.data['transformer_code'],
+                    record.surveyName,
                     style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 18,

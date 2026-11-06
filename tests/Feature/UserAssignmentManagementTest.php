@@ -45,14 +45,14 @@ class UserAssignmentManagementTest extends TestCase
         parent::setUp();
         $org = Organization::create(['name' => 'Assignment test', 'type' => 'internal', 'status' => 'active']);
         $this->admin = User::factory()->create(['organization_id' => $org->id, 'role' => UserRole::SuperAdmin]);
-        $this->surveyor = User::factory()->create(['organization_id' => $org->id, 'role' => UserRole::Surveyor]);
+        $this->surveyor = User::factory()->create(['organization_id' => $org->id, 'role' => UserRole::MobileSurveyUser]);
         $this->project = Project::create(['code' => 'HUB', 'name' => 'Hub project', 'status' => 'active', 'timezone' => 'Asia/Karachi']);
         $circle = Circle::create(['project_id' => $this->project->id, 'code' => 'C', 'name' => 'Circle']);
         $division = Division::create(['project_id' => $this->project->id, 'circle_id' => $circle->id, 'code' => 'D', 'name' => 'Division']);
         $sub = SubDivision::create(['project_id' => $this->project->id, 'division_id' => $division->id, 'code' => 'S', 'name' => 'Sub']);
         $grid = GridStation::create(['project_id' => $this->project->id, 'sub_division_id' => $sub->id, 'code' => 'G', 'name' => 'Grid']);
         $this->feeder = Feeder::create(['project_id' => $this->project->id, 'circle_id' => $circle->id, 'division_id' => $division->id, 'sub_division_id' => $sub->id, 'grid_station_id' => $grid->id, 'feeder_code' => 'HUB-001', 'feeder_name' => 'Hub feeder', 'status' => 'active', 'total_transformers' => 20]);
-        $this->team = SurveyTeam::create(['project_id' => $this->project->id, 'code' => 'ST', 'name' => 'Hub survey team', 'status' => 'active']);
+        $this->team = SurveyTeam::create(['project_id' => $this->project->id, 'code' => 'ST', 'name' => 'Hub survey team', 'group_code' => '01', 'status' => 'active']);
         $this->team->members()->attach($this->surveyor->id, ['is_leader' => true]);
         $this->actingAs($this->admin);
     }
@@ -196,7 +196,7 @@ class UserAssignmentManagementTest extends TestCase
 
     public function test_mobile_reassignment_reuses_history_and_started_work_retains_owner(): void
     {
-        $target = User::factory()->create(['role' => UserRole::Surveyor]);
+        $target = User::factory()->create(['role' => UserRole::MobileSurveyUser]);
         $this->team->members()->attach($target->id);
         $task = $this->mobile(['instructions' => 'Keep instructions']);
         $this->getJson(route('admin.assignments.candidates', $task))->assertOk()->assertJsonPath('users.0.id', $target->id);
@@ -257,7 +257,7 @@ class UserAssignmentManagementTest extends TestCase
 
     public function test_mobile_team_scope_overlap_and_bulk_rollback_are_enforced(): void
     {
-        $other = User::factory()->create(['role' => UserRole::Surveyor]);
+        $other = User::factory()->create(['role' => UserRole::MobileSurveyUser]);
         $existing = $this->mobile(['surveyor_id' => $other->id, 'status' => 'in_progress']);
         $this->postAssignment(['task_type' => 'mobile', 'task_ids' => [$this->feeder->id]])->assertSessionHasErrors('authorize_overlap');
         $this->postAssignment(['task_type' => 'mobile', 'task_ids' => [$this->feeder->id], 'authorize_overlap' => 1])->assertSessionHasNoErrors();
@@ -274,7 +274,7 @@ class UserAssignmentManagementTest extends TestCase
 
     public function test_team_bulk_assignment_does_not_modify_permissions_or_existing_membership(): void
     {
-        $team = SurveyTeam::create(['project_id' => $this->project->id, 'code' => 'SECOND', 'name' => 'Second team', 'status' => 'active']);
+        $team = SurveyTeam::create(['project_id' => $this->project->id, 'code' => 'SECOND', 'name' => 'Second team', 'group_code' => '02', 'status' => 'active']);
         $userBefore = $this->surveyor->fresh()->getRawOriginal();
         $rolesBefore = DB::table('model_has_roles')->get()->toJson();
         $membershipBefore = DB::table('survey_team_members')->where('survey_team_id', $this->team->id)->first();

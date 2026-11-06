@@ -1,5 +1,9 @@
 # MDB Creation and Verification
 
+For synced Android surveys, use [Mobile Survey GPX Linking](../mobile/MOBILE_GPX_WORKFLOW.md): the MDB Creator confirms per-transformer mappings from shared GPX files and downloads a frozen JSON for local conversion.
+
+Future implementation recommendation: retain the PHP interface and use a local Windows C# console converter for JSON-to-MDB generation. See the [saved recommendation and workflow](FUTURE_CSHARP_CONVERTER.md).
+
 The [ten-reference comparison and v2 device mapping](REFERENCE_REVIEW.md) adds explicit meter points and PV generator/year records, backed by native Access write/readback checks. The original v1 mapping remains supported.
 
 The module adds private, versioned survey batches, source processing, manual PDF entry, explicit transformer networks, validation, immutable verification revisions, retryable genuine MDB export and separate SynerGEE analysis results. It reuses the application's project/feeder/team structure, Spatie permissions, Google Drive OAuth and audit trail.

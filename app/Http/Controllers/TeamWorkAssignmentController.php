@@ -7,9 +7,8 @@ use App\Models\Feeder;
 use App\Models\FeederAssignment;
 use App\Models\FieldSurvey;
 use App\Models\Mdb\SurveyBatch;
-use App\Models\MdbTeam;
-use App\Models\SurveyTeam;
 use App\Models\SurveyorAssignment;
+use App\Models\SurveyTeam;
 use App\Models\User;
 use App\Services\AuditService;
 use Illuminate\Http\Request;
@@ -29,15 +28,17 @@ class TeamWorkAssignmentController extends Controller
             ->whereIn('status', ['assigned', 'in_progress', 'draft', 'returned'])->whereIn('surveyor_id', $userIds)->groupBy('surveyor_id')->pluck('assigned_count', 'surveyor_id');
         $teamOptions = $teams->mapWithKeys(function (SurveyTeam $team) use ($users, $feeders, $workload) {
             $members = $team->members->filter(fn (User $member) => $users->has($member->id)
-                && $member->hasAnyRole([UserRole::Surveyor->value, UserRole::SurveyTeamLeader->value]))
+                && $member->hasAnyRole([UserRole::MobileSurveyUser->value, UserRole::Surveyor->value, UserRole::SurveyTeamLeader->value]))
                 ->map(fn (User $member) => ['id' => $member->id, 'name' => $member->name, 'role' => $member->role->label(), 'open_tasks' => $workload[$member->id] ?? 0])->values();
             $teamFeeders = $feeders->where('project_id', $team->project_id)
                 ->map(fn (Feeder $feeder) => ['id' => $feeder->id, 'code' => $feeder->feeder_code, 'name' => $feeder->feeder_name])->values();
+
             return [$team->id => ['members' => $members, 'feeders' => $teamFeeders]];
         });
         $assignments = SurveyorAssignment::with(['team.project', 'feeder', 'surveyor', 'assigner'])
             ->whereIn('survey_team_id', $teams->modelKeys())->latest()->paginate(40);
         $progressCounts = SurveyorAssignment::selectRaw('status, count(*) as total')->whereIn('survey_team_id', $teams->modelKeys())->groupBy('status')->pluck('total', 'status');
+
         return view('team-work.assignments', compact('teams', 'assignments', 'workload', 'teamOptions', 'progressCounts'));
     }
 
@@ -56,14 +57,16 @@ class TeamWorkAssignmentController extends Controller
             throw ValidationException::withMessages(['surveyor_id' => 'Choose an active surveyor who belongs to the selected survey team.']);
         }
         $surveyor = User::findOrFail($data['surveyor_id']);
-        if (! $surveyor->isActive() || ! $surveyor->hasAnyRole([UserRole::Surveyor->value, UserRole::SurveyTeamLeader->value, UserRole::SuperAdmin->value])) {
+        if (! $surveyor->isActive() || ! $surveyor->hasAnyRole([UserRole::MobileSurveyUser->value, UserRole::Surveyor->value, UserRole::SurveyTeamLeader->value, UserRole::SuperAdmin->value])) {
             throw ValidationException::withMessages(['surveyor_id' => 'Choose an active surveyor or a team leader authorized to conduct surveys.']);
         }
 
         $created = DB::transaction(function () use ($request, $data, $team, $audit) {
             $lockedTeam = SurveyTeam::whereKey($team->id)->lockForUpdate()->firstOrFail();
             $feeders = Feeder::active()->where('project_id', $lockedTeam->project_id)->whereIn('id', $data['feeder_ids'])->orderBy('id')->lockForUpdate()->get();
-            if ($feeders->count() !== count($data['feeder_ids'])) throw ValidationException::withMessages(['feeder_ids' => 'All selected feeders must be active and belong to the selected project.']);
+            if ($feeders->count() !== count($data['feeder_ids'])) {
+                throw ValidationException::withMessages(['feeder_ids' => 'All selected feeders must be active and belong to the selected project.']);
+            }
             $records = [];
             foreach ($feeders as $feeder) {
                 $teamFeeder = FeederAssignment::where('feeder_id', $feeder->id)->where('survey_team_id', $lockedTeam->id)->where('status', 'active')->first();
@@ -78,7 +81,9 @@ class TeamWorkAssignmentController extends Controller
                     throw ValidationException::withMessages(['authorize_overlap' => 'A selected feeder is already assigned to another surveyor. Deliberately authorize overlap to proceed.']);
                 }
                 $record = SurveyorAssignment::firstOrNew(['survey_team_id' => $lockedTeam->id, 'feeder_id' => $feeder->id, 'surveyor_id' => $data['surveyor_id'], 'status' => 'assigned']);
-                if ($record->exists) throw ValidationException::withMessages(['feeder_ids' => 'One or more selected assignments already exist. Use Reassign for work already assigned.']);
+                if ($record->exists) {
+                    throw ValidationException::withMessages(['feeder_ids' => 'One or more selected assignments already exist. Use Reassign for work already assigned.']);
+                }
                 $record->fill(['assignment_uuid' => (string) Str::uuid(), 'assigned_by' => $request->user()->id,
                     'assigned_at' => $data['assigned_at'], 'deadline' => $data['deadline'] ?? null, 'priority' => $data['priority'],
                     'instructions' => $data['instructions'] ?? null, 'status' => 'assigned'])->save();
@@ -88,8 +93,10 @@ class TeamWorkAssignmentController extends Controller
                 'surveyor_id' => (int) $data['surveyor_id'], 'feeder_ids' => $feeders->modelKeys(), 'assigned_at' => $data['assigned_at'],
                 'deadline' => $data['deadline'] ?? null, 'priority' => $data['priority'], 'instructions' => $data['instructions'] ?? null,
                 'overlap_authorized' => $request->boolean('authorize_overlap')]);
+
             return count($records);
         }, 3);
+
         return back()->with('success', "{$created} survey task(s) assigned. They will appear in the surveyor's mobile assignments after sync.");
     }
 
@@ -101,12 +108,14 @@ class TeamWorkAssignmentController extends Controller
             throw ValidationException::withMessages(['surveyor_id' => 'Choose a new surveyor who belongs to this survey team.']);
         }
         $nextUser = User::findOrFail($data['surveyor_id']);
-        if (! $nextUser->isActive() || ! $nextUser->hasAnyRole([UserRole::Surveyor->value, UserRole::SurveyTeamLeader->value])) {
+        if (! $nextUser->isActive() || ! $nextUser->hasAnyRole([UserRole::MobileSurveyUser->value, UserRole::SuperAdmin->value])) {
             throw ValidationException::withMessages(['surveyor_id' => 'Choose an active surveyor in this team.']);
         }
         DB::transaction(function () use ($request, $assignment, $data, $audit) {
             $current = SurveyorAssignment::whereKey($assignment->id)->lockForUpdate()->firstOrFail();
-            if ($current->status !== 'assigned') throw ValidationException::withMessages(['assignment' => 'Only pending assignments can be reassigned. Started or completed work must retain its owner.']);
+            if ($current->status !== 'assigned') {
+                throw ValidationException::withMessages(['assignment' => 'Only pending assignments can be reassigned. Started or completed work must retain its owner.']);
+            }
             $old = $current->toArray();
             $current->update(['status' => 'reassigned']);
             $replacement = SurveyorAssignment::create(['assignment_uuid' => (string) Str::uuid(), 'survey_team_id' => $current->survey_team_id,
@@ -115,6 +124,7 @@ class TeamWorkAssignmentController extends Controller
                 'status' => 'assigned']);
             $audit->record($request->user(), 'survey.task_reassigned', $replacement, $old, $replacement->toArray(), $data['reason']);
         });
+
         return back()->with('success', 'Pending survey task reassigned.');
     }
 
@@ -132,6 +142,7 @@ class TeamWorkAssignmentController extends Controller
             $audit->record($request->user(), 'survey.task_returned', $task, $old, $task->fresh()->toArray(), $data['comments']);
             $audit->record($request->user(), 'field_survey.returned_for_correction', $survey, $survey->toArray(), ['status' => $survey->status, 'comments' => $data['comments']], $data['comments']);
         });
+
         return back()->with('success', 'Survey returned to the assigned surveyor with correction comments.');
     }
 
@@ -151,6 +162,7 @@ class TeamWorkAssignmentController extends Controller
                 });
             })->latest()->paginate(30);
         $users = User::where('status', 'active')->orderBy('name')->get();
+
         return view('team-work.workflow', compact('batches', 'users'));
     }
 
@@ -164,13 +176,20 @@ class TeamWorkAssignmentController extends Controller
         abort_unless($actor->hasRole('super_admin') || ($stage === 'mdb' ? $actor->hasRole('mdb_creation_team_leader') : $actor->hasRole('data_entry_verification_team_leader')), 403);
         $batch = SurveyBatch::with('surveyTeam')->findOrFail($data['batch_id']);
         if (! $actor->hasRole('super_admin')) {
-            if ($stage === 'mdb') abort_unless($actor->mdbTeams()->where('status', 'active')->where('project_id', $batch->project_id)->exists(), 403);
-            else abort_unless($batch->surveyTeam?->members()->whereKey($actor->id)->where('survey_team_members.is_leader', true)->exists(), 403);
+            if ($stage === 'mdb') {
+                abort_unless($actor->mdbTeams()->where('status', 'active')->where('project_id', $batch->project_id)->exists(), 403);
+            } else {
+                abort_unless($batch->surveyTeam?->members()->whereKey($actor->id)->where('survey_team_members.is_leader', true)->exists(), 403);
+            }
         }
         $target = User::findOrFail($data['user_id']);
         abort_unless($target->isActive(), 422, 'Select an active user.');
-        $field = match ($stage) { 'entry' => 'entry_assigned_to', 'verification' => 'verification_assigned_to', 'mdb' => 'mdb_assigned_to' };
-        $role = match ($stage) { 'entry' => 'survey_data_entry_operator', 'verification' => 'survey_data_verifier', 'mdb' => 'mdb_generator' };
+        $field = match ($stage) {
+            'entry' => 'entry_assigned_to', 'verification' => 'verification_assigned_to', 'mdb' => 'mdb_assigned_to'
+        };
+        $role = match ($stage) {
+            'entry' => 'survey_data_entry_operator', 'verification' => 'survey_data_verifier', 'mdb' => 'mdb_generator'
+        };
         abort_unless($target->hasAnyRole([$role, 'super_admin']), 422, 'The selected user does not have the role required for this stage.');
         if (! $actor->hasRole('super_admin') && ! $target->hasRole('super_admin')) {
             if (in_array($stage, ['entry', 'verification'], true)) {
@@ -179,9 +198,15 @@ class TeamWorkAssignmentController extends Controller
                 abort_unless($target->mdbTeams()->where('status', 'active')->where('project_id', $batch->project_id)->exists(), 422, 'The MDB creator must belong to an active MDB team for this project.');
             }
         }
-        if ($stage === 'entry') abort_unless(in_array($batch->survey_status, ['entry', 'returned'], true), 422, 'Entry work can be assigned only while a batch is in entry or returned status.');
-        if ($stage === 'verification') abort_unless(in_array($batch->survey_status, ['submitted', 'awaiting_verification'], true), 422, 'Verification work can be assigned only after submission.');
-        if ($stage === 'mdb') abort_unless($batch->survey_status === 'approved', 422, 'MDB work can be assigned only after verification is approved.');
+        if ($stage === 'entry') {
+            abort_unless(in_array($batch->survey_status, ['entry', 'returned'], true), 422, 'Entry work can be assigned only while a batch is in entry or returned status.');
+        }
+        if ($stage === 'verification') {
+            abort_unless(in_array($batch->survey_status, ['submitted', 'awaiting_verification'], true), 422, 'Verification work can be assigned only after submission.');
+        }
+        if ($stage === 'mdb') {
+            abort_unless($batch->survey_status === 'approved', 422, 'MDB work can be assigned only after verification is approved.');
+        }
         if ($stage === 'verification' && ((int) $batch->entry_operator_id === (int) $target->id || (int) $batch->entry_assigned_to === (int) $target->id || in_array($target->id, $batch->entry_actor_ids ?? [], true))) {
             throw ValidationException::withMessages(['user_id' => 'The person who entered this batch cannot verify their own work.']);
         }
@@ -191,6 +216,7 @@ class TeamWorkAssignmentController extends Controller
             $locked->update([$field => $target->id]);
             $audit->record($request->user(), 'mdb.workflow_task_assigned', $locked, $old, $locked->fresh()->only([$field, 'survey_status']) + ['stage' => $stage, 'assignee' => $target->name], $data['reason'] ?? null);
         });
+
         return back()->with('success', 'Workflow task assigned to '.$target->name.'.');
     }
 
@@ -200,6 +226,7 @@ class TeamWorkAssignmentController extends Controller
         if (! $user->hasRole(UserRole::SuperAdmin->value)) {
             $query->whereHas('members', fn ($q) => $q->where('users.id', $user->id)->where('survey_team_members.is_leader', true));
         }
+
         return $query;
     }
 }

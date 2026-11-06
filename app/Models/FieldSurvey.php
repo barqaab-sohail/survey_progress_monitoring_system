@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SurveyTeamGroup;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -23,6 +24,18 @@ class FieldSurvey extends Model
     public function collector(): BelongsTo
     {
         return $this->belongsTo(User::class, 'collected_by');
+    }
+
+    public function gpxLinks(): HasMany
+    {
+        return $this->hasMany(MobileGpxLink::class);
+    }
+
+    public function getSurveyNameAttribute(): string
+    {
+        $group = $this->reference_snapshot['group_code'] ?? collect($this->rows ?? [])->firstWhere('se', 'E')['group'] ?? SurveyTeamGroup::identifier($this->team);
+
+        return ($group ?: '??').'_'.$this->survey_date->format('dmy').'_'.($this->transformer_code ?: 'Draft');
     }
 
     public function team(): BelongsTo

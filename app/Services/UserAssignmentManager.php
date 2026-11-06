@@ -33,11 +33,11 @@ class UserAssignmentManager
         }
 
         return match ($type) {
-            'mobile' => $user->hasAnyRole(['surveyor', 'survey_team_leader', 'super_admin']),
+            'mobile' => $user->hasAnyRole(['mobile_survey_user', 'super_admin']),
             'entry' => $user->hasAnyRole(['survey_data_entry_operator', 'super_admin']),
             'verification' => $user->hasAnyRole(['survey_data_verifier', 'super_admin']),
             'mdb' => $user->hasAnyRole(['mdb_generator', 'super_admin']),
-            'survey_team' => $user->hasAnyRole(['surveyor', 'survey_team_leader', 'data_entry_verification_team_leader', 'survey_data_entry_operator', 'survey_data_verifier', 'super_admin']),
+            'survey_team' => $user->hasAnyRole(['mobile_survey_user', 'surveyor', 'survey_team_leader', 'data_entry_verification_team_leader', 'survey_data_entry_operator', 'survey_data_verifier', 'super_admin']),
             'mdb_team' => $user->hasAnyRole(['mdb_generator', 'mdb_creation_team_leader', 'mdb_team_user', 'super_admin']),
             'feeder_pool' => $user->surveyTeams()->exists(),
             default => false,
