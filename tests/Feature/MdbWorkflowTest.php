@@ -253,6 +253,26 @@ class MdbWorkflowTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'mdb.survey_return']);
     }
 
+    public function test_data_verifier_cannot_flag_or_return_a_survey(): void
+    {
+        $this->admin->assignRole('survey_data_verifier');
+        $this->batch->update(['revision' => 1, 'staged_workflow' => true, 'survey_status' => 'awaiting_verification']);
+
+        $this->view('mdb-workflow.workflow-actions', ['batch' => $this->batch, 'canVerify' => true])
+            ->assertSee('Approve')
+            ->assertDontSee('Flag Discrepancy')
+            ->assertDontSee('Return for Correction');
+
+        foreach (['flag', 'return'] as $action) {
+            $this->post(route('mdb-workflow.survey.decision', $this->batch), [
+                'revision' => 1, 'action' => $action, 'remarks' => 'Correction needed',
+            ])->assertForbidden();
+        }
+
+        $this->assertSame('awaiting_verification', $this->batch->fresh()->survey_status);
+        $this->assertSame(1, $this->batch->fresh()->revision);
+    }
+
     private function replacementPdf(int $pages = 4): UploadedFile
     {
         $objects = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Count '.$pages.' /Kids ['.implode(' ', array_map(fn ($i) => ($i + 3).' 0 R', range(0, $pages - 1))).'] >>'];

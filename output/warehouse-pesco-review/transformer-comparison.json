@@ -1,0 +1,291 @@
+{
+    "source": "Warehouse_PESCO - 14DEC2025.mdb (saved extraction)",
+    "warehouse_count": 46,
+    "bundled_ids": [
+        "100 KVA",
+        "200 KVA",
+        "50 KVA"
+    ],
+    "missing_from_bundled": [
+        "10 KVA",
+        "1000 KVA",
+        "1250 KVA",
+        "15 KVA",
+        "1500 KVA",
+        "1P 14.4/2.4 50",
+        "1P 14.4/2.8 250",
+        "1P 14.4/7.2 500",
+        "1P 19.9/7.2 500",
+        "1P 24.9/7.6 750",
+        "1P 34.5/7.6 500",
+        "2000 KVA",
+        "25 KVA",
+        "250 KVA",
+        "300 KVA",
+        "3P 24.9/4 1000",
+        "3P 24/13 1500",
+        "3P 24/13 2000",
+        "3P 4.16/.48 1000",
+        "3P 4.8/.48 500",
+        "400 KVA",
+        "50 KVA CSP",
+        "500 KVA",
+        "630 KVA",
+        "75 KVA CSP",
+        "750 KVA",
+        "DT 13/.48 1000",
+        "DT 13/.48 500",
+        "DT 13/4 100",
+        "DT 13/4 500",
+        "DT 13/4.16 5000",
+        "DT Iso-Down 13/4 500",
+        "PM 115/13 10MVA",
+        "PM 115/13 12MVA",
+        "PM 115/13 18MVA",
+        "PM 115/13 20MVA",
+        "PM 115/24 2MVA",
+        "PM 115/24 30MVA",
+        "PM 115/34.5 30MVA",
+        "PM 115/4.8 4MVA",
+        "PM 12.47/4 1.5M",
+        "PM 24/13 500KVA",
+        "PM 69/12.47 10MVA"
+    ],
+    "live_configurations": [
+        {
+            "project_id": 1,
+            "transformer_types": {
+                "50": "50 KVA",
+                "100": "100 KVA",
+                "200": "200 KVA"
+            },
+            "template_id": null
+        }
+    ],
+    "active_templates": [
+        {
+            "id": 1,
+            "transformers": []
+        },
+        {
+            "id": 2,
+            "transformers": []
+        },
+        {
+            "id": 3,
+            "transformers": []
+        },
+        {
+            "id": 4,
+            "transformers": [
+                "100 KVA"
+            ]
+        }
+    ],
+    "distribution_11kv_415v": [
+        {
+            "TransformerName": "10 KVA",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 10,
+            "PercentImpedance": 4,
+            "PercentResistance": 3.2,
+            "NoLoadLosses": 0.06,
+            "HighVoltageConnectionCode": "D",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "10 KVA"
+        },
+        {
+            "TransformerName": "100 KVA",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 100,
+            "PercentImpedance": 4,
+            "PercentResistance": 2.02,
+            "NoLoadLosses": 0.31,
+            "HighVoltageConnectionCode": "D",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "100 KVA"
+        },
+        {
+            "TransformerName": "1000 KVA",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 1000,
+            "PercentImpedance": 5,
+            "PercentResistance": 1.35,
+            "NoLoadLosses": 1.8,
+            "HighVoltageConnectionCode": "D",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "1000 KVA"
+        },
+        {
+            "TransformerName": "1250 KVA",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 1250,
+            "PercentImpedance": 5,
+            "PercentResistance": 1.36,
+            "NoLoadLosses": 2.2,
+            "HighVoltageConnectionCode": "D",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "1250 KVA"
+        },
+        {
+            "TransformerName": "15 KVA",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 15,
+            "PercentImpedance": 4,
+            "PercentResistance": 2.9,
+            "NoLoadLosses": 0.08,
+            "HighVoltageConnectionCode": "D",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "15 KVA"
+        },
+        {
+            "TransformerName": "1500 KVA",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 1500,
+            "PercentImpedance": 6,
+            "PercentResistance": 1.33,
+            "NoLoadLosses": 2.5,
+            "HighVoltageConnectionCode": "D",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "1500 KVA"
+        },
+        {
+            "TransformerName": "200 KVA",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 200,
+            "PercentImpedance": 4,
+            "PercentResistance": 1.71,
+            "NoLoadLosses": 0.49,
+            "HighVoltageConnectionCode": "D",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "200 KVA"
+        },
+        {
+            "TransformerName": "2000 KVA",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 2000,
+            "PercentImpedance": 6,
+            "PercentResistance": 1.23,
+            "NoLoadLosses": 3.25,
+            "HighVoltageConnectionCode": "D",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "2000 KVA"
+        },
+        {
+            "TransformerName": "25 KVA",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 25,
+            "PercentImpedance": 4,
+            "PercentResistance": 2.56,
+            "NoLoadLosses": 0.12,
+            "HighVoltageConnectionCode": "D",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "25 KVA"
+        },
+        {
+            "TransformerName": "250 KVA",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 250,
+            "PercentImpedance": 4,
+            "PercentResistance": 1.6,
+            "NoLoadLosses": 3.67,
+            "HighVoltageConnectionCode": "D",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "250 KVA"
+        },
+        {
+            "TransformerName": "300 KVA",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 300,
+            "PercentImpedance": 4,
+            "PercentResistance": 1.7,
+            "NoLoadLosses": 3.62,
+            "HighVoltageConnectionCode": "D",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "300 KVA"
+        },
+        {
+            "TransformerName": "400 KVA",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 400,
+            "PercentImpedance": 4,
+            "PercentResistance": 1.4,
+            "NoLoadLosses": 0.92,
+            "HighVoltageConnectionCode": "D",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "400 KVA"
+        },
+        {
+            "TransformerName": "50 KVA",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 50,
+            "PercentImpedance": 4,
+            "PercentResistance": 2.34,
+            "NoLoadLosses": 0.17,
+            "HighVoltageConnectionCode": "D",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "50 KVA"
+        },
+        {
+            "TransformerName": "500 KVA",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 500,
+            "PercentImpedance": 6,
+            "PercentResistance": 1.33,
+            "NoLoadLosses": 2.5,
+            "HighVoltageConnectionCode": "D",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "500 KVA"
+        },
+        {
+            "TransformerName": "630 KVA",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 630,
+            "PercentImpedance": 4,
+            "PercentResistance": 1.29,
+            "NoLoadLosses": 1.35,
+            "HighVoltageConnectionCode": "D",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "630 KVA"
+        },
+        {
+            "TransformerName": "75 KVA CSP",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 75,
+            "PercentImpedance": 2,
+            "PercentResistance": 0.93,
+            "NoLoadLosses": 0.09,
+            "HighVoltageConnectionCode": "YG",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "75 KVA CSP"
+        },
+        {
+            "TransformerName": "750 KVA",
+            "HighSideRatedKv": 11,
+            "LowSideRatedKv": 0.415,
+            "TransformerRatedKva": 750,
+            "PercentImpedance": 5,
+            "PercentResistance": 1.33,
+            "NoLoadLosses": 1.3,
+            "HighVoltageConnectionCode": "D",
+            "LowVoltageConnectionCode": "YG",
+            "Description": "750 KVA"
+        }
+    ]
+}

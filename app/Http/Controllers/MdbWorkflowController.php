@@ -689,6 +689,8 @@ class MdbWorkflowController extends Controller
 
     public function surveyDecision(Request $request, SurveyBatch $batch)
     {
+        abort_if($request->user()->hasRole('survey_data_verifier') && in_array($request->input('action'), ['flag', 'return'], true),
+            403, 'Data Verifiers must correct the survey and approve it. Flagging or returning surveys is not allowed.');
         $this->access->authorize($request->user(), $batch, $request->input('action') === 'submit' ? 'submit' : 'surveyVerify');
         $data = $request->validate(['revision' => 'required|integer', 'action' => 'required|in:submit,approve,return,flag', 'remarks' => 'required_if:action,return,flag|nullable|string|max:10000']);
         DB::transaction(function () use ($request, $batch, $data) {
