@@ -39,12 +39,14 @@ class TeamController extends Controller
 
     public function store(Request $request, AuditService $audit): RedirectResponse
     {
-        $data = $request->validate(['type' => ['required', 'in:survey,mdb'], 'project_id' => ['required', 'exists:projects,id'], 'code' => ['required', 'string', 'max:50'], 'name' => ['required', 'string', 'max:255'],
-            'group_code' => ['nullable', 'string', 'regex:/^[0-9]{2}$/D', Rule::unique('survey_teams')->where('project_id', $request->input('project_id'))],
-            'gpx_group_code' => ['nullable', 'string', 'regex:/^[A-Za-z0-9]{1,20}$/D', Rule::unique('survey_teams')->where('project_id', $request->input('project_id'))]]);
+        $type = $request->input('type');
+        $codeRules = $type === 'survey'
+            ? ['required', 'string', 'regex:/^[0-9]{2}$/D', Rule::unique('survey_teams')->where('project_id', $request->input('project_id'))]
+            : ['required', 'string', 'max:50'];
+        $data = $request->validate(['type' => ['required', 'in:survey,mdb'], 'project_id' => ['required', 'exists:projects,id'], 'code' => $codeRules, 'name' => ['required', 'string', 'max:255']]);
         $attributes = ['project_id' => $data['project_id'], 'code' => $data['code'], 'name' => $data['name'], 'status' => 'active'];
         if ($data['type'] === 'survey') {
-            $attributes += ['group_code' => $data['group_code'] ?? null, 'gpx_group_code' => isset($data['gpx_group_code']) ? strtoupper($data['gpx_group_code']) : null];
+            $attributes += ['group_code' => $data['code']];
         }
         $team = match ($data['type']) {
             'survey' => SurveyTeam::create($attributes), 'mdb' => MdbTeam::create($attributes),
@@ -56,13 +58,40 @@ class TeamController extends Controller
 
     public function group(Request $request, SurveyTeam $team, AuditService $audit): RedirectResponse
     {
-        $data = $request->validate(['group_code' => ['required', 'string', 'regex:/^[0-9]{2}$/D', Rule::unique('survey_teams')->where('project_id', $team->project_id)->ignore($team)],
-            'gpx_group_code' => ['nullable', 'string', 'regex:/^[A-Za-z0-9]{1,20}$/D', Rule::unique('survey_teams')->where('project_id', $team->project_id)->ignore($team)]]);
-        $old = $team->only(['group_code', 'gpx_group_code']);
-        $team->update(['group_code' => $data['group_code'], 'gpx_group_code' => isset($data['gpx_group_code']) ? strtoupper($data['gpx_group_code']) : null]);
-        $audit->record($request->user(), 'team.group_configured', $team, $old, $team->only(['group_code', 'gpx_group_code']));
+        $data = $request->validate(['code' => ['required', 'string', 'regex:/^[0-9]{2}$/D', Rule::unique('survey_teams')->where('project_id', $team->project_id)->ignore($team)]]);
+        $old = $team->only(['code', 'group_code']);
+        $team->update(['code' => $data['code'], 'group_code' => $data['code']]);
+        $audit->record($request->user(), 'team.group_configured', $team, $old, $team->only(['code', 'group_code']));
 
         return back()->with('success', 'Group code saved. Existing survey rows keep their original group identifiers. Refresh mobile assignments before creating new surveys.');
+    }
+
+    public function updateSurvey(Request $request, SurveyTeam $team, AuditService $audit): RedirectResponse
+    {
+        return $this->updateTeam($request, $team, 'survey', $audit);
+    }
+
+    public function updateMdb(Request $request, MdbTeam $team, AuditService $audit): RedirectResponse
+    {
+        return $this->updateTeam($request, $team, 'mdb', $audit);
+    }
+
+    private function updateTeam(Request $request, SurveyTeam|MdbTeam $team, string $type, AuditService $audit): RedirectResponse
+    {
+        $codeRules = $type === 'survey'
+            ? ['required', 'string', 'regex:/^[0-9]{2}$/D', Rule::unique('survey_teams')->where('project_id', $request->input('project_id'))->ignore($team), Rule::unique('survey_teams', 'group_code')->where('project_id', $request->input('project_id'))->ignore($team)]
+            : ['required', 'string', 'max:50'];
+        $data = $request->validate([
+            'project_id' => ['required', 'exists:projects,id'],
+            'code' => $codeRules,
+            'name' => ['required', 'string', 'max:255'],
+            'status' => ['required', 'in:active,inactive'],
+        ]);
+        $before = $team->only(['project_id', 'code', 'name', 'status']);
+        $team->update($data + ($type === 'survey' ? ['group_code' => $data['code']] : []));
+        $audit->record($request->user(), 'team.updated', $team, $before, $team->only(['project_id', 'code', 'name', 'status']));
+
+        return back()->with('success', 'Team details updated.');
     }
 
     public function member(Request $request, AuditService $audit): RedirectResponse

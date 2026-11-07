@@ -6,6 +6,7 @@
     $availableMdbTeams = $mdbTeams->filter(fn ($team) => $team->status === 'active' && $team->project?->status === \App\Enums\RecordStatus::Active);
 @endphp
 
+<div class="admin-teams-page">
 <div class="page-head">
     <div>
         <h1>Teams & Assignments</h1>
@@ -14,7 +15,7 @@
     <a class="btn" href="{{ route('admin.assignments.index') }}">User Assignments</a>
 </div>
 
-<section class="grid period-grid">
+<section class="grid admin-team-categories">
     @foreach(['Survey Teams' => $surveyTeams, 'MDB Teams' => $mdbTeams] as $label => $teams)
     <div class="card">
         <h2>{{ $label }}</h2>
@@ -23,10 +24,21 @@
             <strong>{{ $team->code }} | {{ $team->name }}</strong>
             <div class="muted">{{ $team->project?->name }} | {{ ucfirst($team->status) }}</div>
             <div class="muted">{{ $team->members->pluck('name')->join(', ') ?: 'No members' }}</div>
+            <details class="admin-team-edit">
+                <summary class="btn btn-light">Edit team</summary>
+                <form method="POST" action="{{ route($label === 'Survey Teams' ? 'admin.teams.survey.update' : 'admin.teams.mdb.update', $team) }}" class="admin-team-edit-form">
+                    @csrf @method('PUT')
+                    <label>Project<select name="project_id" required>@if(!$projects->contains('id', $team->project_id))<option value="{{ $team->project_id }}" selected>{{ $team->project?->name }} (inactive)</option>@endif @foreach($projects as $project)<option value="{{ $project->id }}" @selected($team->project_id === $project->id)>{{ $project->name }}</option>@endforeach</select></label>
+                    <label>{{ $label === 'Survey Teams' ? 'Team / group code' : 'Code' }}<input name="code" value="{{ $team->code }}" @if($label === 'Survey Teams')pattern="[0-9]{2}" inputmode="numeric" minlength="2" maxlength="2" placeholder="01"@endif required></label>
+                    <label>Team name<input name="name" value="{{ $team->name }}" maxlength="255" required></label>
+                    <label>Status<select name="status"><option value="active" @selected($team->status === 'active')>Active</option><option value="inactive" @selected($team->status === 'inactive')>Inactive</option></select></label>
+                    <button class="btn btn-primary" type="submit">Save team</button>
+                </form>
+            </details>
             @if($label === 'Survey Teams')
             <form method="POST" action="{{ route('admin.teams.group', $team) }}" class="form-grid" style="margin-top:10px">@csrf @method('PUT')
-                <label>Group code<input name="group_code" value="{{ $team->group_code }}" pattern="[0-9]{2}" minlength="2" maxlength="2" placeholder="02" required></label>
-                <label>GPX filename group<input name="gpx_group_code" value="{{ $team->gpx_group_code }}" pattern="[A-Za-z0-9]{1,20}" maxlength="20" placeholder="A (or leave blank for numeric group)"></label>
+                <label>Team / group code<input name="code" value="{{ $team->code }}" pattern="[0-9]{2}" inputmode="numeric" minlength="2" maxlength="2" placeholder="02" required></label>
+                <div class="admin-team-gpx-hint">GPX filename prefix: <strong>{{ \App\Support\SurveyTeamGroup::filenameGroup($team) ?? 'Set a valid group code' }}</strong></div>
                 <button class="btn btn-light">Save group</button>
             </form>
             @endif
@@ -38,7 +50,7 @@
     @endforeach
 </section>
 
-<div class="grid period-grid">
+<div class="grid admin-team-forms">
     <form class="card" method="POST" action="{{ route('admin.teams.store') }}">
         @csrf
         <h2>Create team</h2>
@@ -57,10 +69,9 @@
                 @endforeach
             </select>
         </div>
-        <div class="field"><label for="new-team-code">Code</label><input id="new-team-code" name="code" value="{{ old('code') }}" required></div>
+        <div class="field"><label for="new-team-code">Team / group code</label><input id="new-team-code" name="code" value="{{ old('code') }}" pattern="[0-9]{2}" inputmode="numeric" minlength="2" maxlength="2" placeholder="01" required></div>
         <div class="field"><label for="new-team-name">Name</label><input id="new-team-name" name="name" value="{{ old('name') }}" required></div>
-        <div class="field"><label>Survey group code (optional for legacy teams)</label><input name="group_code" pattern="[0-9]{2}" maxlength="2" placeholder="02"></div>
-        <div class="field"><label>GPX filename group</label><input name="gpx_group_code" pattern="[A-Za-z0-9]{1,20}" maxlength="20" placeholder="A"></div>
+        <p class="admin-team-gpx-hint">GPX filename prefix is assigned from the group code: 01 = A, 02 = B, and so on.</p>
         <button class="btn btn-primary" style="margin-top:14px">Create team</button>
     </form>
 
@@ -161,12 +172,17 @@
         </tbody>
     </table>
 </div>
+</div>
 @endsection
+
+@push('styles')<link rel="stylesheet" href="{{ asset('css/admin-teams.css').'?v='.filemtime(public_path('css/admin-teams.css')) }}">@endpush
 
 @push('scripts')
 <script>
 (() => {
     const memberType = document.getElementById('member-type');
+    const createTeamType = document.getElementById('new-team-type');
+    const createTeamCode = document.getElementById('new-team-code');
     const memberTeam = document.getElementById('member-team');
     const memberLeader = document.getElementById('member-leader');
     const memberUser = document.getElementById('member-user');
@@ -189,6 +205,17 @@
 
     memberType.addEventListener('change', () => updateMemberTeams(true));
     updateMemberTeams();
+
+    function updateCreateTeamCodeRule() {
+        const isSurvey = createTeamType.value === 'survey';
+        createTeamCode.pattern = isSurvey ? '[0-9]{2}' : '';
+        createTeamCode.inputMode = isSurvey ? 'numeric' : 'text';
+        createTeamCode.placeholder = isSurvey ? '01' : '';
+        createTeamCode.maxLength = isSurvey ? 2 : 50;
+    }
+
+    createTeamType.addEventListener('change', updateCreateTeamCodeRule);
+    updateCreateTeamCodeRule();
 
     const assignmentTeam = document.getElementById('assignment-team');
     const assignmentScope = document.getElementById('assignment-scope');

@@ -10,7 +10,7 @@
 </div>
 <form class="card" method="POST" action="{{ route('mobile-gpx.preview', $survey->client_uuid) }}">@csrf
 <input type="hidden" name="survey_revision" value="{{ $survey->revision }}"><h2>Select related shared GPX</h2>
-@forelse($sources as $source)<p><label><input type="checkbox" name="source_ids[]" value="{{ $source->id }}" @checked(in_array($source->id, $selected))> {{ $source->original_name }} — Group {{ $source->group_code }}, {{ $source->survey_date->format('d M Y') }}, expected {{ $source->expected_transformers }} transformers</label></p>@empty<p>No GPX is available for this team's survey dates. Upload it from the GPX linking list. Configure letter-to-numeric group mapping under Teams & Assignments.</p>@endforelse
+@forelse($sources as $source)<p><label><input type="checkbox" name="source_ids[]" value="{{ $source->id }}" @checked(in_array($source->id, $selected))> {{ $source->original_name }} — Group {{ $source->group_code }}, {{ $source->survey_date->format('d M Y') }}, expected {{ $source->expected_transformers }} transformers</label></p>@empty<p>No GPX is available for this team's survey dates. Upload it from the GPX linking list. Set the team two-digit group code under Teams & Assignments; the matching GPX prefix is derived automatically.</p>@endforelse
 <button class="btn btn-primary" @disabled($sources->isEmpty())>Preview waypoint matches</button></form>
 @php
     $displayReport = $report ?? $current?->report;

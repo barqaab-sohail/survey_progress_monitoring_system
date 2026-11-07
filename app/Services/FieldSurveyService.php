@@ -98,7 +98,7 @@ class FieldSurveyService
                         'feeder_name' => $feeder->feeder_name,
                         'team_name' => $team->name,
                         'group_code' => SurveyTeamGroup::identifier($team),
-                        'gpx_group_code' => $team->gpx_group_code,
+                        'gpx_group_code' => SurveyTeamGroup::filenameGroup($team),
                         'starting_pole_coordinates' => app(StartingPoleCoordinates::class)->capture($transformer),
                         'transformer' => $transformer?->only(['id', 'transformer_code', 'capacity_kva', 'equipment_make', 'equipment_location']),
                     ];

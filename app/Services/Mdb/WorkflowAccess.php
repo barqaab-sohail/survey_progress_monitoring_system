@@ -29,6 +29,9 @@ class WorkflowAccess
         if ($user->hasRole('super_admin')) {
             return true;
         }
+        if ($user->hasRole('project_manager') && in_array($ability, ['view', 'upload'], true)) {
+            return true;
+        }
         if ($ability === 'configure') {
             return false;
         }

@@ -180,6 +180,8 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::get('/teams', [TeamController::class, 'index'])->name('teams.index');
         Route::post('/teams', [TeamController::class, 'store'])->name('teams.store');
+        Route::put('/teams/survey/{team}', [TeamController::class, 'updateSurvey'])->name('teams.survey.update');
+        Route::put('/teams/mdb/{team}', [TeamController::class, 'updateMdb'])->name('teams.mdb.update');
         Route::put('/teams/{team}/group', [TeamController::class, 'group'])->name('teams.group');
         Route::post('/teams/member', [TeamController::class, 'member'])->name('teams.member');
         Route::post('/teams/assign-feeder', [TeamController::class, 'assignFeeder'])->name('teams.assign-feeder');

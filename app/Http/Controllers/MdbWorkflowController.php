@@ -20,6 +20,7 @@ use App\Models\Mdb\VerificationDecision;
 use App\Models\Mdb\Waypoint;
 use App\Models\Project;
 use App\Models\SurveyTeam;
+use App\Models\User;
 use App\Services\AuditService;
 use App\Services\DriveStorage\FileStorage;
 use App\Services\Mdb\EngineeringDefaults;
@@ -128,7 +129,9 @@ class MdbWorkflowController extends Controller
     {
         Gate::authorize('mdb-workflow.upload');
 
-        return view('mdb-workflow.create', $this->references($request));
+        return view('mdb-workflow.create', $this->references($request) + [
+            'entryOperators' => User::where('status', 'active')->whereHas('roles', fn ($q) => $q->where('name', 'survey_data_entry_operator'))->orderBy('name')->get(),
+        ]);
     }
 
     public function previewDrive(Request $request)
@@ -153,8 +156,13 @@ class MdbWorkflowController extends Controller
     public function store(Request $request)
     {
         Gate::authorize('mdb-workflow.upload');
+        $isProjectManager = $request->user()->hasRole('project_manager');
+        $isEntryOperator = $request->user()->hasRole('survey_data_entry_operator');
+        $canCreateWithoutTeam = $isProjectManager || $isEntryOperator;
         $data = $request->validate(['project_id' => 'required|exists:projects,id', 'feeder_id' => 'required|exists:feeders,id',
-            'survey_team_id' => 'required|exists:survey_teams,id', 'survey_date' => 'required|date', 'survey_pdf' => 'required_without:survey_pdf_drive_id|nullable|file|extensions:pdf',
+            'survey_team_id' => [$canCreateWithoutTeam ? 'nullable' : 'required', 'exists:survey_teams,id'],
+            'entry_assigned_to' => [$isProjectManager ? 'required' : 'prohibited', 'nullable', 'integer', Rule::exists('users', 'id')->where('status', 'active')],
+            'survey_date' => 'required|date', 'survey_pdf' => 'required_without:survey_pdf_drive_id|nullable|file|extensions:pdf',
             'gps_gpx' => 'required_without:gps_gpx_drive_id|nullable|file|extensions:gpx',
             'survey_pdf_drive_id' => 'nullable|string|regex:/^[A-Za-z0-9_-]{10,200}$/',
             'gps_gpx_drive_id' => 'nullable|string|regex:/^[A-Za-z0-9_-]{10,200}$/']);
@@ -163,10 +171,13 @@ class MdbWorkflowController extends Controller
                 throw ValidationException::withMessages([$field => 'Choose either a local file or a Drive file.']);
             }
         }
-        $team = SurveyTeam::findOrFail($data['survey_team_id']);
+        $team = ! empty($data['survey_team_id']) ? SurveyTeam::findOrFail($data['survey_team_id']) : null;
         $feeder = Feeder::active()->findOrFail($data['feeder_id']);
-        abort_unless($team->status === 'active' && $team->project_id === (int) $data['project_id'] && $feeder->project_id === (int) $data['project_id'], 422, 'Team, feeder and project must match.');
-        if (! $request->user()->hasRole('super_admin')) {
+        if ($isProjectManager && ! User::whereKey($data['entry_assigned_to'])->whereHas('roles', fn ($q) => $q->where('name', 'survey_data_entry_operator'))->exists()) {
+            throw ValidationException::withMessages(['entry_assigned_to' => 'Select an active Data Entry Operator.']);
+        }
+        abort_unless((! $team || ($team->status === 'active' && $team->project_id === (int) $data['project_id'])) && $feeder->project_id === (int) $data['project_id'], 422, 'Team, feeder and project must match.');
+        if (! $canCreateWithoutTeam && ! $request->user()->hasRole('super_admin')) {
             if (! $team->members()->whereKey($request->user()->id)->exists()) {
                 throw ValidationException::withMessages(['survey_team_id' => 'You are not a member of the selected survey team. Ask the Super Admin to add you to the team.']);
             }
@@ -179,7 +190,11 @@ class MdbWorkflowController extends Controller
         try {
             $batch = DB::transaction(function () use ($data, $request, &$storedPaths) {
                 app(EngineeringDefaults::class)->initialize(Project::findOrFail($data['project_id']), $request->user());
-                $batch = SurveyBatch::create(array_intersect_key($data, array_flip(['project_id', 'feeder_id', 'survey_team_id', 'survey_date'])) + ['created_by' => $request->user()->id, 'status' => 'draft', 'staged_workflow' => true]);
+                $batchData = array_intersect_key($data, array_flip(['project_id', 'feeder_id', 'survey_team_id', 'survey_date', 'entry_assigned_to']));
+                if ($request->user()->hasRole('survey_data_entry_operator')) {
+                    $batchData['entry_assigned_to'] = $request->user()->id;
+                }
+                $batch = SurveyBatch::create($batchData + ['created_by' => $request->user()->id, 'status' => 'draft', 'staged_workflow' => true]);
                 foreach (['survey_pdf' => 'pdf', 'gps_gpx' => 'gpx'] as $field => $kind) {
                     try {
                         $service = app(SourceService::class);
@@ -1097,11 +1112,12 @@ class MdbWorkflowController extends Controller
     private function references(Request $request): array
     {
         $user = $request->user();
+        $canSelectAnyFeeder = $user->hasAnyRole(['super_admin', 'project_manager', 'survey_data_entry_operator']);
         $teamsQuery = SurveyTeam::where('status', 'active');
-        if (! $user->hasAnyRole(['super_admin', 'project_manager'])) {
+        if (! $canSelectAnyFeeder) {
             $teamsQuery->whereHas('members', fn ($q) => $q->where('users.id', $user->id));
         }
-        $visibleProjects = $user->hasAnyRole(['super_admin', 'project_manager']) ? null : $this->access->visible($user)->select('project_id')->distinct();
+        $visibleProjects = $canSelectAnyFeeder ? null : $this->access->visible($user)->select('project_id')->distinct();
         $teams = $teamsQuery->orderBy('name')->get();
         $teamIds = $teams->modelKeys();
         $projectIds = $teams->pluck('project_id')->merge($visibleProjects ? $visibleProjects->pluck('project_id') : [])->unique();
@@ -1109,7 +1125,7 @@ class MdbWorkflowController extends Controller
             ->whereDate('start_date', '<=', today())->where(fn ($q) => $q->whereNull('end_date')->orWhereDate('end_date', '>=', today()));
         $feedersQuery = Feeder::active()->when($visibleProjects, fn ($q) => $q->whereIn('project_id', $projectIds))
             ->with(['assignments' => $activeTeamAllocation]);
-        if (! $user->hasAnyRole(['super_admin', 'project_manager'])) {
+        if (! $canSelectAnyFeeder) {
             $feedersQuery->whereHas('assignments', $activeTeamAllocation);
         }
         $feeders = $feedersQuery->orderBy('feeder_name')->get();

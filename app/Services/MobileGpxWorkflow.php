@@ -43,8 +43,9 @@ class MobileGpxWorkflow
             $this->fail('gpx', 'Use Group_DDMMYY_Count.gpx, for example A_061126_06.gpx.');
         }
         $group = SurveyTeamGroup::identifier($team);
-        if (! $group || ! in_array(strtoupper($match[1]), array_filter([$group, strtoupper($team->gpx_group_code ?? '')]), true)) {
-            $this->fail('gpx', 'The filename group does not match this team. Configure its numeric group and GPX filename group in Teams & Assignments.');
+        $filenameGroup = SurveyTeamGroup::filenameGroup($team);
+        if (! $group || ! $filenameGroup || strtoupper($match[1]) !== $filenameGroup) {
+            $this->fail('gpx', 'The filename group does not match this team. Group '.$group.' requires the GPX filename prefix '.$filenameGroup.'.');
         }
         $date = CarbonImmutable::createFromFormat('!dmy', $match[2], 'Asia/Karachi');
         if (! $date || $date->format('dmy') !== $match[2] || $date->year < 2000 || $date->isFuture() || (int) $match[3] < 1) {

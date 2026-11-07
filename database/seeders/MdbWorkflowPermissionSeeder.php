@@ -19,7 +19,7 @@ class MdbWorkflowPermissionSeeder extends Seeder
         $grants = [
             ...WorkflowAccess::SURVEY_ROLE_ABILITIES,
             'super_admin' => WorkflowAccess::ABILITIES,
-            'project_manager' => ['view'],
+            'project_manager' => ['view', 'upload'],
             'survey_team_leader' => ['view', 'upload'],
             'mdb_team_user' => ['view', 'edit', 'export'],
             'mdb_processing_user' => ['view', 'verify'],

@@ -6,6 +6,24 @@ use App\Models\SurveyTeam;
 
 class SurveyTeamGroup
 {
+    public static function filenameGroup(SurveyTeam $team): ?string
+    {
+        $group = self::identifier($team);
+        if ($group === null) {
+            return null;
+        }
+
+        $number = (int) $group;
+        $letters = '';
+        while ($number > 0) {
+            $number--;
+            $letters = chr(65 + ($number % 26)).$letters;
+            $number = intdiv($number, 26);
+        }
+
+        return $letters;
+    }
+
     public static function identifier(SurveyTeam $team): ?string
     {
         if ($team->group_code !== null) {

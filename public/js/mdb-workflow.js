@@ -13,14 +13,14 @@
                     const teamIds = (option.dataset.teamIds || '').split(',').filter(Boolean);
                     const teamMatches = surveyTeam?.value && teamIds.includes(surveyTeam.value);
                     const adminOverride = batchCreate?.dataset.canChooseUnassigned === '1';
-                    allowed = allowed && !!surveyTeam?.value && (teamMatches || adminOverride);
+                    allowed = allowed && (adminOverride || (!!surveyTeam?.value && teamMatches));
                 }
                 option.hidden = !allowed;
                 option.disabled = !allowed;
                 if (!allowed && option.selected) select.value = '';
             });
         });
-        if (feeder) feeder.disabled = !project.value || !surveyTeam?.value;
+        if (feeder) feeder.disabled = !project.value || (!surveyTeam?.value && batchCreate?.dataset.canChooseUnassigned !== '1');
     };
     project?.addEventListener('change', updateReferences);
     surveyTeam?.addEventListener('change', updateReferences);
