@@ -10,6 +10,47 @@ const applicationBaseUrl = kDebugMode
       )
     : 'https://hazeco.barqaab.pk';
 
+int? _integerId(dynamic value) => value is int ? value : int.tryParse('$value');
+int? parseIntegerId(dynamic value) => _integerId(value);
+
+/// Normalizes database IDs from fresh or previously cached bootstrap data.
+/// Older app builds could persist numeric IDs as strings.
+Json normalizeFieldBootstrap(Json data) {
+  for (final team in (data['teams'] as List? ?? const []).cast<Json>()) {
+    team['id'] = _integerId(team['id']) ?? team['id'];
+  }
+  for (final feeder in (data['feeders'] as List? ?? const []).cast<Json>()) {
+    feeder['id'] = _integerId(feeder['id']) ?? feeder['id'];
+    final settings = feeder['entry_settings'];
+    if (settings is Map && settings['two_digit_year_start'] != null) {
+      settings['two_digit_year_start'] =
+          _integerId(settings['two_digit_year_start']) ??
+          settings['two_digit_year_start'];
+    }
+    feeder['team_ids'] = (feeder['team_ids'] as List? ?? const [])
+        .map((id) => _integerId(id) ?? id)
+        .toList();
+    for (final task in (feeder['tasks'] as List? ?? const []).cast<Json>()) {
+      task['team_id'] = _integerId(task['team_id']) ?? task['team_id'];
+    }
+  }
+  for (final transformer
+      in (data['transformers'] as List? ?? const []).cast<Json>()) {
+    transformer['id'] = _integerId(transformer['id']) ?? transformer['id'];
+    transformer['feeder_id'] =
+        _integerId(transformer['feeder_id']) ?? transformer['feeder_id'];
+  }
+  return data;
+}
+
+Json normalizeSurveyRecordData(Json data) {
+  for (final key in ['survey_team_id', 'feeder_id', 'transformer_id']) {
+    if (data[key] != null) data[key] = _integerId(data[key]) ?? data[key];
+  }
+  data['base_revision'] = _integerId(data['base_revision']) ?? 0;
+  return data;
+}
+
 // Keep the wire contract independent of local editing/display metadata. Stable
 // row/PV IDs are part of the contract and must never be stripped for sync.
 const surveyRowFields = {
@@ -124,8 +165,10 @@ Json copyJson(Json value) => jsonDecode(jsonEncode(value)) as Json;
 
 String? teamGroupIdentifier(Json? team) {
   if (team == null) return null;
-  if (team.containsKey('group_identifier')) {
-    return team['group_identifier'] as String?;
+  final configured = team['group_identifier'] ?? team['group_code'];
+  if (configured != null) {
+    final value = configured.toString();
+    return RegExp(r'^[0-9]{2}$').hasMatch(value) ? value : null;
   }
   final numbers = <String>{};
   for (final value in [team['code'], team['name']]) {
@@ -136,6 +179,23 @@ String? teamGroupIdentifier(Json? team) {
     }
   }
   return numbers.length == 1 ? numbers.single : null;
+}
+
+Json? defaultSurveyTeam(Iterable<Json> teams) {
+  final available = teams.toList();
+  if (available.isEmpty) return null;
+  return available.first;
+}
+
+Json? surveyTeamForUser(Json? reference, Iterable<Json> teams) {
+  final available = teams.toList();
+  if (available.isEmpty) return null;
+  final teamId = _integerId(reference?['mobile_survey_team']?['id']);
+  final memberTeam = available.where(
+    (team) => _integerId(team['id']) == teamId,
+  );
+  if (teamId != null && memberTeam.length == 1) return memberTeam.single;
+  return available.first;
 }
 
 String transformerIdentity(dynamic code) => (code ?? '')
@@ -171,7 +231,7 @@ class FieldSession {
   factory FieldSession.fromJson(Json json) => FieldSession(
     url: json['url'],
     token: json['token'],
-    userId: json['user_id'],
+    userId: _integerId(json['user_id']) ?? 0,
     name: json['name'],
   );
 }
@@ -200,7 +260,7 @@ class SurveyRecord {
     return '${data['team_group'] ?? '??'}_${stamp}_$code';
   }
 
-  int get revision => data['base_revision'] as int? ?? 0;
+  int get revision => _integerId(data['base_revision']) ?? 0;
   List<Json> get rows => (data['rows'] as List).cast<Json>();
   List<Json> get solar => (data['solar'] as List).cast<Json>();
   Json get header => data['header'] as Json;
@@ -230,9 +290,9 @@ class SurveyRecord {
       data: {
         'client_uuid': const Uuid().v4(),
         'base_revision': 0,
-        'survey_team_id': team['id'],
+        'survey_team_id': _integerId(team['id']) ?? team['id'],
         'team_group': group,
-        'feeder_id': feeder['id'],
+        'feeder_id': _integerId(feeder['id']) ?? feeder['id'],
         'transformer_id': null,
         'transformer_code': '',
         'survey_date': dayString(DateTime.now()),

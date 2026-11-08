@@ -61,23 +61,22 @@ void main() {
     expect(record.solar.single['local_expanded'], true);
   });
 
-  test(
-    'every edited group is exactly two ASCII digits with zeros retained',
-    () {
-      final record = readySurvey();
-      for (final group in ['0', '001', '0a', ' 01', '01 ', '٠١']) {
-        record.rows.first['group'] = group;
-        expect(
-          SurveyValidation.errors(record),
-          contains('rows.0.group'),
-          reason: group,
-        );
-      }
-      for (final group in ['00', '07', '99']) {
-        record.rows.first['group'] = group;
-        expect(SurveyValidation.errors(record, submitting: true), isEmpty);
-        expect(record.payload(submitted: true)['rows'][0]['group'], group);
-      }
-    },
-  );
+  test('group values are two digits and assigned team code is submitted', () {
+    final record = readySurvey();
+    for (final group in ['0', '001', '0a', ' 01', '01 ', '٠١']) {
+      record.rows.first['group'] = group;
+      expect(
+        SurveyValidation.errors(record),
+        contains('rows.0.group'),
+        reason: group,
+      );
+    }
+    for (final group in ['01', '02', '99']) {
+      record.rows.first['group'] = '01';
+      record.data['team_group'] = group;
+      if (group != '01') record.rows.first['group'] = group;
+      expect(SurveyValidation.errors(record, submitting: true), isEmpty);
+      expect(record.payload(submitted: true)['rows'][0]['group'], group);
+    }
+  });
 }

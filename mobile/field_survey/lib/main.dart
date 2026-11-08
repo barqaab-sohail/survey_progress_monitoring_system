@@ -222,7 +222,7 @@ class _LoginPageState extends State<LoginPage> {
                         : const Icon(Icons.login),
                     label: const Padding(
                       padding: EdgeInsets.all(12),
-                      child: Text('Sign in and download assignments'),
+                      child: Text('Sign in and download feeder data'),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -378,17 +378,47 @@ class _SurveyHomeState extends State<SurveyHome> {
 
   Future<void> create() async {
     if (opening || controller.busy) return;
-    final eligible = controller.teams
-        .where((team) => controller.feedersFor(team['id']).isNotEmpty)
+    if (controller.session != null && !controller.syncing) {
+      try {
+        await controller.refreshReference();
+      } on ApiFailure catch (error) {
+        notice('Unable to refresh team codes. ${error.message}');
+        return;
+      } on Object {
+        notice(
+          'Unable to refresh team codes. Connect to the internet and try again.',
+        );
+        return;
+      }
+      if (!mounted) return;
+    }
+    List<Json> teamsFor(Json feeder) {
+      final ids = (feeder['team_ids'] as List? ?? const []);
+      return controller.teams
+          .where(
+            (team) =>
+                ids.any((id) => '$id' == '${team['id']}') &&
+                teamGroupIdentifier(team) != null,
+          )
+          .toList();
+    }
+
+    final availableFeeders = controller.feeders
+        .where((feeder) => teamsFor(feeder).isNotEmpty)
         .toList();
-    if (eligible.isEmpty) {
+    if (availableFeeders.isEmpty) {
       notice(
-        'No feeder assignments are available. Ask the administrator to assign your team.',
+        'No feeder data is available. Download feeder data or contact the administrator.',
       );
       return;
     }
-    Json selectedTeam = eligible.first;
-    Json selectedFeeder = controller.feedersFor(selectedTeam['id']).first;
+    Json selectedFeeder = availableFeeders.first;
+    final initialTeams = teamsFor(selectedFeeder);
+    Json selectedTeam = surveyTeamForUser(controller.reference, initialTeams)!;
+    if (controller.syncing) {
+      notice('Wait for sync to finish before starting a survey.');
+      return;
+    }
     final accepted = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -399,43 +429,54 @@ class _SurveyHomeState extends State<SurveyHome> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                DropdownButtonFormField<int>(
-                  initialValue: selectedTeam['id'],
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    labelText: 'Assigned survey team',
-                    errorText: teamGroupIdentifier(selectedTeam) == null
-                        ? 'No valid team number. Ask the administrator to correct this team.'
-                        : null,
-                    errorMaxLines: 3,
-                  ),
-                  items: eligible
-                      .map(
-                        (t) => DropdownMenuItem<int>(
-                          value: t['id'],
-                          child: Text(
-                            t['name'],
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) => update(() {
-                    selectedTeam = eligible.firstWhere((t) => t['id'] == value);
-                    selectedFeeder = controller.feedersFor(value!).first;
+                FeederPicker(
+                  key: const ValueKey('all-available-feeders'),
+                  selectedId: selectedFeeder['id'],
+                  feeders: availableFeeders,
+                  onSelected: (value) => update(() {
+                    selectedFeeder = availableFeeders.firstWhere(
+                      (feeder) => '${feeder['id']}' == '$value',
+                    );
+                    selectedTeam = surveyTeamForUser(
+                      controller.reference,
+                      teamsFor(selectedFeeder),
+                    )!;
                   }),
                 ),
-                const SizedBox(height: 16),
-                FeederPicker(
-                  key: ValueKey(selectedTeam['id']),
-                  selectedId: selectedFeeder['id'],
-                  feeders: controller.feedersFor(selectedTeam['id']),
-                  onSelected: (value) => update(
-                    () => selectedFeeder = controller.feeders.firstWhere(
-                      (f) => f['id'] == value,
+                if (teamsFor(selectedFeeder).length > 1) ...[
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int>(
+                    initialValue: parseIntegerId(selectedTeam['id']),
+                    decoration: const InputDecoration(labelText: 'Survey team'),
+                    items: teamsFor(selectedFeeder)
+                        .map(
+                          (team) => DropdownMenuItem<int>(
+                            value: parseIntegerId(team['id']),
+                            child: Text(
+                              '${team['name']} (Group ${teamGroupIdentifier(team)})',
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      update(() {
+                        selectedTeam = teamsFor(selectedFeeder).firstWhere(
+                          (team) => parseIntegerId(team['id']) == value,
+                        );
+                      });
+                    },
+                  ),
+                ] else
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Assigned team: ${selectedTeam['name']} · Group ${teamGroupIdentifier(selectedTeam)}',
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -445,9 +486,7 @@ class _SurveyHomeState extends State<SurveyHome> {
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: teamGroupIdentifier(selectedTeam) == null
-                  ? null
-                  : () => Navigator.pop(context, true),
+              onPressed: () => Navigator.pop(context, true),
               child: const Text('Create survey'),
             ),
           ],
@@ -458,7 +497,17 @@ class _SurveyHomeState extends State<SurveyHome> {
     await createFor(selectedTeam['id'], selectedFeeder['id']);
   }
 
-  Future<void> createFor(int teamId, int feederId) async {
+  Future<void> createFor(dynamic teamValue, dynamic feederValue) async {
+    final teamId = teamValue is int ? teamValue : int.tryParse('$teamValue');
+    final feederId = feederValue is int
+        ? feederValue
+        : int.tryParse('$feederValue');
+    if (teamId == null || feederId == null) {
+      notice(
+        'The selected team or feeder is invalid. Download assignments and try again.',
+      );
+      return;
+    }
     final team = controller.team(teamId);
     final feeder = controller.feeder(feederId);
     final session = controller.session;
@@ -517,12 +566,17 @@ class _SurveyHomeState extends State<SurveyHome> {
                   .contains(search.toLowerCase()),
         )
         .toList();
+    final assignedMobileTeam = surveyTeamForUser(
+      controller.reference,
+      controller.teams,
+    );
+    final signedInGroup = teamGroupIdentifier(assignedMobileTeam);
     return Scaffold(
       appBar: AppBar(
         title: const Text('HAZECO Field Survey'),
         actions: [
           IconButton(
-            tooltip: 'Download assignments',
+            tooltip: 'Download feeder data',
             onPressed: controller.syncing ? null : refresh,
             icon: const Icon(Icons.cloud_download_outlined),
           ),
@@ -552,7 +606,7 @@ class _SurveyHomeState extends State<SurveyHome> {
             ),
             const SizedBox(height: 6),
             Text(
-              '${controller.session!.name} · ${controller.teams.length} assigned team${controller.teams.length == 1 ? '' : 's'}',
+              '${controller.session!.name}${signedInGroup == null ? '' : ' · Code $signedInGroup'} · ${controller.teams.length} assigned team${controller.teams.length == 1 ? '' : 's'}',
             ),
             const SizedBox(height: 16),
             Card(
@@ -658,7 +712,7 @@ class _SurveyHomeState extends State<SurveyHome> {
                         ),
                       ),
                       SizedBox(height: 8),
-                      Text('Start a new survey using your assigned feeder.'),
+                      Text('Select any available feeder to start a survey.'),
                     ],
                   ),
                 ),
@@ -733,7 +787,7 @@ class _SurveyHomeState extends State<SurveyHome> {
             ),
             if (controller.reference?['_downloaded_at'] != null)
               Text(
-                'Assignments downloaded ${controller.reference!['_downloaded_at'].toString().replaceFirst('T', ' ').substring(0, 16)}',
+                'Feeder data downloaded ${controller.reference!['_downloaded_at'].toString().replaceFirst('T', ' ').substring(0, 16)}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
           ],

@@ -25,7 +25,14 @@ class FieldSurveyApiController extends Controller
     public function bootstrap(Request $request, FieldSurveyAccess $access): JsonResponse
     {
         $user = $request->user();
-        $teams = $access->teams($user)->orderBy('id')->get(['id', 'code', 'name', 'project_id', 'group_code', 'gpx_group_code']);
+        $mobileCollector = $user->hasRole('mobile_survey_user');
+        $teamQuery = $mobileCollector ? $access->mobileTeams($user) : $access->teams($user);
+        $teams = $teamQuery->orderBy('id')->get(['id', 'code', 'name', 'project_id', 'group_code', 'gpx_group_code']);
+        $mobileSurveyTeam = null;
+        if ($mobileCollector) {
+            // Task history does not choose the mobile account's group.
+            $mobileSurveyTeam = $teams->first();
+        }
         $feeders = $access->feeders($user)->with(['gridStation', 'division', 'subDivision', 'assignments' => function ($query) use ($access, $teams): void {
             $access->activeAssignments($query->getQuery());
             $query->whereIn('survey_team_id', $teams->pluck('id'));
@@ -50,13 +57,17 @@ class FieldSurveyApiController extends Controller
             ->whereIn('status', ['assigned', 'in_progress', 'draft', 'returned', 'submitted'])->get()->groupBy('feeder_id');
 
         return response()->json([
-            'user' => $user->only(['id', 'name']), 'teams' => $teams->map(fn ($team) => array_merge($team->toArray(), ['group_identifier' => SurveyTeamGroup::identifier($team)])),
+            'user' => $user->only(['id', 'name']),
+            'mobile_survey_team' => $mobileSurveyTeam ? array_merge($mobileSurveyTeam->only(['id', 'code', 'name', 'group_code']), ['group_identifier' => SurveyTeamGroup::identifier($mobileSurveyTeam)]) : null,
+            'teams' => $teams->map(fn ($team) => array_merge($team->toArray(), ['group_identifier' => SurveyTeamGroup::identifier($team)])),
             'feeders' => $feeders->map(fn ($feeder) => [
                 'id' => $feeder->id, 'feeder_code' => $feeder->feeder_code, 'feeder_name' => $feeder->feeder_name,
                 'entry_lookups' => $lookups[$feeder->project_id], 'entry_settings' => $settings[$feeder->project_id],
                 'grid_station_name' => $feeder->gridStation?->name, 'division_name' => $feeder->division?->name,
                 'sub_division_name' => $feeder->subDivision?->name, 'sub_division_code' => $feeder->subDivision?->code,
-                'team_ids' => $feeder->assignments->filter(fn ($assignment) => $teams->firstWhere('id', $assignment->survey_team_id)?->project_id === $feeder->project_id)->pluck('survey_team_id')->unique()->values(),
+                'team_ids' => $mobileCollector
+                    ? $teams->where('project_id', $feeder->project_id)->pluck('id')->values()
+                    : $feeder->assignments->filter(fn ($assignment) => $teams->firstWhere('id', $assignment->survey_team_id)?->project_id === $feeder->project_id)->pluck('survey_team_id')->unique()->values(),
                 'tasks' => ($personalTasks[$feeder->id] ?? collect())->map(fn ($task) => ['assignment_id' => $task->assignment_uuid,
                     'team_id' => $task->survey_team_id, 'assigned_at' => $task->assigned_at?->toDateString(), 'deadline' => $task->deadline?->toDateString(),
                     'priority' => $task->priority, 'instructions' => $task->instructions, 'return_comments' => $task->return_comments, 'status' => $task->status])->values(),

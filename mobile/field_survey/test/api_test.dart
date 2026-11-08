@@ -7,6 +7,51 @@ import 'models_test.dart' show testSession, readySurvey;
 
 void main() {
   test(
+    'bootstrap normalizes string database IDs for dropdown selections',
+    () async {
+      final api = FieldApi(
+        client: MockClient((request) async {
+          expect(request.url.path, '/api/v1/field/bootstrap');
+          return http.Response(
+            jsonEncode({
+              'teams': [
+                {'id': '7', 'name': 'Team 07'},
+              ],
+              'feeders': [
+                {
+                  'id': '41',
+                  'team_ids': ['7'],
+                  'entry_settings': {'two_digit_year_start': '2000'},
+                  'tasks': [
+                    {'team_id': '7'},
+                  ],
+                },
+              ],
+              'transformers': [
+                {'id': '83', 'feeder_id': '41'},
+              ],
+            }),
+            200,
+          );
+        }),
+      );
+
+      final data = await api.bootstrap(testSession);
+
+      expect(data['teams'][0]['id'], 7);
+      expect(data['feeders'][0]['id'], 41);
+      expect(
+        data['feeders'][0]['entry_settings']['two_digit_year_start'],
+        2000,
+      );
+      expect(data['feeders'][0]['team_ids'], [7]);
+      expect(data['feeders'][0]['tasks'][0]['team_id'], 7);
+      expect(data['transformers'][0]['id'], 83);
+      expect(data['transformers'][0]['feeder_id'], 41);
+    },
+  );
+
+  test(
     'requests use configured subpath, bearer token and stable JSON payload',
     () async {
       final api = FieldApi(

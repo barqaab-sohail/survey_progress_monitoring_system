@@ -21,28 +21,11 @@ void main() {
         ),
       );
       final group = find.widgetWithText(TextFormField, 'Group identifier');
-      expect(
-        tester
-            .widget<TextField>(
-              find.descendant(of: group, matching: find.byType(TextField)),
-            )
-            .readOnly,
-        false,
-      );
+      expect(tester.widget<TextFormField>(group).enabled, false);
       expect(record.rows.first['group'], '01');
-      await tester.enterText(group, '0');
-      await tester.pump();
-      expect(
-        find.text('Enter exactly two digits, for example 01.'),
-        findsOneWidget,
-      );
       await tester.enterText(group, '07');
       await tester.pump();
-      expect(record.rows.first['group'], '07');
-      expect(record.payload(submitted: true)['rows'][0]['group'], '07');
-      await tester.enterText(group, '079');
-      await tester.pump();
-      expect(record.rows.first['group'], '07');
+      expect(record.rows.first['group'], '01');
       final waypoint = find.widgetWithText(
         TextFormField,
         'GPS waypoint identifier',

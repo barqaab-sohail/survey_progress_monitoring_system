@@ -76,19 +76,31 @@ class FieldApi {
           .timeout(const Duration(seconds: 25)),
     );
     final user = data['user'] as Json;
+    final userId = parseIntegerId(user['id']);
+    if (userId == null) {
+      throw const FormatException(
+        'The sign-in response did not include a valid account ID.',
+      );
+    }
     return FieldSession(
       url: url,
       token: data['token'],
-      userId: user['id'],
+      userId: userId,
       name: user['name'],
     );
   }
 
-  Future<Json> bootstrap(FieldSession session) async => read(
-    await client
-        .get(endpoint(session.url, '/bootstrap'), headers: headers(session))
-        .timeout(const Duration(seconds: 30)),
-  );
+  Future<Json> bootstrap(FieldSession session) async {
+    final data = read(
+      await client
+          .get(endpoint(session.url, '/bootstrap'), headers: headers(session))
+          .timeout(const Duration(seconds: 30)),
+    );
+    // Bootstrap data is also normalized when loaded from local storage so
+    // older cached string IDs cannot reach integer dropdowns.
+    return normalizeFieldBootstrap(data);
+  }
+
   Future<void> logout(FieldSession session) async {
     read(
       await client
@@ -108,7 +120,7 @@ class FieldApi {
           .timeout(const Duration(seconds: 40)),
     );
     if (reply['client_uuid'] != data['client_uuid'] ||
-        reply['revision'] is! int) {
+        parseIntegerId(reply['revision']) == null) {
       throw const FormatException(
         'The server response did not confirm this survey. It remains saved on this phone.',
       );

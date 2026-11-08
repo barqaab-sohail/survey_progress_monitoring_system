@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'models.dart';
 
-/// Searches the assigned feeders already cached on the phone; works offline.
+/// Searches feeder reference data already cached on the phone; works offline.
 class FeederPicker extends StatelessWidget {
   const FeederPicker({
     super.key,
@@ -37,7 +37,7 @@ class FeederPicker extends StatelessWidget {
                   )
                   .toList();
               return AlertDialog(
-                title: const Text('Assigned feeders'),
+                title: const Text('Available feeders'),
                 content: SizedBox(
                   width: 460,
                   height: 370,
@@ -55,9 +55,7 @@ class FeederPicker extends StatelessWidget {
                       const SizedBox(height: 12),
                       Expanded(
                         child: matches.isEmpty
-                            ? const Center(
-                                child: Text('No matching assigned feeders.'),
-                              )
+                            ? const Center(child: Text('No matching feeders.'))
                             : ListView(
                                 children: matches
                                     .map(
@@ -65,10 +63,12 @@ class FeederPicker extends StatelessWidget {
                                         title: Text(f['feeder_code']),
                                         subtitle: Text(_taskSummary(f)),
                                         selected: f['id'] == selectedId,
-                                        onTap: () => Navigator.pop(
-                                          context,
-                                          f['id'] as int,
-                                        ),
+                                        onTap: () {
+                                          final id = parseIntegerId(f['id']);
+                                          if (id != null) {
+                                            Navigator.pop(context, id);
+                                          }
+                                        },
                                       ),
                                     )
                                     .toList(),

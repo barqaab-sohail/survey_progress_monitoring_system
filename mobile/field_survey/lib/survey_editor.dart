@@ -48,9 +48,24 @@ class _SurveyEditorState extends State<SurveyEditor>
     WidgetsBinding.instance.addObserver(this);
     controller.addListener(controllerChanged);
     if (editable) {
-      record.data['team_group'] = teamGroupIdentifier(
+      final today = dayString(DateTime.now());
+      if (record.data['survey_date'] != today) {
+        record.data['survey_date'] = today;
+        dirty = true;
+      }
+      final assignedGroup = teamGroupIdentifier(
         controller.team(record.data['survey_team_id']),
       );
+      record.data['team_group'] = assignedGroup;
+      if (record.revision == 0 && assignedGroup != null) {
+        for (final row in record.rows) {
+          if (row['group'] != assignedGroup || row['date'] != today) {
+            row['group'] = assignedGroup;
+            row['date'] = today;
+            dirty = true;
+          }
+        }
+      }
     }
     if (editable && record.ensurePairIds()) {
       // Save linkage without turning a viewed synced survey into an edited draft.
@@ -426,9 +441,11 @@ class _SurveyEditorState extends State<SurveyEditor>
                     ?.cast<String, String>() ??
                 const {},
             yearStart:
-                controller.feeder(
-                  record.data['feeder_id'],
-                )?['entry_settings']?['two_digit_year_start'] ??
+                parseIntegerId(
+                  controller.feeder(
+                    record.data['feeder_id'],
+                  )?['entry_settings']?['two_digit_year_start'],
+                ) ??
                 2000,
             editable: editable,
             onChanged: () => touch(),
@@ -630,12 +647,15 @@ class _SurveyEditorState extends State<SurveyEditor>
           DateEntry(
             label: 'Survey date',
             yearStart:
-                controller.feeder(
-                  record.data['feeder_id'],
-                )?['entry_settings']?['two_digit_year_start'] ??
+                parseIntegerId(
+                  controller.feeder(
+                    record.data['feeder_id'],
+                  )?['entry_settings']?['two_digit_year_start'],
+                ) ??
                 2000,
             value: record.data['survey_date'],
             enabled: editable,
+            readOnly: true,
             onChanged: (value) {
               record.data['survey_date'] = value;
               touch('survey_date');
@@ -1482,10 +1502,16 @@ class _RowEditorState extends State<RowEditor> {
                 'group',
                 'Group identifier',
                 digits: true,
-                enabled: widget.index == 0 && row['se'] == 'S',
-                helper: widget.index == 0 && row['se'] == 'S'
-                    ? 'For an old survey reference, enter its original two-digit group and row date.'
-                    : 'Assigned automatically from your survey team. Historical first S keeps its original group.',
+                enabled:
+                    widget.record.revision > 0 &&
+                    widget.editable &&
+                    (row['group'] ?? '').toString() !=
+                        widget.record.data['team_group'],
+                helper: row['group'] == widget.record.data['team_group']
+                    ? 'Assigned automatically from your survey team.'
+                    : widget.record.revision == 0
+                    ? 'Check the survey team selected when this survey was created.'
+                    : 'Preserved historical value. Edit only to correct an invalid entry.',
               ),
               DateEntry(
                 label: 'Row date',
@@ -1493,6 +1519,7 @@ class _RowEditorState extends State<RowEditor> {
                 value: row['date'] ?? '',
                 error: errors['$prefix.date'],
                 enabled: widget.editable,
+                readOnly: true,
                 onChanged: (value) {
                   row['date'] = value;
                   changed();
@@ -1846,11 +1873,13 @@ class DateEntry extends StatefulWidget {
     required this.onChanged,
     this.yearStart = 2000,
     this.error,
+    this.readOnly = false,
   });
   final String label, value;
   final bool enabled;
   final int yearStart;
   final String? error;
+  final bool readOnly;
   final ValueChanged<String> onChanged;
   @override
   State<DateEntry> createState() => _DateEntryState();
@@ -1884,14 +1913,16 @@ class _DateEntryState extends State<DateEntry> {
   Widget build(BuildContext context) => TextFormField(
     controller: controller,
     enabled: widget.enabled,
+    readOnly: widget.readOnly,
     keyboardType: TextInputType.number,
     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
     decoration: InputDecoration(
       labelText: '${widget.label} (DDMMYY)',
       hintText: '171026',
       errorText: error ?? widget.error,
-      helperText:
-          'Six digits: day, month, year. Earlier dates can be typed directly.',
+      helperText: widget.readOnly
+          ? "Automatically set to today's date."
+          : 'Six digits: day, month, year. Earlier dates can be typed directly.',
     ),
     onChanged: (value) {
       final iso = parseEntryDate(value, yearStart: widget.yearStart);

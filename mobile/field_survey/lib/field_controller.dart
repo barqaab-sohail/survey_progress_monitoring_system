@@ -35,11 +35,24 @@ class FieldController extends ChangeNotifier {
       ((reference?['feeders'] ?? []) as List).cast<Json>();
   List<Json> get transformers =>
       ((reference?['transformers'] ?? []) as List).cast<Json>();
-  List<Json> feedersFor(int teamId) => feeders
-      .where((item) => (item['team_ids'] as List).contains(teamId))
-      .toList();
-  Json? feeder(int id) => feeders.where((item) => item['id'] == id).firstOrNull;
-  Json? team(int id) => teams.where((item) => item['id'] == id).firstOrNull;
+  List<Json> feedersFor(dynamic teamValue) {
+    final teamId = teamValue is int ? teamValue : int.tryParse('$teamValue');
+    if (teamId == null) return [];
+    return feeders
+        .where(
+          (item) => (item['team_ids'] as List? ?? const []).any(
+            (id) => id == teamId || int.tryParse('$id') == teamId,
+          ),
+        )
+        .toList();
+  }
+
+  Json? feeder(dynamic id) => feeders
+      .where((item) => item['id'] == id || '${item['id']}' == '$id')
+      .firstOrNull;
+  Json? team(dynamic id) => teams
+      .where((item) => item['id'] == id || '${item['id']}' == '$id')
+      .firstOrNull;
 
   Future<List<Json>> availableTransformers(SurveyRecord record) async {
     final saved = await store.surveys(record.scope);
@@ -74,13 +87,18 @@ class FieldController extends ChangeNotifier {
         }
       }
       if (session != null) {
-        reference = await store.bootstrap(session!.scope);
-        if (reference == null) {
-          try {
-            await refreshReference();
-          } catch (_) {
-            session = null;
-          }
+        final cachedReference = await store.bootstrap(session!.scope);
+        reference = cachedReference == null
+            ? null
+            : normalizeFieldBootstrap(cachedReference);
+        try {
+          // Refresh cached reference data at startup so account team changes
+          // (including the group code shown in the notebook header) take effect.
+          await refreshReference();
+        } catch (_) {
+          // Keep the cached reference for offline field work. A missing cache
+          // still means there is no usable session bootstrap.
+          if (reference == null) session = null;
         }
         await reload();
       }
@@ -107,6 +125,7 @@ class FieldController extends ChangeNotifier {
         await store.cacheBootstrap(next.scope, downloaded);
       } catch (_) {
         downloaded = await store.bootstrap(next.scope);
+        if (downloaded != null) normalizeFieldBootstrap(downloaded);
         if (downloaded == null) rethrow;
       }
       await secureStorage.write(
@@ -207,7 +226,7 @@ class FieldController extends ChangeNotifier {
     if (session?.scope != current.scope || session?.token != current.token) {
       return;
     }
-    reference = cached;
+    reference = cached == null ? null : normalizeFieldBootstrap(cached);
     notifyListeners();
   }
 
@@ -253,7 +272,13 @@ class FieldController extends ChangeNotifier {
       for (final record in forms) {
         try {
           final reply = await api.sync(current, record.outbound!);
-          await store.acknowledge(record, reply['revision'] as int);
+          final revision = parseIntegerId(reply['revision']);
+          if (revision == null) {
+            throw const FormatException(
+              'The server did not return a valid survey revision. The saved copy remains on this phone.',
+            );
+          }
+          await store.acknowledge(record, revision);
           formCount++;
         } on ApiFailure catch (error) {
           final conflict = error.status == 409;

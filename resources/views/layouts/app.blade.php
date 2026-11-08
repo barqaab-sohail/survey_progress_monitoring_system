@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20261009-mdb-sidebar-fixed">
     @stack('styles')
 </head>
-<body>
+<body @class(['local-environment' => app()->environment('local')])>
 <div class="shell">
     <header class="topbar">
         <a class="brand" href="{{ route('dashboard') }}">

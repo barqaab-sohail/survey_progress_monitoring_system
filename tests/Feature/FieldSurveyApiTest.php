@@ -175,12 +175,15 @@ class FieldSurveyApiTest extends TestCase
         $this->getJson('/api/v1/field/bootstrap')->assertForbidden();
     }
 
-    public function test_bootstrap_excludes_unassigned_feeders_and_inactive_projects_or_memberships(): void
+    public function test_mobile_bootstrap_includes_every_active_feeder_in_a_member_project(): void
     {
         $other = $this->feeder->replicate();
         $other->feeder_code = 'OTHER';
         $other->save();
-        $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonCount(1, 'feeders')->assertJsonPath('feeders.0.feeder_code', '0012')->assertJsonPath('feeders.0.team_ids.0', $this->team->id)->assertJsonPath('feeders.0.sub_division_code', 'SD');
+        $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonCount(2, 'feeders')
+            ->assertJsonPath('feeders.0.feeder_code', '0012')->assertJsonPath('feeders.0.team_ids.0', $this->team->id)
+            ->assertJsonPath('feeders.0.sub_division_code', 'SD')->assertJsonPath('feeders.1.feeder_code', 'OTHER')
+            ->assertJsonPath('feeders.1.team_ids.0', $this->team->id);
         $this->team->members()->detach($this->leader->id);
         $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonCount(0, 'teams')->assertJsonCount(0, 'feeders');
         $this->withHeader('Authorization', 'Bearer '.$this->tokenFor($this->admin));
@@ -189,7 +192,7 @@ class FieldSurveyApiTest extends TestCase
         $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonCount(0, 'teams')->assertJsonCount(0, 'feeders');
     }
 
-    public function test_surveyor_mobile_access_is_limited_to_personal_assignments_and_sync_updates_task_audit(): void
+    public function test_mobile_survey_users_can_use_any_feeder_in_their_team_project_and_sync_updates_task_audit(): void
     {
         $surveyor = User::factory()->create(['organization_id' => $this->organization->id, 'role' => UserRole::MobileSurveyUser]);
         $this->team->members()->attach($surveyor->id, ['is_leader' => false]);
@@ -197,7 +200,6 @@ class FieldSurveyApiTest extends TestCase
         $other->feeder_code = '0022';
         $other->feeder_name = 'Not assigned';
         $other->save();
-        FeederAssignment::create(['feeder_id' => $other->id, 'survey_team_id' => $this->team->id, 'assigned_by' => $this->admin->id, 'start_date' => today(), 'status' => 'active']);
         $this->actingAs($this->admin)->post(route('team-work.survey.assign'), ['survey_team_id' => $this->team->id, 'surveyor_id' => $surveyor->id,
             'feeder_ids' => [$this->feeder->id], 'assigned_at' => today()->toDateString(), 'deadline' => today()->addDays(2)->toDateString(), 'priority' => 'high',
             'instructions' => 'Photograph both pole labels.'])->assertRedirect()->assertSessionHasNoErrors();
@@ -206,16 +208,18 @@ class FieldSurveyApiTest extends TestCase
 
         $login = $this->postJson('/api/v1/field/login', ['email' => $surveyor->email, 'password' => 'password', 'device_name' => 'Surveyor device'])->assertOk();
         $this->withHeader('Authorization', 'Bearer '.$login->json('token'));
-        $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonCount(1, 'feeders')
+        $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonPath('mobile_survey_team.id', $this->team->id)
+            ->assertJsonPath('mobile_survey_team.group_identifier', '01')->assertJsonCount(2, 'feeders')
             ->assertJsonPath('feeders.0.id', $this->feeder->id)->assertJsonPath('feeders.0.tasks.0.assignment_id', $task->assignment_uuid)
-            ->assertJsonPath('feeders.0.tasks.0.priority', 'high')->assertJsonPath('feeders.0.tasks.0.instructions', 'Photograph both pole labels.');
+            ->assertJsonPath('feeders.0.tasks.0.priority', 'high')->assertJsonPath('feeders.0.tasks.0.instructions', 'Photograph both pole labels.')
+            ->assertJsonPath('feeders.1.id', $other->id)->assertJsonPath('feeders.1.team_ids.0', $this->team->id);
         $payload = $this->payload();
-        $payload['feeder_id'] = $other->id;
-        $this->postJson('/api/v1/field/surveys/sync', $payload)->assertForbidden();
-        $payload['feeder_id'] = $this->feeder->id;
         $this->postJson('/api/v1/field/surveys/sync', $payload)->assertCreated();
         $this->assertSame('submitted', $task->fresh()->status);
         $this->assertDatabaseHas('audit_logs', ['action' => 'survey.task_status_changed', 'auditable_id' => $task->id]);
+        $otherPayload = $this->payload();
+        $otherPayload['feeder_id'] = $other->id;
+        $this->postJson('/api/v1/field/surveys/sync', $otherPayload)->assertCreated();
         $this->actingAs($this->admin)->post(route('team-work.survey.return', $task), ['comments' => 'Please attach the pole label photograph.'])
             ->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame('returned', $task->fresh()->status);
@@ -405,14 +409,14 @@ class FieldSurveyApiTest extends TestCase
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()->assertJsonValidationErrors('rows');
     }
 
-    public function test_sync_rechecks_assignment_membership_and_project_before_accepting_retries(): void
+    public function test_sync_requires_team_membership_and_active_project_not_feeder_allocation(): void
     {
         $data = $this->payload();
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
         FeederAssignment::query()->update(['status' => 'inactive']);
-        $this->postJson('/api/v1/field/surveys/sync', $data)->assertForbidden();
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk();
         FeederAssignment::query()->update(['status' => 'active', 'end_date' => today()->subDay()]);
-        $this->postJson('/api/v1/field/surveys/sync', $data)->assertForbidden();
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk();
         FeederAssignment::query()->update(['end_date' => null]);
         $this->team->members()->detach($this->leader->id);
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertForbidden();
@@ -453,22 +457,24 @@ class FieldSurveyApiTest extends TestCase
         return UploadedFile::fake()->createWithContent('sketch.pdf', "%PDF-1.7\n".$text."\n%%EOF");
     }
 
-    public function test_team_group_is_a_default_and_edited_groups_survive_updates_and_team_renumbering(): void
+    public function test_team_group_is_required_for_new_rows_and_historical_groups_are_preserved(): void
     {
         $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonPath('teams.0.group_identifier', '01');
         $data = $this->payload();
         $data['rows'][0]['group'] = '12';
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()->assertJsonValidationErrors('rows.0.group');
+        $data['rows'][0]['group'] = '01';
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
         $this->team->update(['name' => 'Survey Team 12']);
         $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonPath('teams.0.group_identifier', '12');
         $data['base_revision'] = 1;
         $data['remarks'] = 'Saved groups retained';
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk();
-        $this->assertSame('12', FieldSurvey::firstOrFail()->rows[0]['group']);
+        $this->assertSame('01', FieldSurvey::firstOrFail()->rows[0]['group']);
         $data['base_revision'] = 2;
         $data['rows'][0]['group'] = '07';
-        $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk();
-        $this->assertSame('07', FieldSurvey::firstOrFail()->rows[0]['group']);
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()->assertJsonValidationErrors('rows.0.group');
+        $this->assertSame('01', FieldSurvey::firstOrFail()->rows[0]['group']);
         $this->team->update(['name' => 'Survey Team', 'code' => 'ST']);
         $new = $this->payload();
         $new['transformer_code'] = 'NEW';
@@ -508,10 +514,16 @@ class FieldSurveyApiTest extends TestCase
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()->assertJsonValidationErrors('rows');
     }
 
-    public function test_complete_mobile_contract_submits_and_preserves_all_fields_row_media_and_edited_groups(): void
+    public function test_complete_mobile_contract_submits_and_preserves_all_fields_row_media_and_historical_groups(): void
     {
         $data = json_decode(file_get_contents(base_path('tests/Fixtures/FieldSurvey/mobile-submission.json')), true, 512, JSON_THROW_ON_ERROR);
         $this->team->update(['group_code' => '09']);
+        foreach ($data['rows'] as &$row) {
+            $row['group'] = '09';
+            $row['date'] = today()->toDateString();
+        }
+        unset($row);
+        $data['survey_date'] = today()->toDateString();
         $data['survey_team_id'] = $this->team->id;
         $data['feeder_id'] = $this->feeder->id;
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated()->assertJsonPath('status', 'submitted');
@@ -538,12 +550,11 @@ class FieldSurveyApiTest extends TestCase
 
         $this->team->update(['name' => 'Survey Team 88']);
         $data['base_revision'] = 1;
-        $data['rows'][0]['group'] = '08';
         $data['rows'] = array_reverse($data['rows']);
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk()->assertJsonPath('revision', 2);
         $survey->refresh();
         $this->assertSame('09', $survey->rows[0]['group']);
-        $this->assertSame('08', $survey->rows[1]['group']);
+        $this->assertSame('09', $survey->rows[1]['group']);
         $this->assertSame($start, $survey->solar[0]['row_id']);
         $this->assertSame($end, $attachment->fresh()->row_id);
         $this->assertSame($data['rows'], $survey->rows);
@@ -561,11 +572,13 @@ class FieldSurveyApiTest extends TestCase
         $this->assertDatabaseCount('field_surveys', 0);
         $data = $this->payload();
         $data['rows'][0]['group'] = '00';
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()->assertJsonValidationErrors('rows.0.group');
+        $data['rows'][0]['group'] = '01';
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
         $data['base_revision'] = 1;
         $data['rows'][0]['group'] = '007';
         $this->postJson('/api/v1/field/surveys/sync', $data)->assertUnprocessable()->assertJsonValidationErrors('rows.0.group');
-        $this->assertSame('00', FieldSurvey::firstOrFail()->rows[0]['group']);
+        $this->assertSame('01', FieldSurvey::firstOrFail()->rows[0]['group']);
     }
 
     public function test_legacy_unlinked_media_and_original_groups_are_preserved_when_row_ids_are_added(): void
@@ -661,8 +674,8 @@ class FieldSurveyApiTest extends TestCase
         Storage::disk('local')->assertExists(FieldSurveyAttachment::first()->path);
         $this->get('/api/v1/field/attachments/'.$uuid)->assertOk()->assertHeader('Content-Type', 'application/pdf');
         FeederAssignment::query()->update(['status' => 'inactive']);
-        $this->getJson('/api/v1/field/attachments/'.$uuid)->assertForbidden();
-        $this->post($url, ['client_uuid' => $uuid, 'row_id' => $data['rows'][0]['row_id'], 'kind' => 'sketch', 'file' => $this->pdf()], ['Accept' => 'application/json'])->assertForbidden();
+        $this->get('/api/v1/field/attachments/'.$uuid)->assertOk();
+        $this->post($url, ['client_uuid' => $uuid, 'row_id' => $data['rows'][0]['row_id'], 'kind' => 'sketch', 'file' => $this->pdf()], ['Accept' => 'application/json'])->assertOk();
     }
 
     public function test_upload_type_size_and_owner_are_enforced(): void
@@ -690,7 +703,7 @@ class FieldSurveyApiTest extends TestCase
         $this->actingAs($other)->get('/field-surveys/'.$data['client_uuid'])->assertNotFound();
         $this->actingAs($this->leader)->get('/field-surveys/'.$data['client_uuid'])->assertOk();
         FeederAssignment::query()->update(['status' => 'inactive']);
-        $this->get('/field-surveys/'.$data['client_uuid'])->assertNotFound();
+        $this->get('/field-surveys/'.$data['client_uuid'])->assertOk();
         $this->actingAs($viewer)->get('/field-surveys/'.$data['client_uuid'])->assertOk();
         $this->post('/field-surveys', [])->assertStatus(405);
     }

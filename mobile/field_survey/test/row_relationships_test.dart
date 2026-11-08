@@ -31,6 +31,60 @@ void main() {
       expect(teamGroupIdentifier({'name': 'Survey Team 01'}), '01');
       expect(teamGroupIdentifier({'name': 'Survey Team 12'}), '12');
       expect(
+        teamGroupIdentifier({
+          'name': 'Survey Team 01',
+          'group_identifier': '03',
+        }),
+        '03',
+      );
+      expect(
+        defaultSurveyTeam([
+          {'id': 1, 'group_identifier': '01'},
+          {'id': 2, 'group_identifier': '03'},
+        ])?['id'],
+        1,
+      );
+      expect(
+        surveyTeamForUser({}, [
+          {'id': 1, 'name': 'Survey Team 01', 'group_code': '01'},
+          {'id': 2, 'name': 'Another team', 'group_code': '03'},
+        ])?['id'],
+        1,
+      );
+      expect(
+        surveyTeamForUser(
+          {
+            'mobile_survey_team': {'id': 2},
+          },
+          [
+            {'id': 1, 'name': 'Survey Team 01', 'group_code': '01'},
+            {'id': 2, 'name': 'Muhammad Shafiq', 'group_code': '03'},
+          ],
+        )?['id'],
+        2,
+      );
+      final group03 = SurveyRecord.create(
+        testSession,
+        {
+          'id': 8,
+          'group_identifier': '03',
+          'group_code': '03',
+          'name': 'Muhammad Shafiq',
+        },
+        {'id': 9},
+      );
+      expect(teamGroupIdentifier({'group_code': '03'}), '03');
+      expect(group03.data['survey_date'], dayString(DateTime.now()));
+      group03.rows.add(group03.nextRow());
+      group03.rows.add(group03.nextRow());
+      group03.rows.add(group03.nextRow());
+      group03.rows.add(group03.nextRow());
+      expect(group03.rows.map((row) => row['group']), ['03', '03', '03', '03']);
+      group03.rows.clear();
+      group03.rows.add(group03.nextRow());
+      group03.ensureEndRow(0);
+      expect(group03.rows.map((row) => row['group']), ['03', '03']);
+      expect(
         teamGroupIdentifier({'code': 'ST101', 'name': 'Survey Team 01'}),
         '01',
       );
@@ -42,9 +96,18 @@ void main() {
       expect(
         teamGroupIdentifier({
           'name': 'Survey Team 01',
-          'group_identifier': null,
+          'group_identifier': '03',
+          'group_code': null,
         }),
-        isNull,
+        '03',
+      );
+      expect(
+        teamGroupIdentifier({
+          'name': 'Survey Team 01',
+          'group_identifier': null,
+          'group_code': null,
+        }),
+        '01',
       );
       expect(
         () => SurveyRecord.create(

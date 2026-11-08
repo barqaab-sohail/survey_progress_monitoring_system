@@ -31,6 +31,24 @@ class FieldSurveyAccess
                 ->whereHas('members', fn (Builder $members) => $members->where('users.id', $user->id)));
     }
 
+    /**
+     * The account form assigns a mobile user to one group. Older team leader
+     * memberships can remain on the pivot, so select the newest non-leader
+     * membership as the account's mobile group before falling back to any team.
+     */
+    public function mobileTeams(User $user): Builder
+    {
+        $availableTeams = $this->teams($user);
+        $memberships = $user->surveyTeams()
+            ->whereIn('survey_teams.id', (clone $availableTeams)->select('survey_teams.id'))
+            ->orderByPivot('updated_at', 'desc')
+            ->get(['survey_teams.id']);
+        $selected = $memberships->first(fn (SurveyTeam $team): bool => ! (bool) $team->pivot->is_leader)
+            ?? $memberships->first();
+
+        return $availableTeams->whereKey($selected?->id ?? 0);
+    }
+
     public function activeAssignments(Builder $query): void
     {
         $query->where('status', 'active')
@@ -41,6 +59,15 @@ class FieldSurveyAccess
     public function feeders(User $user): Builder
     {
         $teamIds = $this->teams($user)->select('survey_teams.id');
+
+        // Mobile collectors download the full feeder reference list for the
+        // projects their survey teams belong to before heading into the field.
+        // Individual task assignments remain useful work tracking, but do not
+        // determine which feeders their phone can prepare surveys for.
+        if ($user->hasRole(UserRole::MobileSurveyUser->value)) {
+            return Feeder::active()->whereHas('project', fn (Builder $query) => $query->where('status', 'active'))
+                ->whereIn('project_id', $this->mobileTeams($user)->select('survey_teams.project_id'));
+        }
 
         if ($this->usesPersonalTasks($user)) {
             return Feeder::active()->whereIn('id', SurveyorAssignment::where('surveyor_id', $user->id)
@@ -64,9 +91,11 @@ class FieldSurveyAccess
         $team = $this->teams($user)->find($teamId);
         $feeder = Feeder::active()->find($feederId);
         abort_unless($team && $feeder && $team->project_id === $feeder->project_id, 403, 'Your survey team or feeder is unavailable. Download assignments again.');
-        $assignment = $feeder->assignments()->where('survey_team_id', $team->id);
-        $this->activeAssignments($assignment->getQuery());
-        abort_unless($assignment->exists(), 403, 'This feeder is no longer assigned to your survey team.');
+        if (! $user->hasRole(UserRole::MobileSurveyUser->value)) {
+            $assignment = $feeder->assignments()->where('survey_team_id', $team->id);
+            $this->activeAssignments($assignment->getQuery());
+            abort_unless($assignment->exists(), 403, 'This feeder is no longer assigned to your survey team.');
+        }
         if ($this->usesPersonalTasks($user)) {
             abort_unless(SurveyorAssignment::where('surveyor_id', $user->id)->where('survey_team_id', $team->id)->where('feeder_id', $feeder->id)
                 ->whereIn('status', ['assigned', 'in_progress', 'draft', 'returned', 'submitted'])->whereDate('assigned_at', '<=', today())
@@ -94,6 +123,12 @@ class FieldSurveyAccess
             return $query->where('collected_by', $user->id);
         }
 
+        if ($user->hasRole(UserRole::MobileSurveyUser->value)) {
+            return $query->where('collected_by', $user->id)
+                ->whereIn('survey_team_id', $this->teams($user)->select('survey_teams.id'))
+                ->whereHas('feeder', fn (Builder $feeder) => $feeder->where('status', 'active'));
+        }
+
         return $query->where('collected_by', $user->id)
             ->whereIn('survey_team_id', $this->teams($user)->select('survey_teams.id'))
             ->whereHas('feeder', function (Builder $feeder): void {
@@ -112,7 +147,6 @@ class FieldSurveyAccess
 
     private function usesPersonalTasks(User $user): bool
     {
-        return $user->hasRole(UserRole::Surveyor->value)
-            || ($user->hasRole(UserRole::MobileSurveyUser->value) && SurveyorAssignment::where('surveyor_id', $user->id)->exists());
+        return $user->hasRole(UserRole::Surveyor->value);
     }
 }

@@ -11,7 +11,7 @@ import 'package:hazeco_field_survey/local_store.dart';
 import 'package:hazeco_field_survey/main.dart';
 import 'package:hazeco_field_survey/models.dart';
 import 'package:hazeco_field_survey/survey_editor.dart';
-import 'models_test.dart' show readySurvey, testSession;
+import 'models_test.dart' show newSurvey, readySurvey, testSession;
 
 // UI tests use synchronous in-memory persistence; real SQLite has separate checks.
 class WidgetSurveyStore extends LocalStore {
@@ -69,6 +69,14 @@ class NoSyncFieldController extends FieldController {
   NoSyncFieldController(super.store);
   @override
   Future<void> sync({bool manual = true}) async {}
+  @override
+  Future<void> reload() async {}
+}
+
+class NoRefreshFieldController extends NoSyncFieldController {
+  NoRefreshFieldController(super.store);
+  @override
+  Future<void> refreshReference() async {}
 }
 
 void main() {
@@ -289,7 +297,7 @@ void main() {
     controller = FieldController(uiStore)
       ..reference = {
         'teams': [
-          {'id': 4, 'name': 'Survey Team 01'},
+          {'id': 4, 'name': 'Survey Team 01', 'group_identifier': '01'},
         ],
       };
     await uiStore.save(record);
@@ -312,12 +320,9 @@ void main() {
     expect(find.text('Previously saved unlinked records'), findsOneWidget);
     await tester.tap(find.textContaining('Row 1 ·'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Group identifier'),
-      '07',
-    );
-    await tester.pump();
-    expect(record.rows.first['group'], '07');
+    final groupField = find.widgetWithText(TextFormField, 'Group identifier');
+    expect(tester.widget<TextFormField>(groupField).enabled, isFalse);
+    expect(record.rows.first['group'], '01');
     final add = find.text('Add solar installation');
     await tester.scrollUntilVisible(
       add,
@@ -381,11 +386,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('Row 2 ·'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Group identifier'),
-      '09',
+    final historicalGroup = find.widgetWithText(
+      TextFormField,
+      'Group identifier',
     );
-    await tester.pump();
+    expect(tester.widget<TextFormField>(historicalGroup).enabled, isFalse);
     await tester.scrollUntilVisible(
       add,
       500,
@@ -401,7 +406,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(uiStore.saved[record.id]!.solar[1]['meter_number'], '001-A/9');
     expect(uiStore.saved[record.id]!.rows.map((row) => row['group']), [
-      '07',
+      '01',
       '01',
     ]);
     await tester.tap(find.textContaining('Row 1 ·'));
@@ -412,10 +417,118 @@ void main() {
             find.widgetWithText(TextFormField, 'Group identifier'),
           )
           .initialValue,
-      '07',
+      '01',
     );
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('editor accepts string year-start setting from API', (
+    tester,
+  ) async {
+    final record = newSurvey();
+    record.data['base_revision'] = 0;
+    record.data['status'] = 'draft';
+    record.rows.addAll(readySurvey().rows);
+    record.data['survey_date'] = '2026-01-01';
+    record.rows.first['date'] = '2026-01-01';
+    record.rows[1]['date'] = '2026-01-01';
+    controller.reference = {
+      'teams': [
+        {'id': 4, 'name': 'Survey Team 02', 'group_identifier': '02'},
+      ],
+      'feeders': [
+        {
+          'id': 7,
+          'entry_settings': {'two_digit_year_start': '2000'},
+        },
+      ],
+    };
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SurveyEditor(controller: controller, record: record),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(SurveyEditor), findsOneWidget);
+    expect(record.data['survey_date'], dayString(DateTime.now()));
+    expect(record.rows, hasLength(2));
+    expect(
+      record.rows.map((row) => row['date']),
+      everyElement(dayString(DateTime.now())),
+    );
+    expect(record.rows.map((row) => row['group']), everyElement('02'));
+    expect(
+      tester
+          .widget<TextField>(
+            find.descendant(
+              of: find.byType(DateEntry),
+              matching: find.byType(TextField),
+            ),
+          )
+          .readOnly,
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('new survey picker selects the member team group explicitly', (
+    tester,
+  ) async {
+    controller.session = const FieldSession(
+      url: 'https://survey.example.test',
+      token: 'test-token',
+      userId: 1,
+      name: 'Muhammad Shafiq',
+    );
+    controller.reference = {
+      'mobile_survey_team': {
+        'id': 5,
+        'name': 'Muhammad Shafiq',
+        'group_identifier': '03',
+        'group_code': '03',
+      },
+      'teams': [
+        {
+          'id': 4,
+          'name': 'Survey Team 01',
+          'group_identifier': '01',
+          'group_code': '01',
+        },
+        {
+          'id': 5,
+          'name': 'Muhammad Shafiq',
+          'group_identifier': '03',
+          'group_code': '03',
+        },
+      ],
+      'feeders': [
+        {
+          'id': 7,
+          'feeder_name': 'Test feeder',
+          'team_ids': [4, 5],
+        },
+      ],
+    };
+    final pickerController = NoRefreshFieldController(store)
+      ..session = testSession
+      ..reference = controller.reference;
+    await tester.pumpWidget(
+      MaterialApp(home: SurveyHome(controller: pickerController)),
+    );
+    await tester.tap(find.text('New survey'));
+    await tester.pumpAndSettle();
+    expect(find.text('Start a field survey'), findsOneWidget);
+    final teamField = tester.widget<DropdownButtonFormField<int>>(
+      find.byType(DropdownButtonFormField<int>),
+    );
+    expect(teamField.initialValue, 5);
+    await tester.tap(find.text('Create survey'));
+    await tester.pumpAndSettle();
+    final created = await store.surveys(testSession.scope);
+    expect(created, hasLength(1));
+    expect(created.single.data['team_group'], '03');
     await tester.pumpWidget(const SizedBox());
   });
 

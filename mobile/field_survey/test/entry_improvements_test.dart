@@ -278,12 +278,34 @@ void main() {
     expect(find.widgetWithText(ListTile, '407'), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'not a feeder');
     await tester.pumpAndSettle();
-    expect(find.text('No matching assigned feeders.'), findsOneWidget);
+    expect(find.text('No matching feeders.'), findsOneWidget);
     await tester.enterText(find.byType(TextField), '508');
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ListTile, '508'));
     await tester.pumpAndSettle();
     expect(selected, 2);
+  });
+
+  testWidgets('feeder picker accepts an API string ID', (tester) async {
+    int? selected;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FeederPicker(
+            feeders: [
+              {'id': '41', 'feeder_code': '041', 'feeder_name': 'String ID'},
+            ],
+            selectedId: 0,
+            onSelected: (value) => selected = value,
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byType(OutlinedButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, '041'));
+    await tester.pumpAndSettle();
+    expect(selected, 41);
   });
 
   testWidgets(
@@ -326,6 +348,37 @@ void main() {
       expect(stored, '2024-01-01');
     },
   );
+
+  testWidgets('survey date can be fixed to today', (tester) async {
+    final today = dayString(DateTime.now());
+    String stored = today;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DateEntry(
+            label: 'Survey date',
+            value: stored,
+            enabled: true,
+            readOnly: true,
+            onChanged: (value) => stored = value,
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester
+          .widget<TextField>(
+            find.descendant(
+              of: find.byType(TextFormField),
+              matching: find.byType(TextField),
+            ),
+          )
+          .readOnly,
+      isTrue,
+    );
+    expect(stored, today);
+    expect(find.text("Automatically set to today's date."), findsOneWidget);
+  });
 
   testWidgets('pasted identifiers filter non-digits and retain zeros', (
     tester,

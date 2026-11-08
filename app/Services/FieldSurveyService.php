@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Services\DriveStorage\FileStorage;
 use App\Services\Mdb\StartingPoleCoordinates;
 use App\Services\Mdb\SurveyPhaseConsistency;
-use App\Support\FieldSurveyPairs;
 use App\Support\FieldTransformerIdentity;
 use App\Support\SurveyTeamGroup;
 use Illuminate\Database\QueryException;
@@ -40,12 +39,15 @@ class FieldSurveyService
                     if (! $group) {
                         throw ValidationException::withMessages(['survey_team_id' => 'Your assigned team needs a two-digit group code. Contact the administrator.']);
                     }
-                    $first = array_values(FieldSurveyPairs::groups($data['rows']))[0] ?? [];
-                    $firstS = collect($first)->first(fn ($i) => ($data['rows'][$i]['se'] ?? '') === 'S');
                     foreach ($data['rows'] as $i => $row) {
-                        $old = ! empty($row['row_id']) ? collect($survey?->rows ?? [])->firstWhere('row_id', $row['row_id']) : null;
-                        if ($i !== $firstS && ! empty($row['group']) && $row['group'] !== $group && ($old['group'] ?? null) !== $row['group']) {
-                            throw ValidationException::withMessages(["rows.$i.group" => 'New observations use your assigned group '.$group.'. Only the historical first S may use another group.']);
+                        $oldRows = $survey?->rows ?? [];
+                        $old = ! empty($row['row_id']) ? collect($oldRows)->firstWhere('row_id', $row['row_id']) : null;
+                        $legacyIndex = $row['legacy_row_index'] ?? null;
+                        if (! $old && $legacyIndex !== null && isset($oldRows[$legacyIndex]) && empty($oldRows[$legacyIndex]['row_id'])) {
+                            $old = $oldRows[$legacyIndex];
+                        }
+                        if (! empty($row['group']) && $row['group'] !== $group && ($old['group'] ?? null) !== $row['group']) {
+                            throw ValidationException::withMessages(["rows.$i.group" => 'New observations use your assigned group '.$group.'. Existing historical values remain unchanged.']);
                         }
                     }
                 }

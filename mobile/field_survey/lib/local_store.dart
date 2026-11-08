@@ -60,7 +60,7 @@ class LocalStore {
 
   SurveyRecord decode(Json row) => SurveyRecord(
     scope: row['scope'],
-    data: jsonDecode(row['data']) as Json,
+    data: normalizeSurveyRecordData(jsonDecode(row['data']) as Json),
     state: row['state'],
     error: row['error'],
     updatedAt: row['updated_at'],
