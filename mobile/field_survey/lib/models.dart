@@ -344,9 +344,7 @@ class SurveyRecord {
     ensurePairIds();
     final previous = rows.lastOrNull;
     return newRow(
-        rows.length == 1
-            ? data['survey_date']
-            : previous?['date'] ?? data['survey_date'],
+        dayString(DateTime.now()),
         pairId: previous != null && previous['se'] == 'S'
             ? previous['pair_id']
             : null,
@@ -412,12 +410,7 @@ class SurveyRecord {
     final insertAt = start['se'] == 'S' ? startIndex + 1 : startIndex;
     rows.insert(
       insertAt,
-      newRow(
-          startIndex == 0
-              ? data['survey_date']
-              : start['date'] ?? data['survey_date'],
-          pairId: start['pair_id'],
-        )
+      newRow(dayString(DateTime.now()), pairId: start['pair_id'])
         ..['se'] = partnerRole
         ..['group'] = requiredTeamGroup,
     );
@@ -730,6 +723,18 @@ class SurveyValidation {
         record.header['capacity_kva'],
         'Capacity',
       );
+      for (final field in {
+        'transformer_make': 'Transformer make',
+        'mounting': 'Mounting',
+        'duty': 'Duty',
+        'location': 'Location',
+      }.entries) {
+        requiredField(
+          'header.${field.key}',
+          record.header[field.key],
+          field.value,
+        );
+      }
       requiredField(
         'header.inspectors',
         record.header['inspectors'],
@@ -751,6 +756,7 @@ class SurveyValidation {
     if (record.rows.length > 500) {
       result['rows'] = 'Maximum 500 rows per survey.';
     }
+    final firstStartIndex = record.rows.indexWhere((row) => row['se'] == 'S');
     for (var index = 0; index < record.rows.length; index++) {
       final row = record.rows[index];
       final prefix = 'rows.$index';
@@ -797,10 +803,25 @@ class SurveyValidation {
             !RegExp(r'^\d+$').hasMatch(value)) {
           result['$prefix.$key'] = 'Enter digits only; leading zeros are kept.';
         }
+        if (key == 'gps_waypoint' &&
+            row['entry_version'] == 2 &&
+            value.isNotEmpty &&
+            !RegExp(r'^\d{3}$').hasMatch(value)) {
+          result['$prefix.gps_waypoint'] = 'Enter exactly three digits.';
+        }
       }
       final group = (row['group'] ?? '').toString();
       if (group.isNotEmpty && !RegExp(r'^[0-9]{2}$').hasMatch(group)) {
         result['$prefix.group'] = 'Enter exactly two digits, for example 01.';
+      }
+      final assignedGroup = (data['team_group'] ?? '').toString();
+      if (record.revision == 0 &&
+          index != firstStartIndex &&
+          group.isNotEmpty &&
+          assignedGroup.isNotEmpty &&
+          group != assignedGroup) {
+        result['$prefix.group'] =
+            'New observations must use your assigned group $assignedGroup.';
       }
       if (row['entry_version'] == 2 &&
           (row['equipment_type'] ?? '').toString().isNotEmpty &&

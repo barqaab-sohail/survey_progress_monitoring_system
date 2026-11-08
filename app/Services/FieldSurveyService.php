@@ -39,6 +39,7 @@ class FieldSurveyService
                     if (! $group) {
                         throw ValidationException::withMessages(['survey_team_id' => 'Your assigned team needs a two-digit group code. Contact the administrator.']);
                     }
+                    $firstStartIndex = collect($data['rows'])->search(fn (array $row): bool => ($row['se'] ?? null) === 'S');
                     foreach ($data['rows'] as $i => $row) {
                         $oldRows = $survey?->rows ?? [];
                         $old = ! empty($row['row_id']) ? collect($oldRows)->firstWhere('row_id', $row['row_id']) : null;
@@ -46,7 +47,7 @@ class FieldSurveyService
                         if (! $old && $legacyIndex !== null && isset($oldRows[$legacyIndex]) && empty($oldRows[$legacyIndex]['row_id'])) {
                             $old = $oldRows[$legacyIndex];
                         }
-                        if (! empty($row['group']) && $row['group'] !== $group && ($old['group'] ?? null) !== $row['group']) {
+                        if ($i !== $firstStartIndex && ! empty($row['group']) && $row['group'] !== $group && ($old['group'] ?? null) !== $row['group']) {
                             throw ValidationException::withMessages(["rows.$i.group" => 'New observations use your assigned group '.$group.'. Existing historical values remain unchanged.']);
                         }
                     }

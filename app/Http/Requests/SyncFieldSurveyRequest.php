@@ -35,9 +35,9 @@ class SyncFieldSurveyRequest extends FormRequest
             'header' => ['present', 'array:substation,division,sub_division,sub_division_code,transformer_make,inspectors,location,capacity_kva,mounting,duty'],
             'header.capacity_kva' => [$paper, 'numeric', 'gt:0', 'max:10000000'],
             'header.inspectors' => [$paper, 'string', 'max:200'],
-            'header.location' => ['nullable', 'string', 'max:500'],
-            'header.mounting' => ['nullable', Rule::in(['S.Pole', 'D.Pole', 'Pad'])],
-            'header.duty' => ['nullable', Rule::in(['General Duty', 'Dedicated'])],
+            'header.location' => [$paper, 'string', 'max:500'],
+            'header.mounting' => [$paper, Rule::in(['S.Pole', 'D.Pole', 'Pad'])],
+            'header.duty' => [$paper, Rule::in(['General Duty', 'Dedicated'])],
             'rows' => ['present', 'array', $submitted ? 'min:1' : 'min:0', 'max:500'],
             'rows.*' => ['array:row_id,legacy_row_index,pair_id,entry_version,se,group,date,gps_waypoint,latitude,longitude,gps_accuracy_m,phase,conductor_r,conductor_y,conductor_b,conductor_neutral,equipment_type,pole_class,pole_height_ft,consumers,consumer_phases,intersection,remarks'],
             'rows.*.row_id' => ['nullable', 'uuid', 'distinct'],
@@ -70,7 +70,7 @@ class SyncFieldSurveyRequest extends FormRequest
             'remarks' => ['nullable', 'string', 'max:2000'],
         ];
         foreach (['substation', 'division', 'sub_division', 'sub_division_code', 'transformer_make'] as $key) {
-            $rules['header.'.$key] = ['nullable', 'string', 'max:200'];
+            $rules['header.'.$key] = [$paper, 'string', 'max:200'];
         }
         foreach (['r', 'y', 'b', 'neutral'] as $key) {
             $rules['rows.*.conductor_'.$key] = ['nullable', 'string', 'max:100'];
@@ -91,7 +91,7 @@ class SyncFieldSurveyRequest extends FormRequest
         $equipment = null;
         foreach (is_array($this->input('rows')) ? $this->input('rows') : [] as $index => $row) {
             if (is_array($row) && ($row['entry_version'] ?? null) === 2) {
-                $rules["rows.$index.gps_waypoint"] = [$paper, 'string', 'max:50', 'regex:/^[0-9]+$/D'];
+                $rules["rows.$index.gps_waypoint"] = [$paper, 'string', 'regex:/^[0-9]{3}$/D'];
                 $equipment ??= array_keys(app(EntryLookups::class)->options(
                     Feeder::whereKey($this->integer('feeder_id'))->value('project_id'))['equipment_types']);
                 $rules["rows.$index.equipment_type"] = [$paper, 'string', Rule::in($equipment)];

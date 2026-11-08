@@ -58,12 +58,33 @@ class _SurveyEditorState extends State<SurveyEditor>
       );
       record.data['team_group'] = assignedGroup;
       if (record.revision == 0 && assignedGroup != null) {
-        for (final row in record.rows) {
-          if (row['group'] != assignedGroup || row['date'] != today) {
-            row['group'] = assignedGroup;
-            row['date'] = today;
+        final firstStartIndex = record.rows.indexWhere(
+          (row) => row['se'] == 'S',
+        );
+        var correctedGroup = false;
+        for (var index = 0; index < record.rows.length; index++) {
+          final row = record.rows[index];
+          final isFirstStart = index == firstStartIndex;
+          final nextGroup =
+              isFirstStart && (row['group'] ?? '').toString().isNotEmpty
+              ? row['group']
+              : assignedGroup;
+          final nextDate =
+              isFirstStart && (row['date'] ?? '').toString().isNotEmpty
+              ? row['date']
+              : today;
+          if (row['group'] != nextGroup || row['date'] != nextDate) {
+            if (row['group'] != nextGroup) correctedGroup = true;
+            row['group'] = nextGroup;
+            row['date'] = nextDate;
             dirty = true;
           }
+        }
+        if (correctedGroup ||
+            record.error.contains('New observations use your assigned group')) {
+          record.error = '';
+          record.state = 'draft';
+          record.data['status'] = 'draft';
         }
       }
     }
@@ -174,7 +195,44 @@ class _SurveyEditorState extends State<SurveyEditor>
     });
   }
 
+  Map<String, String> headerSaveErrors() {
+    final found = <String, String>{};
+    for (final field in {
+      'transformer_code': 'Transformer code',
+      'header.transformer_make': 'Transformer make',
+      'header.mounting': 'Mounting',
+      'header.duty': 'Duty',
+      'header.location': 'Location',
+    }.entries) {
+      final value = field.key == 'transformer_code'
+          ? record.data['transformer_code']
+          : record.header[field.key.substring('header.'.length)];
+      if (value == null || value.toString().trim().isEmpty) {
+        found[field.key] = '${field.value} is required.';
+      }
+    }
+    final capacity = record.header['capacity_kva']?.toString().trim() ?? '';
+    final parsedCapacity = num.tryParse(capacity);
+    if (capacity.isEmpty) {
+      found['header.capacity_kva'] = 'Capacity is required.';
+    } else if (parsedCapacity == null ||
+        !parsedCapacity.isFinite ||
+        parsedCapacity <= 0) {
+      found['header.capacity_kva'] = 'Enter a capacity greater than 0.';
+    }
+    return found;
+  }
+
   Future<void> saveDraft() async {
+    final requiredHeaderErrors = headerSaveErrors();
+    if (requiredHeaderErrors.isNotEmpty) {
+      setState(() {
+        section = 0;
+        errors = requiredHeaderErrors;
+      });
+      notice('Complete the required transformer details before continuing.');
+      return;
+    }
     final conflicts = surveyPhaseConsistencyErrors(record);
     if (conflicts.isNotEmpty) {
       setState(() => errors = conflicts);
@@ -183,7 +241,12 @@ class _SurveyEditorState extends State<SurveyEditor>
     }
     try {
       await flush();
-      notice('Draft saved on this phone. Submit when complete.');
+      if (!mounted) return;
+      setState(() {
+        errors.clear();
+        section = 1;
+      });
+      notice('Header saved on this phone. Continue with S/E rows.');
     } catch (error) {
       notice(
         error is FormatException
@@ -581,9 +644,10 @@ class _SurveyEditorState extends State<SurveyEditor>
         value: target[key]?.toString() ?? '',
         enabled: editable,
         values: values,
+        error: errors['header.$key'],
         onChanged: (value) {
           target[key] = value;
-          touch();
+          touch('header.$key');
         },
       );
   Widget headerSection() => Column(
@@ -1103,7 +1167,9 @@ class _SurveyEditorState extends State<SurveyEditor>
           ),
           actions: [
             IconButton(
-              tooltip: 'Save draft',
+              tooltip: section == 0
+                  ? 'Save header and continue to S/E rows'
+                  : 'Save draft',
               onPressed: editable ? saveDraft : null,
               icon: const Icon(Icons.save_outlined),
             ),
@@ -1213,8 +1279,13 @@ class _SurveyEditorState extends State<SurveyEditor>
                   ),
                 ],
                 selected: {section},
-                onSelectionChanged: (values) =>
-                    setState(() => section = values.first),
+                onSelectionChanged: (values) {
+                  if (values.first == 1 && section == 0) {
+                    unawaited(saveDraft());
+                  } else {
+                    setState(() => section = values.first);
+                  }
+                },
               ),
             ),
             const SizedBox(height: 20),
@@ -1261,6 +1332,10 @@ class _RowEditorState extends State<RowEditor> {
   bool finishing = false;
   int copyGeneration = 0;
   String get prefix => 'rows.${widget.index}';
+  bool get isFirstStartRow =>
+      row['se'] == 'S' &&
+      widget.record.rows.indexWhere((item) => item['se'] == 'S') ==
+          widget.index;
   Map<String, String> get errors => SurveyValidation.errors(
     widget.record,
     submitting: true,
@@ -1362,7 +1437,11 @@ class _RowEditorState extends State<RowEditor> {
     enabled: widget.editable && enabled,
     number: number,
     digits: digits,
-    maxLength: key == 'group' ? 2 : null,
+    maxLength: key == 'group'
+        ? 2
+        : key == 'gps_waypoint'
+        ? 3
+        : null,
     helper: helper,
     error: errors['$prefix.$key'],
     onChanged: (value) {
@@ -1502,24 +1581,23 @@ class _RowEditorState extends State<RowEditor> {
                 'group',
                 'Group identifier',
                 digits: true,
-                enabled:
-                    widget.record.revision > 0 &&
-                    widget.editable &&
-                    (row['group'] ?? '').toString() !=
-                        widget.record.data['team_group'],
-                helper: row['group'] == widget.record.data['team_group']
+                enabled: isFirstStartRow,
+                helper: isFirstStartRow
+                    ? 'Keep the group printed on the first S row. Later rows use assigned group ${widget.record.data['team_group']}.'
+                    : row['group'] == widget.record.data['team_group']
                     ? 'Assigned automatically from your survey team.'
-                    : widget.record.revision == 0
-                    ? 'Check the survey team selected when this survey was created.'
-                    : 'Preserved historical value. Edit only to correct an invalid entry.',
+                    : 'Preserved from the original survey and read-only.',
               ),
               DateEntry(
                 label: 'Row date',
                 yearStart: widget.yearStart,
                 value: row['date'] ?? '',
                 error: errors['$prefix.date'],
-                enabled: widget.editable,
-                readOnly: true,
+                enabled: widget.editable && isFirstStartRow,
+                readOnly: !isFirstStartRow,
+                helper: isFirstStartRow
+                    ? 'Editable on the first S row. Later S/E rows use today\'s date.'
+                    : null,
                 onChanged: (value) {
                   row['date'] = value;
                   changed();
@@ -1529,8 +1607,7 @@ class _RowEditorState extends State<RowEditor> {
                 'gps_waypoint',
                 'GPS waypoint identifier',
                 digits: true,
-                helper:
-                    'Enter the waypoint identifier used to link the GPX file.',
+                helper: 'Enter exactly three digits, keeping leading zeros.',
               ),
             ],
           ),
@@ -1874,12 +1951,14 @@ class DateEntry extends StatefulWidget {
     this.yearStart = 2000,
     this.error,
     this.readOnly = false,
+    this.helper,
   });
   final String label, value;
   final bool enabled;
   final int yearStart;
   final String? error;
   final bool readOnly;
+  final String? helper;
   final ValueChanged<String> onChanged;
   @override
   State<DateEntry> createState() => _DateEntryState();
@@ -1920,9 +1999,11 @@ class _DateEntryState extends State<DateEntry> {
       labelText: '${widget.label} (DDMMYY)',
       hintText: '171026',
       errorText: error ?? widget.error,
-      helperText: widget.readOnly
-          ? "Automatically set to today's date."
-          : 'Six digits: day, month, year. Earlier dates can be typed directly.',
+      helperText:
+          widget.helper ??
+          (widget.readOnly
+              ? "Automatically set to today's date."
+              : 'Six digits: day, month, year. Earlier dates can be typed directly.'),
     ),
     onChanged: (value) {
       final iso = parseEntryDate(value, yearStart: widget.yearStart);
