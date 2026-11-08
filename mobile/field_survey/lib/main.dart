@@ -104,7 +104,31 @@ class _LoginPageState extends State<LoginPage> {
   final email = TextEditingController(), password = TextEditingController();
   final form = GlobalKey<FormState>();
   String? error;
-  bool hide = true;
+  bool hide = true,
+      rememberCredentials = false,
+      loadingRememberedCredentials = true;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(loadRememberedCredentials());
+  }
+
+  Future<void> loadRememberedCredentials() async {
+    try {
+      final saved = await widget.controller.rememberedCredentials();
+      if (mounted && saved != null && email.text.isEmpty) {
+        email.text = saved['email']!;
+        password.text = saved['password']!;
+        rememberCredentials = true;
+      }
+    } catch (_) {
+      // Sign-in remains available if secure credential storage is unavailable.
+    } finally {
+      if (mounted) setState(() => loadingRememberedCredentials = false);
+    }
+  }
+
   @override
   void dispose() {
     email.dispose();
@@ -113,12 +137,16 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> signIn() async {
-    if (widget.controller.busy) return;
+    if (widget.controller.busy || loadingRememberedCredentials) return;
     if (!form.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
     setState(() => error = null);
     try {
-      await widget.controller.login(email.text, password.text);
+      await widget.controller.login(
+        email.text,
+        password.text,
+        rememberCredentials: rememberCredentials,
+      );
     } on Object catch (e) {
       if (mounted) setState(() => error = signInErrorMessage(e));
     }
@@ -196,6 +224,20 @@ class _LoginPageState extends State<LoginPage> {
                         : null,
                   ),
                   const SizedBox(height: 18),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    value: rememberCredentials,
+                    onChanged:
+                        widget.controller.busy || loadingRememberedCredentials
+                        ? null
+                        : (value) => setState(
+                            () => rememberCredentials = value ?? false,
+                          ),
+                    title: const Text(
+                      'Remember email and password on this phone',
+                    ),
+                  ),
                   if (error != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 14),
@@ -212,7 +254,10 @@ class _LoginPageState extends State<LoginPage> {
                       child: Text(widget.controller.startupMessage),
                     ),
                   FilledButton.icon(
-                    onPressed: widget.controller.busy ? null : signIn,
+                    onPressed:
+                        widget.controller.busy || loadingRememberedCredentials
+                        ? null
+                        : signIn,
                     icon: widget.controller.busy
                         ? const SizedBox(
                             width: 18,
@@ -227,7 +272,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'First sign-in needs internet and an assigned survey team. Your password is never saved.',
+                    'First sign-in needs internet and an assigned survey team. Credentials are saved securely only when Remember is selected.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -310,7 +355,7 @@ class _SurveyHomeState extends State<SurveyHome> {
     }
     if (!mounted) return;
     await controller.reload();
-    unawaited(controller.sync(manual: false));
+    if (controller.autoSync) unawaited(controller.sync(manual: false));
     if (createInSameFeeder) {
       await createFor(record.data['survey_team_id'], record.data['feeder_id']);
     }
@@ -653,9 +698,18 @@ class _SurveyHomeState extends State<SurveyHome> {
                         controller.needsLogin ? 'Sign in again' : 'Sync now',
                       ),
                     ),
-                    Text(
-                      'Automatic retry runs while the app is open. Keep the app open until photos finish.',
-                      style: Theme.of(context).textTheme.bodySmall,
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      value: controller.autoSync,
+                      onChanged: controller.syncing || controller.busy
+                          ? null
+                          : controller.setAutoSync,
+                      title: const Text('Sync automatically'),
+                      subtitle: Text(
+                        controller.autoSync
+                            ? 'Submitted surveys and photos sync when connected.'
+                            : 'Surveys stay on this phone until you tap Sync now.',
+                      ),
                     ),
                   ],
                 ),

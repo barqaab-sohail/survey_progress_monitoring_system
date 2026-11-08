@@ -40,6 +40,24 @@ class _SurveyEditorState extends State<SurveyEditor>
               as Map?)
           ?.keys
           .cast<String>();
+  Map<String, String> get conductorOptions {
+    final raw = controller.feeder(
+      record.data['feeder_id'],
+    )?['entry_lookups']?['conductors'];
+    if (raw is Map) {
+      final options = <String, String>{};
+      for (final entry in raw.entries) {
+        final code = entry.key.toString();
+        final label = entry.value?.toString() ?? code;
+        if (code.isNotEmpty && code != 'Other') options[code] = label;
+      }
+      if (options.isNotEmpty) return options;
+    }
+    return {
+      for (final code in conductorChoices.where((c) => c != 'Other'))
+        code: code,
+    };
+  }
 
   @override
   void initState() {
@@ -306,7 +324,7 @@ class _SurveyEditorState extends State<SurveyEditor>
       });
       await controller.reload();
       if (!mounted) return;
-      unawaited(controller.sync(manual: false));
+      if (controller.autoSync) unawaited(controller.sync(manual: false));
       final createNew = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
@@ -503,6 +521,7 @@ class _SurveyEditorState extends State<SurveyEditor>
                         as Map?)
                     ?.cast<String, String>() ??
                 const {},
+            conductorOptions: conductorOptions,
             yearStart:
                 parseIntegerId(
                   controller.feeder(
@@ -1312,6 +1331,7 @@ class RowEditor extends StatefulWidget {
     this.showRequired = false,
     this.extrasBuilder,
     this.equipmentOptions = const {},
+    this.conductorOptions = const {},
     this.yearStart = 2000,
   });
   final SurveyRecord record;
@@ -1319,6 +1339,7 @@ class RowEditor extends StatefulWidget {
   final Widget Function(VoidCallback refresh)? extrasBuilder;
   final bool editable, showRequired;
   final Map<String, String> equipmentOptions;
+  final Map<String, String> conductorOptions;
   final int yearStart;
   final VoidCallback onChanged;
   final Future<void> Function() onSave;
@@ -1644,6 +1665,7 @@ class _RowEditorState extends State<RowEditor> {
                   value: row[entry.key] ?? '',
                   enabled: widget.editable,
                   error: errors['$prefix.${entry.key}'],
+                  options: widget.conductorOptions,
                   onChanged: (value) {
                     row[entry.key] =
                         value.isEmpty &&
@@ -2027,11 +2049,13 @@ class ConductorEntry extends StatefulWidget {
     required this.value,
     required this.enabled,
     required this.onChanged,
+    this.options = const {},
     this.error,
   });
   final String label, value;
   final bool enabled;
   final ValueChanged<String> onChanged;
+  final Map<String, String> options;
   final String? error;
   @override
   State<ConductorEntry> createState() => _ConductorEntryState();
@@ -2046,8 +2070,16 @@ class _ConductorEntryState extends State<ConductorEntry> {
         widget.value == 'Other' ||
         widget.value.isNotEmpty &&
             widget.value != '__none__' &&
+            !_optionsMap.containsKey(widget.value) &&
             !conductorChoices.contains(widget.value);
   }
+
+  Map<String, String> get _optionsMap => widget.options.isEmpty
+      ? {
+          for (final code in conductorChoices.where((c) => c != 'Other'))
+            code: code,
+        }
+      : widget.options;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -2057,8 +2089,8 @@ class _ConductorEntryState extends State<ConductorEntry> {
         error: widget.error,
         value: other ? 'Other' : widget.value,
         enabled: widget.enabled,
-        values: const ['', '__none__', ...conductorChoices],
-        labels: const {'__none__': 'None / Not Present'},
+        values: ['', '__none__', ..._optionsMap.keys, 'Other'],
+        labels: {'__none__': 'None / Not Present', ..._optionsMap},
         onChanged: (value) {
           setState(() => other = value == 'Other');
           widget.onChanged(value);

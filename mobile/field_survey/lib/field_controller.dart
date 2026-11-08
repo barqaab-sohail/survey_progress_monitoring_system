@@ -25,6 +25,7 @@ class FieldController extends ChangeNotifier {
   Json? reference;
   List<SurveyRecord> records = [];
   bool busy = false, syncing = false, foreground = true;
+  bool autoSync = true;
   String syncMessage = '', startupMessage = '';
   bool needsLogin = false;
   bool capturing = false;
@@ -35,6 +36,19 @@ class FieldController extends ChangeNotifier {
       ((reference?['feeders'] ?? []) as List).cast<Json>();
   List<Json> get transformers =>
       ((reference?['transformers'] ?? []) as List).cast<Json>();
+
+  Future<Map<String, String>?> rememberedCredentials() async {
+    final email = await secureStorage.read(key: 'remembered_field_email');
+    final password = await secureStorage.read(key: 'remembered_field_password');
+    if (email == null ||
+        email.isEmpty ||
+        password == null ||
+        password.isEmpty) {
+      return null;
+    }
+    return {'email': email, 'password': password};
+  }
+
   List<Json> feedersFor(dynamic teamValue) {
     final teamId = teamValue is int ? teamValue : int.tryParse('$teamValue');
     if (teamId == null) return [];
@@ -76,6 +90,7 @@ class FieldController extends ChangeNotifier {
   Future<void> initialize() async {
     await store.recoverInterruptedUploads();
     try {
+      autoSync = (await store.setting('auto_sync')) != 'false';
       final saved = await secureStorage.read(key: 'field_session');
       if (saved != null) {
         session = FieldSession.fromJson(jsonDecode(saved) as Json);
@@ -108,13 +123,21 @@ class FieldController extends ChangeNotifier {
     }
     await recoverPhoto();
     retryTimer = Timer.periodic(const Duration(seconds: 45), (_) {
-      if (foreground && session != null && !needsLogin && !syncing) {
+      if (autoSync &&
+          foreground &&
+          session != null &&
+          !needsLogin &&
+          !syncing) {
         unawaited(sync(manual: false));
       }
     });
   }
 
-  Future<void> login(String email, String password) async {
+  Future<void> login(
+    String email,
+    String password, {
+    bool rememberCredentials = false,
+  }) async {
     busy = true;
     notifyListeners();
     try {
@@ -132,6 +155,19 @@ class FieldController extends ChangeNotifier {
         key: 'field_session',
         value: jsonEncode(next.toJson()),
       );
+      if (rememberCredentials) {
+        await secureStorage.write(
+          key: 'remembered_field_email',
+          value: email.trim(),
+        );
+        await secureStorage.write(
+          key: 'remembered_field_password',
+          value: password,
+        );
+      } else {
+        await secureStorage.delete(key: 'remembered_field_email');
+        await secureStorage.delete(key: 'remembered_field_password');
+      }
       await store.setSetting('last_url', applicationBaseUrl);
       session = next;
       reference = downloaded;
@@ -142,7 +178,7 @@ class FieldController extends ChangeNotifier {
       busy = false;
       notifyListeners();
     }
-    unawaited(sync(manual: false));
+    if (autoSync) unawaited(sync(manual: false));
   }
 
   Future<void> logout() async {
@@ -230,9 +266,23 @@ class FieldController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setAutoSync(bool value) async {
+    autoSync = value;
+    await store.setSetting('auto_sync', value ? 'true' : 'false');
+    notifyListeners();
+    if (value && foreground && session != null && !needsLogin) {
+      unawaited(sync(manual: false));
+    }
+  }
+
   Future<void> sync({bool manual = true}) async {
     final current = session;
-    if (syncing || busy || current == null || needsLogin && !manual) return;
+    if (syncing ||
+        busy ||
+        current == null ||
+        (!manual && (!autoSync || needsLogin))) {
+      return;
+    }
     syncing = true;
     syncMessage = 'Sync in progress…';
     notifyListeners();
@@ -432,7 +482,9 @@ class FieldController extends ChangeNotifier {
 
   void resumed(bool value) {
     foreground = value;
-    if (value && session != null) unawaited(sync(manual: false));
+    if (autoSync && value && session != null && !needsLogin) {
+      unawaited(sync(manual: false));
+    }
   }
 
   Future<void> pickPhoto(
