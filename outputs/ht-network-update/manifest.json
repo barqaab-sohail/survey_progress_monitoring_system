@@ -1,0 +1,53 @@
+{
+  "version": "1.1.0",
+  "build": 3,
+  "application_id": "com.barqaab.hazeco.hazeco_field_survey",
+  "apk_signing": "unsigned; requires original distribution signing key",
+  "local_migration": "applied",
+  "production_deployment": "not performed",
+  "backend_files": [
+    "app/Http/Controllers/Api/FieldSurveyApiController.php",
+    "app/Http/Controllers/Api/HtNetworkUpdateApiController.php",
+    "app/Http/Controllers/FieldSurveyController.php",
+    "app/Http/Controllers/HtNetworkUpdateController.php",
+    "app/Http/Requests/SyncFieldSurveyRequest.php",
+    "app/Http/Requests/SyncHtNetworkUpdateRequest.php",
+    "app/Models/FieldSurvey.php",
+    "app/Models/HtNetworkUpdate.php",
+    "app/Services/FieldSurveyService.php",
+    "app/Services/HtKmzService.php",
+    "app/Services/HtNetworkWorkflow.php",
+    "app/Services/MobileGpxWorkflow.php",
+    "app/Services/MobileSurveySnapshot.php",
+    "app/Services/TransformerKmzImportService.php",
+    "database/migrations/2026_11_09_000001_create_ht_network_updates.php",
+    "docs/mobile/HT_NETWORK_UPDATES.md",
+    "resources/views/field-surveys/edit.blade.php",
+    "resources/views/field-surveys/index.blade.php",
+    "resources/views/field-surveys/show.blade.php",
+    "resources/views/ht-updates/index.blade.php",
+    "resources/views/ht-updates/show.blade.php",
+    "resources/views/layouts/app.blade.php",
+    "routes/api.php",
+    "routes/web.php"
+  ],
+  "artifacts": {
+    "HAZECO-HT-LT-v1.1.0-build3-unsigned.apk": {
+      "bytes": 61157026,
+      "sha256": "91a5b9dc68f79c09e7b4beec52d6f574c4e2ca9b576b1a3a43964b28e02a4116"
+    },
+    "HT-Network-Update-backend.zip": {
+      "bytes": 57376,
+      "sha256": "b9de1793a353c052f6f1079011d73269f6cbda0ab69573237339ae4e877f6282"
+    }
+  },
+  "validation": {
+    "new_backend_tests": "8 passed, 71 assertions",
+    "mobile_ht_and_upgrade_tests": "5 passed",
+    "actual_client_kmz_roundtrips": "3 client files passed; 43 assertions",
+    "flutter_analyze": "clean",
+    "mobile_layout": "430 x 932 screenshots reviewed",
+    "broader_mobile_regression": "42 passed, 28 pre-existing failures; same 28 failures reproduced at HEAD; pre-existing hanging survey-picker test excluded",
+    "broader_php_regression": "21 pre-existing failures and 5 pre-existing errors reproduced with HEAD request/workflow classes"
+  }
+}

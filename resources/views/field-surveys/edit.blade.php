@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Correct mobile field survey')
+@section('title', 'Correct LT Transformer Survey')
 @section('content')
 @php
     $payload = [
@@ -24,7 +24,7 @@
 .field-evidence img{display:block;max-width:100%;max-height:65vh;object-fit:contain;margin:12px auto}
 @media(max-width:1000px){.field-correction-layout{grid-template-columns:1fr}.field-evidence{position:static;max-height:none;grid-row:1}}
 </style>
-<div class="page-head"><div><h1>Correct mobile field survey</h1><p>{{ $survey->transformer_code }} &middot; {{ $survey->feeder->feeder_name }} &middot; Server revision {{ $survey->revision }}</p></div><a class="btn btn-light" href="{{ route('field-surveys.show', $survey->client_uuid) }}">Cancel</a></div>
+<div class="page-head"><div><h1>Correct LT Transformer Survey</h1><p>{{ $survey->transformer_code }} &middot; {{ $survey->feeder->feeder_name }} &middot; Server revision {{ $survey->revision }}</p></div><a class="btn btn-light" href="{{ route('field-surveys.show', $survey->client_uuid) }}">Cancel</a></div>
 <div class="field-correction-layout">
 <form id="field-correction-form" method="POST" action="{{ route('field-surveys.update', $survey->client_uuid) }}">
     @csrf @method('PATCH')

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Feeder;
+use App\Models\HtNetworkUpdate;
 use App\Models\Transformer;
 use App\Models\TransformerKmzImport;
 use DOMDocument;
@@ -37,6 +38,10 @@ class TransformerKmzImportService
 
             DB::transaction(function () use ($import, $inspection): void {
                 $feeder = Feeder::query()->lockForUpdate()->findOrFail($import->feeder_id);
+                if (TransformerKmzImport::where('feeder_id', $feeder->id)->where('status', 'completed')->exists()
+                    && HtNetworkUpdate::where('feeder_id', $feeder->id)->exists()) {
+                    throw new RuntimeException('This feeder has HT field updates. Reconcile the new client baseline with those updates before replacing it; existing HT/LT connections must be preserved.');
+                }
                 $this->guardWorkflowTotals($feeder, $inspection['transformer_count']);
 
                 $created = 0;
@@ -234,7 +239,7 @@ class TransformerKmzImportService
         ];
     }
 
-    private function readKml(string $absolutePath): string
+    public function readKml(string $absolutePath): string
     {
         $zip = new ZipArchive;
         if ($zip->open($absolutePath) !== true) {

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\FieldSurvey;
 use App\Models\FieldSurveyAttachment;
+use App\Models\HtNetworkUpdate;
 use App\Models\SurveyorAssignment;
 use App\Models\Transformer;
 use App\Models\User;
@@ -70,10 +71,23 @@ class FieldSurveyService
                     throw ValidationException::withMessages($phaseErrors);
                 }
                 $transformer = empty($data['transformer_id']) ? null : Transformer::where('feeder_id', $feeder->id)->find($data['transformer_id']);
+                $htUpdate = null;
+                if (! empty($data['ht_update_uuid'])) {
+                    $htUpdate = HtNetworkUpdate::where('client_uuid', $data['ht_update_uuid'])->first();
+                    if (! $htUpdate || $htUpdate->collected_by !== $actor->id || $htUpdate->feeder_id !== $feeder->id
+                        || $htUpdate->survey_team_id !== $team->id || $htUpdate->transformer_key !== FieldTransformerIdentity::key($data['transformer_code'] ?? null)) {
+                        throw ValidationException::withMessages(['ht_update_uuid' => 'Synchronize the matching HT Network Update first. Keep its feeder, team and transformer code.']);
+                    }
+                    $transformer = $htUpdate->transformer;
+                }
+                abort_if($survey?->ht_network_update_id && $survey->ht_network_update_id !== $htUpdate?->id, 409, 'The original HT/LT connection cannot be removed or changed.');
                 if (! empty($data['transformer_id']) && ! $transformer) {
                     throw ValidationException::withMessages(['transformer_id' => 'The reference transformer is unavailable or belongs to another feeder. Download reference data again or select an unlinked transformer.']);
                 }
                 $key = FieldTransformerIdentity::key($data['transformer_code'] ?? null);
+                if (! $htUpdate && HtNetworkUpdate::where('feeder_id', $feeder->id)->where('transformer_key', $key)->whereIn('status', ['pending', 'returned'])->exists()) {
+                    throw ValidationException::withMessages(['ht_update_uuid' => 'This transformer has an HT Network Update awaiting verification. Open its linked LT survey or synchronize its HT reference first.']);
+                }
                 $identityChanged = ! $survey || $survey->feeder_id !== $feeder->id
                     || $survey->transformer_id !== $transformer?->id || FieldTransformerIdentity::key($survey->transformer_code) !== $key;
                 if ($identityChanged && ($key !== null || $transformer)) {
@@ -94,6 +108,7 @@ class FieldSurveyService
                 $isNew = $survey === null;
                 $survey ??= new FieldSurvey(['client_uuid' => $data['client_uuid'], 'collected_by' => $actor->id]);
                 $survey->forceFill(['transformer_key' => $key]);
+                $survey->forceFill(['ht_network_update_id' => $htUpdate?->id]);
                 if ($isNew || $survey->feeder_id !== $feeder->id) {
                     $survey->reference_snapshot = [
                         'project_id' => $team->project_id,
@@ -170,6 +185,9 @@ class FieldSurveyService
                 throw ValidationException::withMessages($phaseErrors);
             }
             $key = FieldTransformerIdentity::key($data['transformer_code'] ?? null);
+            if ($locked->ht_network_update_id && $key !== $locked->htUpdate?->transformer_key) {
+                throw ValidationException::withMessages(['transformer_code' => 'Keep the transformer identity linked to the HT Network Update. Reconcile HT and LT together before changing its code.']);
+            }
             if ($key !== null && FieldSurvey::where('feeder_id', $locked->feeder_id)->where('id', '!=', $locked->id)->where('transformer_key', $key)->exists()) {
                 throw ValidationException::withMessages(['transformer_code' => 'This transformer already has another saved survey on this feeder.']);
             }

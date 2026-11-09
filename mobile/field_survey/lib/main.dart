@@ -6,6 +6,7 @@ import 'field_controller.dart';
 import 'local_store.dart';
 import 'models.dart';
 import 'survey_editor.dart';
+import 'ht_update_page.dart';
 import 'sign_in_error.dart';
 
 Future<void> main() async {
@@ -186,7 +187,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Collect LT survey sheets in the field. Save offline and sync when you have a connection.',
+                    'Collect HT Network Updates and LT Transformer Surveys. Save offline and sync when connected.',
                   ),
                   const SizedBox(height: 28),
                   TextFormField(
@@ -430,10 +431,8 @@ class _SurveyHomeState extends State<SurveyHome> {
         notice('Unable to refresh team codes. ${error.message}');
         return;
       } on Object {
-        notice(
-          'Unable to refresh team codes. Connect to the internet and try again.',
-        );
-        return;
+        notice('Using downloaded feeder and team data for offline collection.');
+        if (controller.reference == null) return;
       }
       if (!mounted) return;
     }
@@ -468,7 +467,7 @@ class _SurveyHomeState extends State<SurveyHome> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, update) => AlertDialog(
-          title: const Text('Start a field survey'),
+          title: const Text('Start LT Transformer Survey'),
           content: SizedBox(
             width: 440,
             child: Column(
@@ -636,7 +635,7 @@ class _SurveyHomeState extends State<SurveyHome> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: create,
         icon: const Icon(Icons.add),
-        label: const Text('New survey'),
+        label: const Text('New LT Transformer Survey'),
       ),
       body: RefreshIndicator(
         onRefresh: controller.reload,
@@ -644,7 +643,7 @@ class _SurveyHomeState extends State<SurveyHome> {
           padding: const EdgeInsets.fromLTRB(18, 20, 18, 100),
           children: [
             Text(
-              'Field notebook',
+              'HT Updates & LT Surveys',
               style: Theme.of(
                 context,
               ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
@@ -654,6 +653,46 @@ class _SurveyHomeState extends State<SurveyHome> {
               '${controller.session!.name}${signedInGroup == null ? '' : ' · Code $signedInGroup'} · ${controller.teams.length} assigned team${controller.teams.length == 1 ? '' : 's'}',
             ),
             const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'HT Network Update',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Text(
+                      'Missing transformer or new HT extension? Save HT first, then begin LT Transformer Survey immediately.',
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: controller.busy
+                          ? null
+                          : () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      HtUpdatesPage(controller: controller),
+                                ),
+                              );
+                              await controller.reload();
+                            },
+                      icon: const Icon(Icons.electrical_services),
+                      label: const Text('Open HT Network Updates'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Text(
+              'LT Transformer Surveys',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),

@@ -128,6 +128,22 @@ class FieldApi {
     return reply;
   }
 
+  Future<Json> syncHt(FieldSession session, Json data) async => read(
+    await client
+        .post(
+          endpoint(session.url, '/ht-updates/sync'),
+          headers: headers(session),
+          body: jsonEncode(data),
+        )
+        .timeout(const Duration(seconds: 50)),
+  );
+
+  Future<Json> htStatuses(FieldSession session) async => read(
+    await client
+        .get(endpoint(session.url, '/ht-updates'), headers: headers(session))
+        .timeout(const Duration(seconds: 25)),
+  );
+
   Future<Json> upload(FieldSession session, Json attachment) async {
     final file = File(attachment['path']);
     if (!await file.exists()) {

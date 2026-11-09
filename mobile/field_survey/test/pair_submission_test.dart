@@ -517,9 +517,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(home: SurveyHome(controller: pickerController)),
     );
-    await tester.tap(find.text('New survey'));
+    await tester.tap(find.text('New LT Transformer Survey'));
     await tester.pumpAndSettle();
-    expect(find.text('Start a field survey'), findsOneWidget);
+    expect(find.text('Start LT Transformer Survey'), findsOneWidget);
     final teamField = tester.widget<DropdownButtonFormField<int>>(
       find.byType(DropdownButtonFormField<int>),
     );

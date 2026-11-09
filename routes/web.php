@@ -17,6 +17,7 @@ use App\Http\Controllers\FieldSurveyController;
 use App\Http\Controllers\FieldSurveyTestController;
 use App\Http\Controllers\GoogleDriveController;
 use App\Http\Controllers\GpxCalculatorController;
+use App\Http\Controllers\HtNetworkUpdateController;
 use App\Http\Controllers\MdbEntryController;
 use App\Http\Controllers\MdbVerificationController;
 use App\Http\Controllers\MobileGpxController;
@@ -45,6 +46,14 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', 'active'])->group(function () {
+    Route::prefix('ht-updates')->name('ht-updates.')->controller(HtNetworkUpdateController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/feeder/{feeder}/kmz', 'export')->name('export');
+        Route::get('/{update}', 'show')->name('show');
+        Route::post('/{update}/review', 'review')->name('review');
+        Route::post('/{update}/gpx', 'resolveGpx')->name('gpx');
+        Route::get('/{update}/photos/{index}', 'photo')->whereNumber('index')->name('photo');
+    });
     Route::middleware('role:super_admin,mdb_generator')->prefix('mobile-gpx')->name('mobile-gpx.')->controller(MobileGpxController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/sources', 'upload')->middleware('throttle:20,1')->name('upload');

@@ -24,6 +24,7 @@ class FieldController extends ChangeNotifier {
   FieldSession? session;
   Json? reference;
   List<SurveyRecord> records = [];
+  List<Json> htRecords = [];
   bool busy = false, syncing = false, foreground = true;
   bool autoSync = true;
   String syncMessage = '', startupMessage = '';
@@ -202,6 +203,7 @@ class FieldController extends ChangeNotifier {
       session = null;
       reference = null;
       records = [];
+      htRecords = [];
       syncMessage = '';
       needsLogin = false;
     } finally {
@@ -214,10 +216,12 @@ class FieldController extends ChangeNotifier {
     final current = session;
     if (current == null) return;
     final fetched = await store.surveys(current.scope);
+    final fetchedHt = await store.htUpdates(current.scope);
     if (session?.scope != current.scope || session?.token != current.token) {
       return;
     }
     records = fetched;
+    htRecords = fetchedHt;
     notifyListeners();
   }
 
@@ -257,6 +261,10 @@ class FieldController extends ChangeNotifier {
     final current = session;
     if (current == null) return;
     final downloaded = await api.bootstrap(current);
+    await store.mergeHtReference(
+      current.scope,
+      ((downloaded['ht_updates'] ?? []) as List).cast<Json>(),
+    );
     await store.cacheBootstrap(current.scope, downloaded);
     final cached = await store.bootstrap(current.scope);
     if (session?.scope != current.scope || session?.token != current.token) {
@@ -290,6 +298,57 @@ class FieldController extends ChangeNotifier {
     var networkStopped = false;
     final failureReasons = <String>[];
     try {
+      final localHt = await store.htUpdates(current.scope);
+      if (localHt.any((h) => ['pending', 'returned'].contains(h['state']))) {
+        try {
+          final status = await api.htStatuses(current);
+          await store.mergeHtReference(
+            current.scope,
+            ((status['ht_updates'] ?? []) as List).cast<Json>(),
+          );
+        } on ApiFailure catch (e) {
+          if (e.status == 401) {
+            needsLogin = true;
+            syncMessage =
+                'Sign in again to update HT verification status. Saved HT and LT work is retained.';
+            return;
+          }
+        } on Object {
+          /* Cached HT status remains usable offline. */
+        }
+      }
+      for (final ht in await store.htUpdates(current.scope)) {
+        if (session?.scope != current.scope || session?.token != current.token) {
+          return;
+        }
+        if (ht['outbound'] == null || ht['state'] == 'conflict') continue;
+        try {
+          final reply = await api.syncHt(current, ht['outbound'] as Json);
+          await store.acknowledgeHt(current.scope, ht, reply);
+          formCount++;
+        } on ApiFailure catch (error) {
+          await store.rejectHt(
+            current.scope,
+            ht,
+            error.message,
+            correctable: error.status == 422,
+            conflict: error.status == 409,
+          );
+          failures++;
+          failureReasons.add('HT Network Update: ${error.message}');
+          if (error.status == 401) {
+            needsLogin = true;
+            syncMessage =
+                'Sign in again to synchronize HT and LT. Saved work remains on this phone.';
+            return;
+          }
+        } on Object catch (error) {
+          await store.rejectHt(current.scope, ht, _syncFailureReason(error));
+          syncMessage =
+              'HT sync could not finish. Saved HT and LT work remains on this phone. ${_syncFailureReason(error)}';
+          return;
+        }
+      }
       final candidates = await store.surveys(current.scope);
       if (session?.scope != current.scope || session?.token != current.token) {
         syncMessage = 'Sync cancelled because the signed-in account changed.';
@@ -309,7 +368,7 @@ class FieldController extends ChangeNotifier {
           )).any((photo) => ['pending', 'error'].contains(photo['state']));
           if (pendingPhotos) break;
         }
-        if (!pendingPhotos) {
+        if (!pendingPhotos && formCount == 0 && failures == 0) {
           if (manual) {
             syncMessage =
                 'Sync completed successfully. No pending uploads. Local drafts upload after you submit them.';
@@ -320,6 +379,21 @@ class FieldController extends ChangeNotifier {
         }
       }
       for (final record in forms) {
+        final htUuid = record.outbound?['ht_update_uuid'];
+        if (htUuid != null) {
+          final ht = (await store.htUpdates(
+            current.scope,
+          )).where((h) => h['data']['client_uuid'] == htUuid).firstOrNull;
+          if (ht == null ||
+              ht['outbound'] != null ||
+              ['draft', 'conflict'].contains(ht['state'])) {
+            failures++;
+            failureReasons.add(
+              'LT Transformer Survey waits for its HT Network Update to synchronize.',
+            );
+            continue;
+          }
+        }
         try {
           final reply = await api.sync(current, record.outbound!);
           final revision = parseIntegerId(reply['revision']);

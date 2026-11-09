@@ -256,9 +256,13 @@ void main() {
       await store.database.execute(
         'ALTER TABLE attachments DROP COLUMN row_id',
       );
+      // Recreate the actual v1 schema: HT storage was introduced in v3.
+      await store.database.execute('DROP TABLE ht_updates');
       await store.database.setVersion(1);
       await store.database.close();
       store = await LocalStore.open(factory: databaseFactoryFfi, path: path);
+      expect(await store.database.getVersion(), 3);
+      expect(await store.htUpdates(record.scope), isEmpty);
       expect(
         (await store.attachments(record.scope, record.id)).single['row_id'],
         isNull,

@@ -29,6 +29,7 @@ class SyncFieldSurveyRequest extends FormRequest
             'survey_team_id' => ['required', 'integer'],
             'feeder_id' => ['required', 'integer'],
             'transformer_id' => ['nullable', 'integer'],
+            'ht_update_uuid' => ['nullable', 'uuid'],
             'transformer_code' => [$paper, 'string', 'max:100'],
             'survey_date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
             'status' => ['required', Rule::in(['draft', 'submitted'])],

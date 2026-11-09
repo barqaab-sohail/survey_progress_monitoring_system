@@ -13,6 +13,7 @@ use App\Services\Mdb\EntryLookups;
 use App\Services\Mdb\GenerationMode;
 use App\Services\Mdb\SchemaTemplate;
 use App\Services\Mdb\SnapshotService;
+use App\Services\Mdb\StartingPoleCoordinates;
 use App\Services\Mdb\SurveyWaypoint;
 use App\Services\Mdb\SynergeeTransfer;
 use App\Support\FieldSurveyPairs;
@@ -24,6 +25,7 @@ class MobileSurveySnapshot
 {
     public function build(FieldSurvey $survey, array $report): array
     {
+        app(HtNetworkWorkflow::class)->assertVerified($survey);
         $survey->loadMissing(['team', 'feeder.gridStation']);
         $configuration = Configuration::where('project_id', $survey->team->project_id)->first();
         $templateId = $configuration?->settings['template_id'] ?? null;
@@ -133,6 +135,12 @@ class MobileSurveySnapshot
                 'survey_date' => $survey->survey_date->format('Y-m-d'), 'team_group' => $survey->reference_snapshot['group_code'] ?? $entries[1]['group_number'],
                 'inspector' => $header['inspectors'] ?? null, 'pages' => [], 'registered_transformer_id' => $survey->transformer_id,
                 'starting_pole_coordinates' => $survey->reference_snapshot['starting_pole_coordinates'] ?? ['version' => 1, 'source' => SurveyWaypoint::FIRST_PAIR_COORDINATE_SOURCE]]];
+        if ($survey->ht_network_update_id) {
+            $registered = $survey->htUpdate->transformer;
+            $transformer['header']['registered_transformer_id'] = $registered->id;
+            $transformer['header']['starting_pole_coordinates'] = app(StartingPoleCoordinates::class)->capture($registered);
+            $transformer['header']['ht_update_uuid'] = $survey->htUpdate->client_uuid;
+        }
         $transformer = app(SurveyWaypoint::class)->firstPairCoordinates($transformer, $points);
         $snapshot = ['schema_version' => 1, 'batch' => ['id' => $survey->id, 'project_id' => $survey->team->project_id,
             'feeder_id' => $survey->feeder_id, 'survey_team_id' => $survey->survey_team_id, 'survey_date' => $survey->survey_date->format('Y-m-d'), 'revision' => $survey->revision],

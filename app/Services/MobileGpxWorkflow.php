@@ -77,11 +77,17 @@ class MobileGpxWorkflow
 
     public function surveyHash(FieldSurvey $survey): string
     {
-        return app(SnapshotService::class)->hash($survey->only(['client_uuid', 'survey_team_id', 'feeder_id', 'transformer_id', 'transformer_code', 'survey_date', 'status', 'revision', 'header', 'rows', 'solar', 'reference_snapshot', 'remarks']));
+        $data = $survey->only(['client_uuid', 'survey_team_id', 'feeder_id', 'transformer_id', 'transformer_code', 'survey_date', 'status', 'revision', 'header', 'rows', 'solar', 'reference_snapshot', 'remarks']);
+        if ($survey->ht_network_update_id) {
+            $data['ht_update'] = $survey->htUpdate?->only(['client_uuid', 'revision', 'status', 'transformer_id']);
+        }
+
+        return app(SnapshotService::class)->hash($data);
     }
 
     public function preview(User $actor, FieldSurvey $survey, array $sourceIds): array
     {
+        app(HtNetworkWorkflow::class)->assertVerified($survey);
         $this->authorizeTeam($actor, $survey->team);
         abort_unless(app(FieldSurveyAccess::class)->visible($actor)->whereKey($survey->id)->exists(), 404);
         $sourceIds = array_values(array_unique(array_map('intval', $sourceIds)));
@@ -212,6 +218,7 @@ class MobileGpxWorkflow
 
     public function current(FieldSurvey $survey): ?MobileGpxLink
     {
+        app(HtNetworkWorkflow::class)->assertVerified($survey);
         $link = $survey->gpxLinks()->latest('id')->first();
 
         return $link && $link->survey_revision === $survey->revision && hash_equals($link->survey_sha256, $this->surveyHash($survey)) ? $link : null;

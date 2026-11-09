@@ -18,7 +18,7 @@ class FieldSurveyController extends Controller
     public function index(Request $request, FieldSurveyAccess $access): View
     {
         $filters = $request->validate(['q' => ['nullable', 'string', 'max:100'], 'status' => ['nullable', Rule::in(['draft', 'submitted'])]]);
-        $query = $access->visible($request->user())->with(['feeder', 'team', 'collector'])->withCount('attachments');
+        $query = $access->visible($request->user())->with(['feeder', 'team', 'collector', 'htUpdate'])->withCount('attachments');
         if (! empty($filters['q'])) {
             $search = $filters['q'];
             $query->where(fn ($query) => $query->where('transformer_code', 'like', '%'.$search.'%')

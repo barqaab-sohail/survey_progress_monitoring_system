@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\FieldDeviceAuthController;
 use App\Http\Controllers\Api\FieldSurveyApiController;
+use App\Http\Controllers\Api\HtNetworkUpdateApiController;
 use App\Http\Middleware\AuthenticateFieldDevice;
 use Illuminate\Support\Facades\Route;
 
@@ -13,6 +14,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/logout', [FieldDeviceAuthController::class, 'logout']);
             Route::get('/bootstrap', [FieldSurveyApiController::class, 'bootstrap']);
             Route::post('/surveys/sync', [FieldSurveyApiController::class, 'sync']);
+            Route::post('/ht-updates/sync', [HtNetworkUpdateApiController::class, 'sync']);
+            Route::get('/ht-updates', [HtNetworkUpdateApiController::class, 'index']);
             Route::post('/surveys/{clientUuid}/attachments', [FieldSurveyApiController::class, 'attachment'])->whereUuid('clientUuid');
             Route::get('/attachments/{clientUuid}', [FieldSurveyApiController::class, 'download'])->whereUuid('clientUuid');
         });

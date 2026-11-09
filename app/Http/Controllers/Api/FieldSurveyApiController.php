@@ -11,6 +11,8 @@ use App\Models\Transformer;
 use App\Services\DriveStorage\FileStorage;
 use App\Services\FieldSurveyAccess;
 use App\Services\FieldSurveyService;
+use App\Services\HtKmzService;
+use App\Services\HtNetworkWorkflow;
 use App\Services\Mdb\EntryLookups;
 use App\Services\Mdb\SurveyWaypoint;
 use App\Support\FieldTransformerIdentity;
@@ -72,6 +74,8 @@ class FieldSurveyApiController extends Controller
                     'team_id' => $task->survey_team_id, 'assigned_at' => $task->assigned_at?->toDateString(), 'deadline' => $task->deadline?->toDateString(),
                     'priority' => $task->priority, 'instructions' => $task->instructions, 'return_comments' => $task->return_comments, 'status' => $task->status])->values(),
             ]), 'transformers' => $transformers,
+            'ht_updates' => app(HtNetworkWorkflow::class)->visible($user)->get()->map(fn ($u) => $u->summary())->values(),
+            'ht_networks' => $feeders->mapWithKeys(fn ($f) => [$f->id => app(HtKmzService::class)->reference($f->id)]),
         ]);
     }
 

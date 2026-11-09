@@ -1,7 +1,7 @@
 @extends('layouts.app')
-@section('title', 'Mobile field surveys')
+@section('title', 'LT Transformer Surveys')
 @section('content')
-<div class="page-head"><div><h1>Mobile field surveys</h1><p>Transformer survey sheets collected in the Android app.</p></div></div>
+<div class="page-head"><div><h1>LT Transformer Surveys</h1><p>LT transformer survey sheets collected in the mobile app. HT verification is tracked separately.</p></div></div>
 <form class="card" method="GET" action="{{ route('field-surveys.index') }}">
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:end">
         <label>Transformer or feeder<input name="q" value="{{ $filters['q'] ?? '' }}" maxlength="100" placeholder="Search by code or name"></label>
@@ -15,6 +15,7 @@
     <p>{{ $survey->survey_date->format('d M Y') }} &middot; {{ $survey->team->name }} &middot; {{ $survey->collector->name }}</p>
     <p>{{ count($survey->rows) }} survey rows &middot; {{ count($survey->solar) }} solar entries &middot; {{ $survey->attachments_count }} attachments</p>
     <p><strong>Survey name:</strong> {{ $survey->survey_name }}</p>
+    @if($survey->htUpdate)<p><strong>HT Network Update:</strong> {{ ucfirst($survey->htUpdate->status) }} · <a href="{{ route('ht-updates.show', $survey->htUpdate) }}">View HT connection</a></p>@endif
     <a class="btn btn-light" href="{{ route('field-surveys.show', $survey->client_uuid) }}">Open survey sheet</a>
     @if(app(\App\Services\MobileGpxWorkflow::class)->canLink(auth()->user()))<a class="btn btn-primary" href="{{ route('mobile-gpx.show', $survey->client_uuid) }}">Link GPX / JSON</a>@endif
     @include('field-surveys.actions')

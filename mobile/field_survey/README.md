@@ -88,3 +88,12 @@ Automated tests cover local SQLite restart persistence, immutable retries, revis
 ## Required row fields and submission
 
 Every S and E row needs S/E, group identifier, row date, GPS waypoint identifier, equipment type, pole class, pole height and at least one entered R/Y/B/N conductor. Numeric zero is accepted where the existing field rules allow it (including pole height); identifiers remain strings. Errors are shown beside inputs and unfinished rows are highlighted. Incomplete drafts can still be saved. Both the local submission queue and the API reject incomplete, duplicate or mismatched pairs. No database migration is needed for pair IDs because rows already use JSON. Existing immutable queued payloads remain intact; an older incomplete submission rejected by the API must be completed and submitted again.
+
+
+## HT Network Updates and immediate LT collection (1.1.0)
+
+The home screen separates **HT Network Update** and **LT Transformer Surveys**. Open HT Network Updates, select a downloaded feeder, and create a missing-transformer or HT-extension update. Select the existing upstream HT feature, record ordered waypoints (connection first, transformer last), transformer phase/details, incoming span conductors, remarks and at least one photograph. Coordinates may stay blank for web GPX matching. Save HT & Start LT Transformer Survey creates/reuses the linked LT draft immediately, including offline.
+
+HT submissions use a separate SQLite v3 outbox with permanent UUIDs and immutable retries. No app-data reset is required. HT uploads before linked LT. Pending HT can support LT collection/submission; final GPX confirmation/JSON/MDB release requires independently verified HT. Admin returns keep LT data. Download feeder data or Sync now to retrieve verification status, then correct a returned HT update and resubmit using the original identity.
+
+Deploy the backend and the new migration before updating phones. See [HT deployment and operating guide](../../docs/mobile/HT_NETWORK_UPDATES.md). Maintain the original application ID/signing key. Never uninstall a field phone with unsynchronized data.

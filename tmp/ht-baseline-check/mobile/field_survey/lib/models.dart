@@ -1,0 +1,952 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
+
+typedef Json = Map<String, dynamic>;
+const applicationBaseUrl = kDebugMode
+    ? String.fromEnvironment(
+        'API_BASE_URL',
+        defaultValue: 'https://hazeco.barqaab.pk',
+      )
+    : 'https://hazeco.barqaab.pk';
+
+int? _integerId(dynamic value) => value is int ? value : int.tryParse('$value');
+int? parseIntegerId(dynamic value) => _integerId(value);
+
+/// Normalizes database IDs from fresh or previously cached bootstrap data.
+/// Older app builds could persist numeric IDs as strings.
+Json normalizeFieldBootstrap(Json data) {
+  for (final team in (data['teams'] as List? ?? const []).cast<Json>()) {
+    team['id'] = _integerId(team['id']) ?? team['id'];
+  }
+  for (final feeder in (data['feeders'] as List? ?? const []).cast<Json>()) {
+    feeder['id'] = _integerId(feeder['id']) ?? feeder['id'];
+    final settings = feeder['entry_settings'];
+    if (settings is Map && settings['two_digit_year_start'] != null) {
+      settings['two_digit_year_start'] =
+          _integerId(settings['two_digit_year_start']) ??
+          settings['two_digit_year_start'];
+    }
+    feeder['team_ids'] = (feeder['team_ids'] as List? ?? const [])
+        .map((id) => _integerId(id) ?? id)
+        .toList();
+    for (final task in (feeder['tasks'] as List? ?? const []).cast<Json>()) {
+      task['team_id'] = _integerId(task['team_id']) ?? task['team_id'];
+    }
+  }
+  for (final transformer
+      in (data['transformers'] as List? ?? const []).cast<Json>()) {
+    transformer['id'] = _integerId(transformer['id']) ?? transformer['id'];
+    transformer['feeder_id'] =
+        _integerId(transformer['feeder_id']) ?? transformer['feeder_id'];
+  }
+  return data;
+}
+
+Json normalizeSurveyRecordData(Json data) {
+  for (final key in ['survey_team_id', 'feeder_id', 'transformer_id']) {
+    if (data[key] != null) data[key] = _integerId(data[key]) ?? data[key];
+  }
+  data['base_revision'] = _integerId(data['base_revision']) ?? 0;
+  return data;
+}
+
+// Keep the wire contract independent of local editing/display metadata. Stable
+// row/PV IDs are part of the contract and must never be stripped for sync.
+const surveyRowFields = {
+  'row_id',
+  'legacy_row_index',
+  'pair_id',
+  'entry_version',
+  'se',
+  'group',
+  'date',
+  'gps_waypoint',
+  'latitude',
+  'longitude',
+  'gps_accuracy_m',
+  'phase',
+  'conductor_r',
+  'conductor_y',
+  'conductor_b',
+  'conductor_neutral',
+  'equipment_type',
+  'pole_class',
+  'pole_height_ft',
+  'consumers',
+  'consumer_phases',
+  'intersection',
+  'remarks',
+};
+const surveyPvFields = {
+  'pv_id',
+  'row_id',
+  'consumer_reference',
+  'service_load_kw',
+  'installed_pv_kw',
+  'meter_number',
+  'remarks',
+};
+
+void updatePhaseConsumerTotals(Json row) {
+  final all = row['consumer_phases'] as Json? ?? {};
+  for (final category in ['rs', 'sc']) {
+    if (!all.containsKey(category)) continue;
+    final phases = all[category] as Json;
+    final entered = phases.values.where(
+      (v) => (v ?? '').toString().trim().isNotEmpty,
+    );
+    row['consumers'][category] = entered.isEmpty
+        ? ''
+        : entered.fold<int>(
+            0,
+            (sum, value) => sum + (int.tryParse(value.toString()) ?? 0),
+          );
+  }
+}
+
+bool? recordedConductorAvailability(dynamic value) {
+  if (value == null || value.toString().trim().isEmpty) return null;
+  return ![
+    '__none__',
+    '+',
+    '-',
+    '–',
+    '—',
+    'x',
+    '×',
+  ].contains(value.toString().trim().toLowerCase());
+}
+
+Json? sectionStartRow(SurveyRecord record, int index) {
+  for (final group in surveyPairGroups(record.rows)) {
+    if (!group.contains(index)) continue;
+    for (final candidate in group) {
+      if (record.rows[candidate]['se'] == 'S') return record.rows[candidate];
+    }
+  }
+  return null;
+}
+
+Map<String, String> surveyPhaseConsistencyErrors(
+  SurveyRecord record, {
+  bool submitting = false,
+}) {
+  final errors = <String, String>{};
+  for (var index = 0; index < record.rows.length; index++) {
+    final row = record.rows[index], start = sectionStartRow(record, index);
+    if (start == null) continue;
+    final startIndex = record.rows.indexOf(start);
+    final counts = row['consumer_phases'] as Json? ?? {};
+    for (final category in ['rs', 'sc', 'st']) {
+      for (final phase in ['R', 'Y', 'B']) {
+        final count = num.tryParse(
+          ((counts[category] as Json?)?[phase] ?? '').toString(),
+        );
+        final available = recordedConductorAvailability(
+          start['conductor_${phase.toLowerCase()}'],
+        );
+        if (count != null &&
+            count > 0 &&
+            (available == false || (submitting && available != true))) {
+          final message =
+              'Transformer ${record.data['transformer_code'] ?? '(unrecorded)'}, ${row['se']} ${row['gps_waypoint'] ?? '(waypoint unrecorded)'}: ${category.toUpperCase()} $phase-phase customer count $count needs a recorded $phase conductor on the section S row. Check the conductor and customer count.';
+          errors['rows.$index.consumer_phases.$category.$phase'] = message;
+          errors['rows.$startIndex.conductor_${phase.toLowerCase()}'] = message;
+        }
+      }
+    }
+  }
+  return errors;
+}
+
+String dayString(DateTime date) => date.toIso8601String().substring(0, 10);
+Json copyJson(Json value) => jsonDecode(jsonEncode(value)) as Json;
+
+String? teamGroupIdentifier(Json? team) {
+  if (team == null) return null;
+  final configured = team['group_identifier'] ?? team['group_code'];
+  if (configured != null) {
+    final value = configured.toString();
+    return RegExp(r'^[0-9]{2}$').hasMatch(value) ? value : null;
+  }
+  final numbers = <String>{};
+  for (final value in [team['code'], team['name']]) {
+    final match = RegExp(r'([0-9]+)\s*$').firstMatch((value ?? '').toString());
+    if (match != null) {
+      final digits = match[1]!.padLeft(2, '0');
+      numbers.add(digits.substring(digits.length - 2));
+    }
+  }
+  return numbers.length == 1 ? numbers.single : null;
+}
+
+Json? defaultSurveyTeam(Iterable<Json> teams) {
+  final available = teams.toList();
+  if (available.isEmpty) return null;
+  return available.first;
+}
+
+Json? surveyTeamForUser(Json? reference, Iterable<Json> teams) {
+  final available = teams.toList();
+  if (available.isEmpty) return null;
+  final teamId = _integerId(reference?['mobile_survey_team']?['id']);
+  final memberTeam = available.where(
+    (team) => _integerId(team['id']) == teamId,
+  );
+  if (teamId != null && memberTeam.length == 1) return memberTeam.single;
+  return available.first;
+}
+
+String transformerIdentity(dynamic code) => (code ?? '')
+    .toString()
+    .replaceAll(RegExp('[‐‑‒–—−]'), '-')
+    .replaceAll(RegExp(r'\s+'), '')
+    .toUpperCase();
+
+bool sameTransformer(Json a, Json b) =>
+    a['feeder_id'] == b['feeder_id'] &&
+    ((a['transformer_id'] != null &&
+            a['transformer_id'] == b['transformer_id']) ||
+        (transformerIdentity(a['transformer_code']).isNotEmpty &&
+            transformerIdentity(a['transformer_code']) ==
+                transformerIdentity(b['transformer_code'])));
+
+class FieldSession {
+  const FieldSession({
+    required this.url,
+    required this.token,
+    required this.userId,
+    required this.name,
+  });
+  final String url, token, name;
+  final int userId;
+  String get scope => '$url|$userId';
+  Json toJson() => {
+    'url': url,
+    'token': token,
+    'user_id': userId,
+    'name': name,
+  };
+  factory FieldSession.fromJson(Json json) => FieldSession(
+    url: json['url'],
+    token: json['token'],
+    userId: _integerId(json['user_id']) ?? 0,
+    name: json['name'],
+  );
+}
+
+class SurveyRecord {
+  SurveyRecord({
+    required this.scope,
+    required this.data,
+    this.state = 'draft',
+    this.error = '',
+    this.updatedAt = '',
+    this.outbound,
+  });
+  final String scope;
+  Json data;
+  String state, error, updatedAt;
+  Json? outbound;
+  String get id => data['client_uuid'];
+  String get surveyName {
+    final date = DateTime.tryParse(data['survey_date'] ?? '');
+    final code = (data['transformer_code'] ?? '').toString();
+    if (code.isEmpty) return 'New transformer survey';
+    final stamp = date == null
+        ? '??????'
+        : '${date.day.toString().padLeft(2, '0')}${date.month.toString().padLeft(2, '0')}${(date.year % 100).toString().padLeft(2, '0')}';
+    return '${data['team_group'] ?? '??'}_${stamp}_$code';
+  }
+
+  int get revision => _integerId(data['base_revision']) ?? 0;
+  List<Json> get rows => (data['rows'] as List).cast<Json>();
+  List<Json> get solar => (data['solar'] as List).cast<Json>();
+  Json get header => data['header'] as Json;
+  bool get locked =>
+      outbound != null ||
+      state == 'conflict' ||
+      state == 'synced' ||
+      revision > 0;
+  SurveyRecord clone() => SurveyRecord(
+    scope: scope,
+    data: copyJson(data),
+    state: state,
+    error: error,
+    updatedAt: updatedAt,
+    outbound: outbound == null ? null : copyJson(outbound!),
+  );
+
+  factory SurveyRecord.create(FieldSession session, Json team, Json feeder) {
+    final group = teamGroupIdentifier(team);
+    if (group == null) {
+      throw const FormatException(
+        'The assigned survey team needs a valid team number. Ask the administrator to correct its code/name.',
+      );
+    }
+    return SurveyRecord(
+      scope: session.scope,
+      data: {
+        'client_uuid': const Uuid().v4(),
+        'base_revision': 0,
+        'survey_team_id': _integerId(team['id']) ?? team['id'],
+        'team_group': group,
+        'feeder_id': _integerId(feeder['id']) ?? feeder['id'],
+        'transformer_id': null,
+        'transformer_code': '',
+        'survey_date': dayString(DateTime.now()),
+        'status': 'draft',
+        'header': {
+          'substation': feeder['grid_station_name'] ?? '',
+          'division': feeder['division_name'] ?? '',
+          'sub_division': feeder['sub_division_name'] ?? '',
+          'sub_division_code': feeder['sub_division_code'] ?? '',
+          'transformer_make': '',
+          'inspectors': session.name,
+          'location': '',
+          'capacity_kva': '',
+          'mounting': '',
+          'duty': '',
+        },
+        'rows': <Json>[],
+        'solar': <Json>[],
+        'remarks': '',
+      },
+    );
+  }
+
+  static Json newRow(String date, {String? pairId}) => {
+    'row_id': const Uuid().v4(),
+    'pair_id': pairId ?? const Uuid().v4(),
+    'entry_version': 2,
+    'se': 'S',
+    'group': '',
+    'date': date,
+    'gps_waypoint': '',
+    'latitude': null,
+    'longitude': null,
+    'gps_accuracy_m': null,
+    'phase': '',
+    'conductor_r': '',
+    'conductor_y': '',
+    'conductor_b': '',
+    'conductor_neutral': '',
+    'equipment_type': '',
+    'pole_class': '',
+    'pole_height_ft': '',
+    'consumers': <String, dynamic>{},
+    'intersection': false,
+    'remarks': '',
+  };
+
+  Json nextRow() {
+    ensurePairIds();
+    final previous = rows.lastOrNull;
+    return newRow(
+        dayString(DateTime.now()),
+        pairId: previous != null && previous['se'] == 'S'
+            ? previous['pair_id']
+            : null,
+      )
+      ..['se'] = previous?['se'] == 'S' ? 'E' : 'S'
+      ..['group'] = requiredTeamGroup;
+  }
+
+  String get requiredTeamGroup {
+    final group = data['team_group'];
+    if (group is! String || !RegExp(r'^[0-9]{2}$').hasMatch(group)) {
+      throw const FormatException(
+        'No valid assigned team number is available. Refresh assignments or contact the administrator before adding a row.',
+      );
+    }
+    return group;
+  }
+
+  /// Link legacy adjacent pairs once; never rewrite observation values or a queued snapshot.
+  bool ensurePairIds() {
+    if (locked) return false;
+    var changed = false;
+    for (var i = 0; i < rows.length; i++) {
+      if ((rows[i]['row_id'] ?? '').toString().isEmpty) {
+        rows[i]['row_id'] = const Uuid().v4();
+        rows[i]['legacy_row_index'] = i;
+        changed = true;
+      }
+    }
+    for (final indices in surveyPairGroups(rows)) {
+      final saved = (rows[indices.first]['pair_id'] ?? '').toString();
+      final id = saved.isEmpty ? const Uuid().v4() : saved;
+      for (final index in indices) {
+        if ((rows[index]['pair_id'] ?? '').toString().isEmpty) {
+          rows[index]['pair_id'] = id;
+          changed = true;
+        }
+      }
+    }
+    return changed;
+  }
+
+  int ensureEndRow(int startIndex) {
+    if (rows[startIndex]['se'] != 'S') {
+      throw StateError('Only an S row creates an E row.');
+    }
+    return ensurePartnerRow(startIndex);
+  }
+
+  int ensurePartnerRow(int startIndex) {
+    ensurePairIds();
+    final start = rows[startIndex];
+    final partnerRole = start['se'] == 'S' ? 'E' : 'S';
+    final existing = rows.indexWhere(
+      (row) => row['pair_id'] == start['pair_id'] && row['se'] == partnerRole,
+    );
+    if (existing >= 0) return existing;
+    if (rows.length >= 500) {
+      throw StateError(
+        'Maximum 500 rows. Remove an unused pair before adding E.',
+      );
+    }
+    final insertAt = start['se'] == 'S' ? startIndex + 1 : startIndex;
+    rows.insert(
+      insertAt,
+      newRow(dayString(DateTime.now()), pairId: start['pair_id'])
+        ..['se'] = partnerRole
+        ..['group'] = requiredTeamGroup,
+    );
+    return insertAt;
+  }
+
+  void removePairAt(int index) {
+    ensurePairIds();
+    final id = rows[index]['pair_id'];
+    rows.removeWhere((row) => row['pair_id'] == id);
+  }
+
+  bool get hasCompleteValidPair => hasCompletePairWithEquipment(null);
+
+  bool hasCompletePairWithEquipment(Iterable<String>? equipmentCodes) {
+    final errors = SurveyValidation.errors(
+      this,
+      submitting: true,
+      equipmentCodes: equipmentCodes,
+    );
+    return surveyPairGroups(rows).any(
+      (indices) =>
+          isCompletePair(rows, indices) &&
+          indices.every(
+            (index) =>
+                !errors.keys.any((key) => key.startsWith('rows.$index.')),
+          ),
+    );
+  }
+
+  void copyPreviousValues(int index) {
+    if (index <= 0 || index >= rows.length) return;
+    for (final key in [
+      'conductor_r',
+      'conductor_y',
+      'conductor_b',
+      'conductor_neutral',
+      'equipment_type',
+      'pole_class',
+      'pole_height_ft',
+    ]) {
+      rows[index][key] = rows[index - 1][key] ?? '';
+    }
+    rows[index]['phase'] = phaseFromConductors(rows[index]);
+  }
+
+  Json payload({bool submitted = false}) {
+    final result = copyJson(data);
+    result.remove(
+      'team_group',
+    ); // The default is local; each row's edited group travels with the row.
+    result['status'] = submitted ? 'submitted' : 'draft';
+    final header = result['header'] as Json;
+    header['capacity_kva'] = parseNumber(header['capacity_kva']);
+    for (final row in (result['rows'] as List).cast<Json>()) {
+      row['phase'] = phaseFromConductors(row);
+      row['intersection'] = isIntersection(row['intersection']);
+      for (final key in [
+        'latitude',
+        'longitude',
+        'gps_accuracy_m',
+        'pole_height_ft',
+      ]) {
+        row[key] = parseNumber(row[key]);
+      }
+      updatePhaseConsumerTotals(row);
+      final phases = row['consumer_phases'] as Json? ?? {};
+      for (final category in phases.keys) {
+        final values = phases[category] as Json;
+        for (final phase in ['R', 'Y', 'B']) {
+          final value = (values[phase] ?? '').toString().trim();
+          values[phase] = value.isEmpty ? null : int.parse(value);
+        }
+      }
+      final counts = row['consumers'] as Json;
+      for (final key in counts.keys.toList()) {
+        if (counts[key].toString().trim().isEmpty) {
+          counts.remove(key);
+        } else {
+          counts[key] = int.parse(counts[key].toString());
+        }
+      }
+    }
+    for (final item in (result['solar'] as List).cast<Json>()) {
+      item['installed_pv_kw'] = parseNumber(item['installed_pv_kw']);
+      if (item.containsKey('service_load_kw')) {
+        item['service_load_kw'] = parseNumber(item['service_load_kw']);
+      }
+    }
+    result['rows'] = (result['rows'] as List)
+        .cast<Json>()
+        .map(
+          (row) => Map<String, dynamic>.fromEntries(
+            row.entries.where((entry) => surveyRowFields.contains(entry.key)),
+          ),
+        )
+        .toList();
+    result['solar'] = (result['solar'] as List)
+        .cast<Json>()
+        .map(
+          (pv) => Map<String, dynamic>.fromEntries(
+            pv.entries.where((entry) => surveyPvFields.contains(entry.key)),
+          ),
+        )
+        .toList();
+    return result;
+  }
+}
+
+List<List<int>> surveyPairGroups(List<Json> rows) {
+  final groups = <String, List<int>>{};
+  for (var i = 0; i < rows.length; i++) {
+    final id = (rows[i]['pair_id'] ?? '').toString();
+    final legacyEnd =
+        id.isEmpty &&
+        i > 0 &&
+        rows[i]['se'] == 'E' &&
+        rows[i - 1]['se'] == 'S' &&
+        (rows[i - 1]['pair_id'] ?? '').toString().isEmpty;
+    final key = id.isNotEmpty ? 'id:$id' : 'legacy:${legacyEnd ? i - 1 : i}';
+    (groups[key] ??= []).add(i);
+  }
+  return groups.values.toList();
+}
+
+bool isCompletePair(List<Json> rows, List<int> indices) =>
+    indices.length == 2 &&
+    indices.where((i) => rows[i]['se'] == 'S').length == 1 &&
+    indices.where((i) => rows[i]['se'] == 'E').length == 1;
+
+bool hasConductorInput(Json row) => ['r', 'y', 'b', 'neutral'].any(
+  (key) => ![
+    '',
+    '__none__',
+    '+',
+    '-',
+    '–',
+    '—',
+    'x',
+    '×',
+    'other',
+  ].contains((row['conductor_$key'] ?? '').toString().trim().toLowerCase()),
+);
+
+// Same default century window as web entry. Keep existing ISO dates untouched.
+String displayEntryDate(String value) {
+  if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value)) return value;
+  return '${value.substring(8, 10)}${value.substring(5, 7)}${value.substring(2, 4)}';
+}
+
+String? parseEntryDate(String value, {int yearStart = 2000}) {
+  if (!RegExp(r'^\d{6}$').hasMatch(value)) return null;
+  final day = int.parse(value.substring(0, 2));
+  final month = int.parse(value.substring(2, 4));
+  var year = (yearStart ~/ 100) * 100 + int.parse(value.substring(4, 6));
+  if (year < yearStart) year += 100;
+  final date = DateTime(year, month, day);
+  if (date.year != year || date.month != month || date.day != day) return null;
+  return dayString(date);
+}
+
+num? parseNumber(dynamic value) {
+  if (value == null || value.toString().trim().isEmpty) return null;
+  return num.tryParse(value.toString());
+}
+
+bool isIntersection(dynamic value) =>
+    value == true ||
+    [
+      '1',
+      'true',
+      'yes',
+      'on',
+      'int',
+      'intersection',
+      '✓',
+      '✔',
+      'x',
+      '×',
+      '+',
+    ].contains((value ?? '').toString().trim().toLowerCase());
+
+String phaseFromConductors(Json row) => ['r', 'y', 'b']
+    .where(
+      (key) => ![
+        '',
+        '__none__',
+        '+',
+        '-',
+        '–',
+        '—',
+        'x',
+        '×',
+      ].contains((row['conductor_$key'] ?? '').toString().trim().toLowerCase()),
+    )
+    .map((key) => key.toUpperCase())
+    .join();
+
+const consumerLabels = <String, String>{
+  'rs': 'RS · 1-phase residential',
+  'rl': 'RL · 3-phase residential',
+  'sc': 'SC · 1-phase commercial',
+  'lc': 'LC · Commercial (LC)',
+  'si': 'SI · 1-phase industrial',
+  'li': 'LI · 3-phase industrial',
+  'pb': 'PB · Public buildings',
+  'ag': 'AG · Agriculture',
+  'st': 'ST · Street lights',
+};
+const conductorChoices = [
+  'A',
+  'W',
+  'GN',
+  '2/0 AWG',
+  'PVC 7/0.052',
+  'PVC 19/0.052',
+  'PVC 19/0.083',
+  'PVC 0.083',
+  'PVC 37/0.083',
+  'ABC 50 MM2',
+  'ABC 95 MM2',
+  'DOG',
+  'GOPHER',
+  'GSL',
+  'OSPREY',
+  'PANTHER',
+  'RABBIT',
+  'RACCOON',
+  'INS ANT',
+  'INS GNAT',
+  'INS WASP',
+  'INS 7/0.052',
+  'ABC',
+  'ABC 10 MM2',
+  'ABC 16 MM2',
+  'ABC 25 MM2',
+  'ABC 35 MM2',
+  'ABC 70 MM2',
+  '4/0 AWG',
+  '100 MM2',
+  '1000 MCM',
+  'USAID 50mm2',
+  'USAID 95mm2',
+  'Ang',
+  'Int',
+  'Other',
+];
+
+class SurveyValidation {
+  static Map<String, String> errors(
+    SurveyRecord record, {
+    bool submitting = false,
+    Iterable<String>? equipmentCodes,
+  }) {
+    final result = <String, String>{};
+    final data = record.data;
+    void requiredField(String path, dynamic value, String label) {
+      if (value == null || value.toString().trim().isEmpty) {
+        result[path] = '$label is required.';
+      }
+    }
+
+    void text(String path, dynamic value, int limit) {
+      if ((value?.toString().length ?? 0) > limit) {
+        result[path] = 'Maximum $limit characters.';
+      }
+    }
+
+    void number(
+      String path,
+      dynamic value, {
+      double min = 0,
+      double? max,
+      bool positive = false,
+      bool integer = false,
+    }) {
+      if (value == null || value.toString().trim().isEmpty) return;
+      final parsed = num.tryParse(value.toString());
+      if (parsed == null ||
+          !parsed.isFinite ||
+          parsed < min ||
+          (max != null && parsed > max) ||
+          (positive && parsed <= 0) ||
+          (integer && !RegExp(r'^\d+$').hasMatch(value.toString()))) {
+        result[path] = integer
+            ? 'Enter a whole number of 0 or more.'
+            : positive
+            ? 'Enter a number greater than 0.'
+            : 'Enter a valid number ($min${max == null ? ' or more' : ' to $max'}).';
+      }
+    }
+
+    void date(String path, dynamic value) {
+      final raw = value?.toString() ?? '';
+      final parsed = DateTime.tryParse(raw);
+      if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(raw) ||
+          parsed == null ||
+          dayString(parsed) != raw ||
+          raw.compareTo(dayString(DateTime.now())) > 0) {
+        result[path] = 'Choose a valid date.';
+      }
+    }
+
+    requiredField('survey_team_id', data['survey_team_id'], 'Survey team');
+    requiredField('feeder_id', data['feeder_id'], 'Feeder');
+    date('survey_date', data['survey_date']);
+    text('transformer_code', data['transformer_code'], 100);
+    text('remarks', data['remarks'], 2000);
+    for (final key in [
+      'substation',
+      'division',
+      'sub_division',
+      'sub_division_code',
+      'transformer_make',
+      'inspectors',
+      'location',
+    ]) {
+      text('header.$key', record.header[key], key == 'location' ? 500 : 200);
+    }
+    number(
+      'header.capacity_kva',
+      record.header['capacity_kva'],
+      positive: true,
+      max: 10000000,
+    );
+    if (submitting) {
+      requiredField(
+        'transformer_code',
+        data['transformer_code'],
+        'Transformer code',
+      );
+      requiredField(
+        'header.capacity_kva',
+        record.header['capacity_kva'],
+        'Capacity',
+      );
+      for (final field in {
+        'transformer_make': 'Transformer make',
+        'mounting': 'Mounting',
+        'duty': 'Duty',
+        'location': 'Location',
+      }.entries) {
+        requiredField(
+          'header.${field.key}',
+          record.header[field.key],
+          field.value,
+        );
+      }
+      requiredField(
+        'header.inspectors',
+        record.header['inspectors'],
+        'Inspector names',
+      );
+      if (record.rows.isEmpty) {
+        result['rows'] = 'Complete at least one S/E pair before submission.';
+      }
+      for (final pair in surveyPairGroups(record.rows)) {
+        if (!isCompletePair(record.rows, pair)) {
+          result['rows'] = 'Every pair needs exactly one S row and one E row.';
+          for (final index in pair) {
+            result['rows.$index.pair'] =
+                'Incomplete or duplicate S/E pair. Complete the matching row.';
+          }
+        }
+      }
+    }
+    if (record.rows.length > 500) {
+      result['rows'] = 'Maximum 500 rows per survey.';
+    }
+    final firstStartIndex = record.rows.indexWhere((row) => row['se'] == 'S');
+    for (var index = 0; index < record.rows.length; index++) {
+      final row = record.rows[index];
+      final prefix = 'rows.$index';
+      if (!['S', 'E'].contains(row['se'])) {
+        result['$prefix.se'] = 'Choose S or E.';
+      }
+      date('$prefix.date', row['date']);
+      if (submitting) {
+        for (final field in {
+          'group': 'Group identifier',
+          'date': 'Row date',
+          'equipment_type': 'Equipment type',
+          'pole_class': 'Pole class',
+          'pole_height_ft': 'Pole height',
+        }.entries) {
+          requiredField('$prefix.${field.key}', row[field.key], field.value);
+        }
+        requiredField('$prefix.gps_waypoint', row['gps_waypoint'], 'Waypoint');
+        if (!hasConductorInput(row)) {
+          for (final conductor in ['r', 'y', 'b', 'neutral']) {
+            result['$prefix.conductor_$conductor'] =
+                'Enter at least one R, Y, B or N conductor.';
+          }
+        }
+      }
+      for (final entry in {
+        'group': 20,
+        'gps_waypoint': 50,
+        'phase': 30,
+        'conductor_r': 100,
+        'conductor_y': 100,
+        'conductor_b': 100,
+        'conductor_neutral': 100,
+        'equipment_type': 50,
+        'pole_class': 50,
+        'remarks': 1000,
+      }.entries) {
+        text('$prefix.${entry.key}', row[entry.key], entry.value);
+      }
+      for (final key in ['group', 'gps_waypoint']) {
+        final value = (row[key] ?? '').toString();
+        if (row['entry_version'] == 2 &&
+            value.isNotEmpty &&
+            !RegExp(r'^\d+$').hasMatch(value)) {
+          result['$prefix.$key'] = 'Enter digits only; leading zeros are kept.';
+        }
+        if (key == 'gps_waypoint' &&
+            row['entry_version'] == 2 &&
+            value.isNotEmpty &&
+            !RegExp(r'^\d{3}$').hasMatch(value)) {
+          result['$prefix.gps_waypoint'] = 'Enter exactly three digits.';
+        }
+      }
+      final group = (row['group'] ?? '').toString();
+      if (group.isNotEmpty && !RegExp(r'^[0-9]{2}$').hasMatch(group)) {
+        result['$prefix.group'] = 'Enter exactly two digits, for example 01.';
+      }
+      final assignedGroup = (data['team_group'] ?? '').toString();
+      if (record.revision == 0 &&
+          index != firstStartIndex &&
+          group.isNotEmpty &&
+          assignedGroup.isNotEmpty &&
+          group != assignedGroup) {
+        result['$prefix.group'] =
+            'New observations must use your assigned group $assignedGroup.';
+      }
+      if (row['entry_version'] == 2 &&
+          (row['equipment_type'] ?? '').toString().isNotEmpty &&
+          !(equipmentCodes ?? const ['TR', 'SP', 'Ang', 'WB']).contains(
+            row['equipment_type'],
+          )) {
+        result['$prefix.equipment_type'] = 'Select a listed equipment type.';
+      }
+      number('$prefix.latitude', row['latitude'], min: -90, max: 90);
+      number('$prefix.longitude', row['longitude'], min: -180, max: 180);
+      number('$prefix.gps_accuracy_m', row['gps_accuracy_m'], max: 100000000);
+      number('$prefix.pole_height_ft', row['pole_height_ft'], max: 1000000);
+      final phases = row['consumer_phases'] as Json? ?? {};
+      for (final category in ['rs', 'sc']) {
+        for (final phase in ['R', 'Y', 'B']) {
+          number(
+            '$prefix.consumer_phases.$category.$phase',
+            (phases[category] as Json?)?[phase],
+            integer: true,
+            max: 1000000,
+          );
+        }
+      }
+      for (final key in consumerLabels.keys) {
+        number(
+          '$prefix.consumers.$key',
+          (row['consumers'] as Json)[key],
+          integer: true,
+          max: 1000000,
+        );
+      }
+    }
+    if (record.solar.length > 100) {
+      result['solar'] = 'Maximum 100 solar installations.';
+    }
+    for (var index = 0; index < record.solar.length; index++) {
+      final item = record.solar[index];
+      if (item['row_id'] != null &&
+          !record.rows.any((row) => row['row_id'] == item['row_id'])) {
+        result['solar.$index.row_id'] =
+            'This PV record must belong to a row in this survey.';
+      }
+      number(
+        'solar.$index.installed_pv_kw',
+        item['installed_pv_kw'],
+        max:
+            item.containsKey('service_load_kw') ||
+                item.containsKey('meter_number')
+            ? 1000000
+            : 10000000,
+      );
+      number(
+        'solar.$index.service_load_kw',
+        item['service_load_kw'],
+        max: 1000000,
+      );
+      text('solar.$index.consumer_reference', item['consumer_reference'], 255);
+      text('solar.$index.meter_number', item['meter_number'], 255);
+      text('solar.$index.remarks', item['remarks'], 4000);
+    }
+    result.addAll(surveyPhaseConsistencyErrors(record, submitting: submitting));
+    return result;
+  }
+}
+
+/// Production requires HTTPS. Debug HTTP is restricted to local development hosts.
+String normalizeServerUrl(String raw, {bool debug = kDebugMode}) {
+  final uri = Uri.tryParse(raw.trim());
+  if (uri == null ||
+      !uri.hasAuthority ||
+      uri.host.isEmpty ||
+      uri.userInfo.isNotEmpty ||
+      uri.hasQuery ||
+      uri.hasFragment ||
+      !['http', 'https'].contains(uri.scheme)) {
+    throw const FormatException(
+      'Enter the application URL, for example https://survey.example.org.',
+    );
+  }
+  final host = uri.host.toLowerCase();
+  final octets = host.split('.').map(int.tryParse).toList();
+  final privateIp =
+      octets.length == 4 &&
+      octets.every((e) => e != null && e >= 0 && e <= 255) &&
+      (octets[0] == 10 ||
+          octets[0] == 127 ||
+          (octets[0] == 192 && octets[1] == 168) ||
+          (octets[0] == 172 && octets[1]! >= 16 && octets[1]! <= 31));
+  if (uri.scheme == 'http' &&
+      !(debug &&
+          (privateIp ||
+              host == 'localhost' ||
+              host == '::1' ||
+              host.endsWith('.local')))) {
+    throw const FormatException(
+      'Use HTTPS. Debug builds allow HTTP only for a local development server.',
+    );
+  }
+  var path = uri.path.replaceFirst(RegExp(r'/+$'), '');
+  if (path.endsWith('/api/v1/field')) {
+    path = path.substring(0, path.length - 13);
+  }
+  return uri.replace(path: path).toString();
+}

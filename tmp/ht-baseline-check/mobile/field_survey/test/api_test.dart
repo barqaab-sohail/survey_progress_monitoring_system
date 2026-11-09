@@ -1,0 +1,147 @@
+import 'dart:convert';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:hazeco_field_survey/api_client.dart';
+import 'models_test.dart' show testSession, readySurvey;
+
+void main() {
+  test(
+    'bootstrap normalizes string database IDs for dropdown selections',
+    () async {
+      final api = FieldApi(
+        client: MockClient((request) async {
+          expect(request.url.path, '/api/v1/field/bootstrap');
+          return http.Response(
+            jsonEncode({
+              'teams': [
+                {'id': '7', 'name': 'Team 07'},
+              ],
+              'feeders': [
+                {
+                  'id': '41',
+                  'team_ids': ['7'],
+                  'entry_settings': {'two_digit_year_start': '2000'},
+                  'tasks': [
+                    {'team_id': '7'},
+                  ],
+                },
+              ],
+              'transformers': [
+                {'id': '83', 'feeder_id': '41'},
+              ],
+            }),
+            200,
+          );
+        }),
+      );
+
+      final data = await api.bootstrap(testSession);
+
+      expect(data['teams'][0]['id'], 7);
+      expect(data['feeders'][0]['id'], 41);
+      expect(
+        data['feeders'][0]['entry_settings']['two_digit_year_start'],
+        2000,
+      );
+      expect(data['feeders'][0]['team_ids'], [7]);
+      expect(data['feeders'][0]['tasks'][0]['team_id'], 7);
+      expect(data['transformers'][0]['id'], 83);
+      expect(data['transformers'][0]['feeder_id'], 41);
+    },
+  );
+
+  test(
+    'requests use configured subpath, bearer token and stable JSON payload',
+    () async {
+      final api = FieldApi(
+        client: MockClient((request) async {
+          expect(
+            request.url.toString(),
+            'https://survey.example.test/api/v1/field/surveys/sync',
+          );
+          expect(request.headers['authorization'], 'Bearer test-token');
+          final data = jsonDecode(request.body);
+          expect(data['rows'][0]['gps_waypoint'], '0005');
+          return http.Response(
+            jsonEncode({
+              'id': 1,
+              'client_uuid': data['client_uuid'],
+              'revision': 2,
+              'status': 'submitted',
+            }),
+            200,
+          );
+        }),
+      );
+      expect(
+        (await api.sync(
+          testSession,
+          readySurvey().payload(submitted: true),
+        ))['revision'],
+        2,
+      );
+    },
+  );
+  test(
+    'sync requires a matching server confirmation before acknowledging',
+    () async {
+      final record = readySurvey();
+      final api = FieldApi(
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'client_uuid': 'another-survey',
+              'revision': 1,
+              'status': 'submitted',
+            }),
+            200,
+          ),
+        ),
+      );
+      await expectLater(
+        api.sync(testSession, record.payload(submitted: true)),
+        throwsA(isA<FormatException>()),
+      );
+    },
+  );
+  test(
+    'conflicts and validation remain distinguishable with server field errors',
+    () async {
+      final api = FieldApi(
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'message': 'Fix the survey',
+              'errors': {
+                'rows.0.gps_waypoint': ['Waypoint is required.'],
+              },
+            }),
+            422,
+          ),
+        ),
+      );
+      await expectLater(
+        api.sync(testSession, {}),
+        throwsA(
+          isA<ApiFailure>()
+              .having((e) => e.status, 'status', 422)
+              .having(
+                (e) => e.message,
+                'field message',
+                contains('rows.0.gps_waypoint'),
+              ),
+        ),
+      );
+      final conflicts = FieldApi(
+        client: MockClient(
+          (_) async => http.Response('{"message":"Version changed"}', 409),
+        ),
+      );
+      await expectLater(
+        conflicts.sync(testSession, {}),
+        throwsA(isA<ApiFailure>().having((e) => e.status, 'status', 409)),
+      );
+    },
+  );
+}

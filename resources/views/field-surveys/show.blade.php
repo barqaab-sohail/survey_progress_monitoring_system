@@ -10,6 +10,7 @@
     }
 @endphp
 <div class="actions" style="margin-bottom:16px">@include('field-surveys.actions')</div>
+<section class="card"><h2>LT Transformer Survey</h2>@if($survey->htUpdate)<p>Linked HT Network Update: <a href="{{ route('ht-updates.show', $survey->htUpdate) }}">{{ $survey->htUpdate->transformer_code }}</a> · {{ ucfirst($survey->htUpdate->status) }}. Final network release requires verified HT.</p>@else<p>Transformer survey using the existing reference network.</p>@endif</section>
 <div class="card"><strong>Survey name:</strong> {{ $survey->survey_name }}
 @if(app(\App\Services\MobileGpxWorkflow::class)->canLink(auth()->user()))<a class="btn btn-primary" href="{{ route('mobile-gpx.show', $survey->client_uuid) }}">Link GPX / JSON</a>@endif</div>
 <div class="page-head"><div><h1>{{ $survey->transformer_code ?: 'Untitled draft' }}</h1><p>{{ $survey->reference_snapshot['feeder_code'] ?? $survey->feeder->feeder_code }} &middot; {{ $survey->reference_snapshot['feeder_name'] ?? $survey->feeder->feeder_name }}</p></div><a class="btn btn-light" href="{{ route('field-surveys.index') }}">Back to field surveys</a></div>

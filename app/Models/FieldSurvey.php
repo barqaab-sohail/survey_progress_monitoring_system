@@ -26,6 +26,11 @@ class FieldSurvey extends Model
         return $this->belongsTo(User::class, 'collected_by');
     }
 
+    public function htUpdate(): BelongsTo
+    {
+        return $this->belongsTo(HtNetworkUpdate::class, 'ht_network_update_id');
+    }
+
     public function gpxLinks(): HasMany
     {
         return $this->hasMany(MobileGpxLink::class);

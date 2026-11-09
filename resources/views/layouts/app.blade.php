@@ -55,10 +55,13 @@
             @endif
             @if(auth()->user()->hasAnyRole(['survey_team_leader','super_admin','project_manager','management_viewer']))
                 <a class="nav-link {{ request()->routeIs('survey-progress.*') ? 'active' : '' }}" href="{{ route('survey-progress.index') }}">Automatic Survey Progress</a>
-                <a class="nav-link {{ request()->routeIs('field-surveys.*') ? 'active' : '' }}" href="{{ route('field-surveys.index') }}">Mobile Field Surveys</a>
+                <a class="nav-link {{ request()->routeIs('field-surveys.*') ? 'active' : '' }}" href="{{ route('field-surveys.index') }}">LT Transformer Surveys</a>
             @endif
             @if(auth()->user()->hasAnyRole(['mobile_survey_user','mdb_generator']))
-                <a class="nav-link {{ request()->routeIs('field-surveys.*') ? 'active' : '' }}" href="{{ route('field-surveys.index') }}">Mobile Field Surveys</a>
+                <a class="nav-link {{ request()->routeIs('field-surveys.*') ? 'active' : '' }}" href="{{ route('field-surveys.index') }}">LT Transformer Surveys</a>
+            @endif
+            @if(auth()->user()->hasAnyRole(['super_admin','project_manager','survey_team_leader','mobile_survey_user','management_viewer','mdb_generator']))
+                <a class="nav-link" href="{{ route('ht-updates.index') }}">HT Network Updates</a>
             @endif
             @if(app(\App\Services\MobileGpxWorkflow::class)->canLink(auth()->user()))
                 <a class="nav-link {{ request()->routeIs('mobile-gpx.*') ? 'active' : '' }}" href="{{ route('mobile-gpx.index') }}">Mobile Survey GPX Linking</a>

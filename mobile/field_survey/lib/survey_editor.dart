@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
 import 'field_controller.dart';
 import 'models.dart';
+import 'ht_update_page.dart';
 
 class SurveyEditor extends StatefulWidget {
   const SurveyEditor({
@@ -643,7 +644,9 @@ class _SurveyEditorState extends State<SurveyEditor>
     ),
     label: label,
     value: target[key],
-    enabled: editable,
+    enabled:
+        editable &&
+        !(key == 'transformer_code' && record.data['ht_update_uuid'] != null),
     number: number,
     numericKeyboard: numericKeyboard,
     lines: lines,
@@ -673,10 +676,63 @@ class _SurveyEditorState extends State<SurveyEditor>
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       SectionCard(
+        title: 'LT Transformer Survey',
+        subtitle: 'LT observations start from the selected transformer.',
+        children: [
+          if (record.data['ht_update_uuid'] != null)
+            Text(
+              'Linked HT Network Update: ${controller.htRecords.where((h) => h['data']['client_uuid'] == record.data['ht_update_uuid']).firstOrNull?['state'] ?? 'saved on this phone'}. LT collection can continue; final release requires verified HT.',
+            ),
+          if (editable && record.data['ht_update_uuid'] == null)
+            OutlinedButton.icon(
+              icon: const Icon(Icons.electrical_services),
+              label: const Text(
+                'Missing transformer? Create HT Network Update',
+              ),
+              onPressed: () async {
+                try {
+                  await flush();
+                  if (!mounted) return;
+                  final result = await Navigator.push<Json>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => HtUpdateEditor(
+                        controller: controller,
+                        feeder: controller.feeder(record.data['feeder_id'])!,
+                        team: controller.team(record.data['survey_team_id'])!,
+                        initialCode: record.data['transformer_code'] ?? '',
+                        ltSurveyId: record.id,
+                      ),
+                    ),
+                  );
+                  if (result == null || !mounted) return;
+                  final ht = result['data'] as Json;
+                  setState(() {
+                    record.data['ht_update_uuid'] = ht['client_uuid'];
+                    record.data['transformer_id'] = null;
+                    record.data['transformer_code'] = ht['transformer_code'];
+                    record.header.addAll({
+                      'capacity_kva': ht['capacity_kva'],
+                      'transformer_make': ht['make'],
+                      'location': ht['location'],
+                      'mounting': ht['mounting'],
+                    });
+                    headerGeneration++;
+                  });
+                  touch();
+                  await flush();
+                } catch (e) {
+                  notice('$e');
+                }
+              },
+            ),
+        ],
+      ),
+      SectionCard(
         title: 'Transformer',
         subtitle: 'Check imported values against the equipment in the field.',
         children: [
-          if (editable)
+          if (editable && record.data['ht_update_uuid'] == null)
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(

@@ -13,13 +13,21 @@ class LocalStore {
     final database = await (factory ?? databaseFactory).openDatabase(
       path ?? p.join(await getDatabasesPath(), 'field_surveys.db'),
       options: OpenDatabaseOptions(
-        version: 2,
+        version: 3,
         onUpgrade: (db, oldVersion, _) async {
           if (oldVersion < 2) {
             await db.execute('ALTER TABLE attachments ADD COLUMN row_id TEXT');
           }
+          if (oldVersion < 3) {
+            await db.execute(
+              'CREATE TABLE ht_updates (scope TEXT NOT NULL, uuid TEXT NOT NULL, data TEXT NOT NULL, state TEXT NOT NULL, outbound TEXT, error TEXT NOT NULL DEFAULT "", PRIMARY KEY(scope,uuid))',
+            );
+          }
         },
         onCreate: (db, _) async {
+          await db.execute(
+            'CREATE TABLE ht_updates (scope TEXT NOT NULL, uuid TEXT NOT NULL, data TEXT NOT NULL, state TEXT NOT NULL, outbound TEXT, error TEXT NOT NULL DEFAULT "", PRIMARY KEY(scope,uuid))',
+          );
           await db.execute(
             'CREATE TABLE surveys (scope TEXT NOT NULL, uuid TEXT NOT NULL, data TEXT NOT NULL, state TEXT NOT NULL, error TEXT NOT NULL DEFAULT "", updated_at TEXT NOT NULL, outbound TEXT, PRIMARY KEY(scope,uuid))',
           );
@@ -48,6 +56,144 @@ class LocalStore {
     final data = jsonDecode(rows.first['data'] as String) as Json;
     data['_downloaded_at'] = rows.first['downloaded_at'];
     return data;
+  }
+
+  Future<List<Json>> htUpdates(String scope) async =>
+      (await database.query(
+            'ht_updates',
+            where: 'scope = ?',
+            whereArgs: [scope],
+          ))
+          .map(
+            (row) => {
+              'data': jsonDecode(row['data'] as String) as Json,
+              'state': row['state'],
+              'error': row['error'],
+              'outbound': row['outbound'] == null
+                  ? null
+                  : jsonDecode(row['outbound'] as String),
+            },
+          )
+          .toList();
+
+  Future<void> saveHt(String scope, Json entry) async {
+    await database.transaction((tx) async {
+      final data = entry['data'] as Json;
+      final previous = await tx.query(
+        'ht_updates',
+        where: 'scope = ? AND uuid = ?',
+        whereArgs: [scope, data['client_uuid']],
+      );
+      if (previous.isNotEmpty &&
+          (previous.first['outbound'] != null ||
+              ['pending', 'verified'].contains(previous.first['state']) ||
+              (parseIntegerId(
+                        (jsonDecode(previous.first['data'] as String)
+                            as Json)['base_revision'],
+                      ) ??
+                      0) !=
+                  (parseIntegerId(data['base_revision']) ?? 0))) {
+        throw StateError(
+          'This HT update is queued or verified. Its saved copy is retained.',
+        );
+      }
+      await tx.insert('ht_updates', {
+        'scope': scope,
+        'uuid': data['client_uuid'],
+        'data': jsonEncode(data),
+        'state': entry['state'],
+        'error': entry['error'] ?? '',
+        'outbound': entry['outbound'] == null
+            ? null
+            : jsonEncode(entry['outbound']),
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    });
+  }
+
+  Future<void> acknowledgeHt(String scope, Json entry, Json reply) async {
+    if (reply['client_uuid'] != entry['data']['client_uuid'] ||
+        parseIntegerId(reply['revision']) == null) {
+      throw const FormatException('The server did not confirm this HT update.');
+    }
+    await database.update(
+      'ht_updates',
+      {
+        'data': jsonEncode({
+          ...reply['payload'] as Json,
+          'photos': entry['data']['photos'],
+          'base_revision': reply['revision'],
+          'review_note': reply['review_note'],
+        }),
+        'state': reply['status'],
+        'error': '',
+        'outbound': null,
+      },
+      where: 'scope = ? AND uuid = ? AND outbound = ?',
+      whereArgs: [scope, reply['client_uuid'], jsonEncode(entry['outbound'])],
+    );
+  }
+
+  Future<void> rejectHt(
+    String scope,
+    Json entry,
+    String message, {
+    bool correctable = false,
+    bool conflict = false,
+  }) async {
+    await database.update(
+      'ht_updates',
+      {
+        'error': message,
+        'state': conflict
+            ? 'conflict'
+            : correctable
+            ? 'draft'
+            : 'queued',
+        if (correctable) 'outbound': null,
+      },
+      where: 'scope = ? AND uuid = ? AND outbound = ?',
+      whereArgs: [
+        scope,
+        entry['data']['client_uuid'],
+        jsonEncode(entry['outbound']),
+      ],
+    );
+  }
+
+  Future<void> mergeHtReference(String scope, List<Json> updates) async {
+    for (final reply in updates) {
+      final uuid = reply['client_uuid'];
+      final existing = await database.query(
+        'ht_updates',
+        where: 'scope = ? AND uuid = ?',
+        whereArgs: [scope, uuid],
+      );
+      if (existing.isEmpty) continue;
+      final row = existing.first;
+      final data = jsonDecode(row['data'] as String) as Json;
+      if (row['outbound'] != null ||
+          row['state'] == 'draft' ||
+          (parseIntegerId(data['base_revision']) ?? 0) >
+              (parseIntegerId(reply['revision']) ?? 0)) {
+        continue;
+      }
+      await database.update(
+        'ht_updates',
+        {
+          'data': jsonEncode({
+            ...reply['payload'] as Json,
+            'photos': data['photos'],
+            'base_revision': reply['revision'],
+            'review_note': reply['review_note'],
+          }),
+          'state': reply['status'],
+          'error': '',
+        },
+        where:
+            'scope = ? AND uuid = ? AND data = ? AND outbound IS NULL AND state != ?',
+        whereArgs: [scope, uuid, row['data'], 'draft'],
+      );
+    }
   }
 
   Future<void> cacheBootstrap(String scope, Json data) async {
