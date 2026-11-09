@@ -101,6 +101,23 @@ class FieldApi {
     return normalizeFieldBootstrap(data);
   }
 
+  Future<void> authorizeVoiceInput(FieldSession session) async {
+    final data = read(
+      await client
+          .post(
+            endpoint(session.url, '/voice/authorize'),
+            headers: headers(session),
+          )
+          .timeout(const Duration(seconds: 10)),
+    );
+    if (data['voice_form_filling'] != true) {
+      throw const ApiFailure(
+        403,
+        'Voice form-filling is not enabled for your account.',
+      );
+    }
+  }
+
   Future<void> logout(FieldSession session) async {
     read(
       await client

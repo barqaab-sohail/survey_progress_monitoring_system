@@ -13,6 +13,7 @@ Route::prefix('v1')->group(function () {
         Route::middleware([AuthenticateFieldDevice::class, 'throttle:120,1'])->group(function () {
             Route::post('/logout', [FieldDeviceAuthController::class, 'logout']);
             Route::get('/bootstrap', [FieldSurveyApiController::class, 'bootstrap']);
+            Route::post('/voice/authorize', [FieldSurveyApiController::class, 'authorizeVoice']);
             Route::post('/surveys/sync', [FieldSurveyApiController::class, 'sync']);
             Route::post('/ht-updates/sync', [HtNetworkUpdateApiController::class, 'sync']);
             Route::get('/ht-updates', [HtNetworkUpdateApiController::class, 'index']);

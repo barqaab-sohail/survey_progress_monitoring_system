@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'field_controller.dart';
 import 'models.dart';
 import 'ht_update_page.dart';
+import 'voice_input.dart';
+import 'voice_value.dart';
 
 class SurveyEditor extends StatefulWidget {
   const SurveyEditor({
@@ -1624,7 +1626,7 @@ class _RowEditorState extends State<RowEditor> {
     },
     child: Scaffold(
       appBar: AppBar(
-        title: Text('S/E row ${widget.index + 1}'),
+        title: Text('${row['se'] ?? 'S'} Entry · Row ${widget.index + 1}'),
         leading: IconButton(
           onPressed: () => done(complete: false),
           icon: const Icon(Icons.arrow_back),
@@ -1711,13 +1713,13 @@ class _RowEditorState extends State<RowEditor> {
                     ? 'No previous row to copy.'
                     : 'Copies conductors, equipment, pole class and height only.',
               ),
-              ...{
+              for (final entry in {
                 'conductor_r': 'R conductor',
                 'conductor_y': 'Y conductor',
                 'conductor_b': 'B conductor',
                 'conductor_neutral': 'Neutral conductor',
-              }.entries.map(
-                (entry) => ConductorEntry(
+              }.entries) ...[
+                ConductorEntry(
                   key: ValueKey('${entry.key}:$copyGeneration'),
                   label: entry.value,
                   value: row[entry.key] ?? '',
@@ -1734,7 +1736,28 @@ class _RowEditorState extends State<RowEditor> {
                     changed();
                   },
                 ),
-              ),
+                if (entry.key == 'conductor_r' &&
+                    widget.editable &&
+                    (row['conductor_r'] ?? '').toString().isNotEmpty &&
+                    row['conductor_r'] != '__none__' &&
+                    (row['conductor_y'] != row['conductor_r'] ||
+                        row['conductor_b'] != row['conductor_r']))
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: FilledButton.tonalIcon(
+                        onPressed: () {
+                          row['conductor_y'] = row['conductor_r'];
+                          row['conductor_b'] = row['conductor_r'];
+                          changed();
+                        },
+                        icon: const Icon(Icons.done_all),
+                        label: const Text('Use R conductor for all phases'),
+                      ),
+                    ),
+                  ),
+              ],
               TextFormField(
                 key: ValueKey('phase:${phaseFromConductors(row)}'),
                 initialValue: phaseFromConductors(row),
@@ -1975,6 +1998,30 @@ class _EntryFieldState extends State<EntryField> {
       helperText: widget.helper,
       helperMaxLines: 3,
       errorMaxLines: 3,
+      suffixIcon:
+          widget.enabled && !widget.readOnly && VoiceInputScope.allowed(context)
+          ? VoiceInputButton(
+              field: VoiceFieldSpec(
+                label: widget.label,
+                kind: widget.digits || widget.numericKeyboard
+                    ? VoiceValueKind.digits
+                    : widget.integer
+                    ? VoiceValueKind.integer
+                    : widget.number
+                    ? VoiceValueKind.number
+                    : VoiceValueKind.text,
+                maxLength: widget.maxLength,
+              ),
+              onApplied: (value) {
+                if (!widget.enabled || widget.readOnly) return;
+                controller.value = TextEditingValue(
+                  text: value,
+                  selection: TextSelection.collapsed(offset: value.length),
+                );
+                widget.onChanged(value);
+              },
+            )
+          : null,
     ),
     onChanged: widget.onChanged,
   );
@@ -1999,25 +2046,44 @@ class ChoiceField extends StatelessWidget {
   final String? error, helper;
   final ValueChanged<String> onChanged;
   @override
-  Widget build(BuildContext context) => DropdownButtonFormField<String>(
-    initialValue: values.contains(value) ? value : null,
-    decoration: InputDecoration(
-      labelText: label,
-      errorText: error,
-      errorMaxLines: 3,
-      helperText: helper,
-      helperMaxLines: 3,
-    ),
-    isExpanded: true,
-    items: values
-        .map(
-          (item) => DropdownMenuItem(
-            value: item,
-            child: Text(item.isEmpty ? '' : labels[item] ?? item),
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: DropdownButtonFormField<String>(
+          key: ValueKey(value),
+          initialValue: values.contains(value) ? value : null,
+          decoration: InputDecoration(
+            labelText: label,
+            errorText: error,
+            errorMaxLines: 3,
+            helperText: helper,
+            helperMaxLines: 3,
           ),
-        )
-        .toList(),
-    onChanged: enabled ? (item) => onChanged(item ?? '') : null,
+          isExpanded: true,
+          items: values
+              .map(
+                (item) => DropdownMenuItem(
+                  value: item,
+                  child: Text(
+                    item.isEmpty ? '' : labels[item] ?? item,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: enabled ? (item) => onChanged(item ?? '') : null,
+        ),
+      ),
+      if (enabled && VoiceInputScope.allowed(context))
+        VoiceInputButton(
+          field: VoiceFieldSpec(
+            label: label,
+            kind: VoiceValueKind.choice,
+            choices: {for (final item in values) item: labels[item] ?? item},
+          ),
+          onApplied: onChanged,
+        ),
+    ],
   );
 }
 
@@ -2084,6 +2150,33 @@ class _DateEntryState extends State<DateEntry> {
           (widget.readOnly
               ? "Automatically set to today's date."
               : 'Six digits: day, month, year. Earlier dates can be typed directly.'),
+      suffixIcon:
+          widget.enabled && !widget.readOnly && VoiceInputScope.allowed(context)
+          ? VoiceInputButton(
+              field: VoiceFieldSpec(
+                label: '${widget.label} (DDMMYY)',
+                kind: VoiceValueKind.date,
+                validate: (value) {
+                  final iso = parseEntryDate(
+                    value,
+                    yearStart: widget.yearStart,
+                  );
+                  if (iso == null) return 'Enter a valid date in DDMMYY order.';
+                  return iso.compareTo(dayString(DateTime.now())) > 0
+                      ? 'Date cannot be in the future.'
+                      : null;
+                },
+              ),
+              onApplied: (value) {
+                if (!widget.enabled || widget.readOnly) return;
+                final iso = parseEntryDate(value, yearStart: widget.yearStart);
+                if (iso == null) return;
+                controller.text = value;
+                setState(() => error = null);
+                widget.onChanged(iso);
+              },
+            )
+          : null,
     ),
     onChanged: (value) {
       final iso = parseEntryDate(value, yearStart: widget.yearStart);

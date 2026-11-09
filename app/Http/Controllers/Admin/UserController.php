@@ -31,7 +31,7 @@ class UserController extends Controller
 
     public function store(Request $request, AuditService $audit, UserPhotoService $photos): RedirectResponse
     {
-        $data = $request->validate(['organization_id' => $this->organizationRules($request), 'name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email', 'unique:users,email'], 'phone' => ['nullable', 'string', 'max:30'], 'role' => ['required', Rule::enum(UserRole::class)], 'password' => ['required', 'string', 'min:10', 'confirmed']]);
+        $data = $request->validate(['organization_id' => $this->organizationRules($request), 'name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email', 'unique:users,email'], 'phone' => ['nullable', 'string', 'max:30'], 'role' => ['required', Rule::enum(UserRole::class)], 'allow_voice_form_filling' => ['sometimes', 'boolean'], 'password' => ['required', 'string', 'min:10', 'confirmed']]);
         $request->validate(UserPhotoService::rules());
         $team = $this->mobileTeam($request);
         $user = DB::transaction(function () use ($request, $data, $photos, $team) {
@@ -49,7 +49,7 @@ class UserController extends Controller
 
     public function update(Request $request, User $user, AuditService $audit, UserPhotoService $photos): RedirectResponse
     {
-        $data = $request->validate(['organization_id' => $this->organizationRules($request), 'name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email', Rule::unique('users')->ignore($user)], 'phone' => ['nullable', 'string', 'max:30'], 'role' => ['required', Rule::enum(UserRole::class)], 'status' => ['required', 'in:active,inactive'], 'password' => ['nullable', 'string', 'min:10', 'confirmed']]);
+        $data = $request->validate(['organization_id' => $this->organizationRules($request), 'name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email', Rule::unique('users')->ignore($user)], 'phone' => ['nullable', 'string', 'max:30'], 'role' => ['required', Rule::enum(UserRole::class)], 'allow_voice_form_filling' => ['sometimes', 'boolean'], 'status' => ['required', 'in:active,inactive'], 'password' => ['nullable', 'string', 'min:10', 'confirmed']]);
         if (blank($data['password'] ?? null)) {
             unset($data['password']);
         }

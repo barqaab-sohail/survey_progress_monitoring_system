@@ -343,18 +343,16 @@ class _HtUpdateEditorState extends State<HtUpdateEditor>
     bool identity = false,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
-    child: TextFormField(
+    child: EntryField(
       key: ValueKey('${identityHashCode(target)}:$key'),
-      initialValue: '${target[key] ?? ''}',
+      label: label,
+      value: target[key],
       enabled:
           !locked &&
           !saving &&
           !(identity && (parseIntegerId(data['base_revision']) ?? 0) > 0),
-      decoration: InputDecoration(labelText: label),
-      maxLines: key == 'remarks' ? 3 : 1,
-      keyboardType: number
-          ? const TextInputType.numberWithOptions(decimal: true, signed: true)
-          : TextInputType.text,
+      lines: key == 'remarks' ? 3 : 1,
+      number: number,
       onChanged: (value) {
         target[key] = value;
         changed();
@@ -430,32 +428,19 @@ class _HtUpdateEditorState extends State<HtUpdateEditor>
               child: Text(message),
             ),
           const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            isExpanded: true,
-            initialValue: data['kind'],
-            decoration: const InputDecoration(labelText: 'HT update type'),
-            items: const [
-              DropdownMenuItem(
-                value: 'ht_extension',
-                child: Text(
-                  'HT extension + missing transformer',
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              DropdownMenuItem(
-                value: 'missing_transformer',
-                child: Text(
-                  'Missing transformer on existing HT',
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-            onChanged: locked
-                ? null
-                : (v) {
-                    setState(() => data['kind'] = v);
-                    changed();
-                  },
+          ChoiceField(
+            label: 'HT update type',
+            value: data['kind'],
+            enabled: !locked && !saving,
+            values: const ['ht_extension', 'missing_transformer'],
+            labels: const {
+              'ht_extension': 'HT extension + missing transformer',
+              'missing_transformer': 'Missing transformer on existing HT',
+            },
+            onChanged: (v) {
+              setState(() => data['kind'] = v);
+              changed();
+            },
           ),
           const SizedBox(height: 12),
           field(
@@ -472,46 +457,31 @@ class _HtUpdateEditorState extends State<HtUpdateEditor>
           ),
           field(data, 'make', 'Transformer make'),
           field(data, 'location', 'Transformer location'),
-          DropdownButtonFormField<String>(
-            initialValue: data['mounting'],
-            decoration: const InputDecoration(
-              labelText: 'Transformer mounting',
-            ),
-            items: [
-              'S.Pole',
-              'D.Pole',
-              'Pad',
-            ].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-            onChanged: locked
-                ? null
-                : (v) {
-                    data['mounting'] = v;
-                    changed();
-                  },
+          ChoiceField(
+            label: 'Transformer mounting',
+            value: data['mounting'],
+            enabled: !locked && !saving,
+            values: const ['S.Pole', 'D.Pole', 'Pad'],
+            labels: const {
+              'S.Pole': 'S.Pole — Single pole',
+              'D.Pole': 'D.Pole — Double pole',
+              'Pad': 'Pad',
+            },
+            onChanged: (v) {
+              setState(() => data['mounting'] = v);
+              changed();
+            },
           ),
           const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            initialValue: (data['phase'] ?? '').toString().isEmpty
-                ? null
-                : data['phase'],
-            decoration: const InputDecoration(
-              labelText: 'Transformer HT phase',
-            ),
-            items: [
-              'R',
-              'Y',
-              'B',
-              'R-Y',
-              'Y-B',
-              'R-B',
-              'R-Y-B',
-            ].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-            onChanged: locked
-                ? null
-                : (v) {
-                    data['phase'] = v;
-                    changed();
-                  },
+          ChoiceField(
+            label: 'Transformer HT phase',
+            value: data['phase'] ?? '',
+            enabled: !locked && !saving,
+            values: const ['R', 'Y', 'B', 'R-Y', 'Y-B', 'R-B', 'R-Y-B'],
+            onChanged: (v) {
+              setState(() => data['phase'] = v);
+              changed();
+            },
           ),
           const SizedBox(height: 20),
           Text(

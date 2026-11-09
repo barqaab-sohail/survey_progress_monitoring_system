@@ -27,6 +27,10 @@ class UserInfolist
                     ->badge(),
                 TextEntry::make('status')
                     ->badge(),
+                TextEntry::make('allow_voice_form_filling')
+                    ->label('Mobile voice form-filling')
+                    ->formatStateUsing(fn ($state): string => $state ? 'Enabled' : 'Disabled')
+                    ->badge(),
                 TextEntry::make('email_verified_at')
                     ->dateTime()
                     ->placeholder('-'),

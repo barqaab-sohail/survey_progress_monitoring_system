@@ -60,7 +60,10 @@ class FieldSurveyApiController extends Controller
 
         return response()->json([
             'user' => $user->only(['id', 'name']),
-            'capabilities' => ['ht_network_updates' => $user->canUseHtNetworkUpdates()],
+            'capabilities' => [
+                'ht_network_updates' => $user->canUseHtNetworkUpdates(),
+                'voice_form_filling' => $user->canUseVoiceFormFilling(),
+            ],
             'mobile_survey_team' => $mobileSurveyTeam ? array_merge($mobileSurveyTeam->only(['id', 'code', 'name', 'group_code']), ['group_identifier' => SurveyTeamGroup::identifier($mobileSurveyTeam)]) : null,
             'teams' => $teams->map(fn ($team) => array_merge($team->toArray(), ['group_identifier' => SurveyTeamGroup::identifier($team)])),
             'feeders' => $feeders->map(fn ($feeder) => [
@@ -82,6 +85,13 @@ class FieldSurveyApiController extends Controller
                 ? $feeders->mapWithKeys(fn ($f) => [$f->id => app(HtKmzService::class)->reference($f->id)])
                 : (object) [],
         ]);
+    }
+
+    public function authorizeVoice(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->canUseVoiceFormFilling(), 403, 'Voice form-filling is not enabled for your account. Contact Super Admin.');
+
+        return response()->json(['voice_form_filling' => true])->header('Cache-Control', 'no-store');
     }
 
     public function sync(SyncFieldSurveyRequest $request, FieldSurveyService $service): JsonResponse

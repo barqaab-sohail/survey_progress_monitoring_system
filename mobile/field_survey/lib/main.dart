@@ -8,6 +8,7 @@ import 'models.dart';
 import 'survey_editor.dart';
 import 'ht_update_page.dart';
 import 'sign_in_error.dart';
+import 'voice_input.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,6 +45,7 @@ class FieldSurveyApp extends StatefulWidget {
 
 class _FieldSurveyAppState extends State<FieldSurveyApp>
     with WidgetsBindingObserver {
+  final voiceRecognizer = DeviceVoiceRecognizer();
   @override
   void initState() {
     super.initState();
@@ -53,6 +55,7 @@ class _FieldSurveyAppState extends State<FieldSurveyApp>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    voiceRecognizer.dispose();
     super.dispose();
   }
 
@@ -65,6 +68,11 @@ class _FieldSurveyAppState extends State<FieldSurveyApp>
   Widget build(BuildContext context) => MaterialApp(
     title: 'HAZECO Field Survey',
     debugShowCheckedModeBanner: false,
+    builder: (context, child) => VoiceInputScope(
+      controller: widget.controller,
+      recognizer: voiceRecognizer,
+      child: child!,
+    ),
     theme: ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff075b71)),

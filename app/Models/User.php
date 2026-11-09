@@ -37,6 +37,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'role',
         'status',
         'allow_ht_network_updates',
+        'allow_voice_form_filling',
         'password',
         'profile_photo_path',
     ];
@@ -66,6 +67,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             'role' => UserRole::class,
             'status' => RecordStatus::class,
             'allow_ht_network_updates' => 'boolean',
+            'allow_voice_form_filling' => 'boolean',
         ];
     }
 
@@ -129,6 +131,11 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     public function canUseHtNetworkUpdates(): bool
     {
         return ! $this->hasRole(UserRole::MobileSurveyUser->value) || $this->allow_ht_network_updates;
+    }
+
+    public function canUseVoiceFormFilling(): bool
+    {
+        return $this->isActive() && (bool) $this->allow_voice_form_filling;
     }
 
     public function getProfilePhotoUrlAttribute(): ?string

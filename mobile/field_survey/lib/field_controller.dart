@@ -39,6 +39,44 @@ class FieldController extends ChangeNotifier {
       ((reference?['transformers'] ?? []) as List).cast<Json>();
   bool get canUpdateHt =>
       (reference?['capabilities'] as Map?)?['ht_network_updates'] == true;
+  bool get canUseVoiceInput =>
+      session != null &&
+      !needsLogin &&
+      (reference?['capabilities'] as Map?)?['voice_form_filling'] == true;
+
+  Future<void> authorizeVoiceInput() async {
+    final current = session;
+    if (current == null || !canUseVoiceInput) {
+      throw const ApiFailure(
+        403,
+        'Voice form-filling is not enabled for your account.',
+      );
+    }
+    try {
+      await api.authorizeVoiceInput(current);
+    } on ApiFailure catch (error) {
+      if (session?.token == current.token && session?.scope == current.scope) {
+        if (error.status == 403 && reference != null) {
+          reference!['capabilities'] = {
+            ...?reference!['capabilities'] as Map?,
+            'voice_form_filling': false,
+          };
+          await store.cacheBootstrap(current.scope, reference!);
+        }
+        if (error.status == 401) needsLogin = true;
+        notifyListeners();
+      }
+      rethrow;
+    }
+    if (session?.token != current.token ||
+        session?.scope != current.scope ||
+        !canUseVoiceInput) {
+      throw const ApiFailure(
+        403,
+        'Voice access changed. Sign in and refresh your permissions.',
+      );
+    }
+  }
 
   Future<Map<String, String>?> rememberedCredentials() async {
     final email = await secureStorage.read(key: 'remembered_field_email');
