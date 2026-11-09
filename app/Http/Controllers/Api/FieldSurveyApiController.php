@@ -60,6 +60,7 @@ class FieldSurveyApiController extends Controller
 
         return response()->json([
             'user' => $user->only(['id', 'name']),
+            'capabilities' => ['ht_network_updates' => $user->canUseHtNetworkUpdates()],
             'mobile_survey_team' => $mobileSurveyTeam ? array_merge($mobileSurveyTeam->only(['id', 'code', 'name', 'group_code']), ['group_identifier' => SurveyTeamGroup::identifier($mobileSurveyTeam)]) : null,
             'teams' => $teams->map(fn ($team) => array_merge($team->toArray(), ['group_identifier' => SurveyTeamGroup::identifier($team)])),
             'feeders' => $feeders->map(fn ($feeder) => [
@@ -74,8 +75,12 @@ class FieldSurveyApiController extends Controller
                     'team_id' => $task->survey_team_id, 'assigned_at' => $task->assigned_at?->toDateString(), 'deadline' => $task->deadline?->toDateString(),
                     'priority' => $task->priority, 'instructions' => $task->instructions, 'return_comments' => $task->return_comments, 'status' => $task->status])->values(),
             ]), 'transformers' => $transformers,
-            'ht_updates' => app(HtNetworkWorkflow::class)->visible($user)->get()->map(fn ($u) => $u->summary())->values(),
-            'ht_networks' => $feeders->mapWithKeys(fn ($f) => [$f->id => app(HtKmzService::class)->reference($f->id)]),
+            'ht_updates' => $user->canUseHtNetworkUpdates()
+                ? app(HtNetworkWorkflow::class)->visible($user)->get()->map(fn ($u) => $u->summary())->values()
+                : collect(),
+            'ht_networks' => $user->canUseHtNetworkUpdates()
+                ? $feeders->mapWithKeys(fn ($f) => [$f->id => app(HtKmzService::class)->reference($f->id)])
+                : (object) [],
         ]);
     }
 

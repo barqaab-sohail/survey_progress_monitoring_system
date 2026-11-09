@@ -679,11 +679,13 @@ class _SurveyEditorState extends State<SurveyEditor>
         title: 'LT Transformer Survey',
         subtitle: 'LT observations start from the selected transformer.',
         children: [
-          if (record.data['ht_update_uuid'] != null)
+          if (controller.canUpdateHt && record.data['ht_update_uuid'] != null)
             Text(
               'Linked HT Network Update: ${controller.htRecords.where((h) => h['data']['client_uuid'] == record.data['ht_update_uuid']).firstOrNull?['state'] ?? 'saved on this phone'}. LT collection can continue; final release requires verified HT.',
             ),
-          if (editable && record.data['ht_update_uuid'] == null)
+          if (controller.canUpdateHt &&
+              editable &&
+              record.data['ht_update_uuid'] == null)
             OutlinedButton.icon(
               icon: const Icon(Icons.electrical_services),
               label: const Text(

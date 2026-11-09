@@ -36,6 +36,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'organization_id',
         'role',
         'status',
+        'allow_ht_network_updates',
         'password',
         'profile_photo_path',
     ];
@@ -64,6 +65,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             'google_drive_token' => 'encrypted:array',
             'role' => UserRole::class,
             'status' => RecordStatus::class,
+            'allow_ht_network_updates' => 'boolean',
         ];
     }
 
@@ -122,6 +124,11 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     public function isActive(): bool
     {
         return $this->status === RecordStatus::Active;
+    }
+
+    public function canUseHtNetworkUpdates(): bool
+    {
+        return ! $this->hasRole(UserRole::MobileSurveyUser->value) || $this->allow_ht_network_updates;
     }
 
     public function getProfilePhotoUrlAttribute(): ?string

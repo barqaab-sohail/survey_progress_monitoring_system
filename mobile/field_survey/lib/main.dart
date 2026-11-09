@@ -424,29 +424,20 @@ class _SurveyHomeState extends State<SurveyHome> {
 
   Future<void> create() async {
     if (opening || controller.busy) return;
-    if (controller.session != null && !controller.syncing) {
-      try {
-        await controller.refreshReference();
-      } on ApiFailure catch (error) {
-        notice('Unable to refresh team codes. ${error.message}');
-        return;
-      } on Object {
-        notice('Using downloaded feeder and team data for offline collection.');
-        if (controller.reference == null) return;
-      }
-      if (!mounted) return;
-    }
-    List<Json> teamsFor(Json feeder) {
-      final ids = (feeder['team_ids'] as List? ?? const []);
-      return controller.teams
-          .where(
-            (team) =>
-                ids.any((id) => '$id' == '${team['id']}') &&
-                teamGroupIdentifier(team) != null,
-          )
-          .toList();
-    }
-
+    final eligibleTeams = controller.teams
+        .where((team) => teamGroupIdentifier(team) != null)
+        .toList();
+    final teamsByFeeder = <String, List<Json>>{
+      for (final feeder in controller.feeders)
+        '${feeder['id']}': eligibleTeams
+            .where(
+              (team) => (feeder['team_ids'] as List? ?? const []).any(
+                (id) => '$id' == '${team['id']}',
+              ),
+            )
+            .toList(),
+    };
+    List<Json> teamsFor(Json feeder) => teamsByFeeder['${feeder['id']}'] ?? [];
     final availableFeeders = controller.feeders
         .where((feeder) => teamsFor(feeder).isNotEmpty)
         .toList();
@@ -643,7 +634,9 @@ class _SurveyHomeState extends State<SurveyHome> {
           padding: const EdgeInsets.fromLTRB(18, 20, 18, 100),
           children: [
             Text(
-              'HT Updates & LT Surveys',
+              controller.canUpdateHt
+                  ? 'HT Updates & LT Surveys'
+                  : 'LT Transformer Surveys',
               style: Theme.of(
                 context,
               ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
@@ -653,42 +646,43 @@ class _SurveyHomeState extends State<SurveyHome> {
               '${controller.session!.name}${signedInGroup == null ? '' : ' · Code $signedInGroup'} · ${controller.teams.length} assigned team${controller.teams.length == 1 ? '' : 's'}',
             ),
             const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'HT Network Update',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+            if (controller.canUpdateHt)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'HT Network Update',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const Text(
-                      'Missing transformer or new HT extension? Save HT first, then begin LT Transformer Survey immediately.',
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: controller.busy
-                          ? null
-                          : () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      HtUpdatesPage(controller: controller),
-                                ),
-                              );
-                              await controller.reload();
-                            },
-                      icon: const Icon(Icons.electrical_services),
-                      label: const Text('Open HT Network Updates'),
-                    ),
-                  ],
+                      const Text(
+                        'Missing transformer or new HT extension? Save HT first, then begin LT Transformer Survey immediately.',
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: controller.busy
+                            ? null
+                            : () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        HtUpdatesPage(controller: controller),
+                                  ),
+                                );
+                                await controller.reload();
+                              },
+                        icon: const Icon(Icons.electrical_services),
+                        label: const Text('Open HT Network Updates'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
             const Text(
               'LT Transformer Surveys',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),

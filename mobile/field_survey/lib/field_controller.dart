@@ -37,6 +37,8 @@ class FieldController extends ChangeNotifier {
       ((reference?['feeders'] ?? []) as List).cast<Json>();
   List<Json> get transformers =>
       ((reference?['transformers'] ?? []) as List).cast<Json>();
+  bool get canUpdateHt =>
+      (reference?['capabilities'] as Map?)?['ht_network_updates'] == true;
 
   Future<Map<String, String>?> rememberedCredentials() async {
     final email = await secureStorage.read(key: 'remembered_field_email');
@@ -298,8 +300,11 @@ class FieldController extends ChangeNotifier {
     var networkStopped = false;
     final failureReasons = <String>[];
     try {
-      final localHt = await store.htUpdates(current.scope);
-      if (localHt.any((h) => ['pending', 'returned'].contains(h['state']))) {
+      final localHt = canUpdateHt
+          ? await store.htUpdates(current.scope)
+          : <Json>[];
+      if (canUpdateHt &&
+          localHt.any((h) => ['pending', 'returned'].contains(h['state']))) {
         try {
           final status = await api.htStatuses(current);
           await store.mergeHtReference(
@@ -317,8 +322,10 @@ class FieldController extends ChangeNotifier {
           /* Cached HT status remains usable offline. */
         }
       }
-      for (final ht in await store.htUpdates(current.scope)) {
-        if (session?.scope != current.scope || session?.token != current.token) {
+      for (final ht
+          in canUpdateHt ? await store.htUpdates(current.scope) : <Json>[]) {
+        if (session?.scope != current.scope ||
+            session?.token != current.token) {
           return;
         }
         if (ht['outbound'] == null || ht['state'] == 'conflict') continue;

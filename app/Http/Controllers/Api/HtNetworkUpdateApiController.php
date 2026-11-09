@@ -11,6 +11,8 @@ class HtNetworkUpdateApiController extends Controller
 {
     public function index(Request $request, HtNetworkWorkflow $workflow)
     {
+        abort_unless($request->user()->canUseHtNetworkUpdates(), 403, 'HT Network Updates are not enabled for this mobile account.');
+
         return response()->json(['ht_updates' => $workflow->visible($request->user())->get()->map(fn ($u) => $u->summary())->values()]);
     }
 

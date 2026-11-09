@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
@@ -66,6 +67,12 @@ class UserForm
                     ->visible(fn (Get $get) => $get('role') === UserRole::MobileSurveyUser->value)
                     ->required(fn (Get $get) => $get('role') === UserRole::MobileSurveyUser->value)
                     ->helperText('Configure the two-digit group code in Teams & Assignments first. New S/E entries use this group automatically.'),
+                Toggle::make('allow_ht_network_updates')
+                    ->label('Allow HT Network Updates in mobile app')
+                    ->default(false)
+                    ->visible(fn (Get $get) => $get('role') === UserRole::MobileSurveyUser->value)
+                    ->dehydrateStateUsing(fn ($state, Get $get) => $get('role') === UserRole::MobileSurveyUser->value && (bool) $state)
+                    ->helperText('When enabled, this mobile user can create, view and synchronize HT Network Updates.'),
                 TextInput::make('password')
                     ->password()
                     ->revealable()

@@ -32,6 +32,8 @@ class HtNetworkWorkflow
 
     public function sync(User $actor, array $data): HtNetworkUpdate
     {
+        abort_unless($actor->canUseHtNetworkUpdates(), 403, 'HT Network Updates are not enabled for this mobile account.');
+
         return DB::transaction(function () use ($actor, $data) {
             app(FieldSurveyAccess::class)->authorizeCollection($actor, $data['survey_team_id'], $data['feeder_id']);
             Feeder::whereKey($data['feeder_id'])->lockForUpdate()->firstOrFail();

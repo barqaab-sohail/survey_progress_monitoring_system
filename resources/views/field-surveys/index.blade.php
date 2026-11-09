@@ -1,12 +1,30 @@
 @extends('layouts.app')
 @section('title', 'LT Transformer Surveys')
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/field-surveys.css') }}?v=20261109-1">
+@endpush
 @section('content')
 <div class="page-head"><div><h1>LT Transformer Surveys</h1><p>LT transformer survey sheets collected in the mobile app. HT verification is tracked separately.</p></div></div>
-<form class="card" method="GET" action="{{ route('field-surveys.index') }}">
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:end">
-        <label>Transformer or feeder<input name="q" value="{{ $filters['q'] ?? '' }}" maxlength="100" placeholder="Search by code or name"></label>
-        <label>Status<select name="status"><option value="">All records</option value="draft" @selected(($filters['status'] ?? '') === 'draft')>Draft</option><option value="submitted" @selected(($filters['status'] ?? '') === 'submitted')>Submitted</option></select></label>
-        <div class="actions"><button class="btn btn-primary">Search</button><a class="btn btn-light" href="{{ route('field-surveys.index') }}">Clear</a></div>
+<form class="card lt-survey-filters" method="GET" action="{{ route('field-surveys.index') }}">
+    <div class="lt-survey-filter-grid">
+        <div class="field lt-survey-filter-search">
+            <label for="lt-survey-query">Transformer or feeder</label>
+            <input id="lt-survey-query" type="search" name="q" value="{{ $filters['q'] ?? '' }}" maxlength="100" placeholder="Search by transformer or feeder code/name" autocomplete="off">
+            <small>Find an LT survey by transformer or feeder.</small>
+        </div>
+        <div class="field lt-survey-filter-status">
+            <label for="lt-survey-status">Status</label>
+            <select id="lt-survey-status" name="status">
+                <option value="" @selected(($filters['status'] ?? '') === '')>All statuses</option>
+                <option value="draft" @selected(($filters['status'] ?? '') === 'draft')>Draft</option>
+                <option value="submitted" @selected(($filters['status'] ?? '') === 'submitted')>Submitted</option>
+            </select>
+            <small>Filter by survey progress.</small>
+        </div>
+        <div class="actions lt-survey-filter-actions">
+            <button type="submit" class="btn btn-primary">Search</button>
+            <a class="btn btn-light" href="{{ route('field-surveys.index') }}">Clear</a>
+        </div>
     </div>
 </form>
 @forelse($surveys as $survey)
