@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
+use App\Filament\Forms\Components\KmzFileUpload;
+use App\Filament\Resources\TransformerKmzImports\Pages\ListTransformerKmzImports;
 use App\Models\Circle;
 use App\Models\Division;
 use App\Models\Feeder;
@@ -17,7 +19,12 @@ use App\Models\TransformerKmzImport;
 use App\Models\User;
 use App\Services\TransformerKmzImportService;
 use Database\Seeders\ShieldPermissionSeeder;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
 use RuntimeException;
 use Tests\TestCase;
 use ZipArchive;
@@ -221,6 +228,76 @@ class TransformerKmzImportTest extends TestCase
         $this->actingAs($this->admin)->get('/admin/transformer-kmz-imports')
             ->assertOk()->assertSee('Bulk import KMZ files');
         $this->get('/admin/transformers')->assertOk()->assertSee('Transformers');
+    }
+
+    public function test_selecting_a_feeder_displays_existing_transformer_notice(): void
+    {
+        $this->assertNull(ListTransformerKmzImports::existingTransformerNotice($this->feeder->id));
+        Transformer::create($this->databaseTransformer('ALREADY-IMPORTED'));
+        $this->actingAs($this->admin);
+        Gate::before(fn () => true);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        Livewire::test(ListTransformerKmzImports::class)->mountAction('bulkImport')
+            ->setActionData(['imports' => [['feeder_id' => $this->feeder->id]]])
+            ->assertFormFieldExists('imports.0.feeder_id', fn ($field): bool => str_contains($field->toHtml(), 'Transformers have already been imported or added for this feeder (1 record).')
+                && str_contains($field->toHtml(), 'a replacement KMZ can update or remove existing transformer records.'));
+        $this->assertDatabaseHas('transformers', ['transformer_code' => 'ALREADY-IMPORTED']);
+    }
+
+    public function test_previous_count_only_import_is_distinguished_from_existing_transformer_details(): void
+    {
+        TransformerKmzImport::create(['feeder_id' => $this->feeder->id, 'file_name' => 'old.kmz',
+            'stored_path' => 'old.kmz', 'status' => 'completed', 'transformer_count' => 161,
+            'errors' => [['message' => 'Count imported only']]]);
+        $message = ListTransformerKmzImports::existingTransformerNotice($this->feeder->id);
+        $this->assertStringContainsString('161 transformers counted', $message);
+        $this->assertStringContainsString('no transformer detail records', $message);
+        $this->assertNull(ListTransformerKmzImports::existingTransformerNotice(null));
+    }
+
+    public function test_bulk_upload_accepts_zip_detected_kmz_and_keeps_kmz_name_and_storage_extension(): void
+    {
+        Storage::fake('local');
+        $this->actingAs($this->admin);
+        Gate::before(fn () => true);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $bytes = file_get_contents($this->kmz([
+            $this->point('tx', $this->transformerFields('NEW-TX', '100', '73.1', '34.2'), '73.1,34.2,0'),
+        ]));
+        Livewire::test(ListTransformerKmzImports::class)->mountAction('bulkImport')
+            ->setActionData(['imports' => [['feeder_id' => $this->feeder->id,
+                'stored_path' => [UploadedFile::fake()->createWithContent('City Mansehra.KMZ', $bytes)]]]])
+            ->callMountedAction()->assertHasNoActionErrors();
+        $import = TransformerKmzImport::firstOrFail();
+        $this->assertSame('City Mansehra.KMZ', $import->file_name);
+        $this->assertStringEndsWith('.kmz', $import->stored_path);
+        Storage::disk('local')->assertExists($import->stored_path);
+        $this->assertSame('completed', $import->status);
+        $this->assertSame(1, $import->created_rows);
+        $upload = KmzFileUpload::make('stored_path')->disk('local');
+        $this->assertSame(['application/vnd.google-earth.kmz'], $upload->getAcceptedFileTypes());
+        $info = $upload->getUploadedFile($import->stored_path, $import->file_name);
+        $this->assertSame('City Mansehra.KMZ', $info['name']);
+        $this->assertSame('application/vnd.google-earth.kmz', $info['type']);
+    }
+
+    public function test_bulk_upload_rejects_other_extensions_even_with_valid_kmz_contents(): void
+    {
+        Storage::fake('local');
+        $this->actingAs($this->admin);
+        Gate::before(fn () => true);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $bytes = file_get_contents($this->kmz([
+            $this->point('tx', $this->transformerFields('NEW-TX', '100', '73.1', '34.2'), '73.1,34.2,0'),
+        ]));
+        foreach (['zip', 'kml', 'txt'] as $extension) {
+            Livewire::test(ListTransformerKmzImports::class)->mountAction('bulkImport')
+                ->setActionData(['imports' => [['feeder_id' => $this->feeder->id,
+                    'stored_path' => [UploadedFile::fake()->createWithContent('City Mansehra.'.$extension, $bytes)]]]])
+                ->callMountedAction()->assertHasActionErrors();
+        }
+        $this->assertDatabaseCount('transformer_kmz_imports', 0);
+        $this->assertDatabaseCount('transformers', 0);
     }
 
     /** @param array<int, string> $placemarks */

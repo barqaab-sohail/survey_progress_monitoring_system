@@ -2,22 +2,45 @@
 
 namespace App\Filament\Resources\TransformerKmzImports\Pages;
 
+use App\Filament\Forms\Components\KmzFileUpload;
 use App\Filament\Resources\TransformerKmzImports\TransformerKmzImportResource;
 use App\Models\Feeder;
 use App\Models\TransformerKmzImport;
 use App\Services\TransformerKmzImportService;
 use Filament\Actions\Action;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class ListTransformerKmzImports extends ListRecords
 {
     protected static string $resource = TransformerKmzImportResource::class;
+
+    public static function existingTransformerNotice(mixed $feederId): ?string
+    {
+        if (! is_numeric($feederId)) {
+            return null;
+        }
+        $feeder = Feeder::withCount('transformers')->find((int) $feederId);
+        if (! $feeder) {
+            return null;
+        }
+        if ($feeder->transformers_count > 0) {
+            $records = $feeder->transformers_count === 1 ? 'record' : 'records';
+
+            return "Transformers have already been imported or added for this feeder ({$feeder->transformers_count} {$records}). Check the existing reference before importing again: a replacement KMZ can update or remove existing transformer records.";
+        }
+        $previous = TransformerKmzImport::where('feeder_id', $feeder->id)->where('status', 'completed')->latest('id')->first();
+        if ($previous) {
+            return "This feeder already has a completed KMZ import ({$previous->transformer_count} transformers counted), but no transformer detail records. Review the previous import's warnings before importing again.";
+        }
+
+        return null;
+    }
 
     protected function getHeaderActions(): array
     {
@@ -42,17 +65,21 @@ class ListTransformerKmzImports extends ListRecords
                                     ->all())
                                 ->searchable()
                                 ->preload()
+                                ->live()
+                                ->helperText(fn ($state): string => static::existingTransformerNotice($state) ?? 'Select the feeder before uploading its KMZ file.')
+                                ->afterStateUpdated(function ($state): void {
+                                    if ($notice = static::existingTransformerNotice($state)) {
+                                        Notification::make()->title('Existing transformer data found for this feeder')->body($notice)->warning()->send();
+                                    }
+                                })
                                 ->required(),
-                            FileUpload::make('stored_path')
+                            KmzFileUpload::make('stored_path')
                                 ->label('KMZ file')
+                                ->disabled(fn (Get $get): bool => ! filled($get('feeder_id')))
                                 ->disk('local')
                                 ->directory('transformer-kmz-imports')
                                 ->storeFileNamesIn('original_name')
-                                ->acceptedFileTypes([
-                                    'application/vnd.google-earth.kmz',
-                                    'application/zip',
-                                    'application/octet-stream',
-                                ])
+                                ->helperText('Google Earth KMZ files only (.kmz), up to 15 MB.')
                                 ->maxSize(15360)
                                 ->required(),
                         ])
