@@ -330,6 +330,112 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertSame(2, $this->transformer->entryRows()->where('designation', 'E')->firstOrFail()->consumers['rs']);
     }
 
+    private function serviceCableFixture(): array
+    {
+        $this->save(['identity_version' => 2]);
+        $end = $this->save(['identity_version' => 2, 'designation' => 'E', 'waypoint_reference' => '010',
+            'consumers' => array_replace(array_fill_keys(array_keys(EntryLookups::CONSUMERS), null), ['rs' => 5])]);
+        $point = $this->gpx->waypoints()->create(['batch_id' => $this->batch->id, 'name' => '026', 'latitude' => 30.002, 'longitude' => 71.002]);
+        return ['revision' => $this->batch->fresh()->revision, 'entry_row_id' => $end->id, 'category' => 'rs', 'consumer_number' => 1,
+            'group_number' => '02', 'row_date' => '2026-10-08', 'waypoint_reference' => '026', 'gpx_source_id' => $this->gpx->id,
+            'meter_waypoint_id' => $point->id, 'source_pdf_id' => $this->pdf->id, 'source_page' => 1, 'phase' => 'R', 'meter_number' => 'M-001'];
+    }
+
+    public function test_service_cables_store_real_identity_preserve_counts_and_enter_snapshots_and_review(): void
+    {
+        $data = $this->serviceCableFixture();
+        $before = app(SnapshotService::class)->snapshot($this->batch->fresh(), false);
+        $this->assertArrayNotHasKey('service_cables', $before['transformers'][0]);
+        $this->putJson(route('mdb-workflow.service-cables.configure', [$this->batch, $this->transformer]), ['revision' => $data['revision'], 'enabled' => true])->assertOk();
+        $data['revision'] = $this->batch->fresh()->revision;
+        $this->postJson(route('mdb-workflow.service-cables.store', [$this->batch, $this->transformer]), $data)->assertOk()
+            ->assertJsonPath('transformers.0.service_cables.0.composite_identifier', '02081026026');
+        $this->assertSame(5, $this->transformer->entryRows()->find($data['entry_row_id'])->consumers['rs']);
+        $this->assertSame(5, $this->transformer->sections()->first()->consumers()->where('category', 'rs')->value('count'));
+        $snapshot = app(SnapshotService::class)->snapshot($this->batch->fresh(), false);
+        $this->assertCount(1, $snapshot['transformers'][0]['service_cables']);
+        $this->assertCount(1, $snapshot['transformers'][0]['sections'][0]['service_cables']);
+        $review = app(\App\Services\Mdb\ReviewService::class)->state($this->batch->fresh(), $this->transformer->fresh(), $this->admin->id);
+        $fields = collect($review['pairs'][0]['rows']['E']['fields']);
+        $this->assertTrue($fields->contains('value', '02081026026'));
+        $this->assertTrue($fields->where('group', 'Service cables')->every(fn ($field) => ! $field['editable']));
+    }
+
+    public function test_service_cables_reject_duplicate_consumer_slots_counts_sources_and_unsafe_parent_changes(): void
+    {
+        $data = $this->serviceCableFixture();
+        $this->transformer->update(['service_cables_enabled' => true]);
+        $url = route('mdb-workflow.service-cables.store', [$this->batch, $this->transformer]);
+        foreach (['consumer_number' => 6, 'gpx_source_id' => $this->pdf->id, 'meter_waypoint_id' => $this->gpx->waypoints()->first()->id, 'phase' => 'Y'] as $field => $value) {
+            $this->postJson($url, array_replace($data, [$field => $value]))->assertUnprocessable();
+        }
+        $this->postJson($url, $data)->assertOk();
+        $data['revision'] = $this->batch->fresh()->revision;
+        $this->postJson($url, $data)->assertUnprocessable();
+        $this->putJson(route('mdb-workflow.service-cables.configure', [$this->batch, $this->transformer]), ['revision' => $data['revision'], 'enabled' => false])->assertUnprocessable();
+        $end = $this->transformer->entryRows()->findOrFail($data['entry_row_id']);
+        $this->putJson(route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $end]),
+            $this->payload(['client_uuid' => $end->client_uuid, 'designation' => 'E', 'waypoint_reference' => '010',
+                'consumers' => array_replace($end->consumers, ['rs' => 0])]))->assertUnprocessable();
+        $this->deleteJson(route('mdb-workflow.entry.rows.destroy', [$this->batch, $this->transformer, $end]), ['revision' => $data['revision'], 'confirmed' => true])->assertUnprocessable();
+        $this->assertSame(5, $end->fresh()->consumers['rs']);
+        $this->assertSame($data['revision'], $this->batch->fresh()->revision);
+    }
+
+    public function test_service_cable_operator_permission_is_default_off_and_revocation_hides_and_blocks_access(): void
+    {
+        $data = $this->serviceCableFixture();
+        $operator = User::factory()->create(['role' => UserRole::SurveyDataEntryOperator]);
+        $operator->surveyTeams()->attach($this->batch->survey_team_id);
+        $this->actingAs($operator);
+        $configure = route('mdb-workflow.service-cables.configure', [$this->batch, $this->transformer]);
+        $this->putJson($configure, ['revision' => $data['revision'], 'enabled' => true])->assertForbidden();
+        $this->get(route('mdb-workflow.show', $this->batch))->assertOk()->assertDontSee('id="entry-service-cables"', false);
+        $operator->update(['allow_consumer_service_cables' => true]);
+        $this->putJson($configure, ['revision' => $data['revision'], 'enabled' => true])->assertOk();
+        $data['revision'] = $this->batch->fresh()->revision;
+        $this->postJson(route('mdb-workflow.service-cables.store', [$this->batch, $this->transformer]), $data)->assertOk();
+        $cable = $this->transformer->serviceCables()->firstOrFail();
+        $operator->update(['allow_consumer_service_cables' => false]);
+        $this->getJson(route('mdb-workflow.entry.data', $this->batch))->assertOk()->assertJsonMissingPath('transformers.0.service_cables');
+        $this->putJson(route('mdb-workflow.service-cables.update', [$this->batch, $this->transformer, $cable]), $data)->assertForbidden();
+        $this->deleteJson(route('mdb-workflow.service-cables.destroy', [$this->batch, $this->transformer, $cable]), ['revision' => $this->batch->fresh()->revision])->assertForbidden();
+        $this->assertDatabaseHas('mdb_workflow_service_cables', ['id' => $cable->id]);
+    }
+
+    public function test_service_cable_mutations_retain_batch_scope_entry_locks_and_revision_checks(): void
+    {
+        $data = $this->serviceCableFixture();
+        $operator = User::factory()->create(['role' => UserRole::SurveyDataEntryOperator, 'allow_consumer_service_cables' => true]);
+        $this->actingAs($operator);
+        $url = route('mdb-workflow.service-cables.configure', [$this->batch, $this->transformer]);
+        $this->putJson($url, ['revision' => $data['revision'], 'enabled' => true])->assertForbidden();
+        $operator->surveyTeams()->attach($this->batch->survey_team_id);
+        $this->putJson($url, ['revision' => -1, 'enabled' => true])->assertConflict();
+        $this->batch->update(['staged_workflow' => true, 'survey_status' => 'awaiting_verification']);
+        $this->putJson($url, ['revision' => $data['revision'], 'enabled' => true])->assertForbidden();
+        $this->assertFalse($this->transformer->fresh()->service_cables_enabled);
+    }
+
+    public function test_service_cable_edits_and_deletion_keep_e_counts_and_allow_disabling_after_removal(): void
+    {
+        $data = $this->serviceCableFixture();
+        $this->transformer->update(['service_cables_enabled' => true]);
+        $this->postJson(route('mdb-workflow.service-cables.store', [$this->batch, $this->transformer]), $data)->assertOk();
+        $cable = $this->transformer->serviceCables()->firstOrFail();
+        $data = array_replace($data, ['revision' => $this->batch->fresh()->revision, 'meter_number' => 'M-CORRECTED',
+            'measured_length_m' => 22.5, 'length_evidence' => 'Measured length from source PDF']);
+        $this->putJson(route('mdb-workflow.service-cables.update', [$this->batch, $this->transformer, $cable]), $data)->assertOk()
+            ->assertJsonPath('transformers.0.service_cables.0.meter_number', 'M-CORRECTED');
+        $this->assertSame(22.5, $cable->fresh()->measured_length_m);
+        $this->assertSame(1, $this->transformer->serviceCables()->count());
+        $this->deleteJson(route('mdb-workflow.service-cables.destroy', [$this->batch, $this->transformer, $cable]), ['revision' => $this->batch->fresh()->revision])->assertOk();
+        $this->assertSame(5, $this->transformer->entryRows()->findOrFail($data['entry_row_id'])->consumers['rs']);
+        $this->putJson(route('mdb-workflow.service-cables.configure', [$this->batch, $this->transformer]), ['revision' => $this->batch->fresh()->revision, 'enabled' => false])->assertOk();
+        $snapshot = app(SnapshotService::class)->snapshot($this->batch->fresh(), false);
+        $this->assertArrayNotHasKey('service_cables', $snapshot['transformers'][0]);
+    }
+
     private function payload(array $changes = []): array
     {
         return array_replace(['revision' => $this->batch->fresh()->revision, 'client_uuid' => (string) Str::uuid(), 'save_uuid' => (string) Str::uuid(),
@@ -565,7 +671,7 @@ class MdbOperatorEntryTest extends TestCase
         Configuration::create(['project_id' => $this->batch->project_id, 'settings' => ['entry' => ['two_digit_year_start' => 2000, 'pole_height_unit' => 'ft']]]);
     }
 
-    public function test_data_entry_operator_can_create_batch_for_feeder_actively_assigned_to_their_team(): void
+    public function test_data_entry_operator_can_create_teamless_batches_for_active_project_feeders(): void
     {
         $operator = User::factory()->create(['role' => UserRole::SurveyDataEntryOperator, 'status' => 'active']);
         $team = $this->batch->surveyTeam;
@@ -575,7 +681,7 @@ class MdbOperatorEntryTest extends TestCase
             'start_date' => today()->subDay(), 'status' => 'active']);
 
         $this->actingAs($operator)->get(route('mdb-workflow.create'))
-            ->assertOk()->assertSee('data-team-ids="'.$team->id.'"', false);
+            ->assertOk()->assertSee('data-project-id="'.$this->batch->project_id.'"', false)->assertDontSee('name="survey_team_id"', false);
 
         $unassignedFeeder = $feeder->replicate();
         $unassignedFeeder->feeder_code = 'NOT-ALLOCATED';
@@ -583,17 +689,15 @@ class MdbOperatorEntryTest extends TestCase
         $this->from(route('mdb-workflow.create'))->post(route('mdb-workflow.store'), [
             'project_id' => $this->batch->project_id,
             'feeder_id' => $unassignedFeeder->id,
-            'survey_team_id' => $team->id,
             'survey_date' => today()->toDateString(),
             'survey_pdf' => UploadedFile::fake()->createWithContent('invalid.pdf', "%PDF-1.4\nfixture"),
             'gps_gpx' => UploadedFile::fake()->createWithContent('invalid.gpx', '<gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1"><wpt lat="30.001" lon="71.001"><name>001</name></wpt></gpx>'),
-        ])->assertRedirect(route('mdb-workflow.create'))->assertSessionHasErrors('feeder_id');
-        $this->assertDatabaseMissing('mdb_workflow_batches', ['created_by' => $operator->id]);
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('mdb_workflow_batches', ['created_by' => $operator->id, 'feeder_id' => $unassignedFeeder->id, 'survey_team_id' => null]);
 
         $response = $this->post(route('mdb-workflow.store'), [
             'project_id' => $this->batch->project_id,
             'feeder_id' => $feeder->id,
-            'survey_team_id' => $team->id,
             'survey_date' => today()->toDateString(),
             'survey_pdf' => UploadedFile::fake()->createWithContent('new-survey.pdf', "%PDF-1.4\nfixture"),
             'gps_gpx' => UploadedFile::fake()->createWithContent('new-survey.gpx', '<gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1"><wpt lat="30.001" lon="71.001"><name>001</name></wpt></gpx>'),
@@ -602,7 +706,8 @@ class MdbOperatorEntryTest extends TestCase
         $response->assertRedirect();
         $created = SurveyBatch::where('created_by', $operator->id)->latest('id')->firstOrFail();
         $this->assertSame('entry', $created->survey_status);
-        $this->assertDatabaseCount('mdb_workflow_sources', 4);
+        $this->assertNull($created->survey_team_id);
+        $this->assertDatabaseCount('mdb_workflow_sources', 6);
         $this->get(route('mdb-workflow.show', $created))->assertOk();
     }
 

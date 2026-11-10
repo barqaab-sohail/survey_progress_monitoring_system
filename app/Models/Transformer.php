@@ -19,6 +19,9 @@ class Transformer extends Model
         'small_commercial', 'large_commercial', 'small_industries', 'large_industries',
         'public_use', 'agricultural', 'street_lights', 'remarks', 'source_picture_path',
         'longitude', 'latitude', 'altitude', 'raw_attributes',
+        'source_transformer_code', 'source_capacity_kva', 'source_identity_key', 'temporary_reference',
+        'code_verification_status', 'capacity_verification_status', 'verification_revision', 'capacity_revision', 'code_aliases',
+        'code_confirmed_by', 'code_confirmed_at', 'capacity_verified_by', 'capacity_verified_at',
     ];
 
     protected function casts(): array
@@ -30,6 +33,8 @@ class Transformer extends Model
             'latitude' => 'decimal:7',
             'altitude' => 'decimal:2',
             'raw_attributes' => 'array',
+            'source_capacity_kva' => 'decimal:2', 'verification_revision' => 'integer', 'capacity_revision' => 'integer', 'code_aliases' => 'array',
+            'code_confirmed_at' => 'datetime', 'capacity_verified_at' => 'datetime',
         ];
     }
 
@@ -46,5 +51,22 @@ class Transformer extends Model
     public function getMapUrlAttribute(): string
     {
         return 'https://www.google.com/maps?q='.$this->latitude.','.$this->longitude;
+    }
+
+    public function capacityObservations() { return $this->hasMany(TransformerCapacityObservation::class); }
+
+    public function registryChanges() { return $this->hasMany(TransformerRegistryChange::class); }
+
+    public function fieldSurveys() { return $this->hasMany(FieldSurvey::class); }
+
+    public function hasPendingVerification(): bool
+    {
+        return $this->code_verification_status === 'pending_client' || $this->capacity_verification_status === 'pending_field';
+    }
+
+    public function getVerificationLabelAttribute(): string
+    {
+        return collect([$this->code_verification_status === 'pending_client' ? 'Client code confirmation pending' : null,
+            $this->capacity_verification_status === 'pending_field' ? 'Capacity unknown — field verification pending' : null])->filter()->join(' · ') ?: 'Confirmed';
     }
 }

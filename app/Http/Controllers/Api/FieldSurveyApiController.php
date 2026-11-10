@@ -40,14 +40,15 @@ class FieldSurveyApiController extends Controller
             $query->whereIn('survey_team_id', $teams->pluck('id'));
         }])->orderBy('feeder_code')->get();
         $transformers = Transformer::whereIn('feeder_id', $feeders->pluck('id'))->orderBy('transformer_code')
-            ->get(['id', 'feeder_id', 'transformer_code', 'capacity_kva', 'equipment_make', 'equipment_location']);
+            ->get(['id', 'feeder_id', 'transformer_code', 'capacity_kva', 'equipment_make', 'equipment_location',
+                'source_transformer_code', 'temporary_reference', 'code_verification_status', 'capacity_verification_status', 'source_feature_id']);
         $saved = FieldSurvey::whereIn('feeder_id', $feeders->pluck('id'))->get(['feeder_id', 'transformer_id', 'transformer_key']);
         $claimedReferences = $claimedCodes = [];
         foreach ($saved as $survey) {
             if ($survey->transformer_id !== null) {
                 $claimedReferences[$survey->feeder_id.':'.$survey->transformer_id] = true;
             }
-            if ($survey->transformer_key !== null) {
+            if ($survey->transformer_id === null && $survey->transformer_key !== null) {
                 $claimedCodes[$survey->feeder_id.':'.$survey->transformer_key] = true;
             }
         }

@@ -31,7 +31,10 @@ class UserController extends Controller
 
     public function store(Request $request, AuditService $audit, UserPhotoService $photos): RedirectResponse
     {
-        $data = $request->validate(['organization_id' => $this->organizationRules($request), 'name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email', 'unique:users,email'], 'phone' => ['nullable', 'string', 'max:30'], 'role' => ['required', Rule::enum(UserRole::class)], 'allow_voice_form_filling' => ['sometimes', 'boolean'], 'password' => ['required', 'string', 'min:10', 'confirmed']]);
+        $data = $request->validate(['organization_id' => $this->organizationRules($request), 'name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email', 'unique:users,email'], 'phone' => ['nullable', 'string', 'max:30'], 'role' => ['required', Rule::enum(UserRole::class)], 'allow_voice_form_filling' => ['sometimes', 'boolean'], 'allow_consumer_service_cables' => ['sometimes', 'boolean'], 'password' => ['required', 'string', 'min:10', 'confirmed']]);
+        if (! $request->user()->hasRole('super_admin')) {
+            unset($data['allow_consumer_service_cables']);
+        }
         $request->validate(UserPhotoService::rules());
         $team = $this->mobileTeam($request);
         $user = DB::transaction(function () use ($request, $data, $photos, $team) {
@@ -49,9 +52,12 @@ class UserController extends Controller
 
     public function update(Request $request, User $user, AuditService $audit, UserPhotoService $photos): RedirectResponse
     {
-        $data = $request->validate(['organization_id' => $this->organizationRules($request), 'name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email', Rule::unique('users')->ignore($user)], 'phone' => ['nullable', 'string', 'max:30'], 'role' => ['required', Rule::enum(UserRole::class)], 'allow_voice_form_filling' => ['sometimes', 'boolean'], 'status' => ['required', 'in:active,inactive'], 'password' => ['nullable', 'string', 'min:10', 'confirmed']]);
+        $data = $request->validate(['organization_id' => $this->organizationRules($request), 'name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email', Rule::unique('users')->ignore($user)], 'phone' => ['nullable', 'string', 'max:30'], 'role' => ['required', Rule::enum(UserRole::class)], 'allow_voice_form_filling' => ['sometimes', 'boolean'], 'allow_consumer_service_cables' => ['sometimes', 'boolean'], 'status' => ['required', 'in:active,inactive'], 'password' => ['nullable', 'string', 'min:10', 'confirmed']]);
         if (blank($data['password'] ?? null)) {
             unset($data['password']);
+        }
+        if (! $request->user()->hasRole('super_admin')) {
+            unset($data['allow_consumer_service_cables']);
         }
         $request->validate(UserPhotoService::rules());
         $old = collect($user->toArray())->except('password')->all();

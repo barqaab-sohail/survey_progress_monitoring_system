@@ -20,6 +20,17 @@ class TransformerMdbNetworkService
     public function build(TransformerMdbProject $project, ?Configuration $central = null): array
     {
         $this->require($project->feeder !== null, 'Select a feeder before building the network.');
+        $reference = app(TransformerRegistryService::class)->freeze(['id' => $project->id ?? 0, 'code' => $project->transformer_code,
+            'capacity_kva' => $project->header['capacity_kva'] ?? null,
+            'header' => ['registered_transformer_id' => $project->sourceSurvey?->transformer_id]], $project->feeder_id);
+        if (($reference['registry_verification']['code_status'] ?? null) === 'confirmed') {
+            // Correct the modelling copy only; retain the original workspace/source observations.
+            $project = clone $project;
+            $project->transformer_code = $reference['registry_verification']['confirmed_code'];
+            $reference['code'] = $project->transformer_code;
+        }
+        $referenceIssues = TransformerRegistryService::issues($reference);
+        $this->require(! $referenceIssues, implode(' ', array_column($referenceIssues, 'message')));
         $simple = GenerationMode::simple($central);
         $settings = $project->export_settings;
         if ($central) {

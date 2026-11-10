@@ -18,6 +18,7 @@ class DataEntryMdbExport
 
     public function prepare(SurveyBatch $batch, ?int $transformerId = null): array
     {
+        app(\App\Services\TransformerRegistryService::class)->assertForBatch($batch, $transformerId);
         $revision = $batch->approvedRevision;
         $this->require($revision instanceof Revision && $revision->batch_id === $batch->id && $batch->status === 'approved'
             && $revision->number === $batch->revision, 'A current approved PDF entry snapshot is required.');

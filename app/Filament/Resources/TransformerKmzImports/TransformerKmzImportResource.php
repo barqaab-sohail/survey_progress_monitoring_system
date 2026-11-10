@@ -40,6 +40,8 @@ class TransformerKmzImportResource extends Resource
             TextEntry::make('transformer_count')->numeric(),
             TextEntry::make('created_rows')->numeric(),
             TextEntry::make('updated_rows')->numeric(),
+            TextEntry::make('pending_rows')->label('Pending reference verification')->numeric(),
+            TextEntry::make('skipped_rows')->label('Skipped invalid points')->numeric(),
             TextEntry::make('removed_rows')->numeric(),
             TextEntry::make('errors')
                 ->formatStateUsing(fn ($state): string => $state ? json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) : '-')
@@ -59,6 +61,8 @@ class TransformerKmzImportResource extends Resource
                 TextColumn::make('transformer_count')->label('Transformers')->numeric()->sortable(),
                 TextColumn::make('created_rows')->label('New')->numeric(),
                 TextColumn::make('updated_rows')->label('Updated')->numeric(),
+                TextColumn::make('pending_rows')->label('Pending verification')->numeric(),
+                TextColumn::make('skipped_rows')->label('Skipped')->numeric(),
                 TextColumn::make('removed_rows')->label('Removed')->numeric(),
                 TextColumn::make('importer.name')->label('Imported by')->placeholder('-'),
                 TextColumn::make('imported_at')->dateTime()->sortable(),

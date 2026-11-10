@@ -87,7 +87,7 @@
                 <a class="nav-link {{ request()->routeIs('field-survey-test.*') ? 'active' : '' }}" href="{{ route('field-survey-test.index') }}">Android Survey Web Test</a>
                 <a class="nav-link {{ request()->routeIs('mdb-builder.*') ? 'active' : '' }}" href="{{ route('mdb-builder.index') }}">Create Transformer MDB</a>
             @endif
-            @if(auth()->user()->hasAnyRole(['survey_team_leader','mdb_team_user','super_admin','project_manager']))
+            @if(auth()->user()->hasAnyRole(['survey_team_leader','mdb_team_user','super_admin','project_manager','surveyor','mobile_survey_user','survey_data_verifier']))
                 <div class="nav-label">Reference data</div>
                 <a class="nav-link {{ request()->routeIs('transformers.*') ? 'active' : '' }}" href="{{ route('transformers.index') }}">Transformer GIS Data</a>
             @endif

@@ -66,6 +66,20 @@ class FieldSurveyApiTest extends TestCase
         $this->withHeader('Authorization', 'Bearer '.$this->token);
     }
 
+    public function test_unknown_reference_capacity_creates_a_field_observation_without_overwriting_the_client_baseline(): void
+    {
+        $record = Transformer::create(['feeder_id' => $this->feeder->id, 'transformer_code' => 'FIELD-PROVISIONAL', 'capacity_kva' => null,
+            'source_capacity_kva' => 0, 'capacity_verification_status' => 'pending_field', 'source_identity_key' => hash('sha256', 'field-point'), 'latitude' => 34.1, 'longitude' => 73.1]);
+        $data = $this->payload();
+        $data['transformer_id'] = $record->id;$data['transformer_code'] = $record->transformer_code;
+        $data['header'] += ['division' => 'Division', 'sub_division' => 'Subdivision', 'sub_division_code' => 'SD', 'transformer_make' => 'Make'];
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
+        $this->assertNull($record->fresh()->capacity_kva);
+        $this->assertDatabaseHas('transformer_capacity_observations', ['transformer_id' => $record->id, 'capacity_kva' => 50, 'status' => 'pending']);
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk();
+        $this->assertSame(1, $record->capacityObservations()->count());
+    }
+
     private function tokenFor(User $user): string
     {
         $plain = bin2hex(random_bytes(64));

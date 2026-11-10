@@ -22,6 +22,11 @@ class DataEntryPayload
         $transformers = $snapshot['transformers'] ?? [];
         usort($transformers, fn ($a, $b) => $a['id'] <=> $b['id']);
         foreach ($transformers as $transformer) {
+            $referenceIssues = \App\Services\TransformerRegistryService::issues($transformer);
+            $this->require(! $referenceIssues, implode(' ', array_column($referenceIssues, 'message')));
+            if (! empty($transformer['service_cables'])) {
+                $warn('Consumer service-cable observations have no columns in this legacy S/E schema. They remain in the approved snapshot and Transformer JSON; use the SynerGEE export for recorded meter endpoints.');
+            }
             app(SurveyPhaseConsistency::class)->assertValid(app(SurveyPhaseConsistency::class)->rows($transformer['entry_rows'] ?? [], $transformer['code'] ?? '(unrecorded)', ['R', 'Y', 'B']));
             $header = $transformer['header'] ?? [];
             $entries = $transformer['entry_rows'] ?? [];

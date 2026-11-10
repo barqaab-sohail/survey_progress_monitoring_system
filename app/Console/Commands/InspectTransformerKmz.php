@@ -37,8 +37,14 @@ class InspectTransformerKmz extends Command
             ['Transformer count', $result['transformer_count']],
             ['Count only', $result['count_only'] ? 'Yes' : 'No'],
             ['Validated transformers', count($result['transformers'])],
+            ['Pending client codes', count(array_filter($result['transformers'], fn ($t) => $t['code_verification_status'] === 'pending_client'))],
+            ['Pending field capacities', count(array_filter($result['transformers'], fn ($t) => $t['capacity_verification_status'] === 'pending_field'))],
+            ['Skipped invalid records', $result['transformer_count'] - count($result['transformers'])],
         ]);
-        $this->info('KMZ validation passed. No database records were changed.');
+        if ($result['warnings']) {
+            $this->warn('KMZ inspection completed with verification issues. No database records were changed.');
+            foreach ($result['warnings'] as $warning) $this->warn($warning['message']);
+        } else $this->info('KMZ validation passed. No database records were changed.');
 
         return self::SUCCESS;
     }

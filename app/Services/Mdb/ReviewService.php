@@ -11,7 +11,7 @@ class ReviewService
     public function state(SurveyBatch $batch, NetworkTransformer $transformer, int $reviewerId): array
     {
         $batch->loadMissing('sources', 'waypoints');
-        $transformer->load('entryRows');
+        $transformer->load('entryRows', 'serviceCables');
         $lookups = app(EntryLookups::class)->options();
         $pdfs = $batch->sources->where('kind', 'pdf')->mapWithKeys(fn ($s) => [$s->id => $s->original_name])->all();
         $gpx = $batch->sources->where('kind', 'gpx')->mapWithKeys(fn ($s) => [$s->id => $s->original_name])->all();
@@ -37,6 +37,11 @@ class ReviewService
         if ($registeredStart) {
             $fields[] = $field('header.starting_pole_coordinates.latitude', 'First S latitude (registered transformer)', $registeredStart['latitude'], 'text', [], 'Header', false);
             $fields[] = $field('header.starting_pole_coordinates.longitude', 'First S longitude (registered transformer)', $registeredStart['longitude'], 'text', [], 'Header', false);
+        }
+        $registration = app(\App\Services\TransformerRegistryService::class)->freeze($transformer->toArray(), $batch->feeder_id)['registry_verification'] ?? [];
+        foreach (['registration_id' => 'Permanent transformer ID', 'code_status' => 'Client code verification', 'capacity_status' => 'Field capacity verification',
+            'confirmed_code' => 'Current registered code', 'confirmed_capacity_kva' => 'Current registered capacity (kVA)', 'original_source_code' => 'Original client code'] as $key => $label) {
+            if ($registration) $fields[] = $field('registry_verification.'.$key, $label, $registration[$key] ?? null, 'text', [], 'Reference verification', false);
         }
         $header = ['title'=>$transformer->code.' — transformer header', 'fields'=>$this->identify('header', $fields)];
         $pairs = [];
@@ -82,6 +87,22 @@ class ReviewService
                 foreach ($row->pv_details ?? [] as $index => $pv) {
                     foreach (['reference'=>'Consumer reference','service_load_kw'=>'Service load (kW)','installed_capacity_kw'=>'Solar capacity (kW)','meter_number'=>'Meter Number','remarks'=>'Remarks'] as $key=>$label) {
                         $fields[] = $field('pv_details.'.$index.'.'.$key,'PV '.($index+1).' '.$label,$pv[$key] ?? null,str_ends_with($key,'_kw') ? 'number' : 'text',[],'PV');
+                    }
+                }
+                if (auth()->user()?->canViewConsumerServiceCables()) {
+                    foreach ($transformer->serviceCables->where('entry_row_id', $row->id) as $cable) {
+                        foreach (['composite_identifier' => 'Meter waypoint', 'category' => 'Category', 'consumer_number' => 'Consumer number',
+                            'consumer_reference' => 'Consumer reference', 'meter_number' => 'Meter number', 'phase' => 'Recorded phase',
+                            'conductor_code' => 'Cable library code', 'measured_length_m' => 'Measured length (m)', 'length_evidence' => 'Length evidence',
+                            'source_pdf_id' => 'PDF source', 'source_page' => 'PDF page', 'source_row' => 'PDF row', 'remarks' => 'Remarks'] as $key => $label) {
+                            $fields[] = $field('service_cables.'.$cable->id.'.'.$key, 'Meter '.$cable->consumer_number.' '.$label, $cable->$key,
+                                'text', [], 'Service cables', false);
+                        }
+                        $point = $batch->waypoints->firstWhere('id', $cable->meter_waypoint_id);
+                        foreach (['latitude', 'longitude'] as $axis) {
+                            $fields[] = $field('service_cables.'.$cable->id.'.'.$axis, 'Meter '.$cable->consumer_number.' '.$axis, $point?->$axis,
+                                'text', [], 'Service cables', false);
+                        }
                     }
                 }
                 $pair['rows'][$row->designation] = ['id'=>$row->id, 'designation'=>$row->designation, 'data'=>$data,

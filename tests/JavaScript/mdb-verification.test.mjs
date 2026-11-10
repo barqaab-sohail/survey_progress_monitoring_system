@@ -10,6 +10,8 @@ test('entry operator can check a draft and the save-review form remains visible'
     const d = dom.window.document;
     dom.window.eval([...d.scripts].find(script => script.textContent.includes('window.mdbVerificationBoot')).textContent);
     const boot = dom.window.mdbVerificationBoot;
+    boot.pairs[0].rows.E.fields.push({path:'service_cables.1.composite_identifier',label:'Meter waypoint',value:'02081026026',
+        key:'row.meter.composite_identifier',hash:'meter-check',group:'Service cables',editable:false});
     assert.equal(boot.can_correct, true);
     assert.match(boot.header_url, /\/entry-headers\//);
     assert.match(boot.row_url, /\/transformers\/\d+\/rows\/$/);
@@ -20,6 +22,7 @@ test('entry operator can check a draft and the save-review form remains visible'
         return {ok: true, json: async () => ({revision: boot.revision, checked: posted.fields.map(field => field.key)})};
     };
     initializeVerification(boot);
+    assert.match(d.getElementById('verification-sheet-references').textContent,/02081026026/);
     const confirmation = d.getElementById('operator-review-confirmation');
     assert.ok(confirmation.querySelector('[name="confirmed"]'));
     assert.equal(confirmation.closest('[hidden]'), null);

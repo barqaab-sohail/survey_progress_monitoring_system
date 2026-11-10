@@ -72,13 +72,16 @@ class ConsumerPhaseConnections
                         $allocated[] = $available[$cursor++ % count($available)];
                     }
                 }
-                foreach ($allocated as $phase) {
-                    $plan[] = ['suffix' => ++$physical, 'phase' => $phase, 'kind' => 'consumer', 'category' => $category];
+                $allocated = app(ServiceCableService::class)->allocatePhases($allocated, $recorded, $category, $section);
+                foreach ($allocated as $index => $phase) {
+                    $plan[] = ['suffix' => ++$physical, 'phase' => $phase, 'kind' => 'consumer', 'category' => $category]
+                        + (! empty($section['service_cables']) ? ['consumer_number' => $index + 1] : []);
                 }
             } else {
                 for ($i = 0; $i < $consumer['count']; $i++) {
                     foreach ($this->threePhaseLegs($available) as $leg => $phase) {
-                        $plan[] = ['suffix' => $leg === 0 ? ++$physical : $extra++, 'phase' => $phase, 'kind' => 'consumer', 'category' => $category];
+                        $plan[] = ['suffix' => $leg === 0 ? ++$physical : $extra++, 'phase' => $phase, 'kind' => 'consumer', 'category' => $category]
+                            + (! empty($section['service_cables']) ? ['consumer_number' => $i + 1] : []);
                     }
                 }
             }

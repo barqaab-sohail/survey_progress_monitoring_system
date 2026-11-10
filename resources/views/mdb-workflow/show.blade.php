@@ -37,6 +37,7 @@
         </details>
         @endif
         <div class="entry-transformer-bar"><div class="entry-select-filter"><label for="entry-transformer">Active transformer</label><input id="entry-transformer-search" hidden type="search" placeholder="Search transformer code" aria-label="Search transformer codes"><select id="entry-transformer" data-compact-select data-full-label aria-label="Active transformer"></select><small id="entry-transformer-help"></small></div>@if($canEdit)<button type="button" class="btn btn-light" data-entry-add-transformer>Add Transformer</button>@endif</div>
+        <p id="entry-reference-verification" class="mdb-note" role="status" hidden></p>
         <details id="entry-header-panel"><summary>Transformer header <span id="entry-header-caption"></span></summary>
             @if($canEdit)<form id="entry-header-form" autocomplete="off" novalidate><div class="entry-fields">
                 @foreach(['substation_name'=>'Substation','feeder_name'=>'Feeder name'] as $key=>$label)<label>{{ $label }}<input name="header[{{ $key }}]" maxlength="500"></label>@endforeach
@@ -113,6 +114,7 @@
         <div class="entry-save-actions"><button type="submit" class="btn btn-primary" id="entry-save-next">Save &amp; Add Next</button><button type="button" class="btn btn-light" id="entry-save-draft">Save Draft</button><button type="button" class="btn btn-light" id="entry-row-new">New row / cancel edit</button><small id="entry-tab-help">Tab follows PDF order; calculated phase is skipped. Ctrl+Enter: save &amp; next · Ctrl+S: save draft. Drafts may contain incomplete pairs.</small></div></form>
     </section>@endif
     <section class="card" id="entry-saved"><div class="row-card-head"><h2>Saved rows for active transformer</h2><span id="entry-saved-count"></span></div><div id="entry-saved-rows"></div><div id="entry-legacy-records"></div><a class="btn btn-light" data-entry-leave id="entry-review-link" href="{{ route('mdb-workflow.review', $batch) }}">Review saved survey</a></section>
+    @include('mdb-workflow.partials.service-cables')
     @if($batch->staged_workflow && in_array($batch->survey_status, ['entry','returned'], true))
     @can('mdb-workflow.submit')<section class="card"><form id="entry-submit-form" method="POST" action="{{ route('mdb-workflow.survey.decision', $batch) }}">@csrf<input type="hidden" name="revision" value="{{ $batch->revision }}" data-entry-revision><input type="hidden" name="action" value="submit"><button type="button" id="entry-transformer-submit" class="btn btn-primary" @disabled($batch->transformers->isEmpty())>Submit Transformer</button><p class="mdb-note">Check and save the header and all S/E rows first. You can then enter another transformer from the same PDF or finish and submit the survey for verification.</p></form></section>@endcan
     @elseif($batch->staged_workflow)<p class="mdb-note">{{ $batch->workflow_label }}. Entry is locked. Use Review saved survey for workflow decisions or to reopen verified data for correction.</p>@endif

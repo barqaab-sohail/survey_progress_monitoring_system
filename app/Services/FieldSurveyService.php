@@ -84,6 +84,13 @@ class FieldSurveyService
                 if (! empty($data['transformer_id']) && ! $transformer) {
                     throw ValidationException::withMessages(['transformer_id' => 'The reference transformer is unavailable or belongs to another feeder. Download reference data again or select an unlinked transformer.']);
                 }
+                if (! $transformer && ! empty($data['transformer_code'])) {
+                    $references = app(TransformerRegistryService::class)->candidates($feeder->id, $data['transformer_code'])->filter(fn ($t) => $t->source_identity_key || $t->temporary_reference);
+                    if ($references->count() === 1) $transformer = $references->first();
+                    $ambiguous = ! $transformer && Transformer::where('feeder_id', $feeder->id)->where('code_verification_status', 'pending_client')->get()
+                        ->contains(fn ($t) => FieldTransformerIdentity::key($t->source_transformer_code) === FieldTransformerIdentity::key($data['transformer_code']));
+                    if ($ambiguous) throw ValidationException::withMessages(['transformer_code' => 'This client code identifies multiple KMZ points. Select the exact registered transformer using its temporary reference.']);
+                }
                 $key = FieldTransformerIdentity::key($data['transformer_code'] ?? null);
                 if (! $htUpdate && HtNetworkUpdate::where('feeder_id', $feeder->id)->where('transformer_key', $key)->whereIn('status', ['pending', 'returned'])->exists()) {
                     throw ValidationException::withMessages(['ht_update_uuid' => 'This transformer has an HT Network Update awaiting verification. Open its linked LT survey or synchronize its HT reference first.']);
@@ -93,6 +100,10 @@ class FieldSurveyService
                 if ($identityChanged && ($key !== null || $transformer)) {
                     $duplicate = FieldSurvey::where('feeder_id', $feeder->id)->where('client_uuid', '!=', $data['client_uuid'])
                         ->where(function ($query) use ($key, $transformer): void {
+                            if ($transformer && $transformer->source_identity_key) {
+                                $query->where('transformer_id', $transformer->id)->orWhere(fn ($unlinked) => $unlinked->whereNull('transformer_id')->where('transformer_key', $key));
+                                return;
+                            }
                             if ($key !== null) {
                                 $query->where('transformer_key', $key);
                             }
@@ -136,6 +147,7 @@ class FieldSurveyService
                     'remarks' => $data['remarks'] ?? null,
                     'submitted_at' => $data['status'] === 'submitted' ? ($survey->submitted_at ?? now()) : null,
                 ])->save();
+                app(TransformerRegistryService::class)->observeSurvey($survey);
                 $task = SurveyorAssignment::where('surveyor_id', $actor->id)->where('survey_team_id', $team->id)->where('feeder_id', $feeder->id)
                     ->whereIn('status', ['assigned', 'in_progress', 'draft', 'returned'])
                     ->first();
@@ -197,6 +209,7 @@ class FieldSurveyService
             $locked->forceFill(['transformer_key' => $key, 'revision' => $locked->revision + 1,
                 'payload_hash' => hash('sha256', json_encode($this->canonical($hashData), JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION))])->save();
             $this->audit->record($actor, 'field_survey.corrected_on_server', $locked, $before, $locked->toArray(), $data['correction_reason'] ?? null);
+            app(TransformerRegistryService::class)->observeSurvey($locked);
 
             return $locked;
         }, 3);

@@ -68,6 +68,10 @@ export function initializeVerification(boot, root = document) {
         $('empty').hidden=sheet.rows.length>0;
         $('empty').textContent='No S/E rows for this transformer have been entered on the displayed PDF page.';
         $('sheet-references').innerHTML=`<details><summary>Source references for the displayed rows</summary>${sheet.rows.map(({row,pair})=>`<div class="paper-source-reference"><strong>Pair ${pair.number} ${row.designation}</strong>${row.fields.filter(field=>['source_pdf_id','source_page','gpx_source_id'].includes(field.path)).map(field=>`<span><small>${esc(field.label)}</small>${paperCell(field)}</span>`).join('')}</div>`).join('')}</details>`;
+        const meterRows = sheet.rows.filter(({row}) => row.fields.some(field => field.group === 'Service cables'));
+        const registryFields = state.header.fields.filter(field => field.group === 'Reference verification');
+        if(registryFields.length) $('sheet-references').innerHTML += `<section><h3>Transformer reference verification</h3><div class="entry-fields">${registryFields.map(field => `<div><small>${esc(field.label)}</small>${paperCell(field)}</div>`).join('')}</div></section>`;
+        if (meterRows.length) $('sheet-references').innerHTML += `<section><h3>Consumer service cables</h3><p>Check these meter connections against their source PDF and GPX. Return the survey for entry correction if a meter record needs changing.</p>${meterRows.map(({row,pair}) => `<h4>Pair ${pair.number}, E pole ${esc(row.data.waypoint_reference)}</h4><div class="entry-fields">${row.fields.filter(field => field.group === 'Service cables').map(field => `<div><small>${esc(field.label)}</small>${paperCell(field)}</div>`).join('')}</div>`).join('')}</section>`;
         for(const designation of ['S','E']) {
             const row = pair()?.rows[designation];
             $(designation.toLowerCase()+'-page').textContent = row ? `PDF page ${row.data.source_page || 'not recorded'}` : 'Row not entered';

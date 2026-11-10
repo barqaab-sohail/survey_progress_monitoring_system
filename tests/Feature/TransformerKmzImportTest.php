@@ -134,7 +134,7 @@ class TransformerKmzImportTest extends TestCase
         $this->assertSame('123', $result['transformers'][0]['gps_waypoint_number']);
     }
 
-    public function test_incomplete_records_save_count_without_replacing_existing_details(): void
+    public function test_incomplete_records_preserve_existing_details_and_import_the_valid_points(): void
     {
         Transformer::create($this->databaseTransformer('EXISTING'));
         $file = $this->kmz([
@@ -149,16 +149,17 @@ class TransformerKmzImportTest extends TestCase
         $result = app(TransformerKmzImportService::class)->import($import, $file);
         $this->assertSame('completed', $result->status);
         $this->assertSame(2, $result->transformer_count);
-        $this->assertSame(0, $result->created_rows);
+        $this->assertSame(1, $result->created_rows);
+        $this->assertSame(1, $result->skipped_rows);
         $this->assertSame(0, $result->removed_rows);
         $this->assertNotEmpty($result->errors);
         $this->assertSame(2, $this->feeder->fresh()->total_transformers);
         $this->assertFalse($this->feeder->fresh()->baseline_pending);
-        $this->assertDatabaseCount('transformers', 1);
+        $this->assertDatabaseCount('transformers', 2);
         $this->assertDatabaseHas('transformers', ['transformer_code' => 'EXISTING']);
     }
 
-    public function test_duplicate_transformer_numbers_save_count_without_changing_existing_details(): void
+    public function test_duplicate_transformer_numbers_create_separate_pending_records_and_preserve_existing_details(): void
     {
         Transformer::create($this->databaseTransformer('EXISTING-1'));
         $invalid = $this->kmz([
@@ -174,14 +175,15 @@ class TransformerKmzImportTest extends TestCase
 
         $this->assertSame('completed', $result->status);
         $this->assertSame(2, $result->transformer_count);
-        $this->assertSame(0, $result->created_rows);
+        $this->assertSame(2, $result->created_rows);
+        $this->assertSame(2, $result->pending_rows);
         $this->assertSame(0, $result->updated_rows);
         $this->assertSame(0, $result->removed_rows);
-        $this->assertStringContainsString('count imported only', $result->errors[0]['message']);
-        $this->assertStringContainsString("Duplicate transformer number 'duplicate'", $result->errors[1]['message']);
+        $this->assertStringContainsString("Duplicate transformer number 'duplicate'", $result->errors[0]['message']);
         $this->assertSame(2, $this->feeder->fresh()->total_transformers);
         $this->assertFalse($this->feeder->fresh()->baseline_pending);
-        $this->assertDatabaseCount('transformers', 1);
+        $this->assertDatabaseCount('transformers', 3);
+        $this->assertSame(2, Transformer::where('code_verification_status', 'pending_client')->count());
         $this->assertDatabaseHas('transformers', ['transformer_code' => 'EXISTING-1']);
     }
 

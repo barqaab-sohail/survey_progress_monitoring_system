@@ -38,6 +38,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'status',
         'allow_ht_network_updates',
         'allow_voice_form_filling',
+        'allow_consumer_service_cables',
         'password',
         'profile_photo_path',
     ];
@@ -68,6 +69,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             'status' => RecordStatus::class,
             'allow_ht_network_updates' => 'boolean',
             'allow_voice_form_filling' => 'boolean',
+            'allow_consumer_service_cables' => 'boolean',
         ];
     }
 
@@ -136,6 +138,18 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     public function canUseVoiceFormFilling(): bool
     {
         return $this->isActive() && (bool) $this->allow_voice_form_filling;
+    }
+
+    public function canEnterConsumerServiceCables(): bool
+    {
+        return $this->isActive() && ($this->hasRole('super_admin')
+            || ($this->hasRole('survey_data_entry_operator') && $this->allow_consumer_service_cables));
+    }
+
+    public function canViewConsumerServiceCables(): bool
+    {
+        return $this->isActive() && ($this->hasRole('super_admin')
+            || ($this->hasRole('survey_data_entry_operator') ? (bool) $this->allow_consumer_service_cables : true));
     }
 
     public function getProfilePhotoUrlAttribute(): ?string

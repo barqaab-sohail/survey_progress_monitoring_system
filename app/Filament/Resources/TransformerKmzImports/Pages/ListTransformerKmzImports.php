@@ -119,8 +119,8 @@ class ListTransformerKmzImports extends ListRecords
                             $completed++;
                             $transformers += $result->transformer_count;
                             $synchronized += $result->created_rows + $result->updated_rows;
-                            if ($result->errors) {
-                                $warnings[] = $import->file_name.': Transformer count saved; details could not be imported.';
+                            if ($result->errors || $result->pending_rows || $result->skipped_rows) {
+                                $warnings[] = $import->file_name.': '.($result->created_rows + $result->updated_rows).' records synchronized; '.$result->pending_rows.' need verification; '.$result->skipped_rows.' could not be registered. Open the import details for each warning.';
                             }
                         } catch (Throwable $exception) {
                             $failed[] = $import->file_name.': '.$exception->getMessage();

@@ -141,6 +141,14 @@ class MobileSurveySnapshot
             $transformer['header']['starting_pole_coordinates'] = app(StartingPoleCoordinates::class)->capture($registered);
             $transformer['header']['ht_update_uuid'] = $survey->htUpdate->client_uuid;
         }
+        $registered = $survey->transformer_id ? \App\Models\Transformer::find($survey->transformer_id) : null;
+        if ($registered && $registered->source_identity_key && $registered->code_verification_status === 'confirmed') {
+            $transformer['original_header']['reported_transformer_code'] = $survey->transformer_code;
+            $transformer['code'] = $registered->transformer_code;
+        }
+        $transformer = app(TransformerRegistryService::class)->freeze($transformer, $survey->feeder_id);
+        $referenceIssues = TransformerRegistryService::issues($transformer);
+        if ($referenceIssues) throw ValidationException::withMessages(['transformer' => array_column($referenceIssues, 'message')]);
         $transformer = app(SurveyWaypoint::class)->firstPairCoordinates($transformer, $points);
         $snapshot = ['schema_version' => 1, 'batch' => ['id' => $survey->id, 'project_id' => $survey->team->project_id,
             'feeder_id' => $survey->feeder_id, 'survey_team_id' => $survey->survey_team_id, 'survey_date' => $survey->survey_date->format('Y-m-d'), 'revision' => $survey->revision],

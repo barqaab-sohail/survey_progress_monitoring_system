@@ -6,6 +6,10 @@ use App\Models\Feeder;
 use App\Models\HtNetworkUpdate;
 use App\Models\Transformer;
 use App\Models\TransformerKmzImport;
+use App\Models\FieldSurvey;
+use App\Models\Mdb\NetworkTransformer;
+use App\Models\User;
+use App\Support\FieldTransformerIdentity;
 use DOMDocument;
 use DOMElement;
 use DOMXPath;
@@ -39,33 +43,83 @@ class TransformerKmzImportService
             DB::transaction(function () use ($import, $inspection): void {
                 $feeder = Feeder::query()->lockForUpdate()->findOrFail($import->feeder_id);
                 if (TransformerKmzImport::where('feeder_id', $feeder->id)->where('status', 'completed')->exists()
-                    && HtNetworkUpdate::where('feeder_id', $feeder->id)->exists()) {
+                    && HtNetworkUpdate::where('feeder_id', $feeder->id)->exists()
+                    && ! TransformerKmzImport::where('feeder_id', $feeder->id)->where('status', 'completed')->where('file_sha256', $import->file_sha256)->exists()) {
                     throw new RuntimeException('This feeder has HT field updates. Reconcile the new client baseline with those updates before replacing it; existing HT/LT connections must be preserved.');
                 }
                 $this->guardWorkflowTotals($feeder, $inspection['transformer_count']);
 
                 $created = 0;
                 $updated = 0;
-                $codes = [];
-
+                $ids = [];
+                $pending = 0;
                 foreach ($inspection['transformers'] as $attributes) {
-                    $codes[] = $attributes['transformer_code'];
-                    $transformer = Transformer::firstOrNew([
-                        'feeder_id' => $feeder->id,
-                        'transformer_code' => $attributes['transformer_code'],
-                    ]);
-                    $transformer->fill($attributes + [
-                        'feeder_id' => $feeder->id,
-                        'kmz_import_id' => $import->id,
-                    ]);
-                    $transformer->exists ? $updated++ : $created++;
+                    $transformer = $this->existingPoint($feeder, $attributes, $ids) ?? new Transformer(['feeder_id' => $feeder->id]);
+                    $before = $transformer->only(['transformer_code', 'capacity_kva', 'code_verification_status', 'capacity_verification_status']);
+                    $sourceCode = $attributes['transformer_code'];
+                    $reference = $transformer->temporary_reference ?? 'KMZ-'.$feeder->id.'-'.strtoupper(substr($attributes['source_identity_key'], 0, 12));
+                    if ($attributes['code_verification_status'] === 'pending_client') {
+                        $featureLabel = substr(preg_replace('/[^A-Za-z0-9_-]/', '', $attributes['source_feature_id'] ?? ''), 0, 20);
+                        $attributes['transformer_code'] = mb_substr($sourceCode, 0, 60).'~PENDING-'.($featureLabel ? $featureLabel.'-' : '').substr($reference, -6);
+                        $attributes['temporary_reference'] = $reference;
+                    }
+                    if ($transformer->code_confirmed_at) {
+                        $attributes['transformer_code'] = $transformer->transformer_code;
+                        $attributes['code_verification_status'] = 'confirmed';
+                    } elseif ($transformer->exists && $transformer->code_verification_status === 'pending_client') {
+                        // Only client confirmation may clear a pending identity, even if a later KMZ looks unique.
+                        $attributes['transformer_code'] = $transformer->transformer_code;
+                        $attributes['code_verification_status'] = 'pending_client';
+                    } elseif ($transformer->exists && $attributes['transformer_code'] !== $transformer->transformer_code
+                        && $attributes['code_verification_status'] !== 'pending_client') {
+                        $attributes['transformer_code'] = $transformer->transformer_code;
+                        $attributes['code_verification_status'] = 'pending_client';
+                    }
+                    if ($transformer->capacity_verified_at) {
+                        $attributes['capacity_kva'] = $transformer->capacity_kva;
+                        $attributes['capacity_verification_status'] = 'confirmed';
+                    } elseif ($transformer->exists && $transformer->capacity_verification_status === 'pending_field') {
+                        $attributes['capacity_kva'] = $transformer->capacity_kva;
+                        $attributes['capacity_verification_status'] = 'pending_field';
+                    }
+                    $attributes['source_transformer_code'] = $transformer->source_transformer_code ?? $sourceCode;
+                    $attributes['source_capacity_kva'] = $transformer->source_identity_key ? $transformer->source_capacity_kva : $attributes['source_capacity_kva'];
+                    $aliases = $transformer->code_aliases ?? [];
+                    if ($transformer->exists && $transformer->transformer_code !== $attributes['transformer_code'] && $attributes['code_verification_status'] !== 'pending_client') $aliases[] = $transformer->transformer_code;
+                    $attributes['code_aliases'] = array_values(array_unique($aliases));
+                    $wasExisting = $transformer->exists;
+                    $transformer->fill($attributes + ['feeder_id' => $feeder->id, 'kmz_import_id' => $import->id]);
+                    $coreChanged = $wasExisting && $transformer->isDirty(['transformer_code', 'capacity_kva', 'code_verification_status', 'capacity_verification_status']);
+                    if ($coreChanged) $transformer->verification_revision++;
+                    if ($wasExisting && $transformer->isDirty(['capacity_kva', 'capacity_verification_status'])) $transformer->capacity_revision++;
                     $transformer->save();
+                    if ($coreChanged) {
+                        \App\Models\TransformerRegistryChange::create(['transformer_id' => $transformer->id, 'changed_by' => $import->imported_by,
+                            'kind' => 'source_reimport', 'old_values' => $before,
+                            'new_values' => $transformer->only(['transformer_code', 'capacity_kva', 'code_verification_status', 'capacity_verification_status']),
+                            'reason' => 'Client KMZ reference reimport #'.$import->id, 'evidence_reference' => $import->file_name.' SHA-256 '.$import->file_sha256, 'created_at' => now()]);
+                        app(TransformerRegistryService::class)->refreshLinkedWork($transformer, $before);
+                    }
+                    $wasExisting ? $updated++ : $created++;
+                    $pending += $transformer->hasPendingVerification() ? 1 : 0;
+                    $ids[] = $transformer->id;
                 }
-
-                $removed = $inspection['count_only'] ? 0 : Transformer::query()
-                    ->where('feeder_id', $feeder->id)
-                    ->whereNotIn('transformer_code', $codes)
-                    ->delete();
+                // A warning/provisional import is additive. Never delete skipped or unresolved records.
+                $removed = 0;
+                if (! $inspection['warnings'] && ! $pending) {
+                    $linkedCodes = NetworkTransformer::whereHas('batch', fn ($q) => $q->where('feeder_id', $feeder->id))->get(['code', 'header']);
+                    foreach (Transformer::where('feeder_id', $feeder->id)->whereNotIn('id', $ids)->get() as $obsolete) {
+                        $linked = $linkedCodes->contains(fn ($t) => ($t->header['registered_transformer_id'] ?? null) == $obsolete->id
+                            || FieldTransformerIdentity::key($t->code) === FieldTransformerIdentity::key($obsolete->transformer_code));
+                        if (! $obsolete->hasPendingVerification() && ! $obsolete->code_confirmed_at && ! $obsolete->capacity_verified_at && ! $linked
+                            && ! FieldSurvey::withTrashed()->where('transformer_id', $obsolete->id)->exists()
+                            && ! HtNetworkUpdate::where('transformer_id', $obsolete->id)->exists()
+                            && ! $obsolete->capacityObservations()->exists() && ! $obsolete->registryChanges()->exists()) {
+                            $obsolete->delete();
+                            $removed++;
+                        }
+                    }
+                }
 
                 $feeder->update([
                     'total_transformers' => $inspection['transformer_count'],
@@ -73,6 +127,8 @@ class TransformerKmzImportService
                     'demo_baseline' => false,
                 ]);
 
+                $importWarnings = $inspection['warnings'];
+                if ($pending && ! $importWarnings) $importWarnings[] = ['message' => $pending.' existing transformer reference(s) still require client or field verification.'];
                 $import->update([
                     'source_feeder_name' => $inspection['source_feeder_name'],
                     'source_substation_name' => $inspection['source_substation_name'],
@@ -83,7 +139,9 @@ class TransformerKmzImportService
                     'created_rows' => $created,
                     'updated_rows' => $updated,
                     'removed_rows' => $removed,
-                    'errors' => $inspection['warnings'] ?: null,
+                    'pending_rows' => $pending,
+                    'skipped_rows' => $inspection['transformer_count'] - count($inspection['transformers']),
+                    'errors' => $importWarnings ?: null,
                     'imported_at' => now(),
                 ]);
             });
@@ -152,10 +210,10 @@ class TransformerKmzImportService
             $codeKey = $code === null ? null : mb_strtoupper($code);
 
             if (isset($seenCodes[$codeKey])) {
-                $warnings[] = ['message' => "Duplicate transformer number '{$code}' in the KMZ; transformer point records were counted separately."];
+                $warnings[] = ['message' => "Duplicate transformer number '{$code}' in the KMZ; separate working references require client confirmation."];
             }
             if ($codeKey !== null) {
-                $seenCodes[$codeKey] = true;
+                $seenCodes[$codeKey] = ($seenCodes[$codeKey] ?? 0) + 1;
             }
             if ($sourceSubstation !== null) {
                 $sourceSubstations[mb_strtolower($sourceSubstation)] = $sourceSubstation;
@@ -166,8 +224,8 @@ class TransformerKmzImportService
                 $sourceFeeder = $this->required($raw, 'feeder', 'source feeder');
                 $code = $this->required($raw, 'equipmentnumber', 'transformer/equipment number');
                 $this->validateAttributeCoordinates($raw, $longitude, $latitude, $code);
-                $capacity = $this->number($this->required($raw, 'equipmentsize', "capacity for {$code}"));
-                if ($capacity === null || $capacity <= 0) {
+                $capacity = $this->number($this->value($raw, 'equipmentsize'));
+                if ($capacity !== null && $capacity < 0) {
                     throw new RuntimeException("Transformer '{$code}' has an invalid capacity.");
                 }
 
@@ -188,7 +246,9 @@ class TransformerKmzImportService
                     'conductor_phase_y' => $this->value($raw, 'conductorsizephasey'),
                     'conductor_phase_b' => $this->value($raw, 'conductorsizephaseb'),
                     'conductor_neutral' => $this->value($raw, 'conductorsizeneutral'),
-                    'capacity_kva' => $capacity,
+                    'capacity_kva' => $capacity > 0 ? $capacity : null,
+                    'source_capacity_kva' => $capacity,
+                    'capacity_verification_status' => $capacity > 0 ? 'confirmed' : 'pending_field',
                     'equipment_unit' => $this->unsignedInteger($raw, 'equipmentunit'),
                     'equipment_phase' => $this->value($raw, 'equipmentphase'),
                     'equipment_use' => $this->value($raw, 'equipmentuse'),
@@ -227,16 +287,63 @@ class TransformerKmzImportService
             throw new RuntimeException('A KMZ must contain transformer records for exactly one source feeder.');
         }
 
+        $featureIds = array_count_values(array_filter(array_column($transformers, 'source_feature_id')));
+        $identities = [];
+        foreach ($transformers as &$transformer) {
+            $code = $transformer['transformer_code'];
+            $transformer['code_verification_status'] = ($seenCodes[mb_strtoupper($code)] ?? 0) > 1 ? 'pending_client' : 'confirmed';
+            $feature = $transformer['source_feature_id'];
+            $identity = $feature && ($featureIds[$feature] ?? 0) === 1 ? 'feature:'.$feature
+                : 'point:'.json_encode([$transformer['gps_waypoint_number'], $transformer['longitude'], $transformer['latitude'], mb_strtoupper($code)]);
+            $key = hash('sha256', $identity);
+            if (isset($identities[$key])) throw new RuntimeException('Two transformer points have the same source identity and coordinates. Resolve their source feature IDs before import.');
+            $identities[$key] = true;
+            $transformer['source_identity_key'] = $key;
+            if ($transformer['capacity_verification_status'] === 'pending_field') {
+                $warnings[] = ['message' => "Transformer '{$code}' has unknown/zero source capacity; field verification is required unless a locally approved rating already exists."];
+            }
+        }
+        unset($transformer);
+
         return [
             'source_feeder_name' => array_values($sourceFeeders)[0] ?? null,
             'source_substation_name' => count($sourceSubstations) === 1 ? array_values($sourceSubstations)[0] : null,
             'total_placemarks' => $placemarks->length,
             'point_placemarks' => $pointCount,
             'transformer_count' => $transformerCount,
-            'count_only' => $warnings !== [],
-            'warnings' => $warnings === [] ? [] : array_merge([['message' => 'Transformer count imported only; existing transformer details were preserved.']], $warnings),
-            'transformers' => $warnings === [] ? $transformers : [],
+            'count_only' => $transformers === [],
+            'warnings' => $warnings,
+            'transformers' => $transformers,
         ];
+    }
+
+    private function existingPoint(Feeder $feeder, array $attributes, array $usedIds = []): ?Transformer
+    {
+        $bySource = Transformer::where('feeder_id', $feeder->id)->where('source_identity_key', $attributes['source_identity_key'])->first();
+        if ($bySource) {
+            if (($bySource->hasPendingVerification() || $bySource->code_confirmed_at || $attributes['code_verification_status'] === 'pending_client')
+                && $bySource->gps_waypoint_number && $attributes['gps_waypoint_number'] && $bySource->gps_waypoint_number !== $attributes['gps_waypoint_number']
+                && (abs((float) $bySource->latitude - $attributes['latitude']) > 0.0000002 || abs((float) $bySource->longitude - $attributes['longitude']) > 0.0000002)) {
+                throw new RuntimeException('A provisional/corrected transformer feature now has a different GPS point and location. Reconcile the source identity before reimporting; existing work was preserved.');
+            }
+            if (FieldTransformerIdentity::key($bySource->source_transformer_code ?? $bySource->transformer_code) !== FieldTransformerIdentity::key($attributes['transformer_code'])
+                && $bySource->gps_waypoint_number !== $attributes['gps_waypoint_number']) {
+                throw new RuntimeException('A KMZ feature ID now identifies a different transformer. Existing work was preserved; reconcile its source identity before reimporting.');
+            }
+            return $bySource;
+        }
+        $matches = Transformer::where('feeder_id', $feeder->id)->whereNotIn('id', $usedIds)->get()->filter(function ($record) use ($attributes) {
+            $codeMatches = FieldTransformerIdentity::key($record->transformer_code) === FieldTransformerIdentity::key($attributes['transformer_code'])
+                || FieldTransformerIdentity::key($record->source_transformer_code) === FieldTransformerIdentity::key($attributes['transformer_code']);
+            return $codeMatches && abs((float) $record->latitude - $attributes['latitude']) < 0.0000002
+                && abs((float) $record->longitude - $attributes['longitude']) < 0.0000002;
+        });
+        if ($matches->count() === 1) return $matches->first();
+        if ($matches->count() > 1) throw new RuntimeException('Multiple existing transformers match one KMZ point. Reconcile their internal IDs before reimporting.');
+        if ($attributes['code_verification_status'] === 'confirmed') {
+            return Transformer::where('feeder_id', $feeder->id)->whereNotIn('id', $usedIds)->where('transformer_code', $attributes['transformer_code'])->first();
+        }
+        return null;
     }
 
     public function readKml(string $absolutePath): string

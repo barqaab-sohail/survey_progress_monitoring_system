@@ -107,9 +107,14 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::delete('/google-drive', [GoogleDriveController::class, 'disconnect'])->name('google-drive.disconnect');
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
 
-    Route::middleware('role:survey_team_leader,mdb_team_user,super_admin,project_manager')->prefix('transformer-gis')->name('transformers.')->group(function () {
+    Route::middleware('role:survey_team_leader,mdb_team_user,super_admin,project_manager,surveyor,mobile_survey_user,survey_data_verifier')->prefix('transformer-gis')->name('transformers.')->group(function () {
         Route::get('/', [TransformerController::class, 'index'])->name('index');
         Route::get('/{transformer}', [TransformerController::class, 'show'])->name('show');
+        Route::post('/{transformer}/confirm-code', [\App\Http\Controllers\TransformerVerificationController::class, 'confirmCode'])->name('code.confirm');
+        Route::post('/{transformer}/capacity-observations', [\App\Http\Controllers\TransformerVerificationController::class, 'observe'])->name('capacity.observe');
+        Route::post('/{transformer}/capacity-observations/{observation}/review', [\App\Http\Controllers\TransformerVerificationController::class, 'review'])->name('capacity.review');
+        Route::get('/{transformer}/capacity-observations/{observation}/evidence', [\App\Http\Controllers\TransformerVerificationController::class, 'evidence'])->name('capacity.evidence');
+        Route::get('/{transformer}/capacity-observations/{observation}/photos/{attachment}', [\App\Http\Controllers\TransformerVerificationController::class, 'surveyEvidence'])->name('capacity.survey-evidence');
     });
 
     Route::middleware(['role:survey_team_leader,super_admin', AutomaticSurveyProgressReadOnly::class])->prefix('survey')->name('survey.')->group(function () {

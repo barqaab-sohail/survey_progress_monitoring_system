@@ -34,6 +34,7 @@ class NetworkValidator
         $errors = [];
         $warnings = [];
         $errors = [...$snapshotErrors, ...app(EntryService::class)->issues($data)];
+        foreach ($data['transformers'] ?? [] as $transformer) array_push($errors, ...\App\Services\TransformerRegistryService::issues($transformer));
         $simple = GenerationMode::simple($data['configuration'] ?? []);
         $optionalEngineering = ['unapproved_settings', 'missing_projection', 'missing_electrical_setting', 'missing_library_setting', 'missing_load_assumptions', 'unapproved_mapping', 'missing_template', 'missing_equipment_library', 'missing_source_mapping', 'unknown_transformer_equipment', 'missing_conductor', 'unknown_conductor', 'missing_equipment', 'unknown_equipment', 'missing_consumer_category', 'unapproved_demand', 'missing_phase_demand', 'customer_allocation_mismatch', 'projection_failed'];
         $issue = static function (string $code, string $message, array $context = [], bool $warning = false) use (&$errors, &$warnings, $simple, $optionalEngineering): void {

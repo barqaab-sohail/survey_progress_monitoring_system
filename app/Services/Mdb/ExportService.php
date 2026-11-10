@@ -40,11 +40,14 @@ class ExportService
             $locked = SurveyBatch::whereKey($batch->id)->lockForUpdate()->firstOrFail();
             $this->access->authorize($actor, $locked, $locked->staged_workflow ? 'generate' : 'export');
             $revision = $this->assertApproved($locked);
+            app(\App\Services\TransformerRegistryService::class)->assertForBatch($locked, $transformerId);
             $manifest = $locked->staged_workflow ? app(GenerationInputService::class)->manifest($locked) : [];
             $template = Template::findOrFail($revision->snapshot['template']['id'] ?? null);
             $simple = GenerationMode::simple($revision->snapshot['configuration'] ?? []);
             if ($simple) {
-                $validation = app(NetworkValidator::class)->validate($revision->snapshot);
+                $validationSnapshot = $revision->snapshot;
+                if ($transformerId !== null) $validationSnapshot['transformers'] = array_values(array_filter($validationSnapshot['transformers'], fn ($t) => (int) $t['id'] === $transformerId));
+                $validation = app(NetworkValidator::class)->validate($validationSnapshot);
                 $this->require($validation['valid'], implode(' ', array_column($validation['errors'], 'message')));
             }
             $mappingVersion = $revision->snapshot['configuration']['settings']['mapping']['version'] ?? ($simple ? ExportPayloadBuilder::EXTENDED_VERSION : ExportPayloadBuilder::VERSION);
@@ -243,6 +246,7 @@ class ExportService
 
     public function assertGenerationInputs(ExportJob $export, SurveyBatch $batch): void
     {
+        app(\App\Services\TransformerRegistryService::class)->assertForBatch($batch, $export->transformer_id);
         if ($batch->staged_workflow) {
             $manifest = $export->settings['generation_inputs'] ?? [];
             $this->require(($manifest['approved_revision_id'] ?? null) === $export->revision_id,

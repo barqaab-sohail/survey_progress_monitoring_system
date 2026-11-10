@@ -12,7 +12,7 @@ class CreateUser extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         if (! auth()->user()?->hasRole('super_admin')) {
-            unset($data['allow_voice_form_filling']);
+            unset($data['allow_voice_form_filling'], $data['allow_consumer_service_cables']);
         }
 
         return $data;

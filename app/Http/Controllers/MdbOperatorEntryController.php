@@ -237,6 +237,13 @@ class MdbOperatorEntryController extends Controller
             $this->entries->synchronizePair($transformer, $record->pair_number);
             $this->entries->synchronizeTransformerLocation($transformer);
             $this->entries->synchronizePv($record->fresh());
+            if ($transformer->serviceCables()->exists()) {
+                app(\App\Services\Mdb\ServiceCableService::class)->assertValid([
+                    'id' => $transformer->id, 'service_cables_enabled' => $transformer->service_cables_enabled,
+                    'entry_rows' => $transformer->entryRows()->get()->map->surveyData()->all(),
+                    'service_cables' => $transformer->serviceCables()->get()->map->surveyData()->all(),
+                ], $locked->waypoints()->get()->toArray(), $locked->sources()->get()->toArray());
+            }
             $locked->increment('revision');
             $this->audit->record($request->user(), $request->attributes->get('mdb_verifier_correction') ? 'mdb.verifier_row_corrected' : 'mdb.entry_row_saved', $record, $old, $record->fresh()->surveyData(), $request->input('correction_reason'));
         });
@@ -277,6 +284,9 @@ class MdbOperatorEntryController extends Controller
             $this->access->authorize($request->user(), $locked, 'edit');
             $this->access->recordEntry($locked, $request->user());
             $this->assertRevision($locked, (int) $request->input('revision'));
+            if ($transformer->serviceCables()->where('entry_row_id', $row->id)->exists()) {
+                throw ValidationException::withMessages(['service_cables' => 'Remove this E pole\'s meter records before deleting the pole.']);
+            }
             $old = $row->surveyData();
             $this->snapshots->invalidate($locked);
             $row->pvRecords()->delete();
@@ -416,8 +426,11 @@ class MdbOperatorEntryController extends Controller
         if (! $transformer && is_string($request->input('code'))) {
             $request->merge(['code' => trim($request->input('code'))]);
         }
+        $referenceId = $transformer?->header['registered_transformer_id'] ?? $request->input('registered_transformer_id');
+        $unknownCapacity = $referenceId && ($transformer || ! $request->boolean('manual_transformer'))
+            && \App\Models\Transformer::where('feeder_id', $batch->feeder_id)->whereKey($referenceId)->where('capacity_verification_status', 'pending_field')->exists();
         $rules = ['manual_transformer' => 'sometimes|boolean', 'revision' => 'required|integer', 'code' => ['required', 'string', 'max:255', Rule::unique('mdb_workflow_transformers', 'code')->where('batch_id', $batch->id)->ignore($transformer?->id)],
-            'capacity_kva' => 'required|numeric|gt:0|max:1000000', 'source_waypoint_id' => 'nullable|integer', 'header' => 'required|array',
+            'capacity_kva' => ($unknownCapacity ? 'nullable' : 'required').'|numeric|gt:0|max:1000000', 'source_waypoint_id' => 'nullable|integer', 'header' => 'required|array',
             'header.survey_date' => 'nullable|date_format:Y-m-d', 'header.mounting' => ['nullable', Rule::in(array_filter(['Single Pole', 'Double Pole', 'Pad', $transformer?->header['mounting'] ?? null]))],
             'header.inspector' => 'required|string|max:500', 'header.location' => 'required|string|max:500',
             'header.service_category' => 'required|in:General Duty,Dedicated', 'header.source_survey_identifier' => 'nullable|string|regex:/^\d{11}$/D', 'source_pdf_id' => 'required|integer', 'source_page' => 'required|integer|min:1'];

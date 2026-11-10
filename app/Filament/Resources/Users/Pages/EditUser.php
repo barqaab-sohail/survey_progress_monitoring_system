@@ -14,7 +14,7 @@ class EditUser extends EditRecord
     protected function mutateFormDataBeforeSave(array $data): array
     {
         if (! auth()->user()?->hasRole('super_admin')) {
-            unset($data['allow_voice_form_filling']);
+            unset($data['allow_voice_form_filling'], $data['allow_consumer_service_cables']);
         }
 
         return $data;

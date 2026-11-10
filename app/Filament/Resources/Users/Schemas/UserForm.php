@@ -73,6 +73,13 @@ class UserForm
                     ->visible(fn (Get $get) => $get('role') === UserRole::MobileSurveyUser->value)
                     ->dehydrateStateUsing(fn ($state, Get $get) => $get('role') === UserRole::MobileSurveyUser->value && (bool) $state)
                     ->helperText('When enabled, this mobile user can create, view and synchronize HT Network Updates.'),
+                Toggle::make('allow_consumer_service_cables')
+                    ->label('Allow consumer service-cable entry (PDF)')
+                    ->default(false)
+                    ->visible(fn (Get $get) => auth()->user()?->hasRole('super_admin')
+                        && $get('role') === UserRole::SurveyDataEntryOperator->value)
+                    ->dehydrated(fn () => auth()->user()?->hasRole('super_admin') ?? false)
+                    ->helperText('Allows this operator to enter meter waypoints beneath E poles. Disabled by default. Batch access and entry locks still apply.'),
                 Toggle::make('allow_voice_form_filling')
                     ->label('Allow voice form-filling in mobile app')
                     ->default(false)

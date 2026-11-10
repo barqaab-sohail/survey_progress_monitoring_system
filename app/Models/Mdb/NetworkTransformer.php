@@ -12,7 +12,7 @@ class NetworkTransformer extends Model
 
     protected function casts(): array
     {
-        return ['capacity_kva' => 'float', 'header' => 'array', 'original_header' => 'array'];
+        return ['capacity_kva' => 'float', 'header' => 'array', 'original_header' => 'array', 'service_cables_enabled' => 'boolean'];
     }
 
     public function batch()
@@ -33,6 +33,11 @@ class NetworkTransformer extends Model
     public function entryRows()
     {
         return $this->hasMany(EntryRow::class, 'transformer_id')->orderBy('pair_number')->orderByRaw("CASE WHEN designation = 'S' THEN 0 ELSE 1 END");
+    }
+
+    public function serviceCables()
+    {
+        return $this->hasMany(ServiceCable::class, 'transformer_id')->orderBy('id');
     }
 
     public function consumers()

@@ -13,6 +13,7 @@ class TransformerKmzImport extends Model
         'source_feeder_name', 'source_substation_name', 'status', 'total_placemarks',
         'point_placemarks', 'transformer_count', 'created_rows', 'updated_rows',
         'removed_rows', 'errors', 'imported_at',
+        'pending_rows', 'skipped_rows',
     ];
 
     protected function casts(): array

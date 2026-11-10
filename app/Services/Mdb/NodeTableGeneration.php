@@ -69,7 +69,9 @@ class NodeTableGeneration
                     $connections = (new ConsumerPhaseConnections)->build($section, $rows, $transformer['pv_records'] ?? [], $label.', E '.$entry['waypoint_reference']);
                     foreach ($connections as $connection) {
                         // Decimal suffixes are text: .1 and .10 are distinct identifiers.
-                        $extra[] = $this->row($id.'.'.$connection['suffix'], $xy, 0.01, '', $pad);
+                        $cable = app(ServiceCableService::class)->forConnection($section, $connection);
+                        $meterXY = $cable ? $this->xy(app(ServiceCableService::class)->point($cable, $snapshot['waypoints'] ?? [])) : $xy;
+                        $extra[] = $this->row($id.'.'.$connection['suffix'], $meterXY, $cable ? 0.0 : 0.01, '', $pad);
                     }
                 }
             }

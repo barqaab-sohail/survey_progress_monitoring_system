@@ -1,6 +1,7 @@
 import {installCompactSelects} from './mdb-entry-select.js?v=4';
 import {pdfLoadErrorMessage, clearPdfFallback, showPdfFallback} from './mdb-pdf-errors.js';
 import {phaseEntryState, updatePhaseFields} from './survey-phase-consistency.js?v=1';
+import {installServiceCableEntry} from './mdb-service-cables.js?v=1';
 
 export function transformerCodeKey(code) {
     return String(code ?? '').toLowerCase().replace(/[\u2010-\u2014\u2212]/g,'-').replace(/\s+/gu,'');
@@ -202,6 +203,9 @@ function initialize(boot) {
     const registered = () => (data.registered_transformers || []).find(t => t.id === Number(registeredId));
     const transformerSelection = () => activeId ? String(activeId) : registeredId ? `registered:${registeredId}` : manualTransformer ? '__manual__' : '';
     const editable = () => boot.can_edit && (!data.staged_workflow || ['entry','returned'].includes(data.survey_status));
+    const serviceCables = installServiceCableEntry({active, data:()=>data, editable, api,
+        accept:result=>{data=result;renderLists();renderSaved();persist();}, isBusy:()=>busy, setBusy,
+        isoDate, displayDate, completeWaypoint, waypointMatches});
     const field = (form, name) => form?.elements.namedItem(name);
     function capacityText(value) {
         if (value===null || value===undefined || value==='') return '';
@@ -209,7 +213,13 @@ function initialize(boot) {
         return Number.isFinite(numeric) ? String(numeric) : String(value);
     }
     function setCapacity(value) {
-        const input=$('entry-capacity');if(input)input.value=capacityText(value);
+        const input=$('entry-capacity');if(input){input.value=capacityText(value);
+            const unknown=registered()?.capacity_verification_status==='pending_field' || active()?.registry_verification?.capacity_status==='pending_field';
+            input.required=!unknown;
+            const requiredMark=input.closest('label')?.querySelector('.entry-required');if(requiredMark)requiredMark.hidden=unknown;
+            const note=input.closest('label')?.querySelector('small');
+            if(note)note.textContent=unknown ? 'Capacity unknown: save blank until the field rating is available. Generation requires verified positive capacity.' : 'Enter a positive value. Saved in KVA.';
+        }
     }
     function capacityValue() { return number($('entry-capacity')?.value ?? ''); }
     function heightInFeet(value, unit='ft') { const numeric=number(value);return numeric===null ? null : Number((numeric*(unit==='m' ? 3.280839895 : 1)).toFixed(4)); }
@@ -299,6 +309,7 @@ function initialize(boot) {
     }
     function setBusy(value) {
         busy = value;
+        serviceCables.setBusy(value);
         [rowForm, headerForm].filter(Boolean).forEach(form => Array.from(form.elements).forEach(el => el.disabled = value || !editable()));
         document.querySelectorAll('.entry-source-files form input,.entry-source-files form button').forEach(el=>el.disabled=value || !editable());
         $('entry-transformer').disabled = value;
@@ -549,7 +560,14 @@ function initialize(boot) {
         renderPdfRows();
     }
     function renderSaved() {
+        serviceCables.render();
         const t=active(), rows=t?.rows || [];
+        const reference=t?.registry_verification;
+        const referenceNote=$('entry-reference-verification');
+        if(referenceNote){
+            referenceNote.hidden=!reference;
+            referenceNote.textContent=reference ? `Registered transformer #${reference.registration_id || '?'}: ${reference.code_status==='pending_client' ? 'client code confirmation pending' : 'code confirmed'}; ${reference.capacity_status==='pending_field' ? 'capacity unknown / field verification pending' : 'reference capacity confirmed'}. Entry can continue; final generation requires both confirmations.` : '';
+        }
         const point=data.waypoints.find(point=>point.id===t?.source_waypoint_id);
         const registered=registeredStartingPole(t);
         if($('entry-transformer-location'))$('entry-transformer-location').textContent=registered
@@ -1040,6 +1058,6 @@ function initialize(boot) {
     window.addEventListener('pagehide',()=>{if(sourcePoll)window.clearInterval(sourcePoll);});
     document.querySelectorAll('[data-entry-leave]').forEach(link=>link.addEventListener('click',event=>{if(busy || ((headerDirty || rowDirty) && !window.confirm('Some fields are saved only in this browser. Leave entry now? Use Save Draft to store them in the application.')))event.preventDefault();else persist();}));
     window.addEventListener('beforeunload',event=>{persist();if(headerDirty || rowDirty || busy){event.preventDefault();event.returnValue='';}});
-    document.addEventListener('keydown',event=>{if(event.ctrlKey && event.key==='Enter'){event.preventDefault();saveRow(true);}if(event.ctrlKey && event.key.toLowerCase()==='s'){event.preventDefault();headerDirty ? saveHeader() : saveRow(false);}if(event.altKey && ['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();setPage(pageNumber+(event.key==='ArrowLeft' ? -1 : 1));}});
+    document.addEventListener('keydown',event=>{if(event.target.closest?.('#service-cable-form')){if(event.ctrlKey && (event.key==='Enter' || event.key.toLowerCase()==='s')){event.preventDefault();$('service-cable-form').requestSubmit();}return;}if(event.ctrlKey && event.key==='Enter'){event.preventDefault();saveRow(true);}if(event.ctrlKey && event.key.toLowerCase()==='s'){event.preventDefault();headerDirty ? saveHeader() : saveRow(false);}if(event.altKey && ['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();setPage(pageNumber+(event.key==='ArrowLeft' ? -1 : 1));}});
     loadPdf();persist();
 }

@@ -158,9 +158,8 @@ class MdbWorkflowController extends Controller
         Gate::authorize('mdb-workflow.upload');
         $isProjectManager = $request->user()->hasRole('project_manager');
         $isEntryOperator = $request->user()->hasRole('survey_data_entry_operator');
-        $canCreateWithoutTeam = $isProjectManager || $isEntryOperator;
         $data = $request->validate(['project_id' => 'required|exists:projects,id', 'feeder_id' => 'required|exists:feeders,id',
-            'survey_team_id' => [$canCreateWithoutTeam ? 'nullable' : 'required', 'exists:survey_teams,id'],
+            'survey_team_id' => ['nullable', 'integer', 'exists:survey_teams,id'],
             'entry_assigned_to' => [$isProjectManager ? 'required' : 'prohibited', 'nullable', 'integer', Rule::exists('users', 'id')->where('status', 'active')],
             'survey_date' => 'required|date', 'survey_pdf' => 'required_without:survey_pdf_drive_id|nullable|file|extensions:pdf',
             'gps_gpx' => 'required_without:gps_gpx_drive_id|nullable|file|extensions:gpx',
@@ -177,7 +176,7 @@ class MdbWorkflowController extends Controller
             throw ValidationException::withMessages(['entry_assigned_to' => 'Select an active Data Entry Operator.']);
         }
         abort_unless((! $team || ($team->status === 'active' && $team->project_id === (int) $data['project_id'])) && $feeder->project_id === (int) $data['project_id'], 422, 'Team, feeder and project must match.');
-        if (! $canCreateWithoutTeam && ! $request->user()->hasRole('super_admin')) {
+        if ($team && ! $isProjectManager && ! $isEntryOperator && ! $request->user()->hasRole('super_admin')) {
             if (! $team->members()->whereKey($request->user()->id)->exists()) {
                 throw ValidationException::withMessages(['survey_team_id' => 'You are not a member of the selected survey team. Ask the Super Admin to add you to the team.']);
             }

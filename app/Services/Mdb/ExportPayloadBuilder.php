@@ -44,9 +44,20 @@ class ExportPayloadBuilder
         $this->require(($frozenTemplate['sha256'] ?? '') === $template->sha256 && ($frozenTemplate['version'] ?? '') === $template->version, 'Template differs from the approved immutable revision.');
         $transformers = array_values(array_filter($snapshot['transformers'] ?? [], fn ($t) => $transformerId === null || (int) $t['id'] === $transformerId));
         $this->require($transformers !== [], 'The approved revision contains no selected transformer.');
-        foreach ($transformers as $transformer) {
+        foreach ($transformers as &$transformer) {
+            $referenceIssues = \App\Services\TransformerRegistryService::issues($transformer);
+            $this->require(! $referenceIssues, implode(' ', array_column($referenceIssues, 'message')));
+            app(ServiceCableService::class)->assertValid($transformer, $snapshot['waypoints'] ?? [], $snapshot['sources'] ?? []);
+            foreach ($transformer['service_cables'] ?? [] as $cable) {
+                if (! empty($cable['conductor_code'])) {
+                    $this->require(in_array($cable['conductor_code'], $template->metadata['equipment_references']['conductors'] ?? [], true),
+                        'Recorded service-cable conductor '.$cable['conductor_code'].' is not in the approved template library.');
+                }
+            }
+            $transformer = app(ServiceCableService::class)->attachSections($transformer);
             app(SurveyPhaseConsistency::class)->assertValid(app(SurveyPhaseConsistency::class)->transformer($transformer));
         }
+        unset($transformer);
         $this->engineering(count($transformers) === 1 || ($mapping['consolidated_supported'] ?? false) === true, 'This approved mapping does not permit a consolidated feeder export.');
         $profiles = (new MdbTableDefaults)->resolve($configuration)['tables'];
         $base = $mapping['table_values'] ?? [];
@@ -360,7 +371,7 @@ class ExportPayloadBuilder
             $parent[$toRoot] = $fromRoot;
         }
         $tables = (new NodeTableGeneration($this->projection))->apply($tables, $nodeContexts, $snapshot['sources'] ?? [], $epsg, $snapshot);
-        $generated = (new InstSectionGeneration)->apply($tables, $nodeContexts, $provenance, $loadProvenance, isset($settings['mdb_table_defaults']) ? $profiles['InstSection'] : null);
+        $generated = (new InstSectionGeneration)->apply($tables, $nodeContexts, $provenance, $loadProvenance, isset($settings['mdb_table_defaults']) ? $profiles['InstSection'] : null, $snapshot['waypoints'] ?? []);
         $tables = $generated['tables'];
         $provenance = $generated['provenance'];
         $loadProvenance = $generated['loadProvenance'];
@@ -384,6 +395,10 @@ class ExportPayloadBuilder
             'sources' => array_map(fn ($source) => array_intersect_key($source, array_flip(['id', 'kind', 'original_name', 'sha256', 'bytes', 'version', 'uploaded_by'])), $snapshot['sources'] ?? []),
             'pv_records' => array_merge(...array_map(fn ($t) => $t['pv_records'] ?? [], $transformers)),
             'entry_rows' => array_merge(...array_map(fn ($t) => $t['entry_rows'] ?? [], $transformers)),
+            ...(! empty($generated['serviceCableProvenance']) ? [
+                'service_cable_provenance' => $generated['serviceCableProvenance'],
+                'service_cables' => array_merge(...array_map(fn ($t) => $t['service_cables'] ?? [], $transformers)),
+            ] : []),
             'engineering_acceptance' => 'pending_synergee_analysis',
             'engineering_omissions' => array_values(array_unique($this->omissions)),
         ];

@@ -52,7 +52,7 @@ class SnapshotService
 
     public function snapshot(SurveyBatch $batch, bool $applyEngineering = true): array
     {
-        $batch->load(['sources', 'generationInputs', 'waypoints', 'transformers.sections.consumers', 'transformers.sections.pvRecords', 'transformers.pvRecords', 'transformers.entryRows']);
+        $batch->load(['sources', 'generationInputs', 'waypoints', 'transformers.sections.consumers', 'transformers.sections.pvRecords', 'transformers.pvRecords', 'transformers.entryRows', 'transformers.serviceCables']);
         $configuration = Configuration::where('project_id', $batch->project_id)->first();
         $templateId = $configuration?->settings['template_id'] ?? null;
         $templateQuery = Template::where('active', true);
@@ -77,20 +77,27 @@ class SnapshotService
             })->all(),
             'transformers' => $batch->transformers->sortBy('id')->values()->map(function ($transformer) {
                 $data = $transformer->only(['id', 'batch_id', 'code', 'capacity_kva', 'source_waypoint_id', 'header', 'original_header']);
+                if ($transformer->service_cables_enabled || $transformer->serviceCables->isNotEmpty()) {
+                    $data['service_cables_enabled'] = $transformer->service_cables_enabled;
+                    $data['service_cables'] = $transformer->serviceCables->map->surveyData()->all();
+                }
                 // Leave legacy snapshots byte-for-byte compatible when no new rows exist.
                 if ($transformer->entryRows->isNotEmpty()) {
                     $data['entry_rows'] = $transformer->entryRows->map->surveyData()->values()->all();
                 }
-                $data['sections'] = $transformer->sections->sortBy('id')->values()->map(function ($section) {
+                $data['sections'] = $transformer->sections->sortBy('id')->values()->map(function ($section) use ($transformer) {
                     $data = $section->only(['id', 'transformer_id', 'start_waypoint_id', 'end_waypoint_id', 'start_reference', 'end_reference', 'start_source_file_id', 'end_source_file_id', 'phases', 'conductors', 'equipment_ref', 'equipment_type', 'pole_class', 'pole_height', 'pole_height_unit', 'geometry', 'measured_length_m', 'measured_length_reason', 'length_approved_by', 'source_pdf_id', 'source_page', 'source_row', 'original_entry']);
                     $data['consumers'] = $section->consumers->sortBy('id')->values()->map(fn ($consumer) => $consumer->only(['id', 'section_id', 'category', 'count', 'original_value', 'demand']))->all();
+                    $endRows = $transformer->entryRows->where('section_id', $section->id)->where('designation', 'E')->pluck('id');
+                    $cables = $transformer->serviceCables->whereIn('entry_row_id', $endRows)->map->surveyData()->values()->all();
+                    if ($cables) $data['service_cables'] = $cables;
                     $data['pv_records'] = $section->pvRecords->sortBy('id')->values()->map(fn ($pv) => $pv->only(array_merge(['id', 'transformer_id', 'section_id', 'reference', 'installed_capacity_kw', 'remarks', 'original_entry'], $pv->entry_row_id ? ['entry_row_id', 'service_load_kw'] : [], $pv->meter_number !== null ? ['meter_number'] : [])))->all();
 
                     return $data;
                 })->all();
                 $data['pv_records'] = $transformer->pvRecords->sortBy('id')->values()->map(fn ($pv) => $pv->only(array_merge(['id', 'transformer_id', 'section_id', 'reference', 'installed_capacity_kw', 'remarks', 'original_entry'], $pv->entry_row_id ? ['entry_row_id', 'service_load_kw'] : [], $pv->meter_number !== null ? ['meter_number'] : [])))->all();
 
-                return $data;
+                return app(\App\Services\TransformerRegistryService::class)->freeze($data, $transformer->batch->feeder_id);
             })->all(),
             'configuration' => $configuration?->only(['id', 'project_id', 'epsg', 'revision', 'settings', 'load_assumptions', 'approved_by', 'approved_at']),
             'template' => $template?->only(['id', 'code', 'version', 'sha256', 'synergee_version', 'metadata', 'approved_by', 'approved_at']),

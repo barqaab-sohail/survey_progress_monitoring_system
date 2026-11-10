@@ -9,7 +9,7 @@ class InstSectionGeneration
 {
     private array $profile;
 
-    public function apply(array $tables, array $contexts, array $provenance, array $loadProvenance, ?array $profile = null): array
+    public function apply(array $tables, array $contexts, array $provenance, array $loadProvenance, ?array $profile = null, array $waypoints = []): array
     {
         $this->profile = $profile ?? (new MdbTableDefaults)->table('InstSection');
         $options = $this->profile['options'];
@@ -18,6 +18,7 @@ class InstSectionGeneration
         $sections = $profile === null ? $original
             : array_map(fn ($row) => array_replace($row, $this->profile['values']), $original);
         $remap = $staticLengths = $primarySections = [];
+        $serviceCableProvenance = [];
         $rules = new SectionGenerationRules;
         foreach ($contexts as $context) {
             $transformer = $context['transformer'];
@@ -101,15 +102,31 @@ class InstSectionGeneration
                 }
                 if ($assignments !== []) {
                     $this->check(in_array('N', $phases, true), $label.': consumer sections require confirmed neutral availability.');
-                    $cable = $rules->consumerCableLength($entry, $label.', E '.$entry['waypoint_reference'], $options);
+                    $defaultCableLength = null;
                     foreach ($assignments as $connection) {
+                        $recordedCable = app(ServiceCableService::class)->forConnection($survey, $connection);
+                        if ($recordedCable) {
+                            $meter = app(ServiceCableService::class)->point($recordedCable, $waypoints);
+                            $pole = $context['waypoints'][(string) $survey['end_waypoint_id']] ?? collect($waypoints)->firstWhere('id', $survey['end_waypoint_id']);
+                            $this->check($pole !== null, $label.': service cable starting E coordinates are unavailable.');
+                            $cable = app(ServiceCableService::class)->length($recordedCable, $pole, $meter);
+                            $this->check($cable > 0, $label.': service cable length must be positive.');
+                        } else {
+                            $cable = $defaultCableLength ??= $rules->consumerCableLength($entry, $label.', E '.$entry['waypoint_reference'], $options);
+                        }
                         $suffix = $connection['suffix'];
                         // Resolve the stored Node rather than manufacturing an endpoint from the workbook.
                         $customer = $this->node($nodes, $to['NodeId'].'.'.$suffix, $label);
                         $customerId = $this->id($rules, $code, $entry, $suffix);
-                        $cableConductors = $this->conductors($options['ConsumerConductor'], $options['ConsumerConductor'], str_split($connection['phase'].'N'));
+                        $cableCode = $recordedCable['conductor_code'] ?? $options['ConsumerConductor'];
+                        $cableConductors = $this->conductors($cableCode, $cableCode, str_split($connection['phase'].'N'));
                         $this->put($sections, $this->row($old, $customerId, $feeder, $to['NodeId'], $customer['NodeId'],
                             $connection['phase'].'N', 'Secondary Pole', $cable, $cableConductors));
+                        if ($recordedCable) {
+                            $serviceCableProvenance[] = ['service_cable_id' => $recordedCable['id'], 'section_id' => $customerId,
+                                'from_node_id' => $to['NodeId'], 'to_node_id' => $customer['NodeId'], 'meter_identity' => $recordedCable['composite_identifier'],
+                                'length_m' => $cable, 'length_source' => ($recordedCable['measured_length_m'] ?? null) !== null ? 'recorded_measured' : 'coordinate_distance_estimate'];
+                        }
                     }
                 }
             }
@@ -158,7 +175,7 @@ class InstSectionGeneration
         unset($row);
         $this->validate($tables);
 
-        return compact('tables', 'provenance', 'loadProvenance');
+        return compact('tables', 'provenance', 'loadProvenance', 'serviceCableProvenance');
     }
 
     private function id(SectionGenerationRules $rules, string $code, array $row, ?int $suffix = null): string

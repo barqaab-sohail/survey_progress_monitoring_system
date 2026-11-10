@@ -7,6 +7,7 @@ use App\Http\Controllers\MdbOperatorEntryController;
 use App\Http\Controllers\MdbPdfProgressController;
 use App\Http\Controllers\MdbSurveyReviewController;
 use App\Http\Controllers\MdbWorkflowController;
+use App\Http\Controllers\MdbServiceCableController;
 use App\Http\Controllers\OfflineMdbController;
 use App\Http\Controllers\SynergeeOfflineController;
 use Illuminate\Support\Facades\Route;
@@ -63,6 +64,10 @@ Route::middleware(['auth', 'active'])->prefix('mdb-workflow')->name('mdb-workflo
     Route::post('/{batch}/entry-headers', [MdbOperatorEntryController::class, 'header'])->name('entry.headers.store');
     Route::put('/{batch}/entry-headers/{transformer}', [MdbOperatorEntryController::class, 'header'])->name('entry.headers.update');
     Route::post('/{batch}/transformers/{transformer}/rows', [MdbOperatorEntryController::class, 'save'])->name('entry.rows.store');
+    Route::put('/{batch}/transformers/{transformer}/service-cables/settings', [MdbServiceCableController::class, 'configure'])->name('service-cables.configure');
+    Route::post('/{batch}/transformers/{transformer}/service-cables', [MdbServiceCableController::class, 'save'])->name('service-cables.store');
+    Route::put('/{batch}/transformers/{transformer}/service-cables/{cable}', [MdbServiceCableController::class, 'save'])->name('service-cables.update');
+    Route::delete('/{batch}/transformers/{transformer}/service-cables/{cable}', [MdbServiceCableController::class, 'destroy'])->name('service-cables.destroy');
     Route::delete('/{batch}/transformers/{transformer}', [MdbOperatorEntryController::class, 'destroyTransformer'])->middleware('role:super_admin')->name('transformers.destroy');
     Route::put('/{batch}/transformers/{transformer}/rows/{row}', [MdbOperatorEntryController::class, 'save'])->name('entry.rows.update');
     Route::delete('/{batch}/transformers/{transformer}/rows/{row}', [MdbOperatorEntryController::class, 'destroy'])->name('entry.rows.destroy');

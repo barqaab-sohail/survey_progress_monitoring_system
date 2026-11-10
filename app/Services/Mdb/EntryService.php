@@ -25,10 +25,11 @@ class EntryService
     public function editorData(SurveyBatch $batch): array
     {
         $batch->load(['feeder.gridStation', 'feeder.division', 'feeder.subDivision', 'surveyTeam', 'sources', 'waypoints',
-            'transformers.entryRows', 'transformers.sections.consumers', 'transformers.pvRecords']);
+            'transformers.entryRows', 'transformers.sections.consumers', 'transformers.pvRecords', 'transformers.serviceCables']);
         $feeder = $batch->feeder;
 
         return ['batch_id' => $batch->id, 'revision' => $batch->revision, 'status' => $batch->status,
+            'service_cables_can_enter' => auth()->user()?->canEnterConsumerServiceCables() ?? false,
             'staged_workflow' => $batch->staged_workflow, 'survey_status' => $batch->survey_status,
             'pdf_rows' => PdfRow::whereIn('source_file_id', $batch->sources->pluck('id'))->orderBy('page')->orderBy('row_number')->get()->toArray(),
             'pdf_lines' => PdfLine::whereIn('source_file_id', $batch->sources->pluck('id'))->orderBy('id')->get()->toArray(),
@@ -43,17 +44,23 @@ class EntryService
 
                 return $data;
             })->values()->all(),
-            'registered_transformers' => $feeder?->transformers()->orderBy('transformer_code')->get(['id', 'transformer_code', 'capacity_kva'])
-                ->map(fn ($transformer) => ['id' => $transformer->id, 'code' => $transformer->transformer_code, 'capacity_kva' => $transformer->capacity_kva])->all() ?? [],
+            'registered_transformers' => $feeder?->transformers()->orderBy('transformer_code')->get(['id', 'transformer_code', 'capacity_kva', 'capacity_verification_status', 'code_verification_status', 'source_transformer_code'])
+                ->map(fn ($transformer) => ['id' => $transformer->id, 'code' => $transformer->transformer_code, 'capacity_kva' => $transformer->capacity_kva,
+                    'capacity_verification_status' => $transformer->capacity_verification_status, 'code_verification_status' => $transformer->code_verification_status,
+                    'source_transformer_code' => $transformer->source_transformer_code])->all() ?? [],
             'entry_settings' => app(SurveyWaypoint::class)->settings($batch->project_id),
-            'waypoints' => $batch->waypoints->map(fn ($point) => $point->only(['id', 'name', 'source_file_id']) + ['recorded_at' => $point->recorded_at?->utc()->toIso8601String()])->values()->all(),
-            'transformers' => $batch->transformers->map(fn ($transformer) => app(SurveyWaypoint::class)->transformerLocation([
+            'waypoints' => $batch->waypoints->map(fn ($point) => $point->only(['id', 'name', 'source_file_id', 'latitude', 'longitude', 'elevation']) + ['recorded_at' => $point->recorded_at?->utc()->toIso8601String()])->values()->all(),
+            'transformers' => $batch->transformers->map(fn ($transformer) => app(SurveyWaypoint::class)->transformerLocation(app(\App\Services\TransformerRegistryService::class)->freeze([
                 'id' => $transformer->id, 'code' => $transformer->code, 'capacity_kva' => $transformer->capacity_kva,
                 'source_waypoint_id' => $transformer->source_waypoint_id, 'header' => $transformer->header,
                 'rows' => $transformer->entryRows->map->surveyData()->values()->all(),
                 'legacy_sections' => $transformer->sections->filter(fn ($section) => ! ($section->original_entry['entry_rows_managed'] ?? false))->values()->toArray(),
                 'pv_records' => $transformer->pvRecords->toArray(),
-            ], $batch->waypoints->toArray()))->values()->all(), 'lookups' => app(EntryLookups::class)->options($batch->project_id), 'issues' => $this->issues($batch)];
+                ...((auth()->user()?->canViewConsumerServiceCables() ?? false) ? [
+                    'service_cables_enabled' => $transformer->service_cables_enabled,
+                    'service_cables' => $transformer->serviceCables->map->surveyData()->all(),
+                ] : []),
+            ], $batch->feeder_id), $batch->waypoints->toArray()))->values()->all(), 'lookups' => app(EntryLookups::class)->options($batch->project_id), 'issues' => $this->issues($batch)];
     }
 
     public function normalized(array $data): array
@@ -201,9 +208,10 @@ class EntryService
     public function issues(SurveyBatch|array $input): array
     {
         if ($input instanceof SurveyBatch) {
-            $input->loadMissing(['transformers.entryRows', 'transformers.sections.consumers', 'waypoints', 'sources']);
+            $input->loadMissing(['transformers.entryRows', 'transformers.sections.consumers', 'transformers.serviceCables', 'waypoints', 'sources']);
             $data = ['transformers' => $input->transformers->map(fn ($t) => ['id' => $t->id, 'code' => $t->code, 'header' => $t->header, 'capacity_kva' => $t->capacity_kva,
-                'source_waypoint_id' => $t->source_waypoint_id, 'sections' => $t->sections->toArray(), 'section_count' => $t->sections()->count(), 'entry_rows' => $t->entryRows->map->surveyData()->all()])->all(),
+                'source_waypoint_id' => $t->source_waypoint_id, 'sections' => $t->sections->toArray(), 'section_count' => $t->sections()->count(), 'entry_rows' => $t->entryRows->map->surveyData()->all(),
+                'service_cables_enabled' => $t->service_cables_enabled, 'service_cables' => $t->serviceCables->map->surveyData()->all()])->all(),
                 'waypoints' => $input->waypoints->toArray(), 'sources' => $input->sources->toArray(), 'entry_settings' => app(SurveyWaypoint::class)->settings($input->project_id),
                 'configuration' => Configuration::where('project_id', $input->project_id)->first()?->toArray()];
         } else {
@@ -217,6 +225,7 @@ class EntryService
                 'section_id' => $row->section_id, 'source_pdf_id' => $row->source_pdf_id, 'source_page' => $row->source_page, 'source_row' => $row->source_row];
         };
         foreach ($data['transformers'] ?? [] as $transformerData) {
+            array_push($issues, ...app(ServiceCableService::class)->issues($transformerData, $data['waypoints'] ?? [], $data['sources'] ?? []));
             $transformerData = app(SurveyWaypoint::class)->transformerLocation($transformerData, $data['waypoints'] ?? []);
             $transformer = (object) $transformerData;
             foreach (app(SurveyPhaseConsistency::class)->transformer($transformerData) as $phaseIssue) {
