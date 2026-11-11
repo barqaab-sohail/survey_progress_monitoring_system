@@ -49,7 +49,7 @@ class EntryService
                     'capacity_verification_status' => $transformer->capacity_verification_status, 'code_verification_status' => $transformer->code_verification_status,
                     'source_transformer_code' => $transformer->source_transformer_code])->all() ?? [],
             'entry_settings' => app(SurveyWaypoint::class)->settings($batch->project_id),
-            'waypoints' => $batch->waypoints->map(fn ($point) => $point->only(['id', 'name', 'source_file_id', 'latitude', 'longitude', 'elevation']) + ['recorded_at' => $point->recorded_at?->utc()->toIso8601String()])->values()->all(),
+            'waypoints' => $batch->waypoints->map(fn ($point) => $point->only(['id', 'name', 'source_file_id', 'latitude', 'longitude', 'elevation']) + ['recorded_at' => $point->recorded_at?->utc()->toIso8601String(), 'service_coordinates' => app(ServiceCableService::class)->previewCoordinates($point->toArray())])->values()->all(),
             'transformers' => $batch->transformers->map(fn ($transformer) => app(SurveyWaypoint::class)->transformerLocation(app(\App\Services\TransformerRegistryService::class)->freeze([
                 'id' => $transformer->id, 'code' => $transformer->code, 'capacity_kva' => $transformer->capacity_kva,
                 'source_waypoint_id' => $transformer->source_waypoint_id, 'header' => $transformer->header,

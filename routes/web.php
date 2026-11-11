@@ -46,6 +46,12 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', 'active'])->group(function () {
+    Route::get('/feeder-kmz', [\App\Http\Controllers\FeederKmzController::class, 'index'])->name('feeder-kmz.index');
+    Route::get('/feeder-kmz/{feeder}/download', [\App\Http\Controllers\FeederKmzController::class, 'export'])->name('feeder-kmz.export');
+    Route::get('/feeder-kmz/{feeder}/preview', [\App\Http\Controllers\FeederKmzController::class, 'preview'])->name('feeder-kmz.preview');
+    Route::get('/feeder-kmz-history/{export}', [\App\Http\Controllers\FeederKmzController::class, 'showHistory'])->name('feeder-kmz.history');
+    Route::get('/feeder-kmz-history/{export}/download', [\App\Http\Controllers\FeederKmzController::class, 'downloadHistory'])->name('feeder-kmz.history.download');
+    Route::get('/feeder-kmz-history/{export}/preview', [\App\Http\Controllers\FeederKmzController::class, 'previewHistory'])->name('feeder-kmz.history.preview');
     Route::prefix('ht-updates')->name('ht-updates.')->controller(HtNetworkUpdateController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/feeder/{feeder}/kmz', 'export')->name('export');

@@ -178,6 +178,21 @@ class ServiceCableService
         return $allocated;
     }
 
+    /** Project once for the entry preview using the same CRS as service cable export. */
+    public function previewCoordinates(array $point): ?array
+    {
+        if (! empty($point['correction'])) {
+            if (empty($point['correction_approved_by']) || empty($point['correction_approved_at'])) return null;
+            $point = array_replace($point, $point['correction']);
+        }
+        if (! app(SurveyWaypoint::class)->validCoordinates($point)) return null;
+        try {
+            return app(ProjectionService::class)->project($point['latitude'], $point['longitude'], 32643);
+        } catch (\InvalidArgumentException | \RuntimeException $exception) {
+            return null;
+        }
+    }
+
     public function length(array $cable, array $pole, array $meter): float
     {
         if (($cable['measured_length_m'] ?? null) !== null) return (float) $cable['measured_length_m'];

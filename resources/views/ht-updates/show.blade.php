@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'HT Network Update — '.$update->transformer_code)
 @section('content')
+@if(auth()->user()->hasAnyRole(['super_admin','project_manager']))<p><a class="btn btn-primary" href="{{ route('feeder-kmz.index', ['feeder_id' => $update->feeder_id]) }}">Feeder HT + approved LT</a></p>@endif
 @php($p = $update->payload)
 <div class="page-head"><div><h1>HT Network Update — {{ $update->transformer_code }}</h1><p>{{ $update->feeder->feeder_code }} · {{ $update->feeder->feeder_name }} · {{ ucfirst($update->status) }} · Revision {{ $update->revision }}</p></div><a class="btn btn-light" href="{{ route('ht-updates.index') }}">HT updates</a></div>
 <section class="card"><h2>HT connection and transformer</h2><p>LT Transformer Survey may proceed immediately. Final GPX/JSON/MDB release requires verified HT.</p><dl class="detail-list">

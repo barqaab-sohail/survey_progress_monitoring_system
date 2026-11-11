@@ -3,6 +3,7 @@
 @section('content')
 <div class="page-head">
     <div><h1>Transformer GIS Data</h1><p>Confirmed and provisional transformer points imported from the client KMZ and linked to the Excel feeder master.</p></div>
+    @if(auth()->user()->hasAnyRole(['super_admin','project_manager']))<a class="btn btn-primary" href="{{ route('feeder-kmz.index', ['feeder_id' => request('feeder_id')]) }}">Feeder HT + approved LT</a>@endif
     @can('Create:TransformerKmzImport')
         <a class="btn btn-primary" href="{{ url('/admin/transformer-kmz-imports') }}">Manage KMZ imports</a>
     @endcan

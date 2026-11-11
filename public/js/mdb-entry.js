@@ -1,7 +1,7 @@
 import {installCompactSelects} from './mdb-entry-select.js?v=4';
 import {pdfLoadErrorMessage, clearPdfFallback, showPdfFallback} from './mdb-pdf-errors.js';
 import {phaseEntryState, updatePhaseFields} from './survey-phase-consistency.js?v=1';
-import {installServiceCableEntry} from './mdb-service-cables.js?v=2';
+import {installServiceCableEntry} from './mdb-service-cables.js?v=4';
 
 export function transformerCodeKey(code) {
     return String(code ?? '').toLowerCase().replace(/[\u2010-\u2014\u2212]/g,'-').replace(/\s+/gu,'');

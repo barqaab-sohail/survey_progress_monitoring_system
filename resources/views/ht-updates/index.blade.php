@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'HT Network Updates')
 @section('content')
+@if(auth()->user()->hasAnyRole(['super_admin','project_manager']))<p><a class="btn btn-primary" href="{{ route('feeder-kmz.index') }}">Feeder HT + approved LT</a></p>@endif
 <div class="page-head"><div><h1>HT Network Updates</h1><p>Field additions awaiting independent verification. LT Transformer Survey can continue while verification is pending.</p></div><a class="btn btn-light" href="{{ route('field-surveys.index') }}">LT Transformer Surveys</a></div>
 <section class="card"><div style="overflow:auto"><table class="table"><thead><tr><th>Transformer</th><th>Feeder</th><th>Surveyor</th><th>HT verification</th><th>Updated</th></tr></thead><tbody>
 @forelse($updates as $update)

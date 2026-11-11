@@ -1,3 +1,9 @@
+export function serviceCableDistance(pole, meter) {
+    const a = pole?.service_coordinates, b = meter?.service_coordinates;
+    if (!a || !b || ![a.x,a.y,b.x,b.y].every(v => typeof v === 'number' && Number.isFinite(v))) return null;
+    return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
 export function installServiceCableEntry({active, data, editable, api, accept, isBusy, setBusy, isoDate, displayDate, completeWaypoint, waypointMatches}) {
     const root = document.getElementById('entry-service-cables');
     if (!root) return {render() {}, setBusy() {}};
@@ -32,8 +38,7 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
             matches.some(p => String(p.id) === previous) ? previous : matches.length === 1 ? matches[0].id : '');
         coordinates();
     }
-    function polePoint() {
-        const row = active()?.rows?.find(r => r.id === Number(control('entry_row_id')?.value));
+    function polePoint(row = active()?.rows?.find(r => r.id === Number(control('entry_row_id')?.value))) {
         const matches = row ? waypointMatches(row, data().waypoints || []) : [];
         return matches.length === 1 ? matches[0] : null;
     }
@@ -54,11 +59,16 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
             && displayDate(r.row_date) === control('row_date').value && Number(r.waypoint_reference) === next)) next++;
         control('waypoint_reference').value = next <= 999 ? String(next).padStart(3, '0') : '';
     }
+    function lengthLabel(measured, pole, meter) {
+        if (measured !== null && measured !== undefined && measured !== '' && Number.isFinite(Number(measured))) return `${Number(measured).toFixed(2)} m (measured)`;
+        const length = serviceCableDistance(pole, meter);
+        return length === null ? 'Estimate unavailable (check E / meter coordinates)' : `${length.toFixed(2)} m (coordinate estimate)`;
+    }
     function coordinates() {
         const point = (data().waypoints || []).find(p => p.id === Number(control('meter_waypoint_id')?.value));
         const pole = polePoint();
         $('service-cable-coordinates').textContent = point
-            ? `Meter coordinates from GPX: ${point.latitude}, ${point.longitude}. ${sameLocation(pole, point) ? 'Same location as E (pole-mounted meter); this remains a separate meter waypoint. ' : ''}${control('measured_length_m').value ? 'Recorded measured cable length will be used.' : sameLocation(pole, point) ? 'Coordinate distance is 0 m; enter a measured length if recorded.' : 'Cable distance will be an estimate between the pole and meter coordinates.'}`
+            ? `Meter coordinates from GPX: ${point.latitude}, ${point.longitude}. Service cable length: ${lengthLabel(control('measured_length_m').value, pole, point)}. ${sameLocation(pole, point) ? 'Same location as E (pole-mounted meter); this remains a separate meter waypoint. ' : ''}${control('measured_length_m').value ? 'Recorded measured cable length will be used.' : sameLocation(pole, point) ? 'Coordinate distance is 0 m; enter a measured length if recorded.' : 'Cable distance will be an estimate between the pole and meter coordinates.'}`
             : 'The suggested waypoint must match an actual imported GPX meter record. Check the survey sheet if no match is available.';
     }
     function seed(row = null) {
@@ -115,17 +125,38 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
     async function run(path, method, body, success, clear = false) {
         if (isBusy() || !canEdit()) return;
         const context = clear ? values() : null;
+        let completedPole = false, saved = false;
         setBusy(true); lock(true);
         try {
             const result = await api(path, method, {...body, revision:data().revision});
             if (clear) {cableId = null; dirty = false; drafts.delete(transformerId);}
             accept(result);
             if (clear) reset(context);
-            message(success);
+            saved = true;
+            if (clear && ['POST','PUT'].includes(method)) {
+                const row = active()?.rows?.find(r => r.id === Number(context.entry_row_id));
+                const counts = Object.entries(row?.consumers || {}).filter(([category]) => category !== 'pv');
+                const cables = (active()?.service_cables || []).filter(c => c.entry_row_id === row?.id);
+                completedPole = counts.some(([, count]) => Number(count) > 0) && counts.every(([category, count]) => {
+                    const slots = new Set(cables.filter(c => c.category === category).map(c => Number(c.consumer_number)));
+                    return slots.size === Number(count || 0);
+                });
+                if (completedPole) $('service-cable-editor').open = false;
+            }
+            message(completedPole ? 'All consumer meters for this E pole are saved. Continue with the next pole entry.' : success);
         } catch (error) {
             message(Object.values(error.errors || {}).flat().join(' ') || error.message, true);
             $('service-cables-enabled').checked = !!active()?.service_cables_enabled;
-        } finally {setBusy(false); lock(false); if (clear && !dirty) control('meter_number')?.focus();}
+        } finally {
+            setBusy(false); lock(false);
+            if (saved && completedPole) {
+                const poleForm = $('entry-row-form');
+                poleForm?.scrollIntoView?.({block:'start', behavior:'smooth'});
+                const target = poleForm?.querySelector('input:not([type="hidden"]):not([disabled]):not([readonly]), select:not([disabled])')
+                    || $('service-cable-editor')?.querySelector('summary');
+                target?.focus({preventScroll:true});
+            } else if (saved && clear) control('meter_number')?.focus();
+        }
     }
     function render() {
         const t = active();
@@ -146,7 +177,7 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
         }).join('') || '<p>Save an S/E pair with consumer counts before adding meter connections.</p>';
         $('service-cable-list').innerHTML = cables.length ? '<table class="table"><thead><tr><th>E pole / consumer</th><th>Meter waypoint</th><th>Meter / phase</th><th>Length</th><th>Source</th><th></th></tr></thead><tbody>'+cables.map(c => {
             const row = ends.find(e => e.id === c.entry_row_id);
-            return `<tr><td>${esc(row?.waypoint_reference)} / ${esc(c.category.toUpperCase())} ${c.consumer_number}</td><td>${esc(c.composite_identifier)}</td><td>${esc(c.meter_number || c.consumer_reference || 'Not recorded')} / ${esc(c.phase || 'Not recorded')}</td><td>${c.measured_length_m ?? 'Coordinate estimate'}${c.measured_length_m ? ' m (measured)' : ''}</td><td>PDF #${c.source_pdf_id}, page ${c.source_page}<small>${esc(c.source_row)}</small></td><td>${canEdit() ? `<button type="button" class="btn btn-sm btn-light" data-service-edit="${c.id}">Edit</button> <button type="button" class="btn btn-sm btn-light" data-service-delete="${c.id}">Delete</button>` : ''}</td></tr>`;
+            return `<tr><td>${esc(row?.waypoint_reference)} / ${esc(c.category.toUpperCase())} ${c.consumer_number}</td><td>${esc(c.composite_identifier)}</td><td>${esc(c.meter_number || c.consumer_reference || 'Not recorded')} / ${esc(c.phase || 'Not recorded')}</td><td>${lengthLabel(c.measured_length_m, polePoint(row), (data().waypoints || []).find(p => p.id === Number(c.meter_waypoint_id)))}</td><td>PDF #${c.source_pdf_id}, page ${c.source_page}<small>${esc(c.source_row)}</small></td><td>${canEdit() ? `<button type="button" class="btn btn-sm btn-light" data-service-edit="${c.id}">Edit</button> <button type="button" class="btn btn-sm btn-light" data-service-delete="${c.id}">Delete</button>` : ''}</td></tr>`;
         }).join('')+'</tbody></table>' : '<p>No meter waypoints entered. Existing consumer generation applies.</p>';
         if (form) {
             const retained = changed ? drafts.get(t.id) : {values:current, cableId};

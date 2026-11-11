@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'MDB creation and verification')
 @section('content')
+@if(auth()->user()->hasAnyRole(['super_admin','project_manager']))<p><a class="btn btn-primary" href="{{ route('feeder-kmz.index', ['feeder_id' => request('feeder_id')]) }}">Feeder HT + approved LT</a></p>@endif
 <div class="mdb-workflow">
     <nav class="mdb-tabs">
         @foreach(['entry'=>['edit','PDF Data Entry'], 'survey_verification'=>['surveyVerify','Data Verification'], 'mdb_creation'=>['generate','MDB Creation']] as $queue=>$details)

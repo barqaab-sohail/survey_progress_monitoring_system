@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from '../../tmp/mdb-entry-qa/node_modules/jsdom/lib/api.js';
-import {installServiceCableEntry} from '../../public/js/mdb-service-cables.js';
+import {installServiceCableEntry, serviceCableDistance} from '../../public/js/mdb-service-cables.js';
 import {isoDate, displayDate, completeWaypoint, waypointMatches} from '../../public/js/mdb-entry.js';
 
 function fixture() {
@@ -128,4 +128,54 @@ test('saving under a later E pole keeps that E selected and clears meter-specifi
         assert.equal(f.field('waypoint_reference').value,'216');
         assert.equal(f.field('meter_number').value,'');
     } finally {f.close();}
+});
+
+
+test('finishing all consumers at an E pole collapses the meter form',async()=>{
+    const f=fixture();
+    try {
+        f.state().transformers[0].rows[0].consumers = {rs:1,rl:0,pv:3};
+        const editor = f.dom.window.document.getElementById('service-cable-editor');
+        editor.open=true;
+        f.form.dispatchEvent(new f.dom.window.Event('submit',{bubbles:true,cancelable:true}));
+        await settle();
+        assert.equal(editor.open,false);
+        assert.match(f.dom.window.document.getElementById('service-cable-status').textContent,/All consumer meters/);
+    } finally {f.close();}
+});
+
+test('meter form remains open while the E pole has consumers still to enter',async()=>{
+    const f=fixture();
+    try {
+        const editor = f.dom.window.document.getElementById('service-cable-editor');
+        editor.open=true;
+        f.form.dispatchEvent(new f.dom.window.Event('submit',{bubbles:true,cancelable:true}));
+        await settle();
+        assert.equal(editor.open,true);
+        assert.equal(f.field('waypoint_reference').value,'027');
+    } finally {f.close();}
+});
+
+
+test('service length preview and saved table show E-to-meter metres and measured overrides',async()=>{
+    const f=fixture();
+    try {
+        f.state().waypoints[0].service_coordinates={x:500030,y:3700040};
+        f.state().waypoints.push({id:25,name:'025',source_file_id:1,latitude:34.1,longitude:73.2,service_coordinates:{x:500000,y:3700000}});
+        f.feature.render();
+        assert.match(f.dom.window.document.getElementById('service-cable-coordinates').textContent,/50.00 m \(coordinate estimate\)/);
+        f.form.dispatchEvent(new f.dom.window.Event('submit',{bubbles:true,cancelable:true}));
+        await settle();
+        assert.match(f.dom.window.document.getElementById('service-cable-list').textContent,/50.00 m \(coordinate estimate\)/);
+        f.state().transformers[0].service_cables[0].measured_length_m=65;
+        f.feature.render();
+        assert.match(f.dom.window.document.getElementById('service-cable-list').textContent,/65.00 m \(measured\)/);
+    } finally {f.close();}
+});
+
+test('distance handles coincident points and missing coordinates without guessing',()=>{
+    const p={service_coordinates:{x:500000,y:3700000}};
+    assert.equal(serviceCableDistance(p,p),0);
+    assert.equal(serviceCableDistance(p,null),null);
+    assert.equal(serviceCableDistance(p,{service_coordinates:{x:null,y:0}}),null);
 });

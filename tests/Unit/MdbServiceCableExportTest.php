@@ -34,6 +34,18 @@ class MdbServiceCableExportTest extends TestCase
             new Template($snapshot['template'] + ['active' => true]), 1, str_repeat('b', 64));
     }
 
+    public function test_entry_preview_coordinates_use_the_export_distance_projection(): void
+    {
+        $service = app(\App\Services\Mdb\ServiceCableService::class);
+        $pole = ['latitude' => 34.163863, 'longitude' => 73.257402];
+        $meter = ['latitude' => 34.164, 'longitude' => 73.258];
+        $a = $service->previewCoordinates($pole);
+        $b = $service->previewCoordinates($meter);
+        $this->assertEqualsWithDelta($service->length([], $pole, $meter), hypot($a['x'] - $b['x'], $a['y'] - $b['y']), 0.000001);
+        $this->assertNull($service->previewCoordinates(['latitude' => null, 'longitude' => null]));
+        $this->assertNull($service->previewCoordinates($pole + ['correction' => $meter]));
+    }
+
     public function test_disabled_and_empty_feature_keeps_the_entire_existing_export_identical(): void
     {
         $s = $this->snapshot();
