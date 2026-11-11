@@ -7,7 +7,7 @@ import {isoDate, displayDate, completeWaypoint, waypointMatches} from '../../pub
 function fixture() {
     const fields = ['entry_row_id','category','gpx_source_id','source_pdf_id','meter_waypoint_id'];
     const inputs = ['consumer_number','group_number','row_date','waypoint_reference','composite_identifier','consumer_reference','meter_number','recorded_phase','conductor_code','measured_length_m','length_evidence','source_page','source_row','remarks'];
-    const dom = new JSDOM(`<section id="entry-service-cables"><input type="checkbox" id="service-cables-enabled"><p id="service-cable-status"></p><div id="service-cable-content"><div id="service-cable-coverage"></div><div id="service-cable-list"></div><details id="service-cable-editor"><form id="service-cable-form">${fields.map(name=>`<select name="${name}">${name==='category' ? '<option value="rs">RS</option><option value="rl">RL</option>' : ''}</select>`).join('')}${inputs.map(name=>`<input name="${name}">`).join('')}<p id="service-cable-coordinates"></p><button type="submit">Save</button><button type="button" id="service-cable-cancel">Cancel</button></form></details></div></section>`, {url:'http://localhost'});
+    const dom = new JSDOM(`<section id="entry-service-cables"><input type="checkbox" id="service-cables-enabled"><p id="service-cable-status"></p><div id="service-cable-content"><div id="service-cable-coverage"></div><div id="service-cable-list"></div><details id="service-cable-editor"><form id="service-cable-form">${fields.map(name=>`<select name="${name}">${name==='category' ? '<option value="rs">RS</option><option value="rl">RL</option>' : ''}</select>`).join('')}${inputs.map(name=>`<input name="${name}">`).join('')}<p id="service-cable-coordinates"></p><button type="button" id="service-cable-pole-location">At E</button><button type="submit">Save</button><button type="button" id="service-cable-cancel">Cancel</button></form></details></div></section>`, {url:'http://localhost'});
     Object.assign(globalThis, {window:dom.window,document:dom.window.document,Option:dom.window.Option});
     let state = {revision:1,service_cables_can_enter:true,entry_settings:{two_digit_year_start:2000},
         sources:[{id:1,kind:'gpx',status:'ready',original_name:'Survey.gpx'},{id:2,kind:'pdf',status:'ready',original_name:'Survey.pdf'}],
@@ -32,13 +32,14 @@ function fixture() {
 }
 const settle = async()=>{for(let i=0;i<8;i++)await new Promise(resolve=>setImmediate(resolve));};
 
-test('meter entry uses the E pole but does not invent its next waypoint, and preserves identity and counts on save',async()=>{
+test('meter entry suggests consecutive GPX waypoints and preserves identity and counts on save',async()=>{
     const f=fixture();
     try {
         assert.equal(f.field('entry_row_id').value,'2');
         assert.equal(f.field('group_number').value,'02');
         assert.equal(f.field('row_date').value,'081026');
-        assert.equal(f.field('waypoint_reference').value,'');
+        assert.equal(f.field('waypoint_reference').value,'026');
+        assert.equal(f.field('conductor_code').value,'PVC 7/0.052');
         f.field('waypoint_reference').value='026';
         f.field('waypoint_reference').dispatchEvent(new f.dom.window.Event('input',{bubbles:true}));
         assert.equal(f.field('composite_identifier').value,'02081026026');
@@ -50,6 +51,8 @@ test('meter entry uses the E pole but does not invent its next waypoint, and pre
         assert.equal(f.posted().waypoint_reference,'026');
         assert.equal(f.state().transformers[0].rows[0].consumers.rs,5);
         assert.equal(f.field('consumer_number').value,'2');
+        assert.equal(f.field('waypoint_reference').value,'027');
+        assert.equal(f.field('meter_waypoint_id').value,'');
         assert.equal(f.field('entry_row_id').value,'2');
         assert.match(f.dom.window.document.getElementById('service-cable-coverage').textContent,/5 consumers; 1 meter waypoints recorded; 4 without/);
     } finally {f.close();}
@@ -78,5 +81,51 @@ test('revoked access locks controls while keeping existing counts intact',()=>{
         assert.equal(f.field('waypoint_reference').disabled,true);
         assert.equal(f.dom.window.document.getElementById('service-cables-enabled').disabled,true);
         assert.equal(f.state().transformers[0].rows[0].consumers.rs,5);
+    } finally {f.close();}
+});
+
+
+test('category changes preserve surveyed identity and choose the cable size',()=>{
+    const f=fixture();
+    try {
+        f.field('waypoint_reference').value='030';
+        f.field('category').value='rl';
+        f.field('category').dispatchEvent(new f.dom.window.Event('change',{bubbles:true}));
+        assert.equal(f.field('waypoint_reference').value,'030');
+        assert.equal(f.field('conductor_code').value,'PVC 19/0.052');
+        assert.equal(f.field('recorded_phase').value,'RYB');
+    } finally {f.close();}
+});
+
+test('distinct meter waypoints at E coordinates are identified as the same location',()=>{
+    const f=fixture();
+    try {
+        f.state().waypoints.push({id:25,name:'025',source_file_id:1,latitude:34.1,longitude:73.2});
+        f.feature.render();
+        assert.equal(f.field('meter_waypoint_id').value,'26');
+        assert.match(f.dom.window.document.getElementById('service-cable-coordinates').textContent,/Same location as E/);
+        f.field('meter_waypoint_id').value='';
+        f.dom.window.document.getElementById('service-cable-pole-location').click();
+        assert.equal(f.field('meter_waypoint_id').value,'26');
+    } finally {f.close();}
+});
+
+
+test('saving under a later E pole keeps that E selected and clears meter-specific details',async()=>{
+    const f=fixture();
+    try {
+        f.state().transformers[0].rows.push({...f.state().transformers[0].rows[0],id:3,waypoint_reference:'214',pair_number:2});
+        f.state().waypoints.push({id:215,name:'215',source_file_id:1,latitude:34.2,longitude:73.3});
+        f.feature.render();
+        f.field('entry_row_id').value='3';
+        f.field('entry_row_id').dispatchEvent(new f.dom.window.Event('change',{bubbles:true}));
+        assert.equal(f.field('waypoint_reference').value,'215');
+        f.field('meter_number').value='M-215';
+        f.form.dispatchEvent(new f.dom.window.Event('submit',{bubbles:true,cancelable:true}));
+        await settle();
+        assert.equal(f.posted().entry_row_id,3);
+        assert.equal(f.field('entry_row_id').value,'3');
+        assert.equal(f.field('waypoint_reference').value,'216');
+        assert.equal(f.field('meter_number').value,'');
     } finally {f.close();}
 });

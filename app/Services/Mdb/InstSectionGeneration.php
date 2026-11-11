@@ -110,7 +110,7 @@ class InstSectionGeneration
                             $pole = $context['waypoints'][(string) $survey['end_waypoint_id']] ?? collect($waypoints)->firstWhere('id', $survey['end_waypoint_id']);
                             $this->check($pole !== null, $label.': service cable starting E coordinates are unavailable.');
                             $cable = app(ServiceCableService::class)->length($recordedCable, $pole, $meter);
-                            $this->check($cable > 0, $label.': service cable length must be positive.');
+                            $this->check(is_finite($cable) && $cable >= 0, $label.': service cable length must be finite and nonnegative.');
                         } else {
                             $cable = $defaultCableLength ??= $rules->consumerCableLength($entry, $label.', E '.$entry['waypoint_reference'], $options);
                         }

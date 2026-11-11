@@ -93,6 +93,26 @@ class MdbServiceCableExportTest extends TestCase
         foreach ($result['service_cable_provenance'] as $record) $this->assertSame('02081026026', $record['meter_identity']);
     }
 
+    public function test_separate_pole_meters_can_share_e_coordinates_without_a_measured_length(): void
+    {
+        $s = $this->snapshot();
+        $pole = collect($s['waypoints'])->firstWhere('name', $s['transformers'][0]['entry_rows'][1]['waypoint_reference']);
+        $s['waypoints'][2]['latitude'] = $pole['latitude'];
+        $s['waypoints'][2]['longitude'] = $pole['longitude'];
+        $s['waypoints'][] = array_replace($s['waypoints'][2], ['id' => 4, 'name' => '027']);
+        $s['transformers'][0]['service_cables_enabled'] = true;
+        $s['transformers'][0]['service_cables'] = [$this->cable(), $this->cable([
+            'id' => 2, 'consumer_number' => 2, 'waypoint_reference' => '027',
+            'composite_identifier' => '02081026027', 'meter_waypoint_id' => 4,
+        ])];
+        $result = $this->build($s);
+        $this->assertCount(2, $result['service_cable_provenance']);
+        foreach ($result['service_cable_provenance'] as $record) {
+            $this->assertEquals(0, $record['length_m']);
+            $this->assertSame('coordinate_distance_estimate', $record['length_source']);
+        }
+    }
+
     public function test_frozen_export_rejects_meter_records_exceeding_the_e_pole_count(): void
     {
         $s = $this->snapshot();

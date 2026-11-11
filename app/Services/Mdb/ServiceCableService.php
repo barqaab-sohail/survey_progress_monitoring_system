@@ -70,10 +70,7 @@ class ServiceCableService
                 if (count($poleMatches) === 1 && $poleMatches[0]['id'] === $meter['id']) {
                     $add('The meter endpoint must differ from its starting E pole.');
                 }
-                if (count($poleMatches) === 1 && empty($cable['measured_length_m'])
-                    && $poleMatches[0]['latitude'] == $meter['latitude'] && $poleMatches[0]['longitude'] == $meter['longitude']) {
-                    $add('The meter and pole have identical coordinates; record a measured cable length or correct the waypoint.');
-                }
+                // Separate surveyed meter waypoints may share the E pole coordinates.
             } catch (ValidationException $exception) {
                 $add($exception->validator?->errors()->first() ?: $exception->getMessage());
             }
