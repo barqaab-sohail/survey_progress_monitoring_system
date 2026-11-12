@@ -54,6 +54,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/feeder-kmz-history/{export}/preview', [\App\Http\Controllers\FeederKmzController::class, 'previewHistory'])->name('feeder-kmz.history.preview');
     Route::prefix('ht-updates')->name('ht-updates.')->controller(HtNetworkUpdateController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{update}/edit', 'edit')->name('edit');
+        Route::put('/{update}', 'store')->name('update');
         Route::get('/feeder/{feeder}/kmz', 'export')->name('export');
         Route::get('/{update}', 'show')->name('show');
         Route::post('/{update}/review', 'review')->name('review');

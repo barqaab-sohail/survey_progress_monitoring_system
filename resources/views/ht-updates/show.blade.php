@@ -4,7 +4,8 @@
 @if(auth()->user()->hasAnyRole(['super_admin','project_manager']))<p><a class="btn btn-primary" href="{{ route('feeder-kmz.index', ['feeder_id' => $update->feeder_id]) }}">Feeder HT + approved LT</a></p>@endif
 @php($p = $update->payload)
 <div class="page-head"><div><h1>HT Network Update — {{ $update->transformer_code }}</h1><p>{{ $update->feeder->feeder_code }} · {{ $update->feeder->feeder_name }} · {{ ucfirst($update->status) }} · Revision {{ $update->revision }}</p></div><a class="btn btn-light" href="{{ route('ht-updates.index') }}">HT updates</a></div>
-<section class="card"><h2>HT connection and transformer</h2><p>LT Transformer Survey may proceed immediately. Final GPX/JSON/MDB release requires verified HT.</p><dl class="detail-list">
+@if($update->collected_by === auth()->id() && $update->status !== 'verified' && app(\App\Services\HtNetworkWorkflow::class)->canCreateWeb(auth()->user()))<p><a class="btn btn-primary" href="{{ route('ht-updates.edit', $update) }}">Edit HT Network Update</a></p>@endif
+<section class="card"><h2>HT connection and transformer</h2><p>HT feeder data update. Verify the HT connection before starting LT survey or PDF data entry.</p><dl class="detail-list">
 @foreach(['kind'=>'Update type','capacity_kva'=>'Capacity (kVA)','make'=>'Make','location'=>'Location','mounting'=>'Mounting','observed_on'=>'Observed on','upstream_feature_id'=>'Selected HT feature','upstream_reference'=>'Upstream connection reference','remarks'=>'Field evidence / remarks'] as $key=>$label)
 <div><dt>{{ $label }}</dt><dd>{{ $p[$key] ?? 'Not selected' }}</dd></div>
 @endforeach

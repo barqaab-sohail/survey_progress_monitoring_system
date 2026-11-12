@@ -70,7 +70,7 @@ class HtKmzService
         $path = $this->path($baseline);
         $hash = hash_file('sha256', $path);
 
-        return Cache::remember('ht-network:'.$baseline->id.':'.$hash, 3600, function () use ($path, $hash) {
+        $network = Cache::remember('ht-network:'.$baseline->id.':'.$hash, 3600, function () use ($path, $hash) {
             $doc = $this->document($path);
             $xp = new DOMXPath($doc);
             $features = [];
@@ -104,6 +104,21 @@ class HtKmzService
 
             return ['baseline_sha256' => $hash, 'features' => $features];
         });
+        foreach (HtNetworkUpdate::where('feeder_id', $feederId)->where('status', 'verified')->orderBy('id')->get() as $update) {
+            $nodes = $update->payload['nodes'];
+            foreach ($nodes as $i => $node) {
+                if ($i === 0) continue;
+                $network['features'][] = ['id' => 'field-'.$update->client_uuid.'-p'.$i,
+                    'label' => 'Verified HT '.$update->transformer_code.' / '.$node['waypoint'], 'type' => 'point',
+                    'coordinates' => [[(float) $node['longitude'], (float) $node['latitude']]]];
+                if ($update->payload['kind'] === 'ht_extension') {
+                    $network['features'][] = ['id' => 'field-'.$update->client_uuid.'-l'.$i,
+                        'label' => 'Verified HT span '.$nodes[$i - 1]['waypoint'].' ? '.$node['waypoint'], 'type' => 'line',
+                        'coordinates' => [[(float) $nodes[$i - 1]['longitude'], (float) $nodes[$i - 1]['latitude']], [(float) $node['longitude'], (float) $node['latitude']]]];
+                }
+            }
+        }
+        return $network;
     }
 
     public function reference(int $feederId): array

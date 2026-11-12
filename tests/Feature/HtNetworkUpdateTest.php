@@ -129,6 +129,87 @@ class HtNetworkUpdateTest extends TestCase
             'decision' => 'verified', 'review_note' => 'Route, coordinates and upstream connection checked', 'nodes' => $update->payload['nodes']]);
     }
 
+    public function test_web_minimal_ht_update_verifies_on_correct_feeder_and_keeps_optional_rating_unknown(): void
+    {
+        $this->baseline();
+        $this->actingAs($this->admin)->get(route('ht-updates.create', ['feeder_id' => $this->feeder->id]))
+            ->assertOk()->assertSee('HT Network Update - 11 kV feeder')->assertSee('ht-line');
+        $data = ['client_uuid' => (string) Str::uuid(), 'base_revision' => 0,
+            'feeder_id' => $this->feeder->id, 'survey_team_id' => $this->team->id,
+            'transformer_code' => 'WEB-HT-001', 'kind' => 'missing_transformer',
+            'upstream_feature_id' => 'ht-line', 'baseline_sha256' => $this->baseline()->file_sha256,
+            'nodes' => [['waypoint' => 'J1'], ['waypoint' => 'NEW-TR']]];
+        $this->post(route('ht-updates.store'), $data)->assertRedirect();
+        $update = HtNetworkUpdate::where('transformer_code', 'WEB-HT-001')->firstOrFail();
+        $this->assertSame('pending', $update->status);
+        $this->assertNull($update->payload['capacity_kva']);
+        $this->assertSame([], $update->payload['photos']);
+        $this->assertNull($update->transformer_id);
+        $this->post(route('ht-updates.review', $update), ['revision' => 1, 'decision' => 'verified',
+            'connection_confirmed' => 1, 'review_note' => 'Checked', 'nodes' => [['latitude'=>34,'longitude'=>73],['latitude'=>34,'longitude'=>73]]])->assertForbidden();
+        $reviewer = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $this->actingAs($reviewer)->post(route('ht-updates.review', $update), ['revision' => 1, 'decision' => 'verified',
+            'connection_confirmed' => 1, 'review_note' => 'Checked HT connection', 'nodes' => [['latitude'=>34,'longitude'=>73],['latitude'=>34,'longitude'=>73]]])->assertRedirect();
+        $registered = $update->fresh()->transformer;
+        $this->assertSame($this->feeder->id, $registered->feeder_id);
+        $this->assertSame('pending_field', $registered->capacity_verification_status);
+        $this->assertNull($registered->capacity_kva);
+        $this->actingAs($this->admin)->put(route('ht-updates.update', $update), $data)->assertForbidden();
+    }
+
+    public function test_web_ht_rejects_stale_revision_duplicate_and_wrong_feeder_connection(): void
+    {
+        $data = $this->htPayload();
+        unset($data['photos']);
+        $this->actingAs($this->admin)->post(route('ht-updates.store'), $data)->assertRedirect();
+        $update = HtNetworkUpdate::firstOrFail();
+        $this->put(route('ht-updates.update', $update), array_replace($data, ['remarks' => 'Changed']))->assertConflict()->assertSee('Your entered values are shown below')->assertSee('Changed');
+        $duplicate = $data;
+        $duplicate['client_uuid'] = (string) Str::uuid();
+        $this->post(route('ht-updates.store'), $duplicate)->assertSessionHasErrors('transformer_code');
+        $duplicate['transformer_code'] = 'WEB-OTHER';
+        $duplicate['upstream_feature_id'] = 'foreign-feeder-feature';
+        $this->post(route('ht-updates.store'), $duplicate)->assertSessionHasErrors('upstream_feature_id');
+        $duplicate['upstream_feature_id'] = 'ht-line';
+        $duplicate['nodes'][1]['conductor_r'] = 'UNAPPROVED';
+        $this->post(route('ht-updates.store'), $duplicate)->assertSessionHasErrors('nodes');
+        $this->assertSame(1, HtNetworkUpdate::count());
+    }
+
+    public function test_web_can_connect_to_verified_ht_extension_and_mobile_stale_edit_is_rejected(): void
+    {
+        $this->leader->update(['allow_ht_network_updates' => true]);
+        $data = $this->htPayload();
+        $update = app(HtNetworkWorkflow::class)->sync($this->leader, $data);
+        $this->verify($update);
+        $network = app(HtKmzService::class)->network($this->feeder->id);
+        $this->assertTrue(collect($network['features'])->contains('id', 'field-'.$update->client_uuid.'-l1'));
+        $next = $data;
+        unset($next['photos']);
+        $next['client_uuid'] = (string) Str::uuid();
+        $next['transformer_code'] = 'WEB-NEXT';
+        $next['upstream_feature_id'] = 'field-'.$update->client_uuid.'-l1';
+        $this->actingAs($this->admin)->post(route('ht-updates.store'), $next)->assertRedirect();
+        $this->assertSame(2, HtNetworkUpdate::count());
+        $mobile = $this->htPayload();
+        $mobile['transformer_code'] = 'MOBILE-WEB';
+        $shared = app(HtNetworkWorkflow::class)->sync($this->leader, $mobile);
+        $web = $mobile;
+        unset($web['photos']);
+        $web['base_revision'] = $shared->revision;
+        $web['remarks'] = 'Updated on web';
+        $this->actingAs($this->leader)->put(route('ht-updates.update', $shared), $web)->assertRedirect();
+        try {
+            $mobile['base_revision'] = 1;
+            $mobile['remarks'] = 'Stale phone change';
+            app(HtNetworkWorkflow::class)->sync($this->leader, $mobile);
+            $this->fail('Stale mobile edit must be rejected.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $error) {
+            $this->assertSame(409, $error->getStatusCode());
+        }
+        $this->assertSame('Updated on web', $shared->fresh()->payload['remarks']);
+    }
+
     public function test_pending_ht_can_link_lt_and_blocks_final_release_until_independently_verified(): void
     {
         $ht = $this->htPayload();

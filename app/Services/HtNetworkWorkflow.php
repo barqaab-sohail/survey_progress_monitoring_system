@@ -30,12 +30,31 @@ class HtNetworkWorkflow
             ->when(! $actor->hasRole('survey_team_leader'), fn ($q) => $q->where('collected_by', $actor->id));
     }
 
-    public function sync(User $actor, array $data): HtNetworkUpdate
+    public function canCreateWeb(User $actor): bool
     {
-        abort_unless($actor->canUseHtNetworkUpdates(), 403, 'HT Network Updates are not enabled for this mobile account.');
+        return $actor->isActive() && $actor->canUseHtNetworkUpdates()
+            && $actor->hasAnyRole(['super_admin', 'project_manager', 'survey_team_leader', 'surveyor', 'mobile_survey_user']);
+    }
 
-        return DB::transaction(function () use ($actor, $data) {
-            app(FieldSurveyAccess::class)->authorizeCollection($actor, $data['survey_team_id'], $data['feeder_id']);
+    public function syncWeb(User $actor, array $data): HtNetworkUpdate
+    {
+        abort_unless($this->canCreateWeb($actor), 403);
+        return $this->sync($actor, $data, true);
+    }
+
+    public function sync(User $actor, array $data, bool $web = false): HtNetworkUpdate
+    {
+        abort_unless($actor->canUseHtNetworkUpdates(), 403, 'HT Network Updates are not enabled for this account.');
+
+        return DB::transaction(function () use ($actor, $data, $web) {
+            if ($web && $actor->hasAnyRole(['super_admin', 'project_manager'])) {
+                abort_unless(! $actor->organization_id || $actor->organization?->status->value === 'active', 403);
+                $team = \App\Models\SurveyTeam::where('status', 'active')->findOrFail($data['survey_team_id']);
+                $feeder = Feeder::active()->whereHas('project', fn ($q) => $q->where('status', 'active'))->findOrFail($data['feeder_id']);
+                abort_unless($team->project_id === $feeder->project_id, 422, 'Choose a team belonging to this feeder project.');
+            } else {
+                app(FieldSurveyAccess::class)->authorizeCollection($actor, $data['survey_team_id'], $data['feeder_id']);
+            }
             Feeder::whereKey($data['feeder_id'])->lockForUpdate()->firstOrFail();
             $existing = HtNetworkUpdate::where('client_uuid', $data['client_uuid'])->lockForUpdate()->first();
             abort_if($existing && $existing->collected_by !== $actor->id, 409, 'HT update UUID belongs to another account.');
@@ -46,7 +65,7 @@ class HtNetworkWorkflow
                 return $existing;
             }
             abort_unless((int) $revision === (int) ($existing?->revision ?? 0), 409, 'HT update changed. Download feeder data and review the current version.');
-            abort_if($existing?->status === 'verified', 409, 'Verified HT records cannot be overwritten from the phone.');
+            abort_if($existing?->status === 'verified', 409, 'Verified HT records cannot be overwritten.');
             $key = FieldTransformerIdentity::key($data['transformer_code']);
             if (! $key) {
                 throw ValidationException::withMessages(['transformer_code' => 'Enter a transformer code or a unique temporary reference.']);
@@ -59,6 +78,20 @@ class HtNetworkWorkflow
             if ($existing && ((int) $existing->feeder_id !== (int) $data['feeder_id'] || $existing->transformer_key !== $key || (int) $existing->survey_team_id !== (int) $data['survey_team_id'])) {
                 abort(409, 'Keep the original HT feeder, team and transformer identity when correcting this update.');
             }
+            $network = app(HtKmzService::class)->network($data['feeder_id']);
+            if ($web && (! $network['baseline_sha256'] || $network['baseline_sha256'] !== ($data['baseline_sha256'] ?? null)
+                || ! collect($network['features'])->contains('id', $data['upstream_feature_id'] ?? ''))) {
+                throw ValidationException::withMessages(['upstream_feature_id' => 'Select a connection from the current HT network of this feeder. Reload the form if HT data changed.']);
+            }
+            if ($web) {
+                foreach ($data['nodes'] as $node) {
+                    foreach (['conductor_r', 'conductor_y', 'conductor_b'] as $phase) {
+                        if (! empty($node[$phase]) && ! in_array($node[$phase], \App\Services\Mdb\ApprovedWarehouse::conductors(), true)) {
+                            throw ValidationException::withMessages(['nodes' => 'Choose conductors from the approved warehouse.']);
+                        }
+                    }
+                }
+            }
             foreach ($data['photos'] as $photo) {
                 $bytes = base64_decode($photo, true);
                 $info = $bytes === false ? false : @getimagesizefromstring($bytes);
@@ -69,7 +102,7 @@ class HtNetworkWorkflow
             if ($data['kind'] === 'missing_transformer' && count($data['nodes']) !== 2) {
                 throw ValidationException::withMessages(['nodes' => 'A missing transformer without an HT extension needs exactly the existing connection and transformer nodes.']);
             }
-            if ($data['kind'] === 'ht_extension' && collect(array_slice($data['nodes'], 1))->contains(fn ($n) => empty($n['conductor_r']) && empty($n['conductor_y']) && empty($n['conductor_b']))) {
+            if (! $web && $data['kind'] === 'ht_extension' && collect(array_slice($data['nodes'], 1))->contains(fn ($n) => empty($n['conductor_r']) && empty($n['conductor_y']) && empty($n['conductor_b']))) {
                 throw ValidationException::withMessages(['nodes' => 'Record at least one phase conductor for every new HT span.']);
             }
             $before = $existing?->toArray() ?? [];
@@ -99,7 +132,7 @@ class HtNetworkWorkflow
                 $network = app(HtKmzService::class)->network($update->feeder_id);
                 $feature = collect($network['features'])->firstWhere('id', $p['upstream_feature_id'] ?? '');
                 if (! $feature || $network['baseline_sha256'] !== ($p['baseline_sha256'] ?? null)) {
-                    throw ValidationException::withMessages(['decision' => 'The upstream feature must be selected from the current client HT baseline. Return this update for correction if the baseline changed.']);
+                    throw ValidationException::withMessages(['decision' => 'The upstream feature must be selected from the current approved feeder HT network. Return this update for correction if the baseline changed.']);
                 }
                 if (count($data['nodes']) !== count($p['nodes'])) {
                     abort(422, 'Keep the original route nodes.');
@@ -132,6 +165,7 @@ class HtNetworkWorkflow
                 $transformer ??= new Transformer(['feeder_id' => $update->feeder_id, 'transformer_code' => $update->transformer_code]);
                 $isNew = ! $transformer->exists;
                 $transformer->fill(['capacity_kva' => $p['capacity_kva'], 'equipment_make' => $p['make'], 'equipment_location' => $p['location'],
+                    'capacity_verification_status' => empty($p['capacity_kva']) ? 'pending_field' : 'confirmed',
                     'equipment_mounting' => $p['mounting'], 'gps_waypoint_number' => $last['waypoint'], 'pole_number' => $last['waypoint'],
                     'latitude' => $last['latitude'], 'longitude' => $last['longitude'], 'line_voltage' => '11kV', 'equipment_phase' => $p['phase'], 'equipment_status' => 'Connected'])->save();
                 if ($isNew) {
