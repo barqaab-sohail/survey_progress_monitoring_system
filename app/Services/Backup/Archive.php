@@ -6,7 +6,7 @@ use ZipArchive;
 
 class Archive
 {
-    public function create(string $name, Workspace $workspace, string $directory): string
+    public function create(string $name, Workspace $workspace, string $directory, bool $databaseOnly = false): string
     {
         app(DatabaseExporter::class)->export($directory, $workspace);
         $sql = $directory.'/database.sql';
@@ -21,7 +21,7 @@ class Archive
         $hashes = [];
         try {
             $files = [$sql => 'database.sql'];
-            foreach ($this->sourceFiles() as $file => $relative) {
+            foreach ($databaseOnly ? [] : $this->sourceFiles() as $file => $relative) {
                 $files[$file] = 'application/'.$relative;
             }
             foreach ($files as $file => $entry) {

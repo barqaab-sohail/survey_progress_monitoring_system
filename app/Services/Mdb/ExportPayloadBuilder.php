@@ -50,7 +50,7 @@ class ExportPayloadBuilder
             app(ServiceCableService::class)->assertValid($transformer, $snapshot['waypoints'] ?? [], $snapshot['sources'] ?? []);
             foreach ($transformer['service_cables'] ?? [] as $cable) {
                 if (! empty($cable['conductor_code'])) {
-                    $this->require(in_array($cable['conductor_code'], $template->metadata['equipment_references']['conductors'] ?? [], true),
+                    $this->require(in_array($cable['conductor_code'], ApprovedWarehouse::conductors(), true) && in_array($cable['conductor_code'], $template->metadata['equipment_references']['conductors'] ?? [], true),
                         'Recorded service-cable conductor '.$cable['conductor_code'].' is not in the approved template library.');
                 }
             }
@@ -91,6 +91,13 @@ class ExportPayloadBuilder
         $rawWaypoints = $waypoints;
         $nodeContexts = [];
         foreach ($transformers as $transformer) {
+            $this->require(in_array((float) ($transformer['capacity_kva'] ?? 0), array_map('floatval', ApprovedWarehouse::capacities()), true), 'Transformer capacity is absent from the approved 11/0.415 kV warehouse.');
+            foreach ($transformer['sections'] ?? [] as $warehouseSection) {
+                foreach ($warehouseSection['conductors'] ?? [] as $warehouseConductor) {
+                    $this->require($warehouseConductor === null || $warehouseConductor === '' || in_array(EntryLookups::libraryCode($warehouseConductor), ApprovedWarehouse::conductors(), true), 'Conductor is absent from the approved warehouse.');
+                }
+            }
+
             $transformer = app(SurveyWaypoint::class)->firstPairCoordinates($transformer, $rawWaypoints);
             $this->require(! empty($transformer['id']) && ! empty(trim((string) ($transformer['code'] ?? ''))) && ! isset($transformerIds[$transformer['id']]) && ! isset($transformerCodes[$transformer['code']]), 'Transformer identifiers and codes must be present and unique.');
             $transformerIds[$transformer['id']] = $transformerCodes[$transformer['code']] = true;
@@ -243,6 +250,7 @@ class ExportPayloadBuilder
             $this->require($primarySection !== null, 'Primary transformer section must refer to an approved source section.');
             $primary = array_replace($base['InstPrimaryTransformers'], $network['transformer_fields'] ?? [], ['SectionId' => $primarySection, 'UniqueDeviceId' => $transformer['code']]);
             $this->engineering(! empty($primary['TransformerType']) && isset($primary['SpecNomKv']) && isset($primary['UseInstanceImpedance']), 'Explicit transformer library type, nominal voltage and impedance mode are required.');
+            $this->engineering(ApprovedWarehouse::transformerMatches($primary['TransformerType'] ?? '', $transformer['capacity_kva'] ?? null), 'Transformer type and capacity must match the approved 11/0.415 kV warehouse.');
             $this->engineering(in_array($primary['TransformerType'] ?? null, $template->metadata['equipment_references']['transformers'] ?? [], true), 'Transformer type is absent from the template reviewed equipment references.');
             if ((int) ($primary['UseInstanceImpedance'] ?? 0) === 1) {
                 $this->engineering((float) ($primary['PercentImpedance'] ?? 0) > 0 && isset($primary['PercentResistance']), 'Approved instance transformer impedance and resistance are required.');
@@ -487,7 +495,7 @@ class ExportPayloadBuilder
         foreach (['R' => 'PhaseConductorId', 'Y' => 'PhaseConductor2Id', 'B' => 'PhaseConductor3Id', 'N' => 'NeutralConductorId'] as $phase => $column) {
             $value = $row[$column] ?? null;
             if (str_contains($row['SectionPhases'], $phase)) {
-                $this->require($value && in_array($value, $template->metadata['equipment_references']['conductors'] ?? [], true), 'Conductor '.$phase.' needs an approved equipment-library reference.');
+                $this->require($value && in_array($value, ApprovedWarehouse::conductors(), true) && in_array($value, $template->metadata['equipment_references']['conductors'] ?? [], true), 'Conductor '.$phase.' needs an approved equipment-library reference.');
             } else {
                 $this->require($value === null || $value === '', 'Conductor supplied for a disconnected section phase.');
             }

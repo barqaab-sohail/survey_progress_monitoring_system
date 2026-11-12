@@ -87,3 +87,51 @@ Focused tests verify normal ZIP extraction/import, code/lock/deployed-asset incl
 The local opt-in `scripts/backup-restore-smoke.php` also passed with the actual XAMPP MySQL/MariaDB dump/import binaries: it created disposable schemas, generated a normal ZIP, imported its SQL into a new schema, and checked code, Unicode/binary/encrypted database data, foreign keys, a view and a trigger. It does not use a backup encryption key or overwrite existing databases.
 
 **Still requires Bluehost/Google access:** confirm actual CLI paths, plan limits, database object privileges and private-directory permissions; install the settings and cron; confirm the production application storage connection/folder access; perform a real production upload/checksum check and an isolated restoration. No production `.env`, old backup archives or Drive originals were modified by this simplification.
+
+## Separate scheduled database-only backup
+
+`php artisan backup:database` creates `database-backup-YYYY-MM-DD-HHmm.zip` containing exactly
+`database.sql`. It uses the same private workspace, limits, process lock, exporter and verified
+Drive upload as the full backup. Failures retain staged SQL/ZIP files for recovery.
+Manual runs do not require scheduling to be enabled.
+
+Enable its independent daily schedule with:
+
+```dotenv
+BACKUP_DATABASE_ENABLED=true
+BACKUP_DATABASE_TIME=04:00
+```
+
+Time uses 24-hour HH:MM in Asia/Karachi. The default 04:00 is outside the full backup's
+02:00 start and normal 30-minute budget. The shared process lock prevents concurrent backups,
+including manual runs and catch-up runs. A lock conflict consumes no daily attempt.
+`database-state.json` holds its attempt date and latest verified receipt; the full backup's
+`state.json` and audit cleanup eligibility are unchanged. A failed scheduled attempt waits
+until the next Pakistan date; manual retries remain available.
+
+Use the existing every-minute Laravel `schedule:run` cron. No additional cron is needed.
+After deploying configuration changes run `php artisan config:cache`, then:
+
+```sh
+php artisan schedule:list
+```
+
+Both `backup:run --scheduled` and `backup:database --scheduled` should show a 15-minute
+polling interval. The command itself controls the daily time gate. The direct full-backup-only
+cron documented above does not run database backups; use the existing Laravel scheduler for both.
+
+When ready to perform a real manual upload:
+
+```sh
+php artisan backup:database
+```
+
+To independently recheck the uploaded file using the stored size/MD5/folder receipt and the
+existing authenticated Drive client (read-only network operation):
+
+```sh
+php artisan tinker --execute='$w = new \App\Services\Backup\Workspace; $r = $w->read("database-state")["latest_zip"] ?? null; if (!$r) { throw new \RuntimeException("No verified database backup receipt."); } $d = app(\App\Services\Backup\Drive::class); $d->useWorkspace($w); $d->assertMetadata($r, $d->metadata($r["file_id"]) ?? []); echo "Verified Drive file: ".$r["file_id"].PHP_EOL;'
+```
+
+The command above uses POSIX shell quoting. In Drive, locate the printed file ID, download
+the ZIP, and confirm its sole entry is `database.sql`. Verification does not restore or import SQL.

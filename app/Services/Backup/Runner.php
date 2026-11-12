@@ -10,9 +10,9 @@ class Runner
 
     public function __construct(private Drive $drive, private Archive $archive) {}
 
-    public function run(bool $scheduled = false): string
+    public function run(bool $scheduled = false, bool $databaseOnly = false): string
     {
-        if ($scheduled && ! config('backups.enabled')) {
+        if ($scheduled && ! config($databaseOnly ? 'backups.database_enabled' : 'backups.enabled')) {
             return 'Scheduled backups are disabled.';
         }
         $mask = umask(0077);
@@ -24,16 +24,22 @@ class Runner
             if (! $lock) {
                 return 'Another backup is running.';
             }
-            $state = $workspace->read('state');
+            $stateName = $databaseOnly ? 'database-state' : 'state';
+            $state = $workspace->read($stateName);
             $now = now(config('backups.timezone'));
             $date = $now->toDateString();
+            $databaseTime = (string) config('backups.database_time', '04:00');
+            if ($databaseOnly && ! preg_match('/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/D', $databaseTime)) {
+                throw new Failure('BACKUP_DATABASE_TIME must use HH:MM (24-hour time).');
+            }
+            $beforeTime = $databaseOnly ? $now->format('H:i') < $databaseTime : $now->hour < 2;
             // Cron can poll in the server timezone; only one scheduled attempt per Pakistan date.
-            if ($scheduled && ($now->hour < 2 || ($state['last_zip_attempt_date'] ?? null) === $date)) {
+            if ($scheduled && ($beforeTime || ($state['last_zip_attempt_date'] ?? null) === $date)) {
                 return 'No backup is due.';
             }
             if ($scheduled) {
                 $state['last_zip_attempt_date'] = $date;
-                $workspace->save('state', $state); // Leave old encrypted-backup metadata untouched.
+                $workspace->save($stateName, $state); // Leave old encrypted-backup metadata untouched.
             }
             foreach (['zip', 'pdo_mysql'] as $extension) {
                 if (! extension_loaded($extension)) {
@@ -47,12 +53,12 @@ class Runner
             $this->stage = 'Drive folder';
             $this->drive->assertFolder(config('backups.folder_id'));
             $directory = $workspace->createRun();
-            $name = 'backup-'.$now->format('Y-m-d-Hi').'.zip';
+            $name = ($databaseOnly ? 'database-backup-' : 'backup-').$now->format('Y-m-d-Hi').'.zip';
             $this->stage = 'database and ZIP';
             // Conservative boundary captured BEFORE mysqldump's consistent snapshot.
             $auditThroughId = (int) \Illuminate\Support\Facades\DB::table('audit_logs')->max('id');
             $databaseFingerprint = (new \App\Services\Audit\Storage)->identity();
-            $path = $this->archive->create($name, $workspace, $directory);
+            $path = $this->archive->create($name, $workspace, $directory, $databaseOnly);
             $receipt = ['file_id' => $this->drive->retry(fn () => $this->drive->generateId()),
                 'name' => $name, 'folder_id' => config('backups.folder_id'), 'bytes' => filesize($path), 'md5' => md5_file($path)];
             $this->stage = 'upload';
@@ -61,7 +67,7 @@ class Runner
             $this->drive->assertMetadata($receipt, $this->drive->metadata($receipt['file_id']) ?? []);
             $state['latest_zip'] = $receipt + ['uploaded_at' => now()->toIso8601String(),
                 'database_fingerprint' => $databaseFingerprint, 'audit_through_id' => $auditThroughId];
-            $workspace->save('state', $state);
+            $workspace->save($stateName, $state);
             $this->stage = 'local cleanup';
             $workspace->cleanRun($directory); // Only this run, and only after confirmed size/MD5.
             Log::info('Backup successful.', ['archive' => $name, 'drive_file_id' => $receipt['file_id']]);

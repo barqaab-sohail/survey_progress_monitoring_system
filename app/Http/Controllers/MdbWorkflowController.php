@@ -406,9 +406,7 @@ class MdbWorkflowController extends Controller
 
     public function saveTransformer(Request $request, SurveyBatch $batch, ?NetworkTransformer $transformer = null)
     {
-        if ($batch->staged_workflow) {
-            return app(MdbOperatorEntryController::class)->header($request, $batch, $transformer);
-        }
+        return app(MdbOperatorEntryController::class)->header($request, $batch, $transformer);
         $this->access->authorize($request->user(), $batch, 'edit');
         if ($transformer) {
             abort_unless($transformer->batch_id === $batch->id, 404);

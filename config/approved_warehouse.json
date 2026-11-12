@@ -1,0 +1,404 @@
+{
+  "source": "hazescowarehouse, 23OCT2026.mdb",
+  "sha256": "5ba99908415ac9b3a85ecdd50460bae2477da9fc605b9ac408e50644c3a58589",
+  "conductors": [
+    "1 AAC",
+    "1 ACSR",
+    "1 AL-CN UG",
+    "1 CU",
+    "1/0 AAC",
+    "1/0 ACSR",
+    "1/0 AL-1/3N UG",
+    "1/0 CU",
+    "1000CU",
+    "1000MCM",
+    "1033AAC",
+    "1033ACSR",
+    "1113AAC",
+    "1113ACSR",
+    "1192AAC",
+    "1192ACSR",
+    "12 CW",
+    "120MM",
+    "1272AAC",
+    "1272ACSR",
+    "1351AAC",
+    "1351ACSR",
+    "1431AAC",
+    "1431ACSR",
+    "1510AAC",
+    "1510ACSR",
+    "1590AAC",
+    "1590ACSR",
+    "15kV 1/0 Conc. Neut.",
+    "15kV 1000 Tape Shield",
+    "15kV 2/0 Conc. Neut.",
+    "15kV 250 Tape Shield",
+    "15kV 350 Tape Shield",
+    "15kV 4/0 Sep. Neut.",
+    "2 AAC",
+    "2 ACSR",
+    "2 AL-CN UG",
+    "2 CU",
+    "2 FCWC",
+    "2/0 AAC",
+    "2/0 ACSR",
+    "2/0 AL-1/3N UG",
+    "2/0 CU",
+    "2/0AWG",
+    "250 CU",
+    "266 AAC",
+    "266 ACSR",
+    "3 AAC",
+    "3 ACSR",
+    "3 CU",
+    "3/0 AAC",
+    "3/0 ACSR",
+    "3/0 CU",
+    "300 ACSR",
+    "300 CU",
+    "336 AAC",
+    "336 ACSR",
+    "350 CU",
+    "397 AAC",
+    "397 ACSR",
+    "4 AAC",
+    "4 ACSR",
+    "4 CU",
+    "4/0 AAC",
+    "4/0 ACSR",
+    "4/0 CU",
+    "4/0AWG",
+    "400 CU",
+    "450 CU",
+    "477 AAC",
+    "477 ACSR",
+    "5 ACSR",
+    "5 CU",
+    "500 CU",
+    "500 MCM",
+    "500AL",
+    "500MCM",
+    "556 AAC",
+    "556 ACSR",
+    "6 AAC",
+    "6 ACSR",
+    "6 ACWC",
+    "6 CU",
+    "600 CU",
+    "600V 1000 MCM",
+    "605 ACSR",
+    "636 AAC",
+    "636 ACSR",
+    "666 ACSR",
+    "7 CU",
+    "700 CU",
+    "70MM",
+    "715 AAC",
+    "715 ACSR",
+    "750 AL-1/3N UG",
+    "750 CN Al",
+    "750 CU",
+    "795 AAC",
+    "795 ACSR",
+    "8 AAC",
+    "8 CU",
+    "8 CWC",
+    "800 CU",
+    "874 AAC",
+    "874 ACSR",
+    "8kV 4/0 Conc. Neut.",
+    "900 ACSR",
+    "900 CU",
+    "954 AAC",
+    "954 ACSR",
+    "ANT",
+    "Cable 12.5kV direct burial",
+    "CU7/0.116",
+    "CU7/0.136",
+    "CU7/0.193",
+    "D DOG",
+    "DOG",
+    "DOSPREY",
+    "Ex1_300sqmm",
+    "GNAT",
+    "GOPHER",
+    "GSL",
+    "LYNX",
+    "OSPREY",
+    "OSPREY_4",
+    "OSPREYD",
+    "PANTHER",
+    "PVC 19/0.052",
+    "PVC 19/0.083",
+    "PVC 37/0.083",
+    "PVC 7/0.052",
+    "PVC19/0.052",
+    "PVC19/0.083",
+    "PVC37/0.083",
+    "PVC7/0.052",
+    "RABBIT",
+    "RABBIT INSULATED",
+    "Tape 15kV 1/0",
+    "Tape 15kV 1000",
+    "Tape 15kV 2/0",
+    "Tape 15kV 250",
+    "Tape 15kV 3/0",
+    "Tape 15kV 350",
+    "Tape 15kV 4/0",
+    "Tape 15kV 500",
+    "Tape 15kV 750",
+    "Tape 8kV 1/0",
+    "Tape 8kV 1000",
+    "Tape 8kV 2/0",
+    "Tape 8kV 250",
+    "Tape 8kV 3/0",
+    "Tape 8kV 350",
+    "Tape 8kV 4/0",
+    "Tape 8kV 500",
+    "Tape 8kV 750",
+    "WASP"
+  ],
+  "transformers": [
+    {
+      "name": "10 KVA",
+      "capacity_kva": 10,
+      "primary_kv": 11,
+      "secondary_kv": 0.415
+    },
+    {
+      "name": "100 KVA",
+      "capacity_kva": 100,
+      "primary_kv": 11,
+      "secondary_kv": 0.415
+    },
+    {
+      "name": "15 KVA",
+      "capacity_kva": 15,
+      "primary_kv": 11,
+      "secondary_kv": 0.415
+    },
+    {
+      "name": "1P 14.4/2.4 50",
+      "capacity_kva": 50,
+      "primary_kv": 14.4,
+      "secondary_kv": 2.4
+    },
+    {
+      "name": "1P 14.4/2.8 250",
+      "capacity_kva": 250,
+      "primary_kv": 14.4,
+      "secondary_kv": 2.77
+    },
+    {
+      "name": "1P 14.4/7.2 500",
+      "capacity_kva": 500,
+      "primary_kv": 14.4,
+      "secondary_kv": 7.2
+    },
+    {
+      "name": "1P 19.9/7.2 500",
+      "capacity_kva": 500,
+      "primary_kv": 19.9,
+      "secondary_kv": 7.2
+    },
+    {
+      "name": "1P 24.9/7.6 750",
+      "capacity_kva": 750,
+      "primary_kv": 24.9,
+      "secondary_kv": 7.62
+    },
+    {
+      "name": "1P 34.5/7.6 500",
+      "capacity_kva": 500,
+      "primary_kv": 34.5,
+      "secondary_kv": 7.6
+    },
+    {
+      "name": "200 KVA",
+      "capacity_kva": 200,
+      "primary_kv": 11,
+      "secondary_kv": 0.415
+    },
+    {
+      "name": "25 KVA",
+      "capacity_kva": 25,
+      "primary_kv": 11,
+      "secondary_kv": 0.415
+    },
+    {
+      "name": "30 KVA",
+      "capacity_kva": 25,
+      "primary_kv": 11,
+      "secondary_kv": 0.415
+    },
+    {
+      "name": "3P 24.9/4 1000",
+      "capacity_kva": 1000,
+      "primary_kv": 24.9,
+      "secondary_kv": 4.16
+    },
+    {
+      "name": "3P 24/13 1500",
+      "capacity_kva": 1500,
+      "primary_kv": 24.9,
+      "secondary_kv": 13.2
+    },
+    {
+      "name": "3P 24/13 2000",
+      "capacity_kva": 2000,
+      "primary_kv": 24.9,
+      "secondary_kv": 13.2
+    },
+    {
+      "name": "3P 4.16/.48 1000",
+      "capacity_kva": 1000,
+      "primary_kv": 4.16,
+      "secondary_kv": 0.48
+    },
+    {
+      "name": "3P 4.8/.48 500",
+      "capacity_kva": 500,
+      "primary_kv": 4.8,
+      "secondary_kv": 0.48
+    },
+    {
+      "name": "400 KVA",
+      "capacity_kva": 400,
+      "primary_kv": 11,
+      "secondary_kv": 0.415
+    },
+    {
+      "name": "50 KVA",
+      "capacity_kva": 50,
+      "primary_kv": 11,
+      "secondary_kv": 0.415
+    },
+    {
+      "name": "500 KVA",
+      "capacity_kva": 400,
+      "primary_kv": 11,
+      "secondary_kv": 0.415
+    },
+    {
+      "name": "630 KVA",
+      "capacity_kva": 630,
+      "primary_kv": 11,
+      "secondary_kv": 0.415
+    },
+    {
+      "name": "75 KVA",
+      "capacity_kva": 50,
+      "primary_kv": 11,
+      "secondary_kv": 0.415
+    },
+    {
+      "name": "750 KVA",
+      "capacity_kva": 750,
+      "primary_kv": 11,
+      "secondary_kv": 0.415
+    },
+    {
+      "name": "DT 13/.48 1000",
+      "capacity_kva": 1000,
+      "primary_kv": 13.2,
+      "secondary_kv": 0.48
+    },
+    {
+      "name": "DT 13/.48 500",
+      "capacity_kva": 500,
+      "primary_kv": 13.2,
+      "secondary_kv": 0.48
+    },
+    {
+      "name": "DT 13/4 100",
+      "capacity_kva": 100,
+      "primary_kv": 13.2,
+      "secondary_kv": 4.16
+    },
+    {
+      "name": "DT 13/4 500",
+      "capacity_kva": 500,
+      "primary_kv": 13.2,
+      "secondary_kv": 4.16
+    },
+    {
+      "name": "DT 13/4.16 5000",
+      "capacity_kva": 5000,
+      "primary_kv": 13.2,
+      "secondary_kv": 4.16
+    },
+    {
+      "name": "DT Iso-Down 13/4 500",
+      "capacity_kva": 1500,
+      "primary_kv": 13.2,
+      "secondary_kv": 4.8
+    },
+    {
+      "name": "PM 115/13 10MVA",
+      "capacity_kva": 10000,
+      "primary_kv": 115,
+      "secondary_kv": 13.2
+    },
+    {
+      "name": "PM 115/13 12MVA",
+      "capacity_kva": 12000,
+      "primary_kv": 115,
+      "secondary_kv": 13.2
+    },
+    {
+      "name": "PM 115/13 18MVA",
+      "capacity_kva": 18000,
+      "primary_kv": 115,
+      "secondary_kv": 13.2
+    },
+    {
+      "name": "PM 115/13 20MVA",
+      "capacity_kva": 20000,
+      "primary_kv": 115,
+      "secondary_kv": 13.2
+    },
+    {
+      "name": "PM 115/24 2MVA",
+      "capacity_kva": 20000,
+      "primary_kv": 115,
+      "secondary_kv": 24.9
+    },
+    {
+      "name": "PM 115/24 30MVA",
+      "capacity_kva": 30000,
+      "primary_kv": 115,
+      "secondary_kv": 24.9
+    },
+    {
+      "name": "PM 115/34.5 30MVA",
+      "capacity_kva": 30000,
+      "primary_kv": 115,
+      "secondary_kv": 34.5
+    },
+    {
+      "name": "PM 115/4.8 4MVA",
+      "capacity_kva": 4000,
+      "primary_kv": 115,
+      "secondary_kv": 4.8
+    },
+    {
+      "name": "PM 12.47/4 1.5M",
+      "capacity_kva": 1500,
+      "primary_kv": 12.47,
+      "secondary_kv": 4.1
+    },
+    {
+      "name": "PM 24/13 500KVA",
+      "capacity_kva": 500,
+      "primary_kv": 24.9,
+      "secondary_kv": 13.2
+    },
+    {
+      "name": "PM 69/12.47 10MVA",
+      "capacity_kva": 10000,
+      "primary_kv": 69,
+      "secondary_kv": 12.47
+    }
+  ]
+}

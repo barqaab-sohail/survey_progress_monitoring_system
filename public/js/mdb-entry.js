@@ -348,7 +348,7 @@ function initialize(boot) {
             $('entry-transformer-list').innerHTML='<table class="table"><thead><tr><th>Transformer</th><th>Saved rows</th><th>Action</th></tr></thead><tbody>'+(data.transformers.length ? data.transformers.map(t=>`<tr><td>${esc(t.code)}</td><td>${t.rows.length}</td><td><button type="button" class="btn btn-sm btn-danger" data-entry-delete-transformer="${t.id}" aria-label="Delete transformer ${esc(t.code)}" ${busy || !boot.can_delete_transformer ? 'disabled' : ''}>Delete</button></td></tr>`).join('') : '<tr><td colspan="3">No transformers in this batch.</td></tr>')+'</tbody></table>';
         }
         const available=(data.registered_transformers || []).filter(t=>!data.transformers.some(saved=>transformerCodeKey(saved.code)===transformerCodeKey(t.code)));
-        optionList($('entry-transformer'), [...data.transformers.map(t=>[t.id,t.code]),...(editable() ? available.map(t=>[`registered:${t.id}`,`${t.code} — registered; new survey header`]) : []),...(editable() ? [['__manual__','Transformer not found? Add manually']] : [])], 'Choose a transformer', transformerSelection());
+        optionList($('entry-transformer'), [...data.transformers.map(t=>[t.id,t.code]),...(editable() ? available.map(t=>[`registered:${t.id}`,`${t.code} — registered; new survey header`]) : [])], 'Choose a transformer', transformerSelection());
         if($('entry-transformer-help'))$('entry-transformer-help').textContent='Search to choose a saved or registered transformer. If it is not listed, use Add Transformer to enter it manually.';
         const selectedPdf = $('entry-pdf-source').value;
         optionList($('entry-pdf-source'), data.sources.filter(s=>s.kind==='pdf').map(s=>[s.id,`${s.original_name} · ${s.status}`]), 'Choose PDF', selectedPdf);
@@ -593,7 +593,8 @@ function initialize(boot) {
     }
     function chooseTransformer(id) {
         const match=/^registered:(\d+)$/.exec(String(id || ''));
-        manualTransformer=id==='__manual__';
+        if(id==='__manual__'){status('Update and verify HT data first, then select its registered transformer.','error');return;}
+        manualTransformer=false;
         registeredId=match ? Number(match[1]) : null;activeId=match || manualTransformer ? null : number(id); clearErrors(); renderLists();
         fillHeader(active() || {registered_transformer_id:registeredId,manual_transformer:manualTransformer,header:data.defaults}); headerDirty=!!registered() || manualTransformer;
         $('entry-header-panel').open=!active(); renderSaved(); newRow(); updateAssociation();
@@ -667,6 +668,12 @@ function initialize(boot) {
         clearErrors();
         const body=rowPayload(), validation={...rowValidationErrors(body,data.entry_settings?.two_digit_year_start ?? 2000),
             ...phaseEntryState(body,active()?.rows || [],active()?.code).errors};
+        const firstPair=Math.min(Number(body.pair_number),...(active()?.rows || []).map(row=>Number(row.pair_number)));
+        const firstStart=body.designation==='S' && Number(body.pair_number)===firstPair;
+        if(!firstStart){
+            const matches=waypointMatches(body,data.waypoints);
+            if(matches.length!==1)validation.waypoint_reference=[matches.length ? 'Select the GPX source for this waypoint.' : 'Waypoint is missing from the uploaded GPX. Enter the correct three-digit waypoint.'];
+        }
         for(const element of Array.from(rowForm.elements).filter(el=>el.willValidate && !el.validity.valid)) {
             const pvKey=element.dataset.pvKey, index=pvKey ? Array.from($('entry-pv-records').children).indexOf(element.closest('.entry-pv-row')) : null;
             const key=pvKey ? `pv_details.${index}.${pvKey}` : element.name.replace(/\[([^\]]+)\]/g,'.$1');

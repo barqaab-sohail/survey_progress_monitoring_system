@@ -17,26 +17,11 @@ class EntryLookups
 
     public function options(?int $projectId = null): array
     {
-        // Printed legend and requested warehouse IDs. Availability is not engineering approval.
-        $conductors = ['A' => 'A — Ant', 'W' => 'W — Wasp', 'GN' => 'GN — Gnat', '2/0 AWG' => '2/0 AWG',
-            'PVC 7/0.052' => 'PVC 7/0.052', 'PVC 19/0.052' => 'PVC 19/0.052', 'PVC 19/0.083' => 'PVC 19/0.083',
-            'PVC 0.083' => 'PVC 0.083', 'PVC 37/0.083' => 'PVC 37/0.083 — as written in form',
-            'ABC 50 MM2' => 'ABC 50 MM2', 'ABC 95 MM2' => 'ABC 95 MM2',
-            'DOG' => 'DOG', 'GOPHER' => 'GOPHER', 'GSL' => 'GSL', 'OSPREY' => 'OSPREY',
-            'PANTHER' => 'PANTHER', 'RABBIT' => 'RABBIT', 'RACCOON' => 'RACCOON',
-            'INS ANT' => 'INS ANT', 'INS GNAT' => 'INS GNAT', 'INS WASP' => 'INS WASP', 'INS 7/0.052' => 'INS 7/0.052',
-            'ABC' => 'ABC', 'ABC 10 MM2' => 'ABC 10 MM2', 'ABC 16 MM2' => 'ABC 16 MM2',
-            'ABC 25 MM2' => 'ABC 25 MM2', 'ABC 35 MM2' => 'ABC 35 MM2', 'ABC 70 MM2' => 'ABC 70 MM2',
-            '4/0 AWG' => '4/0 AWG', '100 MM2' => '100 MM2', '1000 MCM' => '1000 MCM'];
+        $conductors = array_combine(ApprovedWarehouse::conductors(), ApprovedWarehouse::conductors());
         $templateId = $projectId ? (Configuration::where('project_id', $projectId)->value('settings')['template_id'] ?? null) : null;
         $templates = Template::where('active', true)->whereNotNull('approved_by')->whereNotNull('approved_at');
         $metadata = ($templateId ? $templates->whereKey($templateId)->first() : $templates->latest('id')->first())?->metadata ?? [];
-        foreach ($metadata['equipment_references']['conductors'] ?? [] as $code) {
-            $code = self::LEGACY_CONDUCTOR_CODES[$code] ?? $code;
-            $conductors[$code] ??= $code.' — approved library';
-        }
-
-        return ['conductors' => $conductors,
+        return ['conductors' => $conductors, 'transformer_capacities' => ApprovedWarehouse::capacities(),
             'equipment_types' => array_replace(['TR' => 'TR — form code (description unconfirmed)', 'SP' => 'SP — form code (description unconfirmed)', 'Ang' => 'Ang — Angle', 'WB' => 'WB — Wall bracket'], $this->namedOptions($metadata['entry_lookups']['equipment_types'] ?? [])),
             'pole_classes' => array_replace(['S' => 'S — Steel structure', 'PCO' => 'PCO — PC ordinary', 'PCS' => 'PCS — PC spun',
                 'RS' => 'RS — Rail steel', 'TS' => 'TS — Tubular steel', 'WB' => 'WB — Wall bracket'], $this->namedOptions($metadata['entry_lookups']['pole_classes'] ?? [])),

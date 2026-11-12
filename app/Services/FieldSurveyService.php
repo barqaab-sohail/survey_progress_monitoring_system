@@ -91,6 +91,9 @@ class FieldSurveyService
                         ->contains(fn ($t) => FieldTransformerIdentity::key($t->source_transformer_code) === FieldTransformerIdentity::key($data['transformer_code']));
                     if ($ambiguous) throw ValidationException::withMessages(['transformer_code' => 'This client code identifies multiple KMZ points. Select the exact registered transformer using its temporary reference.']);
                 }
+                if (! $transformer || ($htUpdate && $htUpdate->status !== 'verified') || ($transformer && HtNetworkUpdate::where('feeder_id', $feeder->id)->where('transformer_id', $transformer->id)->where('status', '!=', 'verified')->exists())) {
+                    throw ValidationException::withMessages(['transformer_id' => 'Update and verify HT data first, then select its registered transformer before entering LT survey data.']);
+                }
                 $key = FieldTransformerIdentity::key($data['transformer_code'] ?? null);
                 if (! $htUpdate && HtNetworkUpdate::where('feeder_id', $feeder->id)->where('transformer_key', $key)->whereIn('status', ['pending', 'returned'])->exists()) {
                     throw ValidationException::withMessages(['ht_update_uuid' => 'This transformer has an HT Network Update awaiting verification. Open its linked LT survey or synchronize its HT reference first.']);

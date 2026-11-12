@@ -21,6 +21,42 @@ class BackupTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_database_backup_contains_only_sql_and_preserves_full_state(): void
+    {
+        $workspace = new Workspace;
+        $workspace->save('state', ['full' => 'unchanged']);
+        $this->artisan('backup:database')->assertSuccessful();
+        $receipt = $workspace->read('database-state')['latest_zip'];
+        $this->assertStringStartsWith('database-backup-', $receipt['name']);
+        file_put_contents($this->directory.'/downloaded.zip', $this->bodies[$receipt['file_id']]);
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($this->directory.'/downloaded.zip'));
+        $this->assertSame(1, $zip->numFiles);
+        $this->assertSame('database.sql', $zip->getNameIndex(0));
+        $zip->close();
+        $this->assertSame(['full' => 'unchanged'], $workspace->read('state'));
+        $this->assertSame([], glob($this->directory.'/run-*'));
+    }
+
+    public function test_database_schedule_has_separate_attempt_state_and_retains_failed_files(): void
+    {
+        config(['backups.database_enabled' => true, 'backups.database_time' => '04:00']);
+        $this->travelTo(\Carbon\Carbon::parse('2026-11-12 03:59', 'Asia/Karachi'));
+        $this->artisan('backup:database', ['--scheduled' => true])->assertSuccessful();
+        $this->assertSame(0, $this->exports);
+        $this->travelTo(\Carbon\Carbon::parse('2026-11-12 04:00', 'Asia/Karachi'));
+        $this->uploadFails = true;
+        $this->artisan('backup:database', ['--scheduled' => true])->assertFailed();
+        $this->artisan('backup:database', ['--scheduled' => true])->assertSuccessful();
+        $this->assertSame(1, $this->exports);
+        $this->assertCount(1, glob($this->directory.'/run-*/database.sql'));
+        $this->assertCount(1, glob($this->directory.'/run-*/database-backup-*.zip'));
+        $this->assertSame([], (new Workspace)->read('state'));
+        $this->uploadFails = false;
+        $this->artisan('backup:database')->assertSuccessful();
+        $this->assertSame(2, $this->exports);
+    }
+
     public function test_audit_cleanup_requires_fresh_verified_backup_covering_this_database_and_ids(): void
     {
         $id = DB::table('audit_logs')->insertGetId([

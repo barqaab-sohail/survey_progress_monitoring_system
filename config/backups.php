@@ -2,6 +2,8 @@
 
 return [
     'enabled' => (bool) env('BACKUP_ENABLED', false),
+    'database_enabled' => (bool) env('BACKUP_DATABASE_ENABLED', false),
+    'database_time' => env('BACKUP_DATABASE_TIME', '04:00'),
     'folder_id' => env('BACKUP_DRIVE_FOLDER_ID'),
     'path' => env('BACKUP_PATH', dirname(base_path()).'/.'.basename(base_path()).'-backups'),
     'mysqldump' => env('BACKUP_MYSQLDUMP', 'mysqldump'),

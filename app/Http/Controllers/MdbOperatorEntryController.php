@@ -55,7 +55,7 @@ class MdbOperatorEntryController extends Controller
             'inheritance' => 'nullable|array:conductors,equipment,group_date', 'inheritance.*' => 'nullable|integer', 'manually_verified' => 'nullable|boolean',
             'identity_version' => 'nullable|in:2', 'composite_identifier' => 'nullable|string|regex:/^\d{11}$/D', 'pdf_progress_row_id' => 'nullable|integer'];
         foreach (['R', 'Y', 'B', 'N'] as $phase) {
-            $codes = array_merge(array_keys(app(EntryLookups::class)->options($batch->project_id)['conductors']), ['__none__'], array_values($row?->conductors ?? []));
+            $codes = array_merge(array_keys(app(EntryLookups::class)->options($batch->project_id)['conductors']), ['__none__']);
             $rules['conductors.'.$phase] = ['present', 'nullable', 'string', 'max:255', Rule::in(array_filter($codes, fn ($value) => $value !== null && $value !== ''))];
         }
         foreach (array_keys(EntryLookups::CONSUMERS) as $category) {
@@ -137,6 +137,16 @@ class MdbOperatorEntryController extends Controller
             if (count($matches) === 1) {
                 $validated['gpx_source_id'] = $matches[0]['source_file_id'];
             }
+        }
+        if (! $firstStart) {
+            $matches = $identity->matches($validated, $batch->waypoints->toArray());
+            if (count($matches) !== 1) {
+                throw ValidationException::withMessages(['waypoint_reference' => count($matches) === 0
+                    ? 'This waypoint is not in the selected uploaded GPX. Enter the correct three-digit waypoint.'
+                    : 'This waypoint has multiple GPX matches. Select its GPX source.']);
+            }
+        } else {
+            $validated['gpx_source_id'] = null;
         }
         foreach (['source_pdf_id' => 'pdf', 'gpx_source_id' => 'gpx'] as $field => $kind) {
             if (! empty($validated[$field])) {
@@ -412,6 +422,18 @@ class MdbOperatorEntryController extends Controller
     private function persistHeader(Request $request, SurveyBatch $batch, ?NetworkTransformer $transformer)
     {
         $this->authorizeEntry($request, $batch);
+        if ($request->boolean('manual_transformer') || ($transformer && empty($transformer->header['registered_transformer_id']))) {
+            throw ValidationException::withMessages(['registered_transformer_id' => 'Update and verify HT data first, then select its registered transformer. Manual LT transformer entry is not allowed.']);
+        }
+        $referenceId = $transformer?->header['registered_transformer_id'] ?? $request->input('registered_transformer_id');
+        if ($referenceId && \App\Models\HtNetworkUpdate::where('feeder_id', $batch->feeder_id)->where('transformer_id', $referenceId)->where('status', '!=', 'verified')->exists()) {
+            throw ValidationException::withMessages(['registered_transformer_id' => 'Verify the HT update before entering LT data.']);
+        }
+
+        if (! $referenceId || ! \App\Models\Transformer::where('feeder_id', $batch->feeder_id)->whereKey($referenceId)->exists()) {
+            throw ValidationException::withMessages(['registered_transformer_id' => 'Select a registered HT transformer belonging to this feeder.']);
+        }
+
         abort_unless(! $transformer || $transformer->batch_id === $batch->id, 404);
         if ($transformer) {
             $request->merge(['code' => $transformer->code]);
@@ -444,6 +466,7 @@ class MdbOperatorEntryController extends Controller
         foreach ($fields as $field) {
             $attributes['header.'.$field] = str_replace('_', ' ', $field);
         }
+        $rules['capacity_kva'] = [$unknownCapacity ? 'nullable' : 'required', 'numeric', Rule::in(\App\Services\Mdb\ApprovedWarehouse::capacities())];
         $data = $request->validate($rules, [
             'header.inspector.required' => 'Enter the inspector name.',
             'header.location.required' => 'Enter the transformer location.',

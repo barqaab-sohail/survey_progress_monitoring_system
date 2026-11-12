@@ -416,7 +416,7 @@ class _SurveyEditorState extends State<SurveyEditor>
                   child: items.isEmpty
                       ? const Center(
                           child: Text(
-                            'No imported transformers for this feeder. Enter the transformer code manually.',
+                            'No registered transformers available. Update and verify HT data first, then refresh the transformer list.',
                           ),
                         )
                       : ListView(

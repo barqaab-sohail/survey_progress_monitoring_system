@@ -34,7 +34,7 @@ class SyncFieldSurveyRequest extends FormRequest
             'survey_date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
             'status' => ['required', Rule::in(['draft', 'submitted'])],
             'header' => ['present', 'array:substation,division,sub_division,sub_division_code,transformer_make,inspectors,location,capacity_kva,mounting,duty'],
-            'header.capacity_kva' => [$paper, 'numeric', 'gt:0', 'max:10000000'],
+            'header.capacity_kva' => [$paper, 'numeric', Rule::in(\App\Services\Mdb\ApprovedWarehouse::capacities())],
             'header.inspectors' => [$paper, 'string', 'max:200'],
             'header.location' => [$paper, 'string', 'max:500'],
             'header.mounting' => [$paper, Rule::in(['S.Pole', 'D.Pole', 'Pad'])],
@@ -74,7 +74,7 @@ class SyncFieldSurveyRequest extends FormRequest
             $rules['header.'.$key] = [$paper, 'string', 'max:200'];
         }
         foreach (['r', 'y', 'b', 'neutral'] as $key) {
-            $rules['rows.*.conductor_'.$key] = ['nullable', 'string', 'max:100'];
+            $rules['rows.*.conductor_'.$key] = ['nullable', 'string', Rule::in(\App\Services\Mdb\ApprovedWarehouse::conductors())];
         }
         foreach (['rs', 'rl', 'sc', 'lc', 'si', 'li', 'pb', 'ag', 'st'] as $key) {
             $rules['rows.*.consumers.'.$key] = ['nullable', 'integer', 'between:0,1000000'];
