@@ -12,6 +12,7 @@ use App\Models\Mdb\ExportJob;
 use App\Models\Mdb\ModelValidation;
 use App\Models\Mdb\NetworkSection;
 use App\Models\Mdb\NetworkTransformer;
+use App\Models\Mdb\PdfLine;
 use App\Models\Mdb\PvRecord;
 use App\Models\Mdb\SourceFile;
 use App\Models\Mdb\SurveyBatch;
@@ -719,6 +720,8 @@ class MdbWorkflowController extends Controller
                     ])->redirectTo(route('mdb-workflow.show', $locked));
                 }
                 app(EntryService::class)->assertComplete($locked);
+                // Entry guides are temporary; verification starts with a clean PDF.
+                PdfLine::whereIn('source_file_id', $locked->sources()->select('id'))->delete();
                 $this->snapshots->invalidate($locked);
                 $this->access->recordEntry($locked, $request->user());
                 $locked->update(['survey_status' => 'awaiting_verification', 'status' => 'awaiting_verification', 'entry_completed_at' => now('UTC'),

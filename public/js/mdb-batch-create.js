@@ -6,10 +6,13 @@
     const viewer = form.querySelector('[data-create-pdf]');
     const open = form.querySelector('[data-preview-open]');
     const placeholder = form.querySelector('[data-preview-placeholder]');
+    const script = document.currentScript;
+    const enhanced = script?.dataset.pdfViewer ? import(script.dataset.pdfViewer).then(module => module.initializeCreatePdf(form, script.dataset.pdfjs)) : null;
     let previewUrl;
     let generation = 0;
     const clearPreview = () => {
         generation++;
+        enhanced?.then(view => view.clear()).catch(() => {});
         viewer.removeAttribute('src');
         viewer.hidden = open.hidden = true;
         open.removeAttribute('href');
@@ -23,6 +26,8 @@
         viewer.src = open.href = previewUrl;
         viewer.hidden = open.hidden = false;
         placeholder.hidden = true;
+        const current = generation;
+        enhanced?.then(view => { if (current === generation) view.load(previewUrl); }).catch(() => {});
     };
     const fileId = value => {
         value = value.trim();

@@ -11,7 +11,18 @@
         <div class="mdb-create-layout">
             <section class="mdb-create-preview" aria-label="Survey PDF preview">
                 <p class="muted" data-preview-placeholder>Select a PDF above to view it here.</p>
-                <a class="btn btn-light" data-preview-open hidden target="_blank" rel="noopener">Open PDF in a new tab</a>
+                <div class="mdb-create-pdf-toolbar" data-create-toolbar hidden>
+                    <button type="button" class="btn btn-light" data-pdf-previous aria-label="Previous PDF page" disabled>&larr;</button>
+                    <label>Page <input data-pdf-page type="number" min="1" value="1" aria-label="Current PDF page" disabled></label><span data-pdf-total>of 0</span>
+                    <button type="button" class="btn btn-light" data-pdf-next aria-label="Next PDF page" disabled>&rarr;</button>
+                    <button type="button" class="btn btn-light" data-pdf-zoom-out aria-label="Zoom out" disabled>&minus;</button>
+                    <button type="button" class="btn btn-light" data-pdf-fit disabled>Fit width</button>
+                    <button type="button" class="btn btn-light" data-pdf-zoom-in aria-label="Zoom in" disabled>+</button>
+                    <button type="button" class="btn btn-light" data-pdf-rotate disabled>Rotate &#8635;</button>
+                    <a class="btn btn-light" data-preview-open hidden target="_blank" rel="noopener">Open PDF</a>
+                    <label>Viewing height <input data-pdf-height type="range" min="180" max="800" step="20" value="300"><output data-pdf-height-value>300 px</output></label>
+                </div>
+                <div class="mdb-create-pdf-scroll" data-pdf-scroll hidden><canvas data-pdf-canvas hidden aria-label="Current survey PDF page"></canvas></div>
                 <iframe title="Survey PDF preview" data-create-pdf hidden></iframe>
             </section>
             <section><h2>2. Enter details from the PDF</h2>
@@ -30,4 +41,4 @@
 </div>
 @endsection
 @push('styles')<link rel="stylesheet" href="{{ asset('css/mdb-workflow.css').'?v='.filemtime(public_path('css/mdb-workflow.css')) }}">@endpush
-@push('scripts')<script src="{{ asset('js/mdb-workflow.js') }}" defer></script><script src="{{ asset('js/mdb-batch-create.js') }}" defer></script>@endpush
+@push('scripts')<script src="{{ asset('js/mdb-workflow.js') }}" defer></script><script src="{{ asset('js/mdb-batch-create.js').'?v='.filemtime(public_path('js/mdb-batch-create.js')) }}" data-pdf-viewer="{{ asset('js/mdb-create-pdf.js').'?v='.filemtime(public_path('js/mdb-create-pdf.js')) }}" data-pdfjs="{{ asset('vendor/pdfjs/build/pdf.min.mjs') }}" defer></script>@endpush

@@ -981,6 +981,33 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertContains('invalid_entry_pdf_source', array_column($issues, 'code'));
     }
 
+    public function test_submission_clears_pdf_guides_only_after_success_and_only_for_this_batch(): void
+    {
+        [$operator] = $this->workflowActors();
+        $this->actingAs($operator);
+        $conductors = ['R' => 'ANT', 'Y' => '__none__', 'B' => '__none__', 'N' => 'ANT'];
+        $this->save(['conductors' => $conductors]);
+        $this->save(['designation' => 'E', 'waypoint_reference' => '010', 'conductors' => $conductors]);
+        $this->post(route('mdb-workflow.entry.review', $this->batch), ['revision' => $this->batch->fresh()->revision,
+            'transformer_id' => $this->transformer->id, 'confirmed' => 1])->assertRedirect()->assertSessionHasNoErrors();
+        $attributes = ['page' => 1, 'start' => ['x' => 0, 'y' => .3], 'end' => ['x' => 1, 'y' => .3], 'created_by' => $operator->id];
+        $line = PdfLine::create($attributes + ['source_file_id' => $this->pdf->id, 'client_uuid' => (string) Str::uuid()]);
+        $otherBatch = $this->batch->replicate();
+        $otherBatch->save();
+        $otherSource = $this->pdf->replicate();
+        $otherSource->batch_id = $otherBatch->id;
+        $otherSource->save();
+        $otherLine = PdfLine::create($attributes + ['source_file_id' => $otherSource->id, 'client_uuid' => (string) Str::uuid()]);
+        $decision = route('mdb-workflow.survey.decision', $this->batch);
+        $this->postJson($decision, ['revision' => -1, 'action' => 'submit'])->assertUnprocessable();
+        $this->assertModelExists($line);
+        $rowCount = $this->transformer->entryRows()->count();
+        $this->postJson($decision, ['revision' => $this->batch->fresh()->revision, 'action' => 'submit'])->assertOk();
+        $this->assertModelMissing($line);
+        $this->assertModelExists($otherLine);
+        $this->assertSame($rowCount, $this->transformer->entryRows()->count());
+    }
+
     private function workflowActors(): array
     {
         $actors = [User::factory()->create(['role' => UserRole::SurveyDataEntryOperator]),
