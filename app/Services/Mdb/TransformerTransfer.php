@@ -50,7 +50,7 @@ class TransformerTransfer
             'snapshot.transformers.0.entry_rows.*.manually_verified' => 'accepted',
             'snapshot.transformers.0.entry_rows.*.row_date' => 'nullable|date_format:Y-m-d',
             'snapshot.transformers.0.entry_rows.*.conductors' => 'nullable|array',
-            'snapshot.transformers.0.entry_rows.*.conductors.*' => 'nullable|string|max:255',
+            'snapshot.transformers.0.entry_rows.*.conductors.*' => ['nullable', 'string', 'max:255', \Illuminate\Validation\Rule::in(ApprovedWarehouse::conductors())],
             'snapshot.transformers.0.entry_rows.*.consumers' => 'nullable|array',
             'snapshot.transformers.0.entry_rows.*.consumers.*' => 'nullable|integer|min:0|max:1000000',
             'snapshot.transformers.0.entry_rows.*.pole_height' => 'nullable|numeric|gt:0',

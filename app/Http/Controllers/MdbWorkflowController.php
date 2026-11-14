@@ -444,7 +444,8 @@ class MdbWorkflowController extends Controller
         $entryRowsOwnHeight = $section?->entryRows()->exists() ?? false;
         $data = $request->validate(['start_reference' => 'nullable|string|max:255', 'end_reference' => 'nullable|string|max:255',
             'start_source_file_id' => 'nullable|integer', 'end_source_file_id' => 'nullable|integer', 'start_waypoint_id' => 'nullable|integer', 'end_waypoint_id' => 'nullable|integer',
-            'phases' => 'nullable|array|max:4', 'phases.*' => 'required|in:R,Y,B,N', 'conductors' => 'nullable|array', 'conductors.*' => 'nullable|string|max:255',
+            'phases' => 'nullable|array|max:4', 'phases.*' => 'required|in:R,Y,B,N', 'conductors' => 'nullable|array',
+            'conductors.*' => ['nullable', 'string', 'max:255', Rule::in(\App\Services\Mdb\ApprovedWarehouse::conductors())],
             'equipment_type' => 'nullable|string|max:255', 'equipment_ref' => 'nullable|string|max:255', 'pole_class' => 'nullable|string|max:255', 'pole_height' => ($entryRowsOwnHeight ? 'nullable|' : 'required|').'numeric|gt:0|max:10000',
             'pole_height_unit' => 'nullable|in:m,ft', 'source_pdf_id' => 'nullable|integer', 'source_page' => 'nullable|integer|min:1', 'source_row' => 'nullable|string|max:60',
             'original_entry' => 'nullable|array', 'geometry_json' => 'nullable|json', 'measured_length_m' => 'nullable|numeric|min:0.001|max:1000000', 'measured_length_reason' => 'nullable|string|max:4000',

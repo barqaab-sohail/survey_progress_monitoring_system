@@ -3,6 +3,7 @@
 namespace App\Services\Mdb;
 
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /** Optional observations describing existing consumers, never additional consumer counts. */
@@ -17,7 +18,7 @@ class ServiceCableService
             'waypoint_reference' => ['required', 'string', 'regex:/^\d{3}$/D'],
             'gpx_source_id' => 'required|integer', 'meter_waypoint_id' => 'required|integer',
             'consumer_reference' => 'nullable|string|max:255', 'meter_number' => 'nullable|string|max:255',
-            'phase' => 'nullable|in:R,Y,B,RYB', 'conductor_code' => 'nullable|string|max:255',
+            'phase' => 'nullable|in:R,Y,B,RYB', 'conductor_code' => ['nullable', 'string', 'max:255', Rule::in(ApprovedWarehouse::conductors())],
             'measured_length_m' => 'nullable|numeric|gt:0|max:100000',
             'length_evidence' => 'required_with:measured_length_m|nullable|string|max:4000',
             'source_pdf_id' => 'required|integer', 'source_page' => 'required|integer|min:1|max:10000',

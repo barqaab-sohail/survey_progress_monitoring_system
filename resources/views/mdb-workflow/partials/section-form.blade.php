@@ -19,7 +19,7 @@
     <fieldset class="mdb-span-all"><legend>Verified phase configuration</legend><div class="mdb-phase-checks">@foreach(['R','Y','B','N'] as $phase)<label><input type="checkbox" name="phases[]" value="{{ $phase }}" @checked(in_array($phase, (array) $value('phases', []), true)) data-copy-key="phase_{{ $phase }}">{{ $phase === 'N' ? 'Neutral' : $phase }}</label>@endforeach</div><small>Each selected phase and neutral requires its own conductor code. A missing configuration remains unresolved.</small></fieldset>
     <label class="mdb-span-all">Phase configuration as written<input name="original_entry[phases]" value="{{ $value('original_entry.phases') }}" maxlength="100"></label>
     @foreach(['R'=>'R phase conductor','Y'=>'Y phase conductor','B'=>'B phase conductor','N'=>'Neutral conductor'] as $phase=>$label)
-    <label>{{ $label }} code<input name="conductors[{{ $phase }}]" value="{{ $value('conductors.'.$phase) }}" maxlength="200" data-copy-key="conductor_{{ $phase }}"></label>
+    <label>{{ $label }} code<select name="conductors[{{ $phase }}]" data-copy-key="conductor_{{ $phase }}"><option value="">Unrecorded / not present</option>@foreach(\App\Services\Mdb\ApprovedWarehouse::conductors() as $code)<option value="{{ $code }}" @selected($value('conductors.'.$phase) === $code)>{{ $code }}</option>@endforeach</select></label>
     <label>{{ $label }} as written<input name="original_entry[conductor_{{ $phase }}]" value="{{ $value('original_entry.conductor_'.$phase) }}" maxlength="200"></label>
     @endforeach
     <label>Equipment type<input name="equipment_type" value="{{ $value('equipment_type') }}" maxlength="100" data-copy-key="equipment_type"></label>

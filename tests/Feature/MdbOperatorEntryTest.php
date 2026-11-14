@@ -436,54 +436,11 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertArrayNotHasKey('service_cables', $snapshot['transformers'][0]);
     }
 
-    public function test_lt_conductor_command_previews_converts_and_is_idempotent_without_changing_source_evidence(): void
-    {
-        $payload = $this->payload(['conductors' => ['R' => 'A', 'Y' => 'W', 'B' => 'G', 'N' => 'GN']]);
-        unset($payload['revision']);
-        $row = $this->transformer->entryRows()->create($payload + ['save_hash' => str_repeat('a', 64),
-            'original_entry' => ['conductors' => ['R' => 'A']], 'manually_verified' => true]);
-        $section = $this->transformer->sections()->create(['start_reference' => '001', 'end_reference' => '010',
-            'conductors' => ['R' => 'A', 'Y' => null, 'B' => '', 'N' => 'UNMAPPED']]);
-        $cable = $this->transformer->serviceCables()->create(['entry_row_id' => $row->id, 'category' => 'rs', 'consumer_number' => 1,
-            'group_number' => '01', 'row_date' => '2026-10-08', 'waypoint_reference' => '003',
-            'composite_identifier' => '01081026003', 'conductor_code' => 'W', 'source_page' => 1]);
-        $this->batch->update(['staged_workflow' => true, 'survey_status' => 'approved']);
-        $frozen = app(SnapshotService::class)->capture($this->batch, $this->admin->id);
-        $this->batch->update(['approved_revision_id' => $frozen->id]);
-        $revision = $this->batch->fresh()->revision;
-        $this->artisan('mdb:normalize-lt-conductors', ['--batch' => $this->batch->id])
-            ->expectsOutputToContain('PREVIEW ONLY')->expectsOutputToContain('3 record(s) would change.')->assertSuccessful();
-        $this->assertSame('A', $row->fresh()->conductors['R']);
-        $this->assertSame($revision, $this->batch->fresh()->revision);
-        $this->assertDatabaseMissing('audit_logs', ['action' => 'mdb.conductor_alias_migrated']);
-        $options = ['--batch' => $this->batch->id, '--apply' => true, '--admin' => $this->admin->id];
-        $this->artisan('mdb:normalize-lt-conductors', $options)->expectsOutputToContain('3 record(s) updated.')->assertSuccessful();
-        $this->assertSame(['R' => 'ANT', 'Y' => 'WASP', 'B' => 'GNAT', 'N' => 'GNAT'], $row->fresh()->conductors);
-        $this->assertSame(['R' => 'ANT', 'Y' => null, 'B' => '', 'N' => 'UNMAPPED'], $section->fresh()->conductors);
-        $this->assertSame('WASP', $cable->fresh()->conductor_code);
-        $this->assertSame(['conductors' => ['R' => 'A']], $row->fresh()->original_entry);
-        $this->assertSame($frozen->snapshot, $frozen->fresh()->snapshot);
-        $this->assertSame($revision + 1, $this->batch->fresh()->revision);
-        $this->assertNull($this->batch->fresh()->approved_revision_id);
-        $this->assertSame('returned', $this->batch->fresh()->survey_status);
-        $this->assertFalse($row->fresh()->manually_verified);
-        $this->assertSame(3, AuditLog::where('action', 'mdb.conductor_alias_migrated')->count());
-        $this->artisan('mdb:normalize-lt-conductors', $options)->expectsOutputToContain('0 record(s) updated.')->assertSuccessful();
-        $this->assertSame($revision + 1, $this->batch->fresh()->revision);
-    }
-
-    public function test_lt_conductor_command_requires_an_active_admin_to_apply(): void
-    {
-        $this->artisan('mdb:normalize-lt-conductors', ['--apply' => true])->assertFailed();
-        $operator = User::factory()->create(['role' => 'survey_data_entry_operator']);
-        $this->artisan('mdb:normalize-lt-conductors', ['--apply' => true, '--admin' => $operator->id])->assertFailed();
-    }
-
     private function payload(array $changes = []): array
     {
         return array_replace(['revision' => $this->batch->fresh()->revision, 'client_uuid' => (string) Str::uuid(), 'save_uuid' => (string) Str::uuid(),
             'pair_number' => 1, 'designation' => 'S', 'group_number' => '01', 'row_date' => '2026-10-08', 'waypoint_reference' => '001', 'gpx_source_id' => $this->gpx->id,
-            'source_pdf_id' => $this->pdf->id, 'source_page' => 1, 'source_row' => '1', 'conductors' => ['R' => 'A', 'Y' => '__none__', 'B' => '__none__', 'N' => 'A'],
+            'source_pdf_id' => $this->pdf->id, 'source_page' => 1, 'source_row' => '1', 'conductors' => ['R' => 'ANT', 'Y' => '__none__', 'B' => '__none__', 'N' => 'ANT'],
             'equipment_type' => 'SP', 'pole_class' => 'S', 'pole_height' => 31, 'pole_height_unit' => 'ft', 'consumers' => array_fill_keys(array_keys(EntryLookups::CONSUMERS), null),
             'intersection' => false, 'pv_details' => [], 'inheritance' => []], $changes);
     }
@@ -498,11 +455,10 @@ class MdbOperatorEntryTest extends TestCase
 
     public function test_requested_warehouse_conductors_are_selectable_and_save_exact_section_references(): void
     {
-        $codes = ['ABC 50 MM2', 'ABC 95 MM2', 'DOG', 'GOPHER', 'GSL', 'OSPREY', 'PANTHER', 'RABBIT', 'RACCOON',
-            'INS ANT', 'INS GNAT', 'INS WASP', 'INS 7/0.052', 'ABC', 'ABC 10 MM2', 'ABC 16 MM2',
-            'ABC 25 MM2', 'ABC 35 MM2', 'ABC 70 MM2', '4/0 AWG', '100 MM2', '1000 MCM'];
+        $codes = ['ANT', 'WASP', 'GNAT', 'PVC 7/0.052', 'PVC 19/0.052', 'PVC 19/0.083', 'PVC 37/0.083'];
         $response = $this->getJson(route('mdb-workflow.entry.data', $this->batch))->assertOk();
         $options = $response->json('lookups.conductors');
+        $this->assertSame(\App\Services\Mdb\ApprovedWarehouse::conductors(), array_keys($options));
         foreach ($codes as $code) {
             $this->assertArrayHasKey($code, $options);
         }
@@ -517,15 +473,16 @@ class MdbOperatorEntryTest extends TestCase
         }
     }
 
-    public function test_historical_abc_codes_remain_editable_and_resolve_to_correct_warehouse_ids(): void
+    public function test_unapproved_conductor_aliases_are_not_selectable_or_accepted(): void
     {
         $row = $this->save();
-        foreach (['ABC 50mm2' => 'ABC 50 MM2', 'ABC 95mm2' => 'ABC 95 MM2'] as $legacy => $canonical) {
-            $row->update(['conductors' => ['R' => $legacy, 'Y' => '', 'B' => '', 'N' => $legacy]]);
+        $options = $this->getJson(route('mdb-workflow.entry.data', $this->batch))->assertOk()->json('lookups.conductors');
+        foreach (['A', 'W', 'G', 'GN', 'ABC 50mm2', 'ABC 95mm2', 'UNAPPROVED'] as $code) {
+            $this->assertArrayNotHasKey($code, $options);
             $this->putJson(route('mdb-workflow.entry.rows.update', [$this->batch, $this->transformer, $row]),
-                $this->payload(['client_uuid' => $row->client_uuid, 'conductors' => ['R' => $legacy, 'Y' => '__none__', 'B' => '__none__', 'N' => $legacy]]))->assertOk();
-            $this->assertSame($legacy, $row->fresh()->conductors['R']);
-            $this->assertSame($canonical, $row->fresh()->section->conductors['R']);
+                $this->payload(['client_uuid' => $row->client_uuid, 'conductors' => ['R' => $code, 'Y' => '__none__', 'B' => '__none__', 'N' => 'ANT']]))
+                ->assertUnprocessable()->assertJsonValidationErrors('conductors.R');
+            $this->assertSame('ANT', $row->fresh()->conductors['R']);
         }
     }
 

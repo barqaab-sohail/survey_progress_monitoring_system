@@ -25,7 +25,7 @@
                 <label>Consumer/reference number<input name="consumer_reference" maxlength="255"></label>
                 <label>Meter number<input name="meter_number" maxlength="255"></label>
                 <label>Recorded phase<select name="recorded_phase"><option value="">Not recorded</option><option>R</option><option>Y</option><option>B</option><option value="RYB">Three phase (RYB)</option></select></label>
-                <label>Service cable<input name="conductor_code" maxlength="255"><small>Single phase: PVC 7/0.052. Three phase: PVC 19/0.052. Correct this if the survey records another cable; export requires an approved library code.</small></label>
+                <label>Service cable<select name="conductor_code"><option value="">Not recorded</option>@foreach(\App\Services\Mdb\ApprovedWarehouse::conductors() as $code)<option value="{{ $code }}">{{ $code }}</option>@endforeach</select><small>Single phase: PVC 7/0.052. Three phase: PVC 19/0.052. Correct this if the survey records another cable; export requires an approved library code.</small></label>
                 <label>Measured cable length (m)<input name="measured_length_m" type="number" min="0.001" max="100000" step="any"><small>Without a measured length, export uses the straight distance between recorded waypoints, labelled as an estimate.</small></label>
                 <label>Measured length evidence<input name="length_evidence" maxlength="4000"></label>
                 <label>Source PDF<select name="source_pdf_id" required></select></label>

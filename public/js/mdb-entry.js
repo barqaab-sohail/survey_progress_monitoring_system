@@ -2,7 +2,7 @@ import {saveFeedback, savedTime} from './mdb-save-feedback.js?v=2';
 import {installCompactSelects} from './mdb-entry-select.js?v=4';
 import {pdfLoadErrorMessage, clearPdfFallback, showPdfFallback} from './mdb-pdf-errors.js';
 import {phaseEntryState, updatePhaseFields} from './survey-phase-consistency.js?v=1';
-import {installServiceCableEntry} from './mdb-service-cables.js?v=5';
+import {installServiceCableEntry} from './mdb-service-cables.js?v=6';
 
 export function transformerCodeKey(code) {
     return String(code ?? '').toLowerCase().replace(/[\u2010-\u2014\u2212]/g,'-').replace(/\s+/gu,'');
@@ -239,7 +239,7 @@ function initialize(boot) {
         if (!element) return;
         if (element.type === 'checkbox') element.checked = !!value;
         else {
-            if (element.tagName === 'SELECT' && value !== null && value !== undefined && value !== '' && !Array.from(element.options).some(o => o.value === String(value))) element.add(new Option(`${value} — saved value; verify`, String(value)));
+            if (element.tagName === 'SELECT' && !element.hasAttribute('data-entry-conductor') && value !== null && value !== undefined && value !== '' && !Array.from(element.options).some(o => o.value === String(value))) element.add(new Option(`${value} — saved value; verify`, String(value)));
             element.value = name === 'row_date' ? displayDate(value) : value ?? '';
         }
     };
