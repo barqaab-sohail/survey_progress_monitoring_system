@@ -173,8 +173,8 @@ class MdbWorkflowController extends Controller
         }
         $team = ! empty($data['survey_team_id']) ? SurveyTeam::findOrFail($data['survey_team_id']) : null;
         $feeder = Feeder::active()->findOrFail($data['feeder_id']);
-        if (! Feeder::withImportedKmz()->whereKey($feeder->id)->exists()) {
-            throw ValidationException::withMessages(['feeder_id' => 'Import this feeder\'s KMZ successfully before creating a batch. Only feeders with a completed KMZ import can be used.']);
+        if (! Feeder::eligibleForBatch()->whereKey($feeder->id)->exists()) {
+            throw ValidationException::withMessages(['feeder_id' => 'This feeder needs a completed KMZ import and at least one actual transformer record before a batch can be created. An imported transformer count alone is not sufficient.']);
         }
         if ($isProjectManager && ! User::whereKey($data['entry_assigned_to'])->whereHas('roles', fn ($q) => $q->where('name', 'survey_data_entry_operator'))->exists()) {
             throw ValidationException::withMessages(['entry_assigned_to' => 'Select an active Data Entry Operator.']);
@@ -1127,7 +1127,7 @@ class MdbWorkflowController extends Controller
         $activeTeamAllocation = fn ($query) => $query->whereIn('survey_team_id', $teamIds)->where('status', 'active')
             ->whereDate('start_date', '<=', today())->where(fn ($q) => $q->whereNull('end_date')->orWhereDate('end_date', '>=', today()));
         $feedersQuery = Feeder::active()->when($visibleProjects, fn ($q) => $q->whereIn('project_id', $projectIds))
-            ->when($importedKmzOnly, fn ($q) => $q->withImportedKmz())
+            ->when($importedKmzOnly, fn ($q) => $q->eligibleForBatch())
             ->with(['assignments' => $activeTeamAllocation]);
         if (! $canSelectAnyFeeder) {
             $feedersQuery->whereHas('assignments', $activeTeamAllocation);

@@ -677,6 +677,7 @@ class MdbOperatorEntryTest extends TestCase
         $eligible = $feeder->replicate();
         $eligible->feeder_code = 'KMZ-READY';
         $eligible->save();
+        $eligible->transformers()->create(['transformer_code' => 'KMZ-TX-1', 'latitude' => 34.1, 'longitude' => 73.2]);
         $eligible->transformerKmzImports()->create(['file_name' => 'ready.kmz', 'stored_path' => 'ready.kmz', 'status' => 'completed']);
         $pending = $feeder->transformerKmzImports()->create(['file_name' => 'pending.kmz', 'stored_path' => 'pending.kmz', 'status' => 'pending']);
         foreach (['super_admin', 'survey_data_entry_operator'] as $role) {
@@ -689,6 +690,34 @@ class MdbOperatorEntryTest extends TestCase
             ->assertViewHas('feeders', fn ($feeders) => ! $feeders->contains('id', $feeder->id));
         // The index must still allow filtering existing batches for older feeders.
         $this->actingAs($this->admin)->get(route('mdb-workflow.index'))->assertOk()
+            ->assertViewHas('feeders', fn ($feeders) => $feeders->contains('id', $feeder->id));
+    }
+
+    public function test_count_only_kmz_imports_do_not_allow_batch_creation_without_transformer_records(): void
+    {
+        $feeder = $this->batch->feeder;
+        $feeder->transformers()->delete();
+        $feeder->update(['total_transformers' => 161]);
+        foreach ([1, 2] as $attempt) {
+            $feeder->transformerKmzImports()->create(['file_name' => 'count-only-'.$attempt.'.kmz',
+                'stored_path' => 'count-only.kmz', 'status' => 'completed',
+                'transformer_count' => 161, 'created_rows' => 0, 'updated_rows' => 0]);
+        }
+        foreach (['super_admin', 'survey_data_entry_operator'] as $role) {
+            $this->actingAs(User::factory()->create(['role' => $role]));
+            $this->get(route('mdb-workflow.create'))->assertOk()
+                ->assertViewHas('feeders', fn ($feeders) => ! $feeders->contains('id', $feeder->id));
+            $this->postJson(route('mdb-workflow.store'), [
+                'project_id' => $this->batch->project_id, 'feeder_id' => $feeder->id,
+                'survey_date' => today()->toDateString(),
+                'survey_pdf' => UploadedFile::fake()->createWithContent('survey.pdf', '%PDF-1.4 fixture'),
+                'gps_gpx' => UploadedFile::fake()->createWithContent('survey.gpx', '<gpx />'),
+            ])->assertUnprocessable()->assertJsonValidationErrors('feeder_id');
+        }
+        $this->assertDatabaseCount('mdb_workflow_batches', 1);
+        $this->assertDatabaseCount('mdb_workflow_sources', 2);
+        $feeder->transformers()->create(['transformer_code' => 'ACTUAL-TX-1', 'latitude' => 34.1, 'longitude' => 73.2]);
+        $this->get(route('mdb-workflow.create'))->assertOk()
             ->assertViewHas('feeders', fn ($feeders) => $feeders->contains('id', $feeder->id));
     }
 
@@ -729,6 +758,7 @@ class MdbOperatorEntryTest extends TestCase
         $unassignedFeeder = $feeder->replicate();
         $unassignedFeeder->feeder_code = 'NOT-ALLOCATED';
         $unassignedFeeder->save();
+        $unassignedFeeder->transformers()->create(['transformer_code' => 'UNASSIGNED-TX-1', 'latitude' => 34.1, 'longitude' => 73.2]);
         $unassignedFeeder->transformerKmzImports()->create(['file_name' => 'unassigned.kmz', 'stored_path' => 'unassigned.kmz', 'status' => 'completed']);
         $this->from(route('mdb-workflow.create'))->post(route('mdb-workflow.store'), [
             'project_id' => $this->batch->project_id,

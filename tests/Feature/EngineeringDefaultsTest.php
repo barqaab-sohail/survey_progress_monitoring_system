@@ -188,6 +188,7 @@ class EngineeringDefaultsTest extends TestCase
             'sub_division_id' => $sub->id, 'grid_station_id' => $grid->id, 'feeder_code' => 'F', 'feeder_name' => 'Feeder', 'status' => 'active', 'total_transformers' => 0]);
         $team = SurveyTeam::create(['project_id' => $this->project->id, 'code' => 'T', 'name' => 'Team', 'status' => 'active']);
         $feeder->transformerKmzImports()->create(['file_name' => 'fixture.kmz', 'stored_path' => 'fixture.kmz', 'status' => 'completed']);
+        $feeder->transformers()->create(['transformer_code' => 'FIXTURE-TX-1', 'latitude' => 34.1, 'longitude' => 73.2]);
         $upload = fn () => ['project_id' => $this->project->id, 'feeder_id' => $feeder->id, 'survey_team_id' => $team->id,
             'survey_date' => '2026-10-19', 'survey_pdf' => UploadedFile::fake()->createWithContent('survey.pdf', '%PDF-1.4 fixture'),
             'gps_gpx' => UploadedFile::fake()->createWithContent('survey.gpx', '<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="test"><wpt lat="34" lon="73"><name>001</name></wpt></gpx>')];

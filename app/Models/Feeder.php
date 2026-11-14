@@ -94,4 +94,9 @@ class Feeder extends Model
     {
         return $query->whereHas('transformerKmzImports', fn (Builder $imports) => $imports->where('status', 'completed'));
     }
+
+    public function scopeEligibleForBatch(Builder $query): Builder
+    {
+        return $query->withImportedKmz()->whereHas('transformers');
+    }
 }
