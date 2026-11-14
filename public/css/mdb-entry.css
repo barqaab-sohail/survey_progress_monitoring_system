@@ -80,3 +80,23 @@
 
 .entry-electrical-equipment{display:flex;flex-wrap:wrap;gap:8px;min-width:0}.entry-electrical-equipment>fieldset{flex:1 1 280px}.mdb-entry .entry-conductor-detail-fields{grid-template-columns:repeat(4,minmax(0,1fr))}.mdb-entry .entry-equipment-detail-fields{grid-template-columns:minmax(70px,1fr) minmax(70px,1fr) minmax(150px,1.3fr)}
 .entry-next-transformer{max-width:min(640px,calc(100vw - 32px));border:1px solid var(--line);border-radius:12px;padding:24px;color:var(--ink);background:#fff}.entry-next-transformer::backdrop{background:#10243580}.entry-next-transformer .actions{flex-wrap:wrap;gap:8px}.entry-next-transformer h2{margin-top:0}
+/* Keep large meter collections compact and the editor beside the list. */
+.service-cable-tools{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:16px 0}
+.service-cable-tools label{flex:1;min-width:160px}
+.service-cable-pagination{margin:12px 0;align-items:center}
+#service-cable-editor:not([open])>summary{cursor:pointer;margin:12px 0}
+#service-cable-editor[open]{position:fixed;inset:0 0 0 auto;width:min(700px,100vw);box-sizing:border-box;z-index:1100;background:#fff;box-shadow:-8px 0 32px #0f172a40;overflow:auto;padding:20px;overscroll-behavior:contain}
+#service-cable-editor[open]>summary{cursor:pointer;font-weight:700;margin-bottom:12px}
+#service-cable-editor[open] .entry-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+#service-cable-editor .service-cable-save-actions{position:sticky;bottom:-20px;background:#fff;padding:14px 0;flex-wrap:wrap;border-top:1px solid #cbd5e1}
+#service-cable-save-status,#entry-row-save-status{display:block;flex-basis:100%;font-weight:600}
+[data-state="saved"]#service-cable-save-status,[data-state="saved"]#entry-row-save-status{color:#166534}
+[data-state="dirty"]#service-cable-save-status,[data-state="dirty"]#entry-row-save-status{color:#92400e}
+[data-state="error"]#service-cable-save-status,[data-state="error"]#entry-row-save-status{color:#b91c1c}
+#entry-save-toast{position:fixed;top:24px;right:24px;z-index:1300;max-width:min(440px,calc(100vw - 48px));padding:14px 20px;border:1px solid #86efac;border-radius:8px;background:#f0fdf4;color:#166534;box-shadow:0 6px 24px #0f172a30;pointer-events:none}
+#entry-save-toast[data-state="error"]{background:#fef2f2;border-color:#fca5a5;color:#991b1b}
+@media(max-width:520px){#service-cable-editor[open] .entry-fields{grid-template-columns:1fr}}
+#entry-save-toast{padding-right:48px;pointer-events:auto}
+.entry-toast-close{position:absolute;top:6px;right:6px;width:32px;height:32px;border:0;border-radius:4px;background:transparent;color:inherit;font-size:24px;line-height:1;cursor:pointer}
+.entry-toast-close:hover{background:#0000000d}
+.entry-toast-close:focus-visible{outline:2px solid currentColor;outline-offset:1px}

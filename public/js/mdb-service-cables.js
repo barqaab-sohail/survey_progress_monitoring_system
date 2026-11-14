@@ -1,3 +1,4 @@
+import {saveFeedback, savedTime} from './mdb-save-feedback.js?v=2';
 export function serviceCableDistance(pole, meter) {
     const a = pole?.service_coordinates, b = meter?.service_coordinates;
     if (!a || !b || ![a.x,a.y,b.x,b.y].every(v => typeof v === 'number' && Number.isFinite(v))) return null;
@@ -13,8 +14,18 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
     const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     let transformerId = null, cableId = null, dirty = false;
     const drafts = new Map();
+    let page = 1;
+    const pageSize = 25;
+    let advanceAfterSave = true;
+    const guardDraft = () => !dirty || window.confirm('Discard unsaved cable changes? Save first to keep them.');
+    function openEditor() {
+        $('service-cable-editor').open = true;
+        if ($('service-cable-editor-title')) $('service-cable-editor-title').textContent = cableId ? 'Edit service cable' : 'Add service cable';
+        control('meter_number')?.focus({preventScroll:true});
+    }
     const canEdit = () => !!data().service_cables_can_enter && editable();
     const message = (value, failed = false) => {
+        saveFeedback($('service-cable-save-status'), value, failed ? 'error' : 'saved');
         $('service-cable-status').textContent = value;
         $('service-cable-status').className = failed ? 'entry-error-summary' : 'mdb-note';
     };
@@ -94,6 +105,7 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
     }
     function reset(context = null) {
         cableId = null; dirty = false;
+        if ($('service-cable-editor-title')) $('service-cable-editor-title').textContent = 'Add service cable';
         if (form) {
             const previous = context || values();
             form.reset();
@@ -119,19 +131,34 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
     }
     function lock(value = isBusy()) {
         $('service-cables-enabled').disabled = value || !canEdit() || !active();
+        if ($('service-cable-add')) $('service-cable-add').disabled = value || !canEdit();
         form?.querySelectorAll('input,select,textarea,button').forEach(el => el.disabled = value || !canEdit());
         root.querySelectorAll('[data-service-edit],[data-service-delete]').forEach(el => el.disabled = value || !canEdit());
     }
-    async function run(path, method, body, success, clear = false) {
+    async function run(path, method, body, success, clear = false, advance = true) {
         if (isBusy() || !canEdit()) return;
         const context = clear ? values() : null;
         let completedPole = false, saved = false;
+        form?.querySelectorAll('[aria-invalid]').forEach(el => el.removeAttribute('aria-invalid'));
         setBusy(true); lock(true);
+        saveFeedback($('service-cable-save-status'), 'Saving...', 'saving');
         try {
             const result = await api(path, method, {...body, revision:data().revision});
+            const confirmed = clear && ['POST','PUT'].includes(method) ? result.transformers?.find(t => t.id === transformerId)?.service_cables?.find(c =>
+                c.entry_row_id === body.entry_row_id && c.category === body.category && Number(c.consumer_number) === body.consumer_number && Number(c.meter_waypoint_id) === body.meter_waypoint_id) : null;
+            if (clear && ['POST','PUT'].includes(method) && !confirmed) throw new Error('The server did not confirm the saved cable. Your fields are retained; refresh saved records before retrying.');
             if (clear) {cableId = null; dirty = false; drafts.delete(transformerId);}
             accept(result);
             if (clear) reset(context);
+            if (confirmed && !advance) {
+                cableId = confirmed.id;
+                if ($('service-cable-editor-title')) $('service-cable-editor-title').textContent = 'Edit service cable';
+                for (const [name,value] of Object.entries(confirmed)) {
+                    const input = control(name === 'phase' ? 'recorded_phase' : name);
+                    if (input) input.value = name === 'row_date' ? displayDate(value) : value ?? '';
+                }
+                identity();control('meter_waypoint_id').value = confirmed.meter_waypoint_id;coordinates();
+            }
             saved = true;
             if (clear && ['POST','PUT'].includes(method)) {
                 const row = active()?.rows?.find(r => r.id === Number(context.entry_row_id));
@@ -141,15 +168,19 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
                     const slots = new Set(cables.filter(c => c.category === category).map(c => Number(c.consumer_number)));
                     return slots.size === Number(count || 0);
                 });
-                if (completedPole) $('service-cable-editor').open = false;
+                if (completedPole && advance) $('service-cable-editor').open = false;
             }
-            message(completedPole ? 'All consumer meters for this E pole are saved. Continue with the next pole entry.' : success);
+            const confirmation = confirmed ? `Service cable ${confirmed.composite_identifier || body.waypoint_reference} saved at ${savedTime()}` : success;
+            saveFeedback($('service-cable-save-status'),confirmation,'saved',true);
+            message(completedPole ? 'All consumer meters for this E pole are saved. Continue with the next pole entry. '+confirmation : confirmation);
         } catch (error) {
-            message(Object.values(error.errors || {}).flat().join(' ') || error.message, true);
+            for (const name of Object.keys(error.errors || {})) control(name === 'phase' ? 'recorded_phase' : name)?.setAttribute('aria-invalid','true');
+            const failure = Object.values(error.errors || {}).flat().join(' ') || error.message;
+            message('Not saved. '+failure+' Your entered fields are retained. Use Save to retry.', true);saveFeedback($('service-cable-save-status'),failure,'error',true);
             $('service-cables-enabled').checked = !!active()?.service_cables_enabled;
         } finally {
             setBusy(false); lock(false);
-            if (saved && completedPole) {
+            if (saved && completedPole && advance) {
                 const poleForm = $('entry-row-form');
                 poleForm?.scrollIntoView?.({block:'start', behavior:'smooth'});
                 const target = poleForm?.querySelector('input:not([type="hidden"]):not([disabled]):not([readonly]), select:not([disabled])')
@@ -165,6 +196,7 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
         const current = values();
         if (transformerId && transformerId !== t.id && dirty) drafts.set(transformerId, {values:current, cableId});
         const changed = transformerId !== t.id;
+        if (changed) { message('');page = 1; if ($('service-cable-search')) $('service-cable-search').value = ''; if ($('service-cable-filter-pole')) $('service-cable-filter-pole').value = ''; }
         transformerId = t.id;
         $('service-cables-enabled').checked = !!t.service_cables_enabled;
         $('service-cable-content').hidden = !t.service_cables_enabled;
@@ -175,10 +207,25 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
             const count = cables.filter(c => c.entry_row_id === row.id).length;
             return `<p>E ${esc(row.composite_identifier || row.waypoint_reference)}: ${total} consumers; ${count} meter waypoints recorded; ${Math.max(0,total-count)} without meter waypoints.</p>`;
         }).join('') || '<p>Save an S/E pair with consumer counts before adding meter connections.</p>';
-        $('service-cable-list').innerHTML = cables.length ? '<table class="table"><thead><tr><th>E pole / consumer</th><th>Meter waypoint</th><th>Meter / phase</th><th>Length</th><th>Source</th><th></th></tr></thead><tbody>'+cables.map(c => {
+        if ($('service-cable-count')) $('service-cable-count').textContent = '('+cables.length+')';
+        const poleFilter = $('service-cable-filter-pole');
+        if (poleFilter) options(poleFilter, ends.map(e => [e.id, 'E '+(e.composite_identifier || e.waypoint_reference)]), poleFilter.value, 'All poles');
+        const query = ($('service-cable-search')?.value || '').trim().toLowerCase();
+        const filtered = cables.filter(c => {
+            const row = ends.find(e => e.id === c.entry_row_id);
+            return (!poleFilter?.value || String(c.entry_row_id) === poleFilter.value)
+                && (!$('service-cable-filter-status')?.value || !(c.meter_number || c.consumer_reference) || !c.phase)
+                && [c.composite_identifier,c.waypoint_reference,c.meter_number,c.consumer_reference,c.category,c.source_row,row?.composite_identifier,row?.waypoint_reference].some(value => String(value ?? '').toLowerCase().includes(query));
+        });
+        const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
+        page = Math.max(1, Math.min(page, pages));
+        if ($('service-cable-page')) $('service-cable-page').textContent = 'Page '+page+' of '+pages+' / '+filtered.length+' matching cables';
+        if ($('service-cable-prev')) $('service-cable-prev').disabled = page === 1;
+        if ($('service-cable-next')) $('service-cable-next').disabled = page === pages;
+        $('service-cable-list').innerHTML = filtered.length ? '<table class="table"><thead><tr><th>E pole / consumer</th><th>Meter waypoint</th><th>Meter / phase</th><th>Length</th><th>Source</th><th></th></tr></thead><tbody>'+filtered.slice((page-1)*pageSize,page*pageSize).map(c => {
             const row = ends.find(e => e.id === c.entry_row_id);
             return `<tr><td>${esc(row?.waypoint_reference)} / ${esc(c.category.toUpperCase())} ${c.consumer_number}</td><td>${esc(c.composite_identifier)}</td><td>${esc(c.meter_number || c.consumer_reference || 'Not recorded')} / ${esc(c.phase || 'Not recorded')}</td><td>${lengthLabel(c.measured_length_m, polePoint(row), (data().waypoints || []).find(p => p.id === Number(c.meter_waypoint_id)))}</td><td>PDF #${c.source_pdf_id}, page ${c.source_page}<small>${esc(c.source_row)}</small></td><td>${canEdit() ? `<button type="button" class="btn btn-sm btn-light" data-service-edit="${c.id}">Edit</button> <button type="button" class="btn btn-sm btn-light" data-service-delete="${c.id}">Delete</button>` : ''}</td></tr>`;
-        }).join('')+'</tbody></table>' : '<p>No meter waypoints entered. Existing consumer generation applies.</p>';
+        }).join('')+'</tbody></table>' : '<p>No matching meter waypoints.</p>';
         if (form) {
             const retained = changed ? drafts.get(t.id) : {values:current, cableId};
             options(control('entry_row_id'), ends.map(e => [e.id, `E ${e.composite_identifier || e.waypoint_reference} (pair ${e.pair_number})`]), retained?.values?.entry_row_id || ends[0]?.id);
@@ -202,11 +249,13 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
         run(`/transformers/${active().id}/service-cables/settings`, 'PUT', {enabled}, enabled ? 'Meter waypoint entry enabled for this transformer.' : 'Meter waypoint entry disabled.');
     });
     form?.addEventListener('input', event => {
-        dirty = true;
+        event.target.removeAttribute('aria-invalid');
+        dirty = true;saveFeedback($('service-cable-save-status'),'Unsaved changes','dirty');
         if (['group_number','row_date','waypoint_reference','gpx_source_id'].includes(event.target.name)) identity();
         if (event.target.name === 'meter_waypoint_id' || event.target.name === 'measured_length_m') coordinates();
     });
     form?.addEventListener('change', event => {
+        dirty = true;saveFeedback($('service-cable-save-status'),'Unsaved changes','dirty');
         if (event.target.name === 'entry_row_id') seed(active()?.rows.find(r => r.id === Number(control('entry_row_id').value)));
         if (event.target.name === 'category') {
             const used = (active()?.service_cables || []).filter(c => c.entry_row_id === Number(control('entry_row_id').value) && c.category === control('category').value);
@@ -221,6 +270,7 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
     form?.addEventListener('submit', event => {
         event.preventDefault();
         if (!form.reportValidity()) return;
+        advanceAfterSave = event.submitter?.value !== 'stay';
         const body = values();
         const duplicate = (active()?.service_cables || []).some(c => c.id !== cableId &&
             (Number(c.meter_waypoint_id) === Number(body.meter_waypoint_id) ||
@@ -233,9 +283,24 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
         delete body.composite_identifier;
         for (const key of ['entry_row_id','consumer_number','gpx_source_id','meter_waypoint_id','source_pdf_id','source_page','measured_length_m']) body[key] = body[key] === '' ? null : Number(body[key]);
         for (const key of Object.keys(body)) if (body[key] === '') body[key] = null;
-        run(`/transformers/${active().id}/service-cables${cableId ? '/'+cableId : ''}`, cableId ? 'PUT' : 'POST', body, 'Meter connection saved. Consumer totals are unchanged. Review the transformer again before submission.', true);
+        run(`/transformers/${active().id}/service-cables${cableId ? '/'+cableId : ''}`, cableId ? 'PUT' : 'POST', body, 'Meter connection saved. Consumer totals are unchanged. Review the transformer again before submission.', true, advanceAfterSave);
     });
-    $('service-cable-cancel')?.addEventListener('click', () => reset());
+    $('service-cable-cancel')?.addEventListener('click', () => {if (guardDraft()) {reset();message('New cable - not saved yet.');}});
+    $('service-cable-add')?.addEventListener('click', () => {if (!isBusy() && guardDraft()) {reset();openEditor();message('New cable - not saved yet.');}});
+    $('service-cable-close')?.addEventListener('click', () => {$('service-cable-editor').open = false;$('service-cable-add')?.focus();});
+    document.addEventListener('keydown', event => {if (event.key === 'Escape' && !isBusy() && $('service-cable-editor')?.open) {$('service-cable-editor').open = false;$('service-cable-add')?.focus();}});
+    for (const id of ['service-cable-search','service-cable-filter-pole','service-cable-filter-status']) $(id)?.addEventListener(id === 'service-cable-search' ? 'input' : 'change', () => {page = 1;render();});
+    $('service-cable-prev')?.addEventListener('click', () => {page--;render();});
+    $('service-cable-next')?.addEventListener('click', () => {page++;render();});
+    $('service-cable-copy')?.addEventListener('click', () => {
+        if (isBusy()) return;
+        const previous = [...(active()?.service_cables || [])].reverse().find(c => c.id !== cableId && c.entry_row_id === Number(control('entry_row_id').value) && c.category === control('category').value);
+        if (!previous) {message('No previous cable for this pole and category.');return;}
+        control('conductor_code').value = previous.conductor_code || '';
+        control('recorded_phase').value = previous.phase || '';
+        dirty = true;message('Phase and cable type copied. Check these values before saving.');
+        saveFeedback($('service-cable-save-status'),'Unsaved changes','dirty');
+    });
     $('service-cable-pole-location')?.addEventListener('click', () => {
         const pole = polePoint();
         const matches = waypointMatches({waypoint_reference:control('waypoint_reference').value, gpx_source_id:Number(control('gpx_source_id').value),
@@ -249,6 +314,7 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
         const edit = event.target.closest('[data-service-edit]');
         const remove = event.target.closest('[data-service-delete]');
         if (edit && form && !isBusy()) {
+            if (!guardDraft()) return;
             const cable = active().service_cables.find(c => c.id === Number(edit.dataset.serviceEdit));
             cableId = cable.id;
             for (const [name,value] of Object.entries(cable)) {
@@ -256,9 +322,9 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
                 if (input) input.value = name === 'row_date' ? displayDate(value) : value ?? '';
             }
             identity(); control('meter_waypoint_id').value = cable.meter_waypoint_id;coordinates();
-            $('service-cable-editor').open = true;dirty = false;form.scrollIntoView({block:'nearest'});
+            dirty = false;openEditor();message('Saved cable loaded for editing.');
         }
-        if (remove && !isBusy() && window.confirm('Remove this meter connection? The consumer count at the E pole will stay the same.')) {
+        if (remove && !isBusy() && guardDraft() && window.confirm('Remove this meter connection? The consumer count at the E pole will stay the same.')) {
             run(`/transformers/${active().id}/service-cables/${remove.dataset.serviceDelete}`, 'DELETE', {}, 'Meter connection removed. Consumer totals are unchanged.', true);
         }
     });

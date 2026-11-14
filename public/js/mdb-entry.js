@@ -1,7 +1,8 @@
+import {saveFeedback, savedTime} from './mdb-save-feedback.js?v=2';
 import {installCompactSelects} from './mdb-entry-select.js?v=4';
 import {pdfLoadErrorMessage, clearPdfFallback, showPdfFallback} from './mdb-pdf-errors.js';
 import {phaseEntryState, updatePhaseFields} from './survey-phase-consistency.js?v=1';
-import {installServiceCableEntry} from './mdb-service-cables.js?v=4';
+import {installServiceCableEntry} from './mdb-service-cables.js?v=5';
 
 export function transformerCodeKey(code) {
     return String(code ?? '').toLowerCase().replace(/[\u2010-\u2014\u2212]/g,'-').replace(/\s+/gu,'');
@@ -246,6 +247,7 @@ function initialize(boot) {
     const number = value => value === '' || value === null || value === undefined ? null : Number(value);
     const sourceUrl = id => `${boot.base_url}/sources/${encodeURIComponent(id)}`;
     function status(message, state = 'saved') {
+        saveFeedback($('entry-row-save-status'), message, state);
         $('entry-save-status').textContent = message;
         $('entry-save-status').hidden = !$('entry-errors').hidden;
         $('entry-save-status').parentElement.dataset.state = $('entry-errors').hidden ? state : 'error';
@@ -283,6 +285,7 @@ function initialize(boot) {
             }
         }
         status('', 'error');
+        saveFeedback($('entry-row-save-status'), message, 'error', true);
     }
     function clearErrors() {
         $('entry-errors').hidden = true;
@@ -684,14 +687,15 @@ function initialize(boot) {
         if(pdfRows().some(row=>row.source_file_id===number(val(rowForm,'source_pdf_id')) && row.page===number(val(rowForm,'source_page'))) && !marker){error('Row not saved. Select the corresponding PDF row.',{pdf_progress_row_id:['Choose the PDF row for this record before saving.']},rowForm);revealRowErrors();return;}
         saveUuid ||= uuid(); Object.assign(body,{client_uuid:clientUuid,save_uuid:saveUuid,revision:data.revision});
         const path=`/transformers/${activeId}/rows${rowId ? '/'+rowId : ''}`;
-        setBusy(true); status('Saving row…');
+        setBusy(true); status('Saving row...', 'saving');
         let succeeded=false;
         try {const response=await api(path,rowId ? 'PUT' : 'POST',body), saved=response.transformers?.find(t=>t.id===activeId)?.rows?.find(r=>r.client_uuid===clientUuid);
             if(!saved)throw new Error('The server did not confirm the saved row. Refresh saved records before retrying.');
             data=response;rowDirty=false;
             renderLists();renderSaved(); if(advance)newRow(saved); else fillRow(saved,saved.id,saved.client_uuid);
             if(advance && markedSelection){const pending=nextPendingPdfRow(pdfRows(),body.source_pdf_id);if(pending)selectPdfRow(pending.id,false);}
-            status(advance ? 'Row completed and saved. Enter the next S/E row.' : 'Draft saved in the application. You can resume later.');persist();succeeded=true;
+            const confirmation = `Pole ${saved.composite_identifier || saved.waypoint_reference} (${saved.designation}) saved at ${savedTime()}`;
+            status(confirmation);saveFeedback($('entry-row-save-status'),confirmation,'saved',true);persist();succeeded=true;
         }catch(e){rowDirty=true;error(`Row not saved. ${e.message} Your fields are retained.`,e.errors || {},rowForm);persist();}
         finally{setBusy(false);if(rowId){field(rowForm,'pair_number').disabled=true;field(rowForm,'designation').disabled=true;}
             if(succeeded && advance){const nextField=['group_number','row_date','waypoint_reference'].find(key=>!val(rowForm,key)) || 'waypoint_reference';field(rowForm,nextField).focus({preventScroll:true});$('entry-row-panel').scrollIntoView({block:'nearest'});}
@@ -1065,6 +1069,6 @@ function initialize(boot) {
     window.addEventListener('pagehide',()=>{if(sourcePoll)window.clearInterval(sourcePoll);});
     document.querySelectorAll('[data-entry-leave]').forEach(link=>link.addEventListener('click',event=>{if(busy || ((headerDirty || rowDirty) && !window.confirm('Some fields are saved only in this browser. Leave entry now? Use Save Draft to store them in the application.')))event.preventDefault();else persist();}));
     window.addEventListener('beforeunload',event=>{persist();if(headerDirty || rowDirty || busy){event.preventDefault();event.returnValue='';}});
-    document.addEventListener('keydown',event=>{if(event.target.closest?.('#service-cable-form')){if(event.ctrlKey && (event.key==='Enter' || event.key.toLowerCase()==='s')){event.preventDefault();$('service-cable-form').requestSubmit();}return;}if(event.ctrlKey && event.key==='Enter'){event.preventDefault();saveRow(true);}if(event.ctrlKey && event.key.toLowerCase()==='s'){event.preventDefault();headerDirty ? saveHeader() : saveRow(false);}if(event.altKey && ['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();setPage(pageNumber+(event.key==='ArrowLeft' ? -1 : 1));}});
+    document.addEventListener('keydown',event=>{if(event.target.closest?.('#service-cable-form')){if(event.ctrlKey && (event.key==='Enter' || event.key.toLowerCase()==='s')){event.preventDefault();$('service-cable-form').requestSubmit(event.key.toLowerCase()==='s' ? $('service-cable-save-stay') : undefined);}return;}if(event.ctrlKey && event.key==='Enter'){event.preventDefault();saveRow(true);}if(event.ctrlKey && event.key.toLowerCase()==='s'){event.preventDefault();headerDirty ? saveHeader() : saveRow(false);}if(event.altKey && ['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();setPage(pageNumber+(event.key==='ArrowLeft' ? -1 : 1));}});
     loadPdf();persist();
 }

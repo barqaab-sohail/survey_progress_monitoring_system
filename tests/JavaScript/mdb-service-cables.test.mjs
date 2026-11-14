@@ -7,13 +7,13 @@ import {isoDate, displayDate, completeWaypoint, waypointMatches} from '../../pub
 function fixture() {
     const fields = ['entry_row_id','category','gpx_source_id','source_pdf_id','meter_waypoint_id'];
     const inputs = ['consumer_number','group_number','row_date','waypoint_reference','composite_identifier','consumer_reference','meter_number','recorded_phase','conductor_code','measured_length_m','length_evidence','source_page','source_row','remarks'];
-    const dom = new JSDOM(`<section id="entry-service-cables"><input type="checkbox" id="service-cables-enabled"><p id="service-cable-status"></p><div id="service-cable-content"><div id="service-cable-coverage"></div><div id="service-cable-list"></div><details id="service-cable-editor"><form id="service-cable-form">${fields.map(name=>`<select name="${name}">${name==='category' ? '<option value="rs">RS</option><option value="rl">RL</option>' : ''}</select>`).join('')}${inputs.map(name=>`<input name="${name}">`).join('')}<p id="service-cable-coordinates"></p><button type="button" id="service-cable-pole-location">At E</button><button type="submit">Save</button><button type="button" id="service-cable-cancel">Cancel</button></form></details></div></section>`, {url:'http://localhost'});
+    const dom = new JSDOM(`<section id="entry-service-cables"><input type="checkbox" id="service-cables-enabled"><p id="service-cable-status"></p><div id="service-cable-content"><div id="service-cable-coverage"></div><input id="service-cable-search"><select id="service-cable-filter-pole"></select><select id="service-cable-filter-status"><option value=""></option><option value="incomplete">Incomplete</option></select><span id="service-cable-count"></span><button id="service-cable-prev"></button><span id="service-cable-page"></span><button id="service-cable-next"></button><div id="service-cable-list"></div><details id="service-cable-editor"><form id="service-cable-form">${fields.map(name=>`<select name="${name}">${name==='category' ? '<option value="rs">RS</option><option value="rl">RL</option>' : ''}</select>`).join('')}${inputs.map(name=>`<input name="${name}">`).join('')}<span id="service-cable-save-status"></span><button id="service-cable-save-stay" type="submit" value="stay">Save</button><p id="service-cable-coordinates"></p><button type="button" id="service-cable-pole-location">At E</button><button type="submit">Save</button><button type="button" id="service-cable-cancel">Cancel</button></form></details></div></section>`, {url:'http://localhost'});
     Object.assign(globalThis, {window:dom.window,document:dom.window.document,Option:dom.window.Option});
     let state = {revision:1,service_cables_can_enter:true,entry_settings:{two_digit_year_start:2000},
         sources:[{id:1,kind:'gpx',status:'ready',original_name:'Survey.gpx'},{id:2,kind:'pdf',status:'ready',original_name:'Survey.pdf'}],
         waypoints:[{id:26,name:'026',source_file_id:1,latitude:34.1,longitude:73.2}],
         transformers:[{id:1,service_cables_enabled:true,service_cables:[],rows:[{id:2,designation:'E',pair_number:1,group_number:'02',row_date:'2026-10-08',waypoint_reference:'025',gpx_source_id:1,source_pdf_id:2,source_page:1,consumers:{rs:5}}]}]};
-    let busy = false, posted = null, reject = false;
+    let busy = false, posted = null, reject = false, unconfirmed = false;
     let feature;
     feature = installServiceCableEntry({active:()=>state.transformers[0],data:()=>state,editable:()=>true,isBusy:()=>busy,
         setBusy:value=>{busy=value;feature.setBusy(value);},isoDate,displayDate,completeWaypoint,waypointMatches,
@@ -22,12 +22,12 @@ function fixture() {
             if(reject)throw new Error('Network unavailable');
             const result=structuredClone(state);
             result.revision++;
-            result.transformers[0].service_cables.push({...body,id:1,composite_identifier:completeWaypoint(body.group_number,body.row_date,body.waypoint_reference)});
+            if (!unconfirmed) result.transformers[0].service_cables.push({...body,id:1,composite_identifier:completeWaypoint(body.group_number,body.row_date,body.waypoint_reference)});
             return result;
         }});
     feature.render();
     const form=dom.window.document.getElementById('service-cable-form');
-    return {dom,feature,form,field:name=>form.elements.namedItem(name),state:()=>state,posted:()=>posted,reject:()=>{reject=true;},
+    return {dom,feature,form,field:name=>form.elements.namedItem(name),state:()=>state,posted:()=>posted,reject:()=>{reject=true;},unconfirm:()=>{unconfirmed=true;},
         close:()=>{dom.window.close();delete globalThis.window;delete globalThis.document;delete globalThis.Option;}};
 }
 const settle = async()=>{for(let i=0;i<8;i++)await new Promise(resolve=>setImmediate(resolve));};
@@ -178,4 +178,57 @@ test('distance handles coincident points and missing coordinates without guessin
     assert.equal(serviceCableDistance(p,p),0);
     assert.equal(serviceCableDistance(p,null),null);
     assert.equal(serviceCableDistance(p,{service_coordinates:{x:null,y:0}}),null);
+});
+
+
+test('large cable lists paginate and search by meter or E pole without losing draft fields',()=>{
+    const f=fixture();
+    try {
+        f.state().transformers[0].service_cables=Array.from({length:61},(_,i)=>({id:i+1,entry_row_id:2,category:'rs',consumer_number:i+1,composite_identifier:'meter-'+i,meter_number:'M-'+i,phase:i===60 ? '' : 'R'}));
+        f.feature.render();
+        const doc=f.dom.window.document;
+        assert.equal(doc.querySelectorAll('#service-cable-list tbody tr').length,25);
+        assert.match(doc.getElementById('service-cable-page').textContent,/Page 1 of 3/);
+        f.field('meter_number').value='draft';
+        doc.getElementById('service-cable-next').click();
+        assert.match(doc.getElementById('service-cable-page').textContent,/Page 2 of 3/);
+        assert.equal(f.field('meter_number').value,'draft');
+        const search=doc.getElementById('service-cable-search');
+        search.value='M-60';search.dispatchEvent(new f.dom.window.Event('input'));
+        assert.equal(doc.querySelectorAll('#service-cable-list tbody tr').length,1);
+        search.value='';search.dispatchEvent(new f.dom.window.Event('input'));
+        doc.getElementById('service-cable-filter-status').value='incomplete';
+        doc.getElementById('service-cable-filter-status').dispatchEvent(new f.dom.window.Event('change'));
+        assert.equal(doc.querySelectorAll('#service-cable-list tbody tr').length,1);
+    } finally {f.close();}
+});
+
+test('Save stays on the confirmed cable and shows its identity while the toast does not take focus',async()=>{
+    const f=fixture();
+    try {
+        f.field('meter_number').value='M-026';
+        const button=f.dom.window.document.getElementById('service-cable-save-stay');
+        f.form.dispatchEvent(new f.dom.window.SubmitEvent('submit',{bubbles:true,cancelable:true,submitter:button}));
+        await settle();
+        assert.equal(f.field('meter_number').value,'M-026');
+        assert.equal(f.field('waypoint_reference').value,'026');
+        assert.match(f.dom.window.document.getElementById('service-cable-save-status').textContent,/02081026026 saved at/);
+        assert.equal(f.dom.window.document.getElementById('entry-save-toast').getAttribute('role'),'status');
+        f.field('meter_number').dispatchEvent(new f.dom.window.Event('input',{bubbles:true}));
+        assert.equal(f.dom.window.document.getElementById('service-cable-save-status').textContent,'Unsaved changes');
+    } finally {f.close();}
+});
+
+
+test('an unconfirmed server response preserves cable values and reports failure instead of success',async()=>{
+    const f=fixture();
+    try {
+        f.unconfirm();f.field('meter_number').value='KEEP-ME';
+        f.form.dispatchEvent(new f.dom.window.Event('submit',{bubbles:true,cancelable:true}));
+        await settle();
+        assert.equal(f.field('meter_number').value,'KEEP-ME');
+        assert.equal(f.field('waypoint_reference').value,'026');
+        assert.match(f.dom.window.document.getElementById('service-cable-status').textContent,/did not confirm/);
+        assert.equal(f.dom.window.document.getElementById('entry-save-toast').dataset.state,'error');
+    } finally {f.close();}
 });
