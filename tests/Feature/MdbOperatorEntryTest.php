@@ -671,11 +671,54 @@ class MdbOperatorEntryTest extends TestCase
         Configuration::create(['project_id' => $this->batch->project_id, 'settings' => ['entry' => ['two_digit_year_start' => 2000, 'pole_height_unit' => 'ft']]]);
     }
 
+    public function test_batch_creation_lists_only_feeders_with_completed_kmz_imports(): void
+    {
+        $feeder = $this->batch->feeder;
+        $eligible = $feeder->replicate();
+        $eligible->feeder_code = 'KMZ-READY';
+        $eligible->save();
+        $eligible->transformerKmzImports()->create(['file_name' => 'ready.kmz', 'stored_path' => 'ready.kmz', 'status' => 'completed']);
+        $pending = $feeder->transformerKmzImports()->create(['file_name' => 'pending.kmz', 'stored_path' => 'pending.kmz', 'status' => 'pending']);
+        foreach (['super_admin', 'survey_data_entry_operator'] as $role) {
+            $this->actingAs(User::factory()->create(['role' => $role]))
+                ->get(route('mdb-workflow.create'))->assertOk()
+                ->assertViewHas('feeders', fn ($feeders) => $feeders->contains('id', $eligible->id) && ! $feeders->contains('id', $feeder->id));
+        }
+        $pending->update(['status' => 'failed']);
+        $this->get(route('mdb-workflow.create'))->assertOk()
+            ->assertViewHas('feeders', fn ($feeders) => ! $feeders->contains('id', $feeder->id));
+        // The index must still allow filtering existing batches for older feeders.
+        $this->actingAs($this->admin)->get(route('mdb-workflow.index'))->assertOk()
+            ->assertViewHas('feeders', fn ($feeders) => $feeders->contains('id', $feeder->id));
+    }
+
+    public function test_batch_creation_rejects_feeders_without_a_successful_kmz_import(): void
+    {
+        $feeder = $this->batch->feeder;
+        foreach ([null, 'pending', 'processing', 'failed'] as $status) {
+            if ($status) {
+                $feeder->transformerKmzImports()->create(['file_name' => $status.'.kmz', 'stored_path' => $status.'.kmz', 'status' => $status]);
+            }
+            foreach (['super_admin', 'survey_data_entry_operator'] as $role) {
+                $this->actingAs(User::factory()->create(['role' => $role]));
+                $this->postJson(route('mdb-workflow.store'), [
+                    'project_id' => $this->batch->project_id, 'feeder_id' => $feeder->id,
+                    'survey_date' => today()->toDateString(),
+                    'survey_pdf' => UploadedFile::fake()->createWithContent('survey.pdf', '%PDF-1.4 fixture'),
+                    'gps_gpx' => UploadedFile::fake()->createWithContent('survey.gpx', '<gpx />'),
+                ])->assertUnprocessable()->assertJsonValidationErrors('feeder_id');
+            }
+        }
+        $this->assertDatabaseCount('mdb_workflow_batches', 1);
+        $this->assertDatabaseCount('mdb_workflow_sources', 2);
+    }
+
     public function test_data_entry_operator_can_create_teamless_batches_for_active_project_feeders(): void
     {
         $operator = User::factory()->create(['role' => UserRole::SurveyDataEntryOperator, 'status' => 'active']);
         $team = $this->batch->surveyTeam;
         $feeder = $this->batch->feeder;
+        $feeder->transformerKmzImports()->create(['file_name' => 'fixture.kmz', 'stored_path' => 'fixture.kmz', 'status' => 'completed']);
         $team->members()->attach($operator->id);
         FeederAssignment::create(['feeder_id' => $feeder->id, 'survey_team_id' => $team->id, 'assigned_by' => $this->admin->id,
             'start_date' => today()->subDay(), 'status' => 'active']);
@@ -686,6 +729,7 @@ class MdbOperatorEntryTest extends TestCase
         $unassignedFeeder = $feeder->replicate();
         $unassignedFeeder->feeder_code = 'NOT-ALLOCATED';
         $unassignedFeeder->save();
+        $unassignedFeeder->transformerKmzImports()->create(['file_name' => 'unassigned.kmz', 'stored_path' => 'unassigned.kmz', 'status' => 'completed']);
         $this->from(route('mdb-workflow.create'))->post(route('mdb-workflow.store'), [
             'project_id' => $this->batch->project_id,
             'feeder_id' => $unassignedFeeder->id,

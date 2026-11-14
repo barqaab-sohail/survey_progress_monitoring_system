@@ -89,4 +89,9 @@ class Feeder extends Model
     {
         return $query->where('status', RecordStatus::Active->value);
     }
+
+    public function scopeWithImportedKmz(Builder $query): Builder
+    {
+        return $query->whereHas('transformerKmzImports', fn (Builder $imports) => $imports->where('status', 'completed'));
+    }
 }

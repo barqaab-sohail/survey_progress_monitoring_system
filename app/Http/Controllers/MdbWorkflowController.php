@@ -130,7 +130,7 @@ class MdbWorkflowController extends Controller
     {
         Gate::authorize('mdb-workflow.upload');
 
-        return view('mdb-workflow.create', $this->references($request) + [
+        return view('mdb-workflow.create', $this->references($request, importedKmzOnly: true) + [
             'entryOperators' => User::where('status', 'active')->whereHas('roles', fn ($q) => $q->where('name', 'survey_data_entry_operator'))->orderBy('name')->get(),
         ]);
     }
@@ -173,6 +173,9 @@ class MdbWorkflowController extends Controller
         }
         $team = ! empty($data['survey_team_id']) ? SurveyTeam::findOrFail($data['survey_team_id']) : null;
         $feeder = Feeder::active()->findOrFail($data['feeder_id']);
+        if (! Feeder::withImportedKmz()->whereKey($feeder->id)->exists()) {
+            throw ValidationException::withMessages(['feeder_id' => 'Import this feeder\'s KMZ successfully before creating a batch. Only feeders with a completed KMZ import can be used.']);
+        }
         if ($isProjectManager && ! User::whereKey($data['entry_assigned_to'])->whereHas('roles', fn ($q) => $q->where('name', 'survey_data_entry_operator'))->exists()) {
             throw ValidationException::withMessages(['entry_assigned_to' => 'Select an active Data Entry Operator.']);
         }
@@ -1109,7 +1112,7 @@ class MdbWorkflowController extends Controller
         return $this->sanitizeJson($decoded);
     }
 
-    private function references(Request $request): array
+    private function references(Request $request, bool $importedKmzOnly = false): array
     {
         $user = $request->user();
         $canSelectAnyFeeder = $user->hasAnyRole(['super_admin', 'project_manager', 'survey_data_entry_operator']);
@@ -1124,6 +1127,7 @@ class MdbWorkflowController extends Controller
         $activeTeamAllocation = fn ($query) => $query->whereIn('survey_team_id', $teamIds)->where('status', 'active')
             ->whereDate('start_date', '<=', today())->where(fn ($q) => $q->whereNull('end_date')->orWhereDate('end_date', '>=', today()));
         $feedersQuery = Feeder::active()->when($visibleProjects, fn ($q) => $q->whereIn('project_id', $projectIds))
+            ->when($importedKmzOnly, fn ($q) => $q->withImportedKmz())
             ->with(['assignments' => $activeTeamAllocation]);
         if (! $canSelectAnyFeeder) {
             $feedersQuery->whereHas('assignments', $activeTeamAllocation);

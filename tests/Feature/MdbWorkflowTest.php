@@ -55,6 +55,7 @@ class MdbWorkflowTest extends TestCase
         $grid = GridStation::create(['project_id' => $project->id, 'sub_division_id' => $subdivision->id, 'code' => 'G', 'name' => 'Grid']);
         $feeder = Feeder::create(['project_id' => $project->id, 'circle_id' => $circle->id, 'division_id' => $division->id,
             'sub_division_id' => $subdivision->id, 'grid_station_id' => $grid->id, 'feeder_code' => 'F', 'feeder_name' => 'Feeder', 'total_transformers' => 0, 'status' => 'active']);
+        $feeder->transformerKmzImports()->create(['file_name' => 'fixture.kmz', 'stored_path' => 'fixture.kmz', 'status' => 'completed']);
         $this->team = SurveyTeam::create(['project_id' => $project->id, 'code' => 'S', 'name' => 'Survey team', 'status' => 'active']);
         $this->batch = SurveyBatch::create(['project_id' => $project->id, 'feeder_id' => $feeder->id, 'survey_team_id' => $this->team->id,
             'survey_date' => '2026-10-09', 'created_by' => $this->admin->id]);
