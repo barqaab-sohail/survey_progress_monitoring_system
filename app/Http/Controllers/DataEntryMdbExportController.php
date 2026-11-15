@@ -34,6 +34,12 @@ class DataEntryMdbExportController extends Controller
             throw ValidationException::withMessages(['transformer_id' => 'This transformer exceeds the 10 MB offline transfer limit.']);
         }
 
+        if ($request->routeIs('*.save-drive')) {
+            $saved = app(\App\Services\DriveStorage\SurveyJsonExport::class)->save($request->user(), $batch->feeder, $json, $filename,
+                ['kind' => 'transformer', 'batch_id' => $batch->id, 'transformer_id' => $transformer, 'revision' => $package['source']['revision_number']]);
+            return to_route('mdb-workflow.data-entry-export.show', $batch)->with('success', 'JSON saved to the feeder folder in Google Drive.')->with('drive_json', $saved);
+        }
+
         return response()->streamDownload(fn () => print ($json), $filename, ['Content-Type' => 'application/json', 'Cache-Control' => 'private, no-store']);
     }
 

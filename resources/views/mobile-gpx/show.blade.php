@@ -1,11 +1,12 @@
 @extends('layouts.app')
 @section('title', 'Link GPX — '.$survey->survey_name)
 @section('content')
+@include('components.json-drive-result')
 <div class="page-head"><div><h1>{{ $survey->survey_name }}</h1><p>{{ $survey->feeder->feeder_code }} / {{ $survey->feeder->feeder_name }} · {{ $survey->team->name }} · {{ $survey->collector->name }} · Revision {{ $survey->revision }}</p></div><a class="btn" href="{{ route('mobile-gpx.index') }}">Back to GPX linking</a></div>
 <div class="card"><p>Survey date: {{ $survey->survey_date->format('d M Y') }}. Match the current S/E references; the historical first S retains its original identity and the existing starting-coordinate policy.</p>
 @if($previous && !$current)<p><strong>Previous confirmation is outdated. Preview and confirm the current revision before JSON export.</strong></p>@endif
 @if($current)<p><strong>GPX confirmed</strong> on {{ $current->created_at->format('d M Y H:i') }} for revision {{ $current->survey_revision }}.</p>
-<form method="POST" action="{{ route('mobile-gpx.export', $survey->client_uuid) }}">@csrf<input type="hidden" name="survey_revision" value="{{ $survey->revision }}"><input type="hidden" name="link_id" value="{{ $current->id }}"><button class="btn btn-primary">Download confirmed SynerGEE JSON</button></form>
+<form method="POST" action="{{ route('mobile-gpx.export', $survey->client_uuid) }}">@csrf<input type="hidden" name="survey_revision" value="{{ $survey->revision }}"><input type="hidden" name="link_id" value="{{ $current->id }}"><button class="btn btn-primary">Download confirmed SynerGEE JSON</button> <button class="btn btn-light" type="submit" formaction="{{ route('mobile-gpx.json.save-drive', $survey->client_uuid) }}">Save JSON to Google Drive</button></form>
 <p>On the local Windows application, open <strong>JSON to SynerGEE</strong>, upload this JSON, review the model and generate the MDB. Coordinates and the template travel inside the package.</p>@endif
 </div>
 <form class="card" method="POST" action="{{ route('mobile-gpx.preview', $survey->client_uuid) }}">@csrf

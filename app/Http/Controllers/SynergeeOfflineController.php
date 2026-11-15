@@ -40,6 +40,13 @@ class SynergeeOfflineController extends Controller
         }
         $code = count($package['scope']['transformer_codes']) === 1 ? Str::slug($package['scope']['transformer_codes'][0]) : 'feeder';
 
+        if ($request->routeIs('*.save-drive')) {
+            $saved = app(\App\Services\DriveStorage\SurveyJsonExport::class)->save($request->user(), $batch->feeder, $json,
+                'synergee_'.$code.'_batch-'.$batch->id.'_r'.$package['source']['revision_number'].'.json',
+                ['kind' => 'synergee', 'batch_id' => $batch->id, 'revision' => $package['source']['revision_number']]);
+            return to_route('mdb-workflow.review', $batch)->with('success', 'JSON saved to the feeder folder in Google Drive.')->with('drive_json', $saved);
+        }
+
         return response()->streamDownload(fn () => print ($json), 'synergee_'.$code.'_batch-'.$batch->id.'_r'.$package['source']['revision_number'].'.json',
             ['Content-Type' => 'application/json', 'Cache-Control' => 'private, no-store']);
     }

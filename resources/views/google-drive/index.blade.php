@@ -12,6 +12,7 @@
         <button class="btn btn-primary">{{ $storageConnection ? 'Reconnect storage account' : 'Connect application storage account' }}</button>
     </form>@endif
     <p class="muted">Use the organization's storage account. Personal Drive disconnection below does not disconnect application storage.</p>
+    <p>JSON exports are saved under <a href="https://drive.google.com/drive/folders/{{ config('drive_storage.json_export_folder_id') }}" target="_blank" rel="noopener">the configured JSON parent folder</a>, in one reusable subfolder per feeder. Use the application storage account above to save exports.</p>
     <h3>Existing duplicate PDF and GPX files</h3>
     @if(empty($duplicateGroups))
         <p>No confirmed duplicate PDF or GPX Drive copies were found.</p>

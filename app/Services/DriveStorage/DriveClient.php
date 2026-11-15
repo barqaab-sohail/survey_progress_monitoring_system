@@ -51,6 +51,16 @@ class DriveClient
         return Http::withToken($token)->timeout(config('drive_storage.timeout', 180))->withOptions(['allow_redirects' => false]);
     }
 
+    public function verifyJsonDestination(DriveStoredFile $file): void
+    {
+        $folder = $this->destinationFolder($file);
+        $info = $this->info($file->drive_file_id) ?? [];
+        $this->verify($file, $info);
+        if (!in_array($folder, $info['parents'] ?? [], true)) {
+            throw new RuntimeException('The JSON file is no longer in its feeder folder.');
+        }
+    }
+
     public function generateId(): string
     {
         $response = $this->client()->get(self::API.'/generateIds', ['count' => 1, 'space' => 'drive', 'type' => 'files']);
@@ -105,15 +115,17 @@ class DriveClient
 
     public function upload(DriveStoredFile $file, string $path): void
     {
+        $jsonFolder = ($file->context['kind'] ?? null) === 'survey_json' ? $this->destinationFolder($file) : null;
         $existing = $this->info($file->drive_file_id);
         if ($existing) {
             $this->verify($file, $existing);
+            if ($jsonFolder && !in_array($jsonFolder, $existing['parents'] ?? [], true)) throw new RuntimeException('JSON is outside its feeder folder.');
 
             return;
         }
         $response = $this->client()->withHeaders(['X-Upload-Content-Type' => $file->mime, 'X-Upload-Content-Length' => (string) $file->bytes])
             ->post('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', [
-                'id' => $file->drive_file_id, 'name' => $file->original_name, 'mimeType' => $file->mime, 'parents' => [$this->destinationFolder($file)],
+                'id' => $file->drive_file_id, 'name' => $file->original_name, 'mimeType' => $file->mime, 'parents' => [$jsonFolder ?? $this->destinationFolder($file)],
                 'appProperties' => ['storage_uuid' => $file->uuid, 'project_id' => (string) ($file->context['project_id'] ?? ''),
                     'feeder_id' => (string) ($file->context['feeder_id'] ?? ''), 'batch_id' => (string) ($file->context['batch_id'] ?? '')],
             ]);
@@ -132,11 +144,23 @@ class DriveClient
                 fclose($stream);
             }
         }
-        $this->verify($file, $this->info($file->drive_file_id) ?? []);
+        $uploaded = $this->info($file->drive_file_id) ?? [];
+        $this->verify($file, $uploaded);
+        if ($jsonFolder && !in_array($jsonFolder, $uploaded['parents'] ?? [], true)) throw new RuntimeException('JSON upload was not confirmed in its feeder folder.');
     }
 
     private function destinationFolder(DriveStoredFile $file, ?string $root = null): string
     {
+        if ($root === null && ($file->context['kind'] ?? null) === 'survey_json') {
+            $root = config('drive_storage.json_export_folder_id');
+            if (!$root || ($file->context['json_export_root'] ?? null) !== $root) {
+                throw new RuntimeException('The JSON export destination does not match the configured folder.');
+            }
+            $info = $this->info($root);
+            if (!$info || ($info['trashed'] ?? false) || ($info['mimeType'] ?? '') !== 'application/vnd.google-apps.folder') {
+                throw new RuntimeException('The JSON export parent folder is unavailable. Check storage-account access.');
+            }
+        }
         $root ??= $this->folder();
         $feederId = (int) ($file->context['feeder_id'] ?? 0);
         if ($feederId <= 0) {

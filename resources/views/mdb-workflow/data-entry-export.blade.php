@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Export Data Entry MDB')
 @section('content')
+@include('components.json-drive-result')
 <div class="mdb-workflow">
     <div class="page-head"><div><h1>Export Data Entry MDB</h1><p>Batch #{{ $batch->id }} &middot; Approved revision {{ $payload['revision_number'] }}</p></div><a class="btn btn-light" href="{{ route('mdb-workflow.review', $batch) }}">Back to survey</a></div>
     <section class="card"><h2>Download Transformer JSON for local MDB conversion</h2>
@@ -8,6 +9,10 @@
         @foreach($batch->approvedRevision->snapshot['transformers'] as $transformer)
         <p><strong>{{ $transformer['code'] }}</strong> &middot; {{ count($transformer['entry_rows'] ?? []) }} observations
             <a class="btn btn-primary" href="{{ route('mdb-workflow.transformer-json.download', [$batch, 'transformer' => $transformer['id'], 'revision_sha256' => $payload['revision_sha256']]) }}">Download Transformer JSON</a></p>
+        <form method="POST" action="{{ route('mdb-workflow.transformer-json.save-drive', [$batch, 'transformer' => $transformer['id']]) }}" style="margin:0 0 18px">@csrf
+            <input type="hidden" name="revision_sha256" value="{{ $payload['revision_sha256'] }}">
+            <button class="btn btn-light" type="submit">Save {{ $transformer['code'] }} JSON to Google Drive</button>
+        </form>
         @endforeach
         @if(PHP_OS_FAMILY === 'Windows' && config('data_entry_mdb.offline_conversion_enabled'))<a class="btn btn-light" href="{{ route('mdb-workflow.offline-mdb.index') }}">Open JSON to MDB</a>@endif
     </section>

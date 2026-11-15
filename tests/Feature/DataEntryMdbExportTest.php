@@ -54,6 +54,32 @@ class DataEntryMdbExportTest extends TestCase
         return $batch->fresh();
     }
 
+    public function test_drive_json_save_uses_the_validated_transformer_and_feeder_and_returns_a_link(): void
+    {
+        $batch = $this->batch();
+        $transformer = $batch->approvedRevision->snapshot['transformers'][0]['id'];
+        $this->mock(\App\Services\DriveStorage\SurveyJsonExport::class, function ($mock) use ($batch) {
+            $mock->shouldReceive('save')->once()->withArgs(function ($actor, $feeder, $json, $filename, $source) use ($batch) {
+                $package = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+                $this->assertSame($batch->feeder_id, $feeder->id);
+                $this->assertSame('hazeco-transformer-data', $package['format']);
+                $this->assertCount(1, $package['snapshot']['transformers']);
+                return str_ends_with($filename, '.json') && $source['kind'] === 'transformer';
+            })->andReturn(['file_url' => 'https://drive.google.com/file/d/saved-json/view',
+                'folder_url' => 'https://drive.google.com/drive/folders/feeder-folder', 'filename' => 'saved.json']);
+        });
+        $this->post(route('mdb-workflow.transformer-json.save-drive', [$batch, 'transformer' => $transformer]), ['revision_sha256' => $batch->approvedRevision->sha256])
+            ->assertRedirect(route('mdb-workflow.data-entry-export.show', $batch))->assertSessionHas('drive_json.filename', 'saved.json');
+    }
+
+    public function test_drive_json_save_rejects_stale_approval_before_contacting_drive(): void
+    {
+        $batch = $this->batch();
+        $this->mock(\App\Services\DriveStorage\SurveyJsonExport::class, fn ($mock) => $mock->shouldNotReceive('save'));
+        $this->post(route('mdb-workflow.transformer-json.save-drive', [$batch, 'transformer' => $batch->approvedRevision->snapshot['transformers'][0]['id']]),
+            ['revision_sha256' => str_repeat('0',64)])->assertConflict();
+    }
+
     public function test_review_uses_only_approved_snapshot_and_does_not_write_records(): void
     {
         $batch = $this->batch();

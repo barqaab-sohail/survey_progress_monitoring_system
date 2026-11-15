@@ -117,6 +117,13 @@ class MobileGpxController extends Controller
         });
         $json = json_encode($package, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
 
+        if ($request->routeIs('*.save-drive')) {
+            $saved = app(\App\Services\DriveStorage\SurveyJsonExport::class)->save($request->user(), $survey->feeder, $json,
+                'mobile_'.Str::slug($survey->survey_name, '_').'_r'.$survey->revision.'.json',
+                ['kind' => 'mobile_survey', 'survey_uuid' => $survey->client_uuid, 'revision' => $survey->revision]);
+            return to_route('mobile-gpx.show', $survey->client_uuid)->with('success', 'JSON saved to the feeder folder in Google Drive.')->with('drive_json', $saved);
+        }
+
         return response()->streamDownload(fn () => print ($json), 'mobile_'.Str::slug($survey->survey_name, '_').'_r'.$survey->revision.'.json',
             ['Content-Type' => 'application/json', 'Cache-Control' => 'private, no-store']);
     }

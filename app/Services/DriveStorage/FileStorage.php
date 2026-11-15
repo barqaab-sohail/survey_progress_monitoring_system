@@ -14,7 +14,7 @@ use RuntimeException;
 
 class FileStorage
 {
-    public function register(string $disk, string $path, string $name, string $mime, array $context): DriveStoredFile
+    public function register(string $disk, string $path, string $name, string $mime, array $context, bool $queueUpload = true): DriveStoredFile
     {
         $full = Storage::disk($disk)->path($path);
         if (! is_file($full)) {
@@ -83,7 +83,7 @@ class FileStorage
             // Do not keep a second private staging copy after a content match is established.
             Storage::disk($disk)->delete($path);
         }
-        if ($file->status !== 'uploaded') {
+        if ($file->status !== 'uploaded' && $queueUpload) {
             // Re-dispatching a canonical pending/failed row is safe: transfer() serializes by file ID and verifies Drive.
             DB::afterCommit(function () use ($file) {
                 try { UploadDriveFile::dispatch($file->id); }
@@ -116,7 +116,9 @@ class FileStorage
 
                 return;
             }
-            if (! config('drive_storage.enabled')) {
+            $manualJson = $file->mime === 'application/json' && ($file->context['kind'] ?? null) === 'survey_json'
+                && ($file->context['json_export_root'] ?? null) === config('drive_storage.json_export_folder_id');
+            if (! config('drive_storage.enabled') && !$manualJson) {
                 throw new RuntimeException('Automatic Drive storage is disabled; the staged file is retained.');
             }
             $file->increment('attempts');

@@ -44,6 +44,9 @@ Route::middleware(['auth', 'active'])->prefix('mdb-workflow')->name('mdb-workflo
     Route::get('/{batch}/advanced', 'advanced')->name('advanced');
     Route::get('/{batch}/review', 'review')->name('review');
     Route::get('/{batch}/data-entry-mdb', [DataEntryMdbExportController::class, 'show'])->name('data-entry-export.show');
+    Route::post('/{batch}/synergee-json/drive', [SynergeeOfflineController::class, 'export'])->middleware('throttle:10,1')->name('synergee-json.save-drive');
+    Route::post('/{batch}/transformers/{transformer}/transfer-json/drive', [DataEntryMdbExportController::class, 'transformerJson'])->whereNumber('transformer')->middleware('throttle:20,1')->name('transformer-json.save-drive');
+    Route::post('/{batch}/synergee-json', [SynergeeOfflineController::class, 'export'])->middleware('throttle:10,1')->name('synergee-json.download-post');
     Route::get('/{batch}/synergee-json', [SynergeeOfflineController::class, 'export'])->middleware('throttle:10,1')->name('synergee-json.download');
     Route::post('/{batch}/data-entry-mdb', [DataEntryMdbExportController::class, 'download'])->middleware('throttle:10,1')->name('data-entry-export.download');
     Route::get('/{batch}/transformers/{transformer}/transfer-json', [DataEntryMdbExportController::class, 'transformerJson'])->whereNumber('transformer')->middleware('throttle:20,1')->name('transformer-json.download');

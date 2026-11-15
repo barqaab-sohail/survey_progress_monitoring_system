@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Review MDB survey')
 @section('content')
+@include('components.json-drive-result')
 @php
     $active = $batch->transformers->firstWhere('id', (int) request('transformer_id')) ?? $batch->transformers->first();
     $firstPair = $active?->entryRows->min('pair_number');

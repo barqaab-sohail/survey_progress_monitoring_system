@@ -70,6 +70,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/{clientUuid}', 'show')->whereUuid('clientUuid')->name('show');
         Route::post('/{clientUuid}/preview', 'preview')->whereUuid('clientUuid')->name('preview');
         Route::post('/{clientUuid}/confirm', 'confirm')->whereUuid('clientUuid')->name('confirm');
+        Route::post('/{clientUuid}/json/drive', 'export')->whereUuid('clientUuid')->middleware('throttle:20,1')->name('json.save-drive');
         Route::post('/{clientUuid}/json', 'export')->whereUuid('clientUuid')->middleware('throttle:20,1')->name('export');
     });
     Route::prefix('gpx-calculator')->name('gpx-calculator.')->controller(GpxCalculatorController::class)->group(function () {
