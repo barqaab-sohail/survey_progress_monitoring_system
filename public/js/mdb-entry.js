@@ -110,7 +110,7 @@ export function rowValidationErrors(payload, yearStart = null) {
         try { completeWaypoint('01',payload.row_date,'001',yearStart); }
         catch(e) { add('row_date',e.message); }
     }
-    if(payload.pole_height !== null && (!Number.isFinite(payload.pole_height) || payload.pole_height <= 0 || payload.pole_height > 10000))add('pole_height','Enter a positive pole/tower height in feet, up to 10,000 ft.');
+    if(payload.pole_height !== null && (!Number.isFinite(payload.pole_height) || payload.pole_height < 30 || payload.pole_height > 10000))add('pole_height','Enter a pole/tower height from 30 to 10,000 ft.');
     for(const [key, value] of Object.entries(payload.consumers || {})) {
         if(value !== null && (!Number.isInteger(value) || value < 0 || value > 1000000))add('consumers.'+key,`${key.toUpperCase()}: enter a whole number from 0 to 1,000,000, or leave it blank.`);
     }
@@ -194,6 +194,7 @@ function initialize(boot) {
     let data = boot, activeId = boot.active_transformer_id || boot.transformers[0]?.id || null;
     let registeredId = null, manualTransformer = false;
     let rowId = null, clientUuid = uuid(), saveUuid = null, inheritance = {}, headerDirty = false, rowDirty = false, busy = false;
+    let submissionNavigation = false;
     let enteredConsumerPhases = new Set();
     let pageNumber = 1, rotation = 0, zoom = 1, pdf = null, pdfLoading = null, pdfLib = null, pdfGeneration = 0, renderTask = null, renderChain = Promise.resolve();
     let selectedPdfRowId = null, drawingLines = false, lineStart = null, linePreview = null, linePointer = null;
@@ -352,7 +353,7 @@ function initialize(boot) {
         }
         const available=(data.registered_transformers || []).filter(t=>!data.transformers.some(saved=>transformerCodeKey(saved.code)===transformerCodeKey(t.code)));
         optionList($('entry-transformer'), [...data.transformers.map(t=>[t.id,t.code]),...(editable() ? available.map(t=>[`registered:${t.id}`,`${t.code} — registered; new survey header`]) : [])], 'Choose a transformer', transformerSelection());
-        if($('entry-transformer-help'))$('entry-transformer-help').textContent='Search to choose a saved or registered transformer. If it is not listed, use Add Transformer to enter it manually.';
+        if($('entry-transformer-help'))$('entry-transformer-help').textContent='Search to choose a saved or registered transformer. If it is not listed, update and verify HT data first, then select its registered transformer.';
         const selectedPdf = $('entry-pdf-source').value;
         optionList($('entry-pdf-source'), data.sources.filter(s=>s.kind==='pdf').map(s=>[s.id,`${s.original_name} · ${s.status}`]), 'Choose PDF', selectedPdf);
         if (!$('entry-pdf-source').value) $('entry-pdf-source').value = String(data.sources.find(s=>s.kind==='pdf')?.id || '');
@@ -981,7 +982,7 @@ function initialize(boot) {
         $('entry-transformer-search').value='';filterSelect($('entry-transformer'),'');
         persist();
         if(sourceChanged)loadPdf();
-        status('Choose the next registered transformer, or use Add Transformer to enter its code. The same PDF is open.');
+        status('Choose the next registered transformer from the available list. The same PDF is open.');
         $('entry-transformer').focus();
         $('entry-header-panel').scrollIntoView({block:'nearest'});
     });
@@ -991,15 +992,15 @@ function initialize(boot) {
         setBusy(true);clearErrors();
         try{
             const result=await api('/survey-decision','POST',{revision:data.revision,action:'submit'});
+            submissionNavigation=true;
             location.assign(result.redirect_url);
-        }catch(e){nextTransformerDialog.close();error('Survey could not be submitted for verification.',e.errors || {submit:[e.message]});}
+        }catch(e){submissionNavigation=false;nextTransformerDialog.close();error('Survey could not be submitted for verification.',e.errors || {submit:[e.message]});}
         finally{setBusy(false);}
     });
     $('entry-next-transformer-cancel')?.addEventListener('click',()=>nextTransformerDialog.close());
     rowForm?.addEventListener('submit',event=>{event.preventDefault();saveRow(true);});rowForm?.addEventListener('input',event=>markDirty(event,'row'));rowForm?.addEventListener('change',event=>markDirty(event,'row'));
     $('entry-save-draft')?.addEventListener('click',()=>saveRow(false));$('entry-row-new')?.addEventListener('click',()=>{if(allowSwitch()){newRow();status('New draft row.');}});
     $('entry-transformer').addEventListener('change',()=>{if(allowSwitch()){chooseTransformer($('entry-transformer').value);persist();}else $('entry-transformer').value=transformerSelection();});
-    document.querySelectorAll('[data-entry-add-transformer]').forEach(button=>button.addEventListener('click',()=>{if(!allowSwitch())return;chooseTransformer('__manual__');$('entry-header-panel').open=true;$('entry-transformer-search').value='';filterSelect($('entry-transformer'),'');field(headerForm,'code')?.focus();persist();}));
     $('entry-transformer-search').addEventListener('input',e=>filterSelect($('entry-transformer'),e.target.value));document.querySelectorAll('[data-entry-filter]').forEach(input=>input.addEventListener('input',()=>filterSelect($(input.dataset.entryFilter),input.value)));
     $('entry-copy-conductors')?.addEventListener('click',()=>copyValues('conductors'));$('entry-copy-equipment')?.addEventListener('click',()=>copyValues('equipment'));$('entry-copy-both')?.addEventListener('click',()=>copyValues('both'));
     $('entry-paste-apply')?.addEventListener('click',()=>{
@@ -1068,7 +1069,7 @@ function initialize(boot) {
     }
     window.addEventListener('pagehide',()=>{if(sourcePoll)window.clearInterval(sourcePoll);});
     document.querySelectorAll('[data-entry-leave]').forEach(link=>link.addEventListener('click',event=>{if(busy || ((headerDirty || rowDirty) && !window.confirm('Some fields are saved only in this browser. Leave entry now? Use Save Draft to store them in the application.')))event.preventDefault();else persist();}));
-    window.addEventListener('beforeunload',event=>{persist();if(headerDirty || rowDirty || busy){event.preventDefault();event.returnValue='';}});
+    window.addEventListener('beforeunload',event=>{persist();if(headerDirty || rowDirty || (busy && !submissionNavigation)){event.preventDefault();event.returnValue='';}});
     document.addEventListener('keydown',event=>{if(event.target.closest?.('#service-cable-form')){if(event.ctrlKey && (event.key==='Enter' || event.key.toLowerCase()==='s')){event.preventDefault();$('service-cable-form').requestSubmit(event.key.toLowerCase()==='s' ? $('service-cable-save-stay') : undefined);}return;}if(event.ctrlKey && event.key==='Enter'){event.preventDefault();saveRow(true);}if(event.ctrlKey && event.key.toLowerCase()==='s'){event.preventDefault();headerDirty ? saveHeader() : saveRow(false);}if(event.altKey && ['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();setPage(pageNumber+(event.key==='ArrowLeft' ? -1 : 1));}});
     loadPdf();persist();
 }

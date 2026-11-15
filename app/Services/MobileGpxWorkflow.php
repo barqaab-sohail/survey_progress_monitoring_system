@@ -78,6 +78,7 @@ class MobileGpxWorkflow
     public function surveyHash(FieldSurvey $survey): string
     {
         $data = $survey->only(['client_uuid', 'survey_team_id', 'feeder_id', 'transformer_id', 'transformer_code', 'survey_date', 'status', 'revision', 'header', 'rows', 'solar', 'reference_snapshot', 'remarks']);
+        if ($survey->service_cables) $data['service_cables'] = $survey->service_cables;
         if ($survey->ht_network_update_id) {
             $data['ht_update'] = $survey->htUpdate?->only(['client_uuid', 'revision', 'status', 'transformer_id']);
         }
@@ -122,7 +123,12 @@ class MobileGpxWorkflow
         $firstPair = array_values(FieldSurveyPairs::groups($survey->rows))[0] ?? [];
         $firstS = collect($firstPair)->first(fn ($i) => ($survey->rows[$i]['se'] ?? '') === 'S');
         $mapping = $warnings = [];
-        foreach ($survey->rows as $i => $row) {
+        app(MobileServiceCableValidation::class)->assertValid(['rows' => $survey->rows, 'service_cables' => $survey->service_cables ?? []]);
+        $observations = $survey->rows;
+        foreach ($survey->service_cables ?? [] as $cable) {
+            $observations[] = ['row_id' => $cable['cable_id'], 'se' => 'M', 'group' => $cable['group'], 'date' => $cable['date'], 'gps_waypoint' => $cable['gps_waypoint']];
+        }
+        foreach ($observations as $i => $row) {
             $identity = null;
             try {
                 $gps = (string) ($row['gps_waypoint'] ?? '');

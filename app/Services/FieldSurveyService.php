@@ -34,6 +34,12 @@ class FieldSurveyService
                 $survey = FieldSurvey::withTrashed()->where('client_uuid', $data['client_uuid'])->lockForUpdate()->first();
                 abort_if($survey?->trashed(), 409, 'This survey was deleted on the server. Your phone copy cannot recreate it.');
                 abort_if($survey && $survey->collected_by !== $actor->id, 409, 'This survey UUID belongs to another account.');
+                $existingCables = $survey?->service_cables ?? [];
+                $data['service_cables'] ??= $existingCables;
+                if ($data['service_cables'] !== $existingCables) {
+                    abort_unless($actor->canEnterConsumerServiceCables(), 403, 'Service-cable entry is not enabled for your account. Contact Super Admin.');
+                }
+                app(MobileServiceCableValidation::class)->assertValid($data);
                 $this->validateRowOwnershipAndGroups($data, $survey, SurveyTeamGroup::identifier($team));
                 if ($actor->hasRole('mobile_survey_user')) {
                     $group = SurveyTeamGroup::identifier($team);
@@ -147,6 +153,7 @@ class FieldSurveyService
                     'header' => $data['header'],
                     'rows' => array_values($data['rows']),
                     'solar' => array_values($data['solar']),
+                    'service_cables' => array_values($data['service_cables']),
                     'remarks' => $data['remarks'] ?? null,
                     'submitted_at' => $data['status'] === 'submitted' ? ($survey->submitted_at ?? now()) : null,
                 ])->save();
@@ -195,6 +202,12 @@ class FieldSurveyService
                 }
             }
             $this->validateRowOwnershipAndGroups($data, $locked, SurveyTeamGroup::identifier($locked->team));
+            $existingCables = $locked->service_cables ?? [];
+            $data['service_cables'] ??= $existingCables;
+            if ($data['service_cables'] !== $existingCables) {
+                abort_unless($actor->canEnterConsumerServiceCables(), 403, 'Service-cable entry is not enabled for your account.');
+            }
+            app(MobileServiceCableValidation::class)->assertValid($data);
             $phaseErrors = app(SurveyPhaseConsistency::class)->fieldErrors($data['rows'], $data['transformer_code'] ?? '(unrecorded)', $locked->status === 'submitted', $locked->rows);
             if ($phaseErrors) {
                 throw ValidationException::withMessages($phaseErrors);
@@ -207,8 +220,8 @@ class FieldSurveyService
                 throw ValidationException::withMessages(['transformer_code' => 'This transformer already has another saved survey on this feeder.']);
             }
             $before = $locked->toArray();
-            $hashData = array_intersect_key($data, array_flip(['client_uuid', 'survey_team_id', 'feeder_id', 'transformer_id', 'transformer_code', 'survey_date', 'status', 'header', 'rows', 'solar', 'remarks']));
-            $locked->fill(array_intersect_key($data, array_flip(['transformer_code', 'survey_date', 'header', 'rows', 'solar', 'remarks'])));
+            $hashData = array_intersect_key($data, array_flip(['client_uuid', 'survey_team_id', 'feeder_id', 'transformer_id', 'transformer_code', 'survey_date', 'status', 'header', 'rows', 'solar', 'service_cables', 'remarks']));
+            $locked->fill(array_intersect_key($data, array_flip(['transformer_code', 'survey_date', 'header', 'rows', 'solar', 'service_cables', 'remarks'])));
             $locked->forceFill(['transformer_key' => $key, 'revision' => $locked->revision + 1,
                 'payload_hash' => hash('sha256', json_encode($this->canonical($hashData), JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION))])->save();
             $this->audit->record($actor, 'field_survey.corrected_on_server', $locked, $before, $locked->toArray(), $data['correction_reason'] ?? null);

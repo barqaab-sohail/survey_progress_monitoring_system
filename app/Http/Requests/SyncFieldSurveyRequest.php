@@ -40,11 +40,13 @@ class SyncFieldSurveyRequest extends FormRequest
             'header.mounting' => [$paper, Rule::in(['S.Pole', 'D.Pole', 'Pad'])],
             'header.duty' => [$paper, Rule::in(['General Duty', 'Dedicated'])],
             'rows' => ['present', 'array', $submitted ? 'min:1' : 'min:0', 'max:500'],
-            'rows.*' => ['array:row_id,legacy_row_index,pair_id,entry_version,se,group,date,gps_waypoint,latitude,longitude,gps_accuracy_m,phase,conductor_r,conductor_y,conductor_b,conductor_neutral,equipment_type,pole_class,pole_height_ft,consumers,consumer_phases,intersection,remarks'],
+            'rows.*' => ['array:row_id,legacy_row_index,pair_id,entry_version,waypoint_check_required,waypoint_confirmation,se,group,date,gps_waypoint,latitude,longitude,gps_accuracy_m,phase,conductor_r,conductor_y,conductor_b,conductor_neutral,equipment_type,pole_class,pole_height_ft,consumers,consumer_phases,intersection,remarks'],
             'rows.*.row_id' => ['nullable', 'uuid', 'distinct'],
             'rows.*.legacy_row_index' => ['nullable', 'integer', 'between:0,499'],
             'rows.*.pair_id' => ['nullable', 'uuid'],
             'rows.*.entry_version' => ['sometimes', 'integer', Rule::in([2])],
+            'rows.*.waypoint_check_required' => ['sometimes', 'boolean'],
+            'rows.*.waypoint_confirmation' => ['nullable', 'string', 'max:100'],
             'rows.*.se' => [$paper, Rule::in(['S', 'E'])],
             'rows.*.group' => [$paper, 'string', 'regex:/^[0-9]{2}$/D'],
             'rows.*.date' => [$paper, 'date_format:Y-m-d', 'before_or_equal:today'],
@@ -55,7 +57,7 @@ class SyncFieldSurveyRequest extends FormRequest
             'rows.*.phase' => ['nullable', 'string', 'max:30'],
             'rows.*.equipment_type' => [$paper, 'string', 'max:50'],
             'rows.*.pole_class' => [$paper, 'string', 'max:50'],
-            'rows.*.pole_height_ft' => [$paper, 'numeric', 'between:0,1000000'],
+            'rows.*.pole_height_ft' => [$paper, 'numeric', 'between:30,10000'],
             'rows.*.consumers' => ['sometimes', 'array:rs,rl,sc,lc,si,li,pb,ag,st'],
             'rows.*.intersection' => ['nullable', 'boolean'],
             'rows.*.remarks' => ['nullable', 'string', 'max:1000'],
@@ -74,14 +76,14 @@ class SyncFieldSurveyRequest extends FormRequest
             $rules['header.'.$key] = [$paper, 'string', 'max:200'];
         }
         foreach (['r', 'y', 'b', 'neutral'] as $key) {
-            $rules['rows.*.conductor_'.$key] = ['nullable', 'string', Rule::in(\App\Services\Mdb\ApprovedWarehouse::conductors())];
+            $rules['rows.*.conductor_'.$key] = ['nullable', 'string', Rule::in(array_merge(\App\Services\Mdb\ApprovedWarehouse::conductors(), ['__none__']))];
         }
         foreach (['rs', 'rl', 'sc', 'lc', 'si', 'li', 'pb', 'ag', 'st'] as $key) {
             $rules['rows.*.consumers.'.$key] = ['nullable', 'integer', 'between:0,1000000'];
         }
 
-        $rules['rows.*.consumer_phases'] = ['sometimes', 'array:rs,sc'];
-        foreach (['rs', 'sc'] as $category) {
+        $rules['rows.*.consumer_phases'] = ['sometimes', 'array:rs,sc,st'];
+        foreach (['rs', 'sc', 'st'] as $category) {
             $rules['rows.*.consumer_phases.'.$category] = ['sometimes', 'array:R,Y,B'];
             foreach (['R', 'Y', 'B'] as $phase) {
                 $rules['rows.*.consumer_phases.'.$category.'.'.$phase] = ['nullable', 'integer', 'between:0,1000000'];
@@ -105,7 +107,7 @@ class SyncFieldSurveyRequest extends FormRequest
             }
         }
 
-        return $rules;
+        return $rules + app(\App\Services\MobileServiceCableValidation::class)->rules();
     }
 
     protected function prepareForValidation(): void
@@ -116,7 +118,7 @@ class SyncFieldSurveyRequest extends FormRequest
             foreach ($rows as &$row) {
                 if (is_array($row)) {
                     $row['phase'] = ConductorPhase::fromRow($row);
-                    foreach (['rs', 'sc'] as $category) {
+                    foreach (['rs', 'sc', 'st'] as $category) {
                         $counts = $row['consumer_phases'][$category] ?? null;
                         if (is_array($counts)) {
                             $values = array_filter($counts, fn ($value) => $value !== null && $value !== '');
@@ -149,6 +151,9 @@ class SyncFieldSurveyRequest extends FormRequest
             }
             if ($this->input('status') !== 'submitted' || ! is_array($this->input('rows'))) {
                 return;
+            }
+            foreach (app(\App\Services\FieldSurveyEntryValidation::class)->errors($this->all()) as $key => $message) {
+                $validator->errors()->add($key, $message);
             }
             foreach (FieldSurveyPairs::errors($this->input('rows')) as $key => $message) {
                 $validator->errors()->add($key, $message);

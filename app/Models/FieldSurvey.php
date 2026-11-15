@@ -12,13 +12,13 @@ class FieldSurvey extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['client_uuid', 'collected_by', 'survey_team_id', 'feeder_id', 'transformer_id', 'transformer_code', 'survey_date', 'status', 'revision', 'payload_hash', 'header', 'rows', 'solar', 'reference_snapshot', 'remarks', 'submitted_at'];
+    protected $fillable = ['client_uuid', 'collected_by', 'survey_team_id', 'feeder_id', 'transformer_id', 'transformer_code', 'survey_date', 'status', 'revision', 'payload_hash', 'header', 'rows', 'solar', 'service_cables', 'reference_snapshot', 'remarks', 'submitted_at'];
 
     protected $hidden = ['payload_hash'];
 
     protected function casts(): array
     {
-        return ['survey_date' => 'date', 'submitted_at' => 'datetime', 'header' => 'array', 'rows' => 'array', 'solar' => 'array', 'reference_snapshot' => 'array'];
+        return ['survey_date' => 'date', 'submitted_at' => 'datetime', 'header' => 'array', 'rows' => 'array', 'solar' => 'array', 'service_cables' => 'array', 'reference_snapshot' => 'array'];
     }
 
     public function collector(): BelongsTo

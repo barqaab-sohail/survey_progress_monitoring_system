@@ -436,6 +436,17 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertArrayNotHasKey('service_cables', $snapshot['transformers'][0]);
     }
 
+    public function test_pdf_pole_height_enforces_thirty_feet_minimum(): void
+    {
+        foreach ([0, 29.99, 10000.01] as $height) {
+            $this->postJson(route('mdb-workflow.entry.rows.store', [$this->batch, $this->transformer]),
+                $this->payload(['pole_height' => $height]))->assertUnprocessable()->assertJsonValidationErrors('pole_height');
+        }
+        $this->postJson(route('mdb-workflow.entry.rows.store', [$this->batch, $this->transformer]),
+            $this->payload(['pole_height' => 30]))->assertOk();
+        $this->assertSame(30.0, (float) $this->transformer->entryRows()->firstOrFail()->pole_height);
+    }
+
     private function payload(array $changes = []): array
     {
         return array_replace(['revision' => $this->batch->fresh()->revision, 'client_uuid' => (string) Str::uuid(), 'save_uuid' => (string) Str::uuid(),

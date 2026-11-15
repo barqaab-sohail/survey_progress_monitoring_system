@@ -68,6 +68,41 @@ class MobileGpxWorkflowTest extends TestCase
         $this->withHeader('Authorization', 'Bearer '.$this->token);
     }
 
+    public function test_mobile_meter_gpx_is_linked_and_frozen_with_verified_mobile_provenance(): void
+    {
+        $data = $this->payload();
+        $data['header'] += ['division' => 'D', 'sub_division' => 'SD', 'sub_division_code' => '01', 'transformer_make' => 'PEL'];
+        foreach ($data['rows'] as &$row) {
+            $row['conductor_r'] = 'ANT'; $row['conductor_y'] = '__none__'; $row['conductor_b'] = '__none__'; $row['conductor_neutral'] = 'ANT';
+            $row['pole_height_ft'] = 36;
+        }
+        unset($row);
+        $data['rows'][0]['gps_waypoint'] = '006';
+        $data['rows'][1]['gps_waypoint'] = '007'; $data['rows'][1]['consumers'] = ['rs' => 1];
+        $cable = ['cable_id' => (string) Str::uuid(), 'pole_row_id' => $data['rows'][1]['row_id'], 'category' => 'rs',
+            'consumer_number' => 1, 'group' => '02', 'date' => today()->toDateString(), 'gps_waypoint' => '008', 'phase' => 'R', 'conductor_code' => 'PVC 7/0.052'];
+        $registered = \App\Models\Transformer::create(['feeder_id' => $this->feeder->id, 'transformer_code' => 'METER-TEST', 'capacity_kva' => 50, 'latitude' => 31.7, 'longitude' => 73.5]);
+        $survey = FieldSurvey::create(['client_uuid' => $data['client_uuid'], 'collected_by' => $this->leader->id,
+            'survey_team_id' => $this->team->id, 'feeder_id' => $this->feeder->id, 'transformer_id' => $registered->id, 'transformer_code' => $registered->transformer_code,
+            'survey_date' => today(), 'status' => 'submitted', 'revision' => 1, 'payload_hash' => hash('sha256', 'meter-test'),
+            'header' => $data['header'], 'rows' => $data['rows'], 'solar' => [], 'service_cables' => [$cable], 'reference_snapshot' => []]);
+        $xml = '<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"><wpt lat="31.7" lon="73.5"><ele>100</ele><name>007</name></wpt><wpt lat="31.7001" lon="73.5001"><ele>100</ele><name>008</name></wpt></gpx>';
+        $source = app(MobileGpxWorkflow::class)->upload($this->admin, $this->team, UploadedFile::fake()->createWithContent('B_'.today()->format('dmy').'_01.gpx', $xml));
+        $workflow = app(MobileGpxWorkflow::class);
+        $report = $workflow->preview($this->admin, $survey, [$source->id]);
+        $this->assertEmpty($report['issues']);
+        $this->assertCount(3, $report['mapping']);
+        $this->assertSame('008', $report['mapping'][2]['point']['name']);
+        $snapshot = app(MobileSurveySnapshot::class)->build($survey, $report);
+        $transformer = $snapshot['transformers'][0];
+        $this->assertCount(1, $transformer['service_cables']);
+        $this->assertSame('008', $transformer['service_cables'][0]['waypoint_reference']);
+        app(\App\Services\Mdb\ServiceCableService::class)->assertValid($transformer, $snapshot['waypoints'], $snapshot['sources'], $snapshot);
+        $this->assertTrue(\App\Services\Mdb\MobileSurveyProvenance::cable($snapshot, $transformer['service_cables'][0], $transformer));
+        $tampered = $transformer['service_cables'][0]; $tampered['consumer_number'] = 2;
+        $this->assertFalse(\App\Services\Mdb\MobileSurveyProvenance::cable($snapshot, $tampered, $transformer));
+    }
+
     private function tokenFor(User $user): string
     {
         $plain = bin2hex(random_bytes(64));

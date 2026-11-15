@@ -7,6 +7,21 @@ use Illuminate\Support\Str;
 /** Mobile source evidence substitutes only for PDF provenance, never model checks. */
 class MobileSurveyProvenance
 {
+    public static function cable(array $snapshot, array $cable, array $transformer): bool
+    {
+        $rows = self::rows($snapshot);
+        if (!$rows || ($cable['mobile_survey_uuid'] ?? null) !== ($snapshot['mobile_survey']['uuid'] ?? null)) return false;
+        $original = collect($snapshot['mobile_survey']['data']['service_cables'] ?? [])->firstWhere('cable_id', $cable['mobile_cable_id'] ?? null);
+        $pole = collect($transformer['entry_rows'] ?? [])->firstWhere('id', $cable['entry_row_id'] ?? null);
+        if (!$original || !$pole || !self::row($snapshot, $pole, $rows) || ($pole['mobile_row_id'] ?? null) !== $original['pole_row_id']) return false;
+        foreach (['category'=>'category', 'consumer_number'=>'consumer_number', 'group_number'=>'group', 'row_date'=>'date', 'waypoint_reference'=>'gps_waypoint',
+            'meter_number'=>'meter_number', 'consumer_reference'=>'consumer_reference', 'phase'=>'phase', 'conductor_code'=>'conductor_code',
+            'measured_length_m'=>'measured_length_m', 'length_evidence'=>'length_evidence'] as $key => $source) {
+            if (($cable[$key] ?? null) != ($original[$source] ?? null)) return false;
+        }
+        return true;
+    }
+
     public static function rows(array $snapshot): array
     {
         $mobile = $snapshot['mobile_survey'] ?? [];

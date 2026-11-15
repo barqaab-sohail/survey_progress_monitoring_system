@@ -486,40 +486,15 @@ class _SurveyHomeState extends State<SurveyHome> {
                     )!;
                   }),
                 ),
-                if (teamsFor(selectedFeeder).length > 1) ...[
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<int>(
-                    initialValue: parseIntegerId(selectedTeam['id']),
-                    decoration: const InputDecoration(labelText: 'Survey team'),
-                    items: teamsFor(selectedFeeder)
-                        .map(
-                          (team) => DropdownMenuItem<int>(
-                            value: parseIntegerId(team['id']),
-                            child: Text(
-                              '${team['name']} (Group ${teamGroupIdentifier(team)})',
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      update(() {
-                        selectedTeam = teamsFor(selectedFeeder).firstWhere(
-                          (team) => parseIntegerId(team['id']) == value,
-                        );
-                      });
-                    },
-                  ),
-                ] else
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Assigned team: ${selectedTeam['name']} · Group ${teamGroupIdentifier(selectedTeam)}',
-                      ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Assigned team: ${selectedTeam['name']} · Group ${teamGroupIdentifier(selectedTeam)}',
                     ),
                   ),
+                ),
               ],
             ),
           ),
@@ -650,6 +625,7 @@ class _SurveyHomeState extends State<SurveyHome> {
               ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
+            Text('Server: ${controller.session!.url}'),
             Text(
               '${controller.session!.name}${signedInGroup == null ? '' : ' · Code $signedInGroup'} · ${controller.teams.length} assigned team${controller.teams.length == 1 ? '' : 's'}',
             ),

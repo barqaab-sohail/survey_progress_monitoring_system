@@ -28,7 +28,7 @@ class UserInfolist
                 TextEntry::make('status')
                     ->badge(),
                 TextEntry::make('allow_consumer_service_cables')
-                    ->label('PDF consumer service-cable entry')
+                    ->label('Consumer service-cable entry (PDF / mobile)')
                     ->formatStateUsing(fn ($state): string => $state ? 'Enabled' : 'Disabled')
                     ->badge(),
                 TextEntry::make('allow_voice_form_filling')

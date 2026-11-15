@@ -39,6 +39,9 @@ class FieldController extends ChangeNotifier {
       ((reference?['transformers'] ?? []) as List).cast<Json>();
   bool get canUpdateHt =>
       (reference?['capabilities'] as Map?)?['ht_network_updates'] == true;
+  bool get canEnterServiceCables =>
+      session != null &&
+      (reference?['capabilities'] as Map?)?['service_cable_entry'] == true;
   bool get canUseVoiceInput =>
       session != null &&
       !needsLogin &&

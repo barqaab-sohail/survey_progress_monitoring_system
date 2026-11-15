@@ -13,12 +13,12 @@ test('transformer completion keeps the same PDF for Yes and submits before leavi
     const boot=dom.window.mdbEntryBoot;
     boot.pdfjs_url=pathToFileURL(path.resolve('tmp/mdb-entry-qa/readonly-pdf-stub.mjs')).href;
     const server=structuredClone(boot), originalId=server.transformers[0].id;
-    const navigations=[],requests=[];let rejectReview=true,rejectSubmission=true;
+    const navigations=[],requests=[],navigationGuards=[];let rejectReview=true,rejectSubmission=true;
     dom.window.HTMLCanvasElement.prototype.getContext=()=>({});
     dom.window.Element.prototype.scrollIntoView=()=>{};
     dom.window.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
     dom.window.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};
-    Object.assign(globalThis,{window:dom.window,document:d,location:{href:dom.window.location.href,assign:url=>navigations.push(url)},history:dom.window.history,Option:dom.window.Option,localStorage:dom.window.localStorage,ResizeObserver:class{observe(){}}});
+    Object.assign(globalThis,{window:dom.window,document:d,location:{href:dom.window.location.href,assign:url=>{const event=new dom.window.Event('beforeunload',{cancelable:true});dom.window.dispatchEvent(event);navigationGuards.push(event.defaultPrevented);navigations.push(url);}},history:dom.window.history,Option:dom.window.Option,localStorage:dom.window.localStorage,ResizeObserver:class{observe(){}}});
     globalThis.fetch=async(url,options)=>{
         requests.push({url,body:options.body?JSON.parse(options.body):null});
         if(url.endsWith('/entry-review')){
@@ -27,6 +27,7 @@ test('transformer completion keeps the same PDF for Yes and submits before leavi
             return {ok:true,json:async()=>structuredClone(server)};
         }
         if(url.endsWith('/survey-decision')){
+            const pending=new dom.window.Event('beforeunload',{cancelable:true});dom.window.dispatchEvent(pending);assert.equal(pending.defaultPrevented,true,'Unfinished submission must still protect against leaving');
             if(rejectSubmission)return {ok:false,status:422,json:async()=>({message:'Another transformer is incomplete',errors:{rows:['Complete all transformers.']}})};
             return {ok:true,json:async()=>({redirect_url:'/mdb-workflow'})};
         }
@@ -62,6 +63,7 @@ test('transformer completion keeps the same PDF for Yes and submits before leavi
         $('transformer-submit').click();await settle();
         $('next-transformer-no').click();await settle();
         assert.deepEqual(navigations,['/mdb-workflow']);
+        assert.deepEqual(navigationGuards,[false],'Successful submission must not display the leave-site warning');
         assert.equal(requests.at(-1).body.revision,server.revision);
         assert.equal(requests.at(-1).body.action,'submit');
     }finally{

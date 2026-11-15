@@ -286,7 +286,12 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
         run(`/transformers/${active().id}/service-cables${cableId ? '/'+cableId : ''}`, cableId ? 'PUT' : 'POST', body, 'Meter connection saved. Consumer totals are unchanged. Review the transformer again before submission.', true, advanceAfterSave);
     });
     $('service-cable-cancel')?.addEventListener('click', () => {if (guardDraft()) {reset();message('New cable - not saved yet.');}});
-    $('service-cable-add')?.addEventListener('click', () => {if (!isBusy() && guardDraft()) {reset();openEditor();message('New cable - not saved yet.');}});
+    $('service-cable-add')?.addEventListener('click', () => {
+        if (isBusy() || !guardDraft()) return;
+        const selectedPole = $('service-cable-filter-pole')?.value;
+        reset(selectedPole ? {...values(), entry_row_id:selectedPole} : null);
+        openEditor();message('New cable - not saved yet.');
+    });
     $('service-cable-close')?.addEventListener('click', () => {$('service-cable-editor').open = false;$('service-cable-add')?.focus();});
     document.addEventListener('keydown', event => {if (event.key === 'Escape' && !isBusy() && $('service-cable-editor')?.open) {$('service-cable-editor').open = false;$('service-cable-add')?.focus();}});
     for (const id of ['service-cable-search','service-cable-filter-pole','service-cable-filter-status']) $(id)?.addEventListener(id === 'service-cable-search' ? 'input' : 'change', () => {page = 1;render();});

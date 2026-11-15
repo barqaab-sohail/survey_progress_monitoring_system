@@ -1,3 +1,4 @@
+import 'approved_entry_values.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
@@ -20,6 +21,17 @@ Json normalizeFieldBootstrap(Json data) {
     team['id'] = _integerId(team['id']) ?? team['id'];
   }
   for (final feeder in (data['feeders'] as List? ?? const []).cast<Json>()) {
+    final projectKey = '${feeder['project_id']}';
+    final sharedLookups =
+        (data['entry_lookups_by_project'] as Map?)?[projectKey];
+    final sharedSettings =
+        (data['entry_settings_by_project'] as Map?)?[projectKey];
+    if (sharedLookups is Map) {
+      feeder['entry_lookups'] ??= Map<String, dynamic>.from(sharedLookups);
+    }
+    if (sharedSettings is Map) {
+      feeder['entry_settings'] ??= Map<String, dynamic>.from(sharedSettings);
+    }
     feeder['id'] = _integerId(feeder['id']) ?? feeder['id'];
     final settings = feeder['entry_settings'];
     if (settings is Map && settings['two_digit_year_start'] != null) {
@@ -58,6 +70,8 @@ const surveyRowFields = {
   'legacy_row_index',
   'pair_id',
   'entry_version',
+  'waypoint_check_required',
+  'waypoint_confirmation',
   'se',
   'group',
   'date',
@@ -90,7 +104,7 @@ const surveyPvFields = {
 
 void updatePhaseConsumerTotals(Json row) {
   final all = row['consumer_phases'] as Json? ?? {};
-  for (final category in ['rs', 'sc']) {
+  for (final category in ['rs', 'sc', 'st']) {
     if (!all.containsKey(category)) continue;
     final phases = all[category] as Json;
     final entered = phases.values.where(
@@ -262,6 +276,8 @@ class SurveyRecord {
 
   int get revision => _integerId(data['base_revision']) ?? 0;
   List<Json> get rows => (data['rows'] as List).cast<Json>();
+  List<Json> get serviceCables =>
+      ((data['service_cables'] ??= <Json>[]) as List).cast<Json>();
   List<Json> get solar => (data['solar'] as List).cast<Json>();
   Json get header => data['header'] as Json;
   bool get locked =>
@@ -311,6 +327,7 @@ class SurveyRecord {
         },
         'rows': <Json>[],
         'solar': <Json>[],
+        'service_cables': <Json>[],
         'remarks': '',
       },
     );
@@ -320,6 +337,8 @@ class SurveyRecord {
     'row_id': const Uuid().v4(),
     'pair_id': pairId ?? const Uuid().v4(),
     'entry_version': 2,
+    'waypoint_check_required': false,
+    'waypoint_confirmation': null,
     'se': 'S',
     'group': '',
     'date': date,
@@ -343,6 +362,13 @@ class SurveyRecord {
   Json nextRow() {
     ensurePairIds();
     final previous = rows.lastOrNull;
+    final suggestion = rows.length > 1
+        ? suggestedNextWaypoint(
+            previous,
+            requiredTeamGroup,
+            dayString(DateTime.now()),
+          )
+        : '';
     return newRow(
         dayString(DateTime.now()),
         pairId: previous != null && previous['se'] == 'S'
@@ -350,7 +376,9 @@ class SurveyRecord {
             : null,
       )
       ..['se'] = previous?['se'] == 'S' ? 'E' : 'S'
-      ..['group'] = requiredTeamGroup;
+      ..['group'] = requiredTeamGroup
+      ..['gps_waypoint'] = suggestion
+      ..['waypoint_check_required'] = suggestion.isNotEmpty;
   }
 
   String get requiredTeamGroup {
@@ -408,11 +436,20 @@ class SurveyRecord {
       );
     }
     final insertAt = start['se'] == 'S' ? startIndex + 1 : startIndex;
+    final suggestion = partnerRole == 'E' && startIndex > 0
+        ? suggestedNextWaypoint(
+            start,
+            requiredTeamGroup,
+            dayString(DateTime.now()),
+          )
+        : '';
     rows.insert(
       insertAt,
       newRow(dayString(DateTime.now()), pairId: start['pair_id'])
         ..['se'] = partnerRole
-        ..['group'] = requiredTeamGroup,
+        ..['group'] = requiredTeamGroup
+        ..['gps_waypoint'] = suggestion
+        ..['waypoint_check_required'] = suggestion.isNotEmpty,
     );
     return insertAt;
   }
@@ -620,44 +657,188 @@ const consumerLabels = <String, String>{
   'ag': 'AG · Agriculture',
   'st': 'ST · Street lights',
 };
-const conductorChoices = [
-  'A',
-  'W',
-  'GN',
-  '2/0 AWG',
-  'PVC 7/0.052',
-  'PVC 19/0.052',
-  'PVC 19/0.083',
-  'PVC 0.083',
-  'PVC 37/0.083',
-  'ABC 50 MM2',
-  'ABC 95 MM2',
-  'DOG',
-  'GOPHER',
-  'GSL',
-  'OSPREY',
-  'PANTHER',
-  'RABBIT',
-  'RACCOON',
-  'INS ANT',
-  'INS GNAT',
-  'INS WASP',
-  'INS 7/0.052',
-  'ABC',
-  'ABC 10 MM2',
-  'ABC 16 MM2',
-  'ABC 25 MM2',
-  'ABC 35 MM2',
-  'ABC 70 MM2',
-  '4/0 AWG',
-  '100 MM2',
-  '1000 MCM',
-  'USAID 50mm2',
-  'USAID 95mm2',
-  'Ang',
-  'Int',
-  'Other',
-];
+const conductorChoices = [...approvedEntryConductors, 'Other'];
+
+Map<String, String> serviceCableErrors(SurveyRecord record) {
+  final errors = <String, String>{};
+  final slots = <String>{}, meters = <String>{};
+  String identity(Json r) => '${r['group']}|${r['date']}|${r['gps_waypoint']}';
+  for (final entry in record.serviceCables.asMap().entries) {
+    final c = entry.value, path = 'service_cables.${entry.key}';
+    final poles = record.rows.where(
+      (r) => r['row_id'] == c['pole_row_id'] && r['se'] == 'E',
+    );
+    if (poles.length != 1) {
+      errors['$path.pole_row_id'] = 'Select an E pole from this survey.';
+      continue;
+    }
+    final pole = poles.single, category = c['category'];
+    final number = int.tryParse('${c['consumer_number']}') ?? 0;
+    final count = int.tryParse('${pole['consumers']?[category] ?? 0}') ?? 0;
+    if (!consumerLabels.containsKey(category) || number < 1 || number > count) {
+      errors['$path.consumer_number'] =
+          'Consumer number exceeds the category count at this E pole.';
+    }
+    final slot = '${c['pole_row_id']}|$category|$number';
+    if (!slots.add(slot)) {
+      errors['$path.consumer_number'] = 'This consumer already has a meter.';
+    }
+    final key = identity(c);
+    if (!meters.add(key) || record.rows.any((r) => identity(r) == key)) {
+      errors['$path.gps_waypoint'] =
+          'Waypoint already used by a pole or meter.';
+    }
+    if (!RegExp(r'^\d{3}$').hasMatch('${c['gps_waypoint']}')) {
+      errors['$path.gps_waypoint'] = 'Enter exactly three waypoint digits.';
+    }
+    if (!RegExp(r'^\d{2}$').hasMatch('${c['group']}')) {
+      errors['$path.group'] = 'Enter exactly two group digits.';
+    }
+    final date = DateTime.tryParse('${c['date']}');
+    if (date == null ||
+        dayString(date) != c['date'] ||
+        c['date'].toString().compareTo(dayString(DateTime.now())) > 0) {
+      errors['$path.date'] = 'Choose a valid date.';
+    }
+    final phase = (c['phase'] ?? '').toString();
+    if (phase.isNotEmpty) {
+      final single = ['rs', 'sc', 'st'].contains(category);
+      if (single ? !['R', 'Y', 'B'].contains(phase) : phase != 'RYB') {
+        errors['$path.phase'] = 'Phase does not match this consumer category.';
+      }
+      final start = sectionStartRow(record, record.rows.indexOf(pole));
+      for (final p in phase.split('')) {
+        if (recordedConductorAvailability(
+              start?['conductor_${p.toLowerCase()}'],
+            ) !=
+            true) {
+          errors['$path.phase'] = 'Phase has no recorded section conductor.';
+        }
+      }
+    }
+    final code = c['conductor_code'];
+    if (code != null && code != '' && !approvedEntryConductors.contains(code)) {
+      errors['$path.conductor_code'] = 'Choose an approved cable.';
+    }
+    final raw = c['measured_length_m'];
+    if (raw != null && '$raw'.isNotEmpty) {
+      final length = num.tryParse('$raw');
+      if (length == null ||
+          !length.isFinite ||
+          length <= 0 ||
+          length > 100000) {
+        errors['$path.measured_length_m'] =
+            'Enter a measured length greater than zero.';
+      }
+      if ((c['length_evidence'] ?? '').toString().trim().isEmpty) {
+        errors['$path.length_evidence'] =
+            'Record the measured length evidence.';
+      }
+    }
+  }
+  if (record.serviceCables.length > 5000) {
+    errors['service_cables'] = 'Maximum 5,000 meter connections per survey.';
+  }
+  for (final pole in record.rows.where((r) => r['se'] == 'E')) {
+    for (final category in ['rs', 'sc', 'st']) {
+      final phases =
+          (pole['consumer_phases'] as Json?)?[category] as Json? ?? {};
+      if (!phases.values.any((v) => v != null && v != '')) {
+        continue;
+      }
+      for (final phase in ['R', 'Y', 'B']) {
+        final count = record.serviceCables
+            .where(
+              (c) =>
+                  c['pole_row_id'] == pole['row_id'] &&
+                  c['category'] == category &&
+                  c['phase'] == phase,
+            )
+            .length;
+        if (count > (int.tryParse('${phases[phase] ?? 0}') ?? 0)) {
+          errors['service_cables'] =
+              'Recorded $phase meter connections exceed the E pole phase count.';
+        }
+      }
+    }
+  }
+  return errors;
+}
+
+Map<String, String> surveyNetworkErrors(SurveyRecord record) {
+  final errors = <String, String>{};
+  final pairs = surveyPairGroups(record.rows);
+  String? identity(Json? row) {
+    if (row == null ||
+        [
+          'group',
+          'date',
+          'gps_waypoint',
+        ].any((k) => (row[k] ?? '').toString().isEmpty)) {
+      return null;
+    }
+    return '${row['group']}|${row['date']}|${row['gps_waypoint']}';
+  }
+
+  final edges = <({int index, Json? start, Json? end})>[];
+  for (final indices in pairs) {
+    final starts = indices.where((i) => record.rows[i]['se'] == 'S');
+    final ends = indices.where((i) => record.rows[i]['se'] == 'E');
+    if (starts.length != 1 || ends.length != 1) continue;
+    final start = record.rows[starts.single], end = record.rows[ends.single];
+    for (final phase in ['r', 'y', 'b', 'neutral']) {
+      final from = start['conductor_$phase'], to = end['conductor_$phase'];
+      if (from != null && from != '' && to != null && to != '' && from != to) {
+        errors['rows.${ends.single}.conductor_$phase'] =
+            'S and E conductor selections must match within the pair.';
+      }
+    }
+    edges.add((index: starts.single, start: start, end: end));
+  }
+  if (edges.isEmpty) return errors;
+  final root = identity(edges.first.end);
+  final reachable = <String>{?root};
+  bool changed;
+  do {
+    final before = reachable.length;
+    for (final edge in edges.skip(1)) {
+      final s = identity(edge.start), e = identity(edge.end);
+      if (s != null &&
+          e != null &&
+          (reachable.contains(s) || reachable.contains(e))) {
+        reachable.addAll([s, e]);
+      }
+    }
+    changed = reachable.length != before;
+  } while (changed);
+  for (final edge in edges.skip(1)) {
+    final s = identity(edge.start), e = identity(edge.end);
+    if (s != null && s == e) {
+      errors['rows.${edge.index}.gps_waypoint'] =
+          'S and E cannot be the same waypoint in a later pair.';
+    } else if (reachable.isNotEmpty && s != null && !reachable.contains(s)) {
+      errors['rows.${edge.index}.gps_waypoint'] =
+          'Starting waypoint has no entered connection to the transformer. A branch may start at any connected point.';
+    }
+  }
+  return errors;
+}
+
+String waypointConfirmation(Json row) =>
+    '${row['group'] ?? ''}|${row['date'] ?? ''}|${row['gps_waypoint'] ?? ''}';
+bool waypointIsChecked(Json row) =>
+    row['waypoint_confirmation'] == waypointConfirmation(row) &&
+    RegExp(r'^\d{3}$').hasMatch('${row['gps_waypoint'] ?? ''}');
+String suggestedNextWaypoint(Json? previous, String group, String date) {
+  if (previous == null ||
+      previous['group'] != group ||
+      previous['date'] != date) {
+    return '';
+  }
+  final text = '${previous['gps_waypoint'] ?? ''}';
+  final n = RegExp(r'^\d{3}$').hasMatch(text) ? int.tryParse(text) : null;
+  return n == null || n >= 999 ? '' : '${n + 1}'.padLeft(3, '0');
+}
 
 class SurveyValidation {
   static Map<String, String> errors(
@@ -736,6 +917,11 @@ class SurveyValidation {
       positive: true,
       max: 10000000,
     );
+    final capacity = num.tryParse('${record.header['capacity_kva'] ?? ''}');
+    if (capacity != null && !approvedEntryCapacities.contains(capacity)) {
+      result['header.capacity_kva'] =
+          'Select an approved transformer capacity.';
+    }
     if (submitting) {
       requiredField(
         'transformer_code',
@@ -788,6 +974,12 @@ class SurveyValidation {
         result['$prefix.se'] = 'Choose S or E.';
       }
       date('$prefix.date', row['date']);
+      if (submitting &&
+          row['waypoint_check_required'] == true &&
+          !waypointIsChecked(row)) {
+        result['$prefix.waypoint_confirmation'] =
+            'Check the waypoint against your GPS or survey sheet, then tick Waypoint checked.';
+      }
       if (submitting) {
         for (final field in {
           'group': 'Group identifier',
@@ -804,6 +996,15 @@ class SurveyValidation {
             result['$prefix.conductor_$conductor'] =
                 'Enter at least one R, Y, B or N conductor.';
           }
+        }
+      }
+      for (final phase in ['r', 'y', 'b', 'neutral']) {
+        final code = (row['conductor_$phase'] ?? '').toString();
+        if (code.isNotEmpty &&
+            code != '__none__' &&
+            !approvedEntryConductors.contains(code)) {
+          result['$prefix.conductor_$phase'] =
+              'Select an approved conductor code or None / Not Present.';
         }
       }
       for (final entry in {
@@ -857,9 +1058,14 @@ class SurveyValidation {
       number('$prefix.latitude', row['latitude'], min: -90, max: 90);
       number('$prefix.longitude', row['longitude'], min: -180, max: 180);
       number('$prefix.gps_accuracy_m', row['gps_accuracy_m'], max: 100000000);
-      number('$prefix.pole_height_ft', row['pole_height_ft'], max: 1000000);
+      number(
+        '$prefix.pole_height_ft',
+        row['pole_height_ft'],
+        min: 30,
+        max: 10000,
+      );
       final phases = row['consumer_phases'] as Json? ?? {};
-      for (final category in ['rs', 'sc']) {
+      for (final category in ['rs', 'sc', 'st']) {
         for (final phase in ['R', 'Y', 'B']) {
           number(
             '$prefix.consumer_phases.$category.$phase',
@@ -888,6 +1094,12 @@ class SurveyValidation {
         result['solar.$index.row_id'] =
             'This PV record must belong to a row in this survey.';
       }
+      if (submitting &&
+          (item['consumer_reference'] ?? '').toString().trim().isEmpty &&
+          (item['meter_number'] ?? '').toString().trim().isEmpty) {
+        result['solar.$index.consumer_reference'] =
+            'Enter Consumer No. or Meter No. for this PV observation.';
+      }
       number(
         'solar.$index.installed_pv_kw',
         item['installed_pv_kw'],
@@ -906,6 +1118,8 @@ class SurveyValidation {
       text('solar.$index.meter_number', item['meter_number'], 255);
       text('solar.$index.remarks', item['remarks'], 4000);
     }
+    result.addAll(serviceCableErrors(record));
+    if (submitting) result.addAll(surveyNetworkErrors(record));
     result.addAll(surveyPhaseConsistencyErrors(record, submitting: submitting));
     return result;
   }

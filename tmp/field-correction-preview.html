@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="2MTNrEUBfAuW661XUA53BPjH2BoLe3RwT7BVRVLS">
+    <meta name="theme-color" content="#0b1f3a">
+    <link rel="manifest" href="http://localhost/manifest.webmanifest">
+    <title>Correct LT Transformer Survey &middot; HAZECO Transmission and Distribution Losses Calculation Project</title>
+    <link rel="icon" type="image/png" href="http://localhost/branding/barqaab-favicon.png">
+    <link rel="apple-touch-icon" href="http://localhost/branding/barqaab-favicon.png">
+    <link rel="stylesheet" href="http://localhost/css/app.css?v=20261009-mdb-sidebar-fixed">
+    <link rel="stylesheet" href="http://localhost/css/field-survey-correction.css?v=1794727541">
+</head>
+<body class="local-environment">
+<div class="shell">
+    <header class="topbar">
+        <a class="brand" href="http://localhost">
+            <span class="brand-mark brand-logo-mark"><img src="http://localhost/branding/barqaab-favicon.png" alt=""></span>
+            <span class="brand-copy"><strong>HAZECO Transmission and Distribution Losses Calculation Project</strong><small>Survey · MDB · Verification</small></span>
+        </a>
+                <button class="btn btn-sm logout-btn nav-toggle" type="button" aria-label="Open navigation" onclick="document.querySelector('.sidebar').classList.toggle('open')">Menu</button>
+        <div class="user-area">
+            <a href="http://localhost/profile" aria-label="My Profile"><span class="user-avatar user-avatar-initials" role="img" aria-label="Super Admin" style="width:40px;height:40px">S</span>
+</a>
+            <div class="user-meta"><strong>Super Admin</strong><small>Super Admin</small></div>
+            <form method="POST" action="http://localhost/logout"><input type="hidden" name="_token" value="2MTNrEUBfAuW661XUA53BPjH2BoLe3RwT7BVRVLS" autocomplete="off"><button class="btn btn-sm logout-btn" type="submit">Sign out</button></form>
+        </div>
+    </header>
+    <div class="workspace">
+        <aside class="sidebar" id="primary-navigation">
+            <a class="nav-link " href="http://localhost/profile">My Profile</a>
+                                        <a class="nav-link " href="http://localhost/google-drive">Google Drive</a>
+                        <a class="nav-link " href="http://localhost">Overview Dashboard</a>
+                            <a class="nav-link " href="http://localhost/gpx-calculator">GPX Length &amp; KMZ Export</a>
+                                                    <a class="nav-link " href="http://localhost/mdb-workflow">MDB Creation &amp; Validation</a>
+                                        <a class="nav-link " href="http://localhost/mdb-workflow?queue=entry">PDF Data Entry</a>
+                                        <a class="nav-link " href="http://localhost/mdb-workflow?queue=survey_verification">Data Verification</a>
+                                                    <a class="nav-link " href="http://localhost/mdb-workflow/offline-mdb">JSON to MDB</a>                                        <a class="nav-link " href="http://localhost/mdb-workflow/offline-synergee">JSON to SynerGEE</a>                                        <a class="nav-link " href="http://localhost/survey-progress">Automatic Survey Progress</a>
+                <a class="nav-link " href="http://localhost/field-surveys">LT Transformer Surveys</a>
+                                                    <a class="nav-link " href="http://localhost/ht-updates">HT Network Updates</a>
+                                        <a class="nav-link " href="http://localhost/mobile-gpx">Mobile Survey GPX Linking</a>
+                                        <div class="nav-label">Survey</div>
+                                <a class="nav-link " href="http://localhost/survey">My Survey Entries</a>
+                <a class="nav-link " href="http://localhost/survey/returned">Returned Entries</a>
+                <a class="nav-link " href="http://localhost/team-work">Survey Task Assignments</a>                                        <a class="nav-link " href="http://localhost/team-work/workflow">Workflow Task Assignments</a>
+                                        <div class="nav-label">MDB workflow</div>
+                <a class="nav-link " href="http://localhost/verification">Verify Survey Entries</a>
+                <a class="nav-link " href="http://localhost/mdb/create">Add Daily MDB</a>
+                <a class="nav-link " href="http://localhost/mdb">MDB History</a>
+                <a class="nav-link " href="http://localhost/mdb/returned">Returned MDB Entries</a>
+                                        <a class="nav-link " href="http://localhost/field-survey-test">Android Survey Web Test</a>
+                <a class="nav-link " href="http://localhost/mdb-builder">Create Transformer MDB</a>
+                                        <div class="nav-label">Reference data</div>
+                <a class="nav-link " href="http://localhost/transformer-gis">Transformer GIS Data</a>
+                                        <div class="nav-label">Control centre</div>
+                <a class="nav-link" href="http://localhost/admin">Filament Administration</a>
+                                        <div class="nav-label">MDB verification</div>
+                <a class="nav-link " href="http://localhost/mdb-verification">Verify MDB Files</a>
+                <a class="nav-link " href="http://localhost/mdb-verification/history">MDB Review History</a>
+                                        <div class="nav-label">Administration</div>
+                <a class="nav-link " href="http://localhost/admin/engineering">Engineering Configuration</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/master-data">Master Data & Import</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/assignments">User Assignments</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/teams">Teams & Assignments</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/users">Users</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/organizations">Organizations</a>
+                <a class="nav-link " href="http://localhost/legacy-admin/audit-log">Audit Log</a>
+                                        <div class="nav-label">Reporting</div>
+                <a class="nav-link " href="http://localhost/reports">Progress Reports</a>
+                                </aside>
+        <main class="main">
+                                                <div class="field-correction-page">
+
+<div class="page-head"><div><h1>Correct LT Transformer Survey</h1><p>T-10220322143 &middot; CITY MANSEHRA &middot; Server revision 1</p></div><a class="btn btn-light" href="http://localhost/field-surveys/35340390-cb21-47c9-94db-a19adffeb85a">Cancel</a></div>
+<div class="field-correction-layout">
+<form id="field-correction-form" method="POST" action="http://localhost/field-surveys/35340390-cb21-47c9-94db-a19adffeb85a">
+    <input type="hidden" name="_token" value="2MTNrEUBfAuW661XUA53BPjH2BoLe3RwT7BVRVLS" autocomplete="off"> <input type="hidden" name="_method" value="PATCH">    <input type="hidden" name="payload" id="field-correction-payload" value="{&quot;base_revision&quot;:1,&quot;transformer_code&quot;:&quot;T-10220322143&quot;,&quot;survey_date&quot;:&quot;2026-11-15&quot;,&quot;header&quot;:{&quot;substation&quot;:&quot;132kV Mansehra&quot;,&quot;division&quot;:&quot;City Mansehra&quot;,&quot;sub_division&quot;:&quot;Urban Mansehra&quot;,&quot;sub_division_code&quot;:&quot;27211&quot;,&quot;transformer_make&quot;:&quot;testing&quot;,&quot;inspectors&quot;:&quot;Muhammad Shafiq&quot;,&quot;location&quot;:&quot;Baidra Road&quot;,&quot;capacity_kva&quot;:50,&quot;mounting&quot;:&quot;D.Pole&quot;,&quot;duty&quot;:&quot;General Duty&quot;},&quot;rows&quot;:[{&quot;row_id&quot;:&quot;f9d872de-c0b2-4c72-82a9-db60771569a6&quot;,&quot;pair_id&quot;:&quot;80d6f710-66e6-4639-acf6-2ef49016fb4e&quot;,&quot;entry_version&quot;:2,&quot;se&quot;:&quot;S&quot;,&quot;group&quot;:&quot;03&quot;,&quot;date&quot;:&quot;2022-11-15&quot;,&quot;gps_waypoint&quot;:&quot;102&quot;,&quot;latitude&quot;:null,&quot;longitude&quot;:null,&quot;gps_accuracy_m&quot;:null,&quot;phase&quot;:&quot;RYB&quot;,&quot;conductor_r&quot;:&quot;WASP&quot;,&quot;conductor_y&quot;:&quot;WASP&quot;,&quot;conductor_b&quot;:&quot;WASP&quot;,&quot;conductor_neutral&quot;:&quot;WASP&quot;,&quot;equipment_type&quot;:&quot;TR&quot;,&quot;pole_class&quot;:&quot;S&quot;,&quot;pole_height_ft&quot;:36,&quot;consumers&quot;:[],&quot;intersection&quot;:false,&quot;remarks&quot;:null},{&quot;row_id&quot;:&quot;c8e886fc-cb71-43db-9d6c-5dd7a51a3a3b&quot;,&quot;pair_id&quot;:&quot;80d6f710-66e6-4639-acf6-2ef49016fb4e&quot;,&quot;entry_version&quot;:2,&quot;se&quot;:&quot;E&quot;,&quot;group&quot;:&quot;03&quot;,&quot;date&quot;:&quot;2026-11-15&quot;,&quot;gps_waypoint&quot;:&quot;001&quot;,&quot;latitude&quot;:null,&quot;longitude&quot;:null,&quot;gps_accuracy_m&quot;:null,&quot;phase&quot;:&quot;RYB&quot;,&quot;conductor_r&quot;:&quot;WASP&quot;,&quot;conductor_y&quot;:&quot;WASP&quot;,&quot;conductor_b&quot;:&quot;WASP&quot;,&quot;conductor_neutral&quot;:&quot;WASP&quot;,&quot;equipment_type&quot;:&quot;TR&quot;,&quot;pole_class&quot;:&quot;S&quot;,&quot;pole_height_ft&quot;:36,&quot;consumers&quot;:[],&quot;intersection&quot;:false,&quot;remarks&quot;:null},{&quot;row_id&quot;:&quot;5207bf34-2ceb-45b4-bf0b-18b3d3d59e4f&quot;,&quot;pair_id&quot;:&quot;20640f7a-f0dc-459f-8a34-db313a416cd6&quot;,&quot;entry_version&quot;:2,&quot;se&quot;:&quot;S&quot;,&quot;group&quot;:&quot;03&quot;,&quot;date&quot;:&quot;2026-11-15&quot;,&quot;gps_waypoint&quot;:&quot;001&quot;,&quot;latitude&quot;:null,&quot;longitude&quot;:null,&quot;gps_accuracy_m&quot;:null,&quot;phase&quot;:&quot;RYB&quot;,&quot;conductor_r&quot;:&quot;WASP&quot;,&quot;conductor_y&quot;:&quot;WASP&quot;,&quot;conductor_b&quot;:&quot;WASP&quot;,&quot;conductor_neutral&quot;:&quot;WASP&quot;,&quot;equipment_type&quot;:&quot;TR&quot;,&quot;pole_class&quot;:&quot;S&quot;,&quot;pole_height_ft&quot;:36,&quot;consumers&quot;:[],&quot;intersection&quot;:false,&quot;remarks&quot;:null},{&quot;row_id&quot;:&quot;4782ad0d-4145-468a-b5f6-b3d2a141d067&quot;,&quot;pair_id&quot;:&quot;20640f7a-f0dc-459f-8a34-db313a416cd6&quot;,&quot;entry_version&quot;:2,&quot;se&quot;:&quot;E&quot;,&quot;group&quot;:&quot;03&quot;,&quot;date&quot;:&quot;2026-11-15&quot;,&quot;gps_waypoint&quot;:&quot;003&quot;,&quot;latitude&quot;:null,&quot;longitude&quot;:null,&quot;gps_accuracy_m&quot;:null,&quot;phase&quot;:&quot;RYB&quot;,&quot;conductor_r&quot;:&quot;WASP&quot;,&quot;conductor_y&quot;:&quot;WASP&quot;,&quot;conductor_b&quot;:&quot;WASP&quot;,&quot;conductor_neutral&quot;:&quot;WASP&quot;,&quot;equipment_type&quot;:&quot;TR&quot;,&quot;pole_class&quot;:&quot;S&quot;,&quot;pole_height_ft&quot;:36,&quot;consumers&quot;:{&quot;rs&quot;:3},&quot;intersection&quot;:false,&quot;remarks&quot;:null}],&quot;solar&quot;:[],&quot;remarks&quot;:null}">
+    <noscript><p class="alert alert-danger">Enable JavaScript to edit this survey.</p></noscript>
+    <section class="card"><h2>Transformer details</h2><div class="field-correction-fields">
+        <label>Transformer code
+    <input data-field="transformer_code" type="text" value="T-10220322143"
+                >
+</label>
+        <label>Survey date
+    <input data-field="survey_date" type="date" value="2026-11-15"
+                 max="2026-11-15" >
+</label>
+                    <label>Substation
+    <input data-field="header.substation" type="text" value="132kV Mansehra"
+                >
+</label>
+                    <label>Division
+    <input data-field="header.division" type="text" value="City Mansehra"
+                >
+</label>
+                    <label>Sub Division
+    <input data-field="header.sub_division" type="text" value="Urban Mansehra"
+                >
+</label>
+                    <label>Sub Division code
+    <input data-field="header.sub_division_code" type="text" value="27211"
+                >
+</label>
+                    <label>Transformer make
+    <input data-field="header.transformer_make" type="text" value="testing"
+                >
+</label>
+                    <label>Inspectors
+    <input data-field="header.inspectors" type="text" value="Muhammad Shafiq"
+                >
+</label>
+                    <label>Location
+    <input data-field="header.location" type="text" value="Baidra Road"
+                >
+</label>
+                <label>Capacity (kVA)
+    <input data-field="header.capacity_kva" type="number" value="50"
+         step="any" min="0"          >
+</label>
+                <label>Mounting<select data-field="header.mounting"><option value="">Not recorded</option><option >S.Pole</option><option selected>D.Pole</option><option >Pad</option></select></label>
+                <label>Duty<select data-field="header.duty"><option value="">Not recorded</option><option selected>General Duty</option><option >Dedicated</option></select></label>
+            </div></section>
+    <section class="card field-row-tools" aria-label="Survey row navigation">
+        <div class="field-row-tools-head"><h2>S/E observations (4)</h2><button class="btn btn-primary" type="submit">Save corrections</button></div>
+        <div class="field-row-tools-fields">
+            <label>Find a row<input type="search" id="field-row-search" placeholder="Waypoint, group, date or S/E"></label>
+            <label>Jump to row<select id="field-row-jump"><option value="">Choose a row</option>
+                <option value="0">Row 1 ? S ? GPS 102</option><option value="1">Row 2 ? E ? GPS 001</option><option value="2">Row 3 ? S ? GPS 001</option><option value="3">Row 4 ? E ? GPS 003</option>            </select></label>
+        </div>
+        <div class="field-row-pagination"><button type="button" class="btn btn-light" id="field-rows-prev">Previous</button><span id="field-rows-count" role="status" aria-live="polite"></span><button type="button" class="btn btn-light" id="field-rows-next">Next</button></div>
+    </section>
+        <details class="card field-correction-row" id="survey-row-0" data-row-index="0"   open >
+        <summary><strong>Row 1 ? S</strong><span data-row-summary>GPS 102 ? Group 03 ? 2022-11-15</span><span class="field-row-edit-label">Edit row</span></summary>
+        <div class="field-row-body"><div class="field-correction-fields">
+        <label>Group identifier
+    <input data-field="rows.0.group" type="text" value="03"
+                >
+</label>
+        <label>Date
+    <input data-field="rows.0.date" type="date" value="2022-11-15"
+                 max="2026-11-15" >
+</label>
+        <label>GPS waypoint
+    <input data-field="rows.0.gps_waypoint" type="text" value="102"
+                >
+</label>
+                            <label>Conductor R
+    <input data-field="rows.0.conductor_r" type="text" value="WASP"
+                >
+</label>
+                    <label>Conductor Y
+    <input data-field="rows.0.conductor_y" type="text" value="WASP"
+                >
+</label>
+                    <label>Conductor B
+    <input data-field="rows.0.conductor_b" type="text" value="WASP"
+                >
+</label>
+                    <label>Conductor Neutral
+    <input data-field="rows.0.conductor_neutral" type="text" value="WASP"
+                >
+</label>
+                            <label>Equipment type
+    <input data-field="rows.0.equipment_type" type="text" value="TR"
+                >
+</label>
+                    <label>Pole class
+    <input data-field="rows.0.pole_class" type="text" value="S"
+                >
+</label>
+                    <label>Row remarks
+    <input data-field="rows.0.remarks" type="text" value=""
+                >
+</label>
+                <label>Pole height (ft)
+    <input data-field="rows.0.pole_height_ft" type="number" value="36"
+         step="any" min="30"  max="10000"          >
+</label>
+        <label class="field-correction-checkbox"><input data-field="rows.0.intersection" type="checkbox" > Intersection</label>
+    </div><h3>Consumer counts</h3><div class="field-correction-fields field-correction-consumers">
+                                    <label>RS
+    <input data-field="rows.0.consumers.rs" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>RL
+    <input data-field="rows.0.consumers.rl" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>SC
+    <input data-field="rows.0.consumers.sc" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>LC
+    <input data-field="rows.0.consumers.lc" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>SI
+    <input data-field="rows.0.consumers.si" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>LI
+    <input data-field="rows.0.consumers.li" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>PB
+    <input data-field="rows.0.consumers.pb" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>AG
+    <input data-field="rows.0.consumers.ag" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>ST
+    <input data-field="rows.0.consumers.st" type="number" value=""
+         step="any" min="0"          >
+</label>
+                        </div></div></details>
+        <details class="card field-correction-row" id="survey-row-1" data-row-index="1"  >
+        <summary><strong>Row 2 ? E</strong><span data-row-summary>GPS 001 ? Group 03 ? 2026-11-15</span><span class="field-row-edit-label">Edit row</span></summary>
+        <div class="field-row-body"><div class="field-correction-fields">
+        <label>Group identifier
+    <input data-field="rows.1.group" type="text" value="03"
+                >
+</label>
+        <label>Date
+    <input data-field="rows.1.date" type="date" value="2026-11-15"
+                 max="2026-11-15" >
+</label>
+        <label>GPS waypoint
+    <input data-field="rows.1.gps_waypoint" type="text" value="001"
+                >
+</label>
+                            <label>Conductor R
+    <input data-field="rows.1.conductor_r" type="text" value="WASP"
+                >
+</label>
+                    <label>Conductor Y
+    <input data-field="rows.1.conductor_y" type="text" value="WASP"
+                >
+</label>
+                    <label>Conductor B
+    <input data-field="rows.1.conductor_b" type="text" value="WASP"
+                >
+</label>
+                    <label>Conductor Neutral
+    <input data-field="rows.1.conductor_neutral" type="text" value="WASP"
+                >
+</label>
+                            <label>Equipment type
+    <input data-field="rows.1.equipment_type" type="text" value="TR"
+                >
+</label>
+                    <label>Pole class
+    <input data-field="rows.1.pole_class" type="text" value="S"
+                >
+</label>
+                    <label>Row remarks
+    <input data-field="rows.1.remarks" type="text" value=""
+                >
+</label>
+                <label>Pole height (ft)
+    <input data-field="rows.1.pole_height_ft" type="number" value="36"
+         step="any" min="30"  max="10000"          >
+</label>
+        <label class="field-correction-checkbox"><input data-field="rows.1.intersection" type="checkbox" > Intersection</label>
+    </div><h3>Consumer counts</h3><div class="field-correction-fields field-correction-consumers">
+                                    <label>RS
+    <input data-field="rows.1.consumers.rs" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>RL
+    <input data-field="rows.1.consumers.rl" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>SC
+    <input data-field="rows.1.consumers.sc" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>LC
+    <input data-field="rows.1.consumers.lc" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>SI
+    <input data-field="rows.1.consumers.si" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>LI
+    <input data-field="rows.1.consumers.li" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>PB
+    <input data-field="rows.1.consumers.pb" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>AG
+    <input data-field="rows.1.consumers.ag" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>ST
+    <input data-field="rows.1.consumers.st" type="number" value=""
+         step="any" min="0"          >
+</label>
+                        </div></div></details>
+        <details class="card field-correction-row" id="survey-row-2" data-row-index="2"  >
+        <summary><strong>Row 3 ? S</strong><span data-row-summary>GPS 001 ? Group 03 ? 2026-11-15</span><span class="field-row-edit-label">Edit row</span></summary>
+        <div class="field-row-body"><div class="field-correction-fields">
+        <label>Group identifier
+    <input data-field="rows.2.group" type="text" value="03"
+                >
+</label>
+        <label>Date
+    <input data-field="rows.2.date" type="date" value="2026-11-15"
+                 max="2026-11-15" >
+</label>
+        <label>GPS waypoint
+    <input data-field="rows.2.gps_waypoint" type="text" value="001"
+                >
+</label>
+                            <label>Conductor R
+    <input data-field="rows.2.conductor_r" type="text" value="WASP"
+                >
+</label>
+                    <label>Conductor Y
+    <input data-field="rows.2.conductor_y" type="text" value="WASP"
+                >
+</label>
+                    <label>Conductor B
+    <input data-field="rows.2.conductor_b" type="text" value="WASP"
+                >
+</label>
+                    <label>Conductor Neutral
+    <input data-field="rows.2.conductor_neutral" type="text" value="WASP"
+                >
+</label>
+                            <label>Equipment type
+    <input data-field="rows.2.equipment_type" type="text" value="TR"
+                >
+</label>
+                    <label>Pole class
+    <input data-field="rows.2.pole_class" type="text" value="S"
+                >
+</label>
+                    <label>Row remarks
+    <input data-field="rows.2.remarks" type="text" value=""
+                >
+</label>
+                <label>Pole height (ft)
+    <input data-field="rows.2.pole_height_ft" type="number" value="36"
+         step="any" min="30"  max="10000"          >
+</label>
+        <label class="field-correction-checkbox"><input data-field="rows.2.intersection" type="checkbox" > Intersection</label>
+    </div><h3>Consumer counts</h3><div class="field-correction-fields field-correction-consumers">
+                                    <label>RS
+    <input data-field="rows.2.consumers.rs" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>RL
+    <input data-field="rows.2.consumers.rl" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>SC
+    <input data-field="rows.2.consumers.sc" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>LC
+    <input data-field="rows.2.consumers.lc" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>SI
+    <input data-field="rows.2.consumers.si" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>LI
+    <input data-field="rows.2.consumers.li" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>PB
+    <input data-field="rows.2.consumers.pb" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>AG
+    <input data-field="rows.2.consumers.ag" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>ST
+    <input data-field="rows.2.consumers.st" type="number" value=""
+         step="any" min="0"          >
+</label>
+                        </div></div></details>
+        <details class="card field-correction-row" id="survey-row-3" data-row-index="3"  >
+        <summary><strong>Row 4 ? E</strong><span data-row-summary>GPS 003 ? Group 03 ? 2026-11-15</span><span class="field-row-edit-label">Edit row</span></summary>
+        <div class="field-row-body"><div class="field-correction-fields">
+        <label>Group identifier
+    <input data-field="rows.3.group" type="text" value="03"
+                >
+</label>
+        <label>Date
+    <input data-field="rows.3.date" type="date" value="2026-11-15"
+                 max="2026-11-15" >
+</label>
+        <label>GPS waypoint
+    <input data-field="rows.3.gps_waypoint" type="text" value="003"
+                >
+</label>
+                            <label>Conductor R
+    <input data-field="rows.3.conductor_r" type="text" value="WASP"
+                >
+</label>
+                    <label>Conductor Y
+    <input data-field="rows.3.conductor_y" type="text" value="WASP"
+                >
+</label>
+                    <label>Conductor B
+    <input data-field="rows.3.conductor_b" type="text" value="WASP"
+                >
+</label>
+                    <label>Conductor Neutral
+    <input data-field="rows.3.conductor_neutral" type="text" value="WASP"
+                >
+</label>
+                            <label>Equipment type
+    <input data-field="rows.3.equipment_type" type="text" value="TR"
+                >
+</label>
+                    <label>Pole class
+    <input data-field="rows.3.pole_class" type="text" value="S"
+                >
+</label>
+                    <label>Row remarks
+    <input data-field="rows.3.remarks" type="text" value=""
+                >
+</label>
+                <label>Pole height (ft)
+    <input data-field="rows.3.pole_height_ft" type="number" value="36"
+         step="any" min="30"  max="10000"          >
+</label>
+        <label class="field-correction-checkbox"><input data-field="rows.3.intersection" type="checkbox" > Intersection</label>
+    </div><h3>Consumer counts</h3><div class="field-correction-fields field-correction-consumers">
+                                    <label>RS
+    <input data-field="rows.3.consumers.rs" type="number" value="3"
+         step="any" min="0"          >
+</label>
+                                                <label>RL
+    <input data-field="rows.3.consumers.rl" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>SC
+    <input data-field="rows.3.consumers.sc" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>LC
+    <input data-field="rows.3.consumers.lc" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>SI
+    <input data-field="rows.3.consumers.si" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>LI
+    <input data-field="rows.3.consumers.li" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>PB
+    <input data-field="rows.3.consumers.pb" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>AG
+    <input data-field="rows.3.consumers.ag" type="number" value=""
+         step="any" min="0"          >
+</label>
+                                                <label>ST
+    <input data-field="rows.3.consumers.st" type="number" value=""
+         step="any" min="0"          >
+</label>
+                        </div></div></details>
+        <p id="field-rows-empty" class="card" hidden>No rows match your search.</p>
+        <section class="card field-correction-notes">
+        <h2>Remarks and corrections</h2>
+        <label>Survey remarks<textarea data-field="remarks" rows="3"></textarea></label>
+        <label>Correction notes (optional)<textarea name="correction_reason" maxlength="2000" rows="2"></textarea></label>
+        <p>Save creates a new server revision and preserves the original photo links. The phone's synced copy remains read-only.</p>
+        <div class="field-correction-actions"><a class="btn btn-light" href="http://localhost/field-surveys/35340390-cb21-47c9-94db-a19adffeb85a">Cancel</a><button type="submit" class="btn btn-primary">Save corrections</button></div>
+    </section>
+</form>
+<aside class="card field-evidence"><h2>Uploaded evidence</h2>
+    <label>Select image or sketch<select id="field-evidence-select" disabled>
+    <option>No uploaded evidence</option>        </select></label>
+    <p>No images or sketches uploaded for this survey.</p></aside>
+</div>
+</div>
+<script src="http://localhost/js/field-survey-correction.js?v=1794732746" defer></script>
+<script>
+(() => {
+    const form = document.getElementById('field-correction-form');
+    form.addEventListener('submit', () => {
+        const hidden = document.getElementById('field-correction-payload');
+        const data = JSON.parse(hidden.value);
+        form.querySelectorAll('[data-field]').forEach(input => {
+            const keys = input.dataset.field.split('.');
+            const last = keys.pop();
+            let target = data;
+            keys.forEach(key => { target = target[key] ??= {}; });
+            target[last] = input.type === 'checkbox' ? input.checked : input.value === '' ? null : input.type === 'number' ? Number(input.value) : input.value;
+        });
+        hidden.value = JSON.stringify(data);
+    });
+    document.getElementById('field-evidence-select').addEventListener('change', event => {
+        document.querySelectorAll('[data-evidence]').forEach(panel => { panel.hidden = panel.dataset.evidence !== event.target.value; });
+    });
+})();
+</script>
+            <footer><a href="http://localhost/privacy-policy">Privacy Policy</a> | <a href="http://localhost/terms-of-service">Terms of Service</a></footer>
+        </main>
+    </div>
+</div>
+<script>
+document.addEventListener('click', e => { if (innerWidth <= 820 && !e.target.closest('.sidebar') && !e.target.closest('.nav-toggle')) document.querySelector('.sidebar')?.classList.remove('open'); });
+const sidebarCollapseButton = document.getElementById('sidebar-collapse-toggle');
+const workspace = document.querySelector('.workspace');
+const sidebarPreferenceKey = 'mdb-workflow:sidebar-collapsed';
+function setSidebarCollapsed(collapsed, remember = true) {
+    if (!sidebarCollapseButton || !workspace) return;
+    const desktopCollapsed = collapsed && innerWidth > 820;
+    workspace.classList.toggle('sidebar-collapsed', desktopCollapsed);
+    sidebarCollapseButton.textContent = desktopCollapsed ? 'Show menu' : 'Hide menu';
+    sidebarCollapseButton.title = desktopCollapsed ? 'Show left navigation' : 'Hide left navigation and use the full page width';
+    sidebarCollapseButton.setAttribute('aria-expanded', String(!desktopCollapsed));
+    if (remember) try { localStorage.setItem(sidebarPreferenceKey, collapsed ? '1' : '0'); } catch (_) {}
+}
+if (sidebarCollapseButton) {
+    let collapsed = false;
+    try { collapsed = localStorage.getItem(sidebarPreferenceKey) === '1'; } catch (_) {}
+    setSidebarCollapsed(collapsed, false);
+    sidebarCollapseButton.addEventListener('click', () => setSidebarCollapsed(!workspace.classList.contains('sidebar-collapsed')));
+    window.addEventListener('resize', () => {
+        let preferred = false;
+        try { preferred = localStorage.getItem(sidebarPreferenceKey) === '1'; } catch (_) {}
+        setSidebarCollapsed(preferred, false);
+    });
+}
+if ('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('http://localhost/service-worker.js'));
+</script>
+</body>
+</html>

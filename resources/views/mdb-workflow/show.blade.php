@@ -10,8 +10,8 @@
     <div class="entry-workspace-columns">
     <section class="card entry-document" aria-label="Survey PDF above the entry form">
         <div class="entry-pdf-toolbar">
-            <label class="entry-pdf-file">Survey PDF<select id="entry-pdf-source" aria-label="Survey PDF"></select></label>
             <div class="entry-page-controls"><button type="button" class="btn btn-sm btn-light" id="entry-page-previous" aria-label="Previous PDF page">←</button><label>Page <input id="entry-page" type="number" min="1" value="1" aria-label="Current PDF page"></label><span id="entry-page-total">of 0</span><button type="button" class="btn btn-sm btn-light" id="entry-page-next" aria-label="Next PDF page">→</button></div>
+            <label class="entry-pdf-file">Survey PDF<select id="entry-pdf-source" aria-label="Survey PDF"></select></label>
             <div class="actions"><button type="button" class="btn btn-sm btn-light" id="entry-zoom-out" aria-label="Zoom out">−</button><button type="button" class="btn btn-sm btn-light" id="entry-zoom-fit">Fit width</button><button type="button" class="btn btn-sm btn-light" id="entry-zoom-in" aria-label="Zoom in">+</button><button type="button" class="btn btn-sm btn-light" id="entry-rotate" aria-label="Rotate PDF clockwise">Rotate ↻</button><a class="btn btn-sm btn-light" id="entry-pdf-open" target="_blank" rel="noopener">Open PDF</a></div>
             <label class="entry-height">Viewing height <input id="entry-viewer-height" type="range" min="180" max="600" step="20" value="240"><output id="entry-height-value">240 px</output></label>
         </div>
@@ -20,7 +20,7 @@
             @if($canEdit)<button type="button" class="btn btn-sm btn-light" id="entry-pdf-draw" aria-pressed="false" title="Click a row for a full-width red line, or drag across it">Draw line</button><button type="button" class="btn btn-sm btn-light" id="entry-line-undo" hidden>Undo line</button>@endif
             <small id="entry-line-status" role="status" aria-live="polite"></small>
             <details id="entry-legacy-progress" hidden><summary>Saved row links</summary><div class="entry-progress-controls"><label>PDF row <select id="entry-pdf-row" aria-label="Select saved survey PDF row"></select></label><span id="entry-pdf-progress" role="status"></span><button type="button" class="btn btn-sm btn-light" id="entry-pdf-pending">Go to next pending</button>@if($canEdit)<button type="button" class="btn btn-sm btn-light" id="entry-pdf-mark">Mark Entered</button><button type="button" class="btn btn-sm btn-light" id="entry-pdf-undo">Undo Entered</button>@endif</div></details>
-            <span id="entry-page-association">PDF navigation keeps your transformer and entered fields.</span>@if($canEdit)<button type="button" class="btn btn-sm btn-light" id="entry-continue">Continue Current Transformer</button><button type="button" class="btn btn-sm btn-light" data-entry-add-transformer>Add New Transformer</button>@endif
+            <span id="entry-page-association">PDF navigation keeps your transformer and entered fields.</span>@if($canEdit)<button type="button" class="btn btn-sm btn-light" id="entry-continue">Continue Current Transformer</button>@endif
         </div>
     </section>
     <div class="entry-form-column">
@@ -36,7 +36,7 @@
             </tbody></table></div>
         </details>
         @endif
-        <div class="entry-transformer-bar"><div class="entry-select-filter"><label for="entry-transformer">Active transformer</label><input id="entry-transformer-search" hidden type="search" placeholder="Search transformer code" aria-label="Search transformer codes"><select id="entry-transformer" data-compact-select data-full-label aria-label="Active transformer"></select><small id="entry-transformer-help"></small></div>@if($canEdit)<button type="button" class="btn btn-light" data-entry-add-transformer>Add Transformer</button>@endif</div>
+        <div class="entry-transformer-bar"><div class="entry-select-filter"><label for="entry-transformer">Active transformer</label><input id="entry-transformer-search" hidden type="search" placeholder="Search transformer code" aria-label="Search transformer codes"><select id="entry-transformer" data-compact-select data-full-label aria-label="Active transformer"></select><small id="entry-transformer-help"></small></div></div>
         <p id="entry-reference-verification" class="mdb-note" role="status" hidden></p>
         <details id="entry-header-panel"><summary>Transformer header <span id="entry-header-caption"></span></summary>
             @if($canEdit)<form id="entry-header-form" autocomplete="off" novalidate><div class="entry-fields">
@@ -83,7 +83,7 @@
             <div class="entry-fields entry-electrical-equipment-fields entry-equipment-detail-fields entry-compact-fields">
                 <label><span>Type <span class="entry-required" aria-hidden="true">*</span></span><select name="equipment_type" required id="entry-equipment" data-compact-select aria-label="Equipment type"></select></label>
                 <label><span>Pole class <span class="entry-required" aria-hidden="true">*</span></span><select name="pole_class" required id="entry-pole-class" data-compact-select aria-label="Pole class"></select></label>
-            <label class="entry-pole-height-field"><span>Pole height (ft) <span class="entry-required" aria-hidden="true">*</span></span><select name="pole_height_choice" id="entry-height-choice" data-compact-select required aria-label="Pole height in feet"><option value=""></option><option value="31">31 ft</option><option value="36">36 ft</option><option value="__custom__">Other / Custom Value</option></select><input id="entry-height-custom" type="number" min="0.001" max="10000" step="any" inputmode="decimal" placeholder="Enter height in ft" aria-label="Custom pole height in feet" hidden><input type="hidden" name="pole_height"><input type="hidden" name="pole_height_unit" value="ft"><small id="entry-height-unit-note">Heights are always saved in feet (ft).</small></label>
+            <label class="entry-pole-height-field"><span>Pole height (ft) <span class="entry-required" aria-hidden="true">*</span></span><select name="pole_height_choice" id="entry-height-choice" data-compact-select required aria-label="Pole height in feet"><option value=""></option><option value="31">31 ft</option><option value="36">36 ft</option><option value="__custom__">Other / Custom Value</option></select><input id="entry-height-custom" type="number" min="30" max="10000" step="any" inputmode="decimal" placeholder="Enter height in ft" aria-label="Custom pole height in feet" hidden><input type="hidden" name="pole_height"><input type="hidden" name="pole_height_unit" value="ft"><small id="entry-height-unit-note">Minimum height is 30 ft; maximum is 10,000 ft.</small></label>
             </div>
         </fieldset></div></div>
         <div class="entry-identity-foot"><small id="entry-waypoint-status"></small><small id="entry-group-date-status" class="entry-inheritance"></small><small id="entry-conductor-copy-status" class="entry-inheritance"></small><small id="entry-equipment-copy-status" class="entry-inheritance"></small></div>

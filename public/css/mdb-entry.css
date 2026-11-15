@@ -81,13 +81,19 @@
 .entry-electrical-equipment{display:flex;flex-wrap:wrap;gap:8px;min-width:0}.entry-electrical-equipment>fieldset{flex:1 1 280px}.mdb-entry .entry-conductor-detail-fields{grid-template-columns:repeat(4,minmax(0,1fr))}.mdb-entry .entry-equipment-detail-fields{grid-template-columns:minmax(70px,1fr) minmax(70px,1fr) minmax(150px,1.3fr)}
 .entry-next-transformer{max-width:min(640px,calc(100vw - 32px));border:1px solid var(--line);border-radius:12px;padding:24px;color:var(--ink);background:#fff}.entry-next-transformer::backdrop{background:#10243580}.entry-next-transformer .actions{flex-wrap:wrap;gap:8px}.entry-next-transformer h2{margin-top:0}
 /* Keep large meter collections compact and the editor beside the list. */
-.service-cable-tools{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:16px 0}
-.service-cable-tools label{flex:1;min-width:160px}
+.service-cable-tools{display:grid;grid-template-columns:minmax(220px,2fr) minmax(160px,1fr) minmax(220px,1.4fr) auto;gap:12px;align-items:end;margin:16px 0}
+.service-cable-tools label{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:12px;font-weight:650;line-height:1.5}
+.service-cable-tools input,.service-cable-tools select{display:block;width:100%;min-width:0;min-height:40px;box-sizing:border-box;padding:9px 10px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);font:inherit;font-weight:400}
+.service-cable-tools input:focus,.service-cable-tools select:focus{outline:3px solid rgba(19,88,162,.13);border-color:var(--blue)}
+.service-cable-tools>.btn{min-height:40px;white-space:nowrap}
+@media(max-width:1000px){.service-cable-tools{grid-template-columns:repeat(2,minmax(0,1fr))}.service-cable-tools>.btn{justify-self:start}}
+@media(max-width:560px){.service-cable-tools{grid-template-columns:minmax(0,1fr)}.service-cable-tools>.btn{width:100%;justify-self:stretch}}
 .service-cable-pagination{margin:12px 0;align-items:center}
 #service-cable-editor:not([open])>summary{cursor:pointer;margin:12px 0}
 #service-cable-editor[open]{position:fixed;inset:0 0 0 auto;width:min(700px,100vw);box-sizing:border-box;z-index:1100;background:#fff;box-shadow:-8px 0 32px #0f172a40;overflow:auto;padding:20px;overscroll-behavior:contain}
 #service-cable-editor[open]>summary{cursor:pointer;font-weight:700;margin-bottom:12px}
 #service-cable-editor[open] .entry-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+.entry-pdf-toolbar .entry-page-controls{flex-shrink:0}
 #service-cable-editor .service-cable-save-actions{position:sticky;bottom:-20px;background:#fff;padding:14px 0;flex-wrap:wrap;border-top:1px solid #cbd5e1}
 #service-cable-save-status,#entry-row-save-status{display:block;flex-basis:100%;font-weight:600}
 [data-state="saved"]#service-cable-save-status,[data-state="saved"]#entry-row-save-status{color:#166534}

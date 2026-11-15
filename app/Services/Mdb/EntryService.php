@@ -225,7 +225,7 @@ class EntryService
                 'section_id' => $row->section_id, 'source_pdf_id' => $row->source_pdf_id, 'source_page' => $row->source_page, 'source_row' => $row->source_row];
         };
         foreach ($data['transformers'] ?? [] as $transformerData) {
-            array_push($issues, ...app(ServiceCableService::class)->issues($transformerData, $data['waypoints'] ?? [], $data['sources'] ?? []));
+            array_push($issues, ...app(ServiceCableService::class)->issues($transformerData, $data['waypoints'] ?? [], $data['sources'] ?? [], $data));
             $transformerData = app(SurveyWaypoint::class)->transformerLocation($transformerData, $data['waypoints'] ?? []);
             $transformer = (object) $transformerData;
             foreach (app(SurveyPhaseConsistency::class)->transformer($transformerData) as $phaseIssue) {
@@ -330,6 +330,10 @@ class EntryService
                         $missingEquipment[] = 'pole class';
                     }
                     $hasHeight = $row->pole_height !== null && $row->pole_height !== '';
+                    $heightFt = is_numeric($row->pole_height) ? (float) $row->pole_height * ($row->pole_height_unit === 'm' ? 1 / 0.3048 : 1) : null;
+                    if ($heightFt !== null && ($heightFt < 30 - 0.000001 || $heightFt > 10000 + 0.000001)) {
+                        $add('invalid_entry_pole_height', $label.'pole height must be between 30 and 10,000 feet.', $row);
+                    }
                     if ((! $simple || $hasHeight) && (! is_numeric($row->pole_height) || $row->pole_height <= 0)) {
                         $missingEquipment[] = 'positive pole/tower height';
                     }

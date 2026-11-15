@@ -80,6 +80,50 @@ class FieldSurveyApiTest extends TestCase
         $this->assertSame(1, $record->capacityObservations()->count());
     }
 
+    public function test_mobile_service_cables_require_admin_enablement_and_survive_sync_and_revocation(): void
+    {
+        $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonPath('capabilities.service_cable_entry', false);
+        $data = $this->payload('draft');
+        $transformer = Transformer::create(['feeder_id' => $this->feeder->id, 'transformer_code' => 'SERVICE-TEST', 'capacity_kva' => 50, 'latitude' => 34.1, 'longitude' => 73.2]);
+        $data['transformer_id'] = $transformer->id; $data['transformer_code'] = 'SERVICE-TEST';
+        foreach ($data['rows'] as &$row) { $row['conductor_r'] = 'ANT'; $row['pole_height_ft'] = 36; }
+        unset($row);
+        $data['rows'][1]['consumers'] = ['rs' => 23];
+        $data['service_cables'] = [['cable_id' => (string) Str::uuid(), 'pole_row_id' => $data['rows'][1]['row_id'],
+            'category' => 'rs', 'consumer_number' => 1, 'group' => '01', 'date' => today()->toDateString(), 'gps_waypoint' => '010',
+            'phase' => 'R', 'conductor_code' => 'PVC 7/0.052']];
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertForbidden();
+        $this->leader->update(['allow_consumer_service_cables' => true]);
+        $this->getJson('/api/v1/field/bootstrap')->assertOk()->assertJsonPath('capabilities.service_cable_entry', true);
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
+        $saved = FieldSurvey::where('client_uuid', $data['client_uuid'])->firstOrFail();
+        $this->assertCount(1, $saved->service_cables);
+        $this->assertSame(23, $saved->rows[1]['consumers']['rs']);
+        $this->leader->update(['allow_consumer_service_cables' => false]);
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk();
+        $data['base_revision'] = $saved->revision;
+        $data['service_cables'][0]['gps_waypoint'] = '011';
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertForbidden();
+        unset($data['service_cables']);
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk();
+        $this->assertSame('010', $saved->fresh()->service_cables[0]['gps_waypoint']);
+    }
+
+    public function test_compact_bootstrap_shares_project_lookups_and_supports_gzip_without_changing_legacy_clients(): void
+    {
+        $this->getJson('/api/v1/field/bootstrap')->assertOk()
+            ->assertJsonPath('feeders.0.entry_lookups.conductors.ANT', 'ANT');
+        $plain = $this->getJson('/api/v1/field/bootstrap?compact=1')->assertOk();
+        $this->assertArrayNotHasKey('entry_lookups', $plain->json('feeders.0'));
+        $this->assertSame('ANT', $plain->json('entry_lookups_by_project.'.$this->project->id.'.conductors.ANT'));
+        $this->assertSame($this->project->id, $plain->json('feeders.0.project_id'));
+        $gzip = $this->withHeader('Accept-Encoding', 'gzip')->getJson('/api/v1/field/bootstrap?compact=1')->assertOk();
+        $gzip->assertHeader('Content-Encoding', 'gzip')->assertHeader('Vary', 'Accept-Encoding');
+        $decoded = json_decode(gzdecode($gzip->getContent()), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame($plain->json(), $decoded);
+        $this->assertSame((string) strlen($gzip->getContent()), $gzip->headers->get('Content-Length'));
+    }
+
     private function tokenFor(User $user): string
     {
         $plain = bin2hex(random_bytes(64));

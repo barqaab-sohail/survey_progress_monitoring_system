@@ -39,11 +39,21 @@ class ConsumerServiceCablePermissionTest extends TestCase
 
     public function test_flag_does_not_grant_entry_access_to_other_roles_or_inactive_users(): void
     {
-        foreach (['project_manager', 'survey_data_verifier', 'mobile_survey_user'] as $role) {
+        foreach (['project_manager', 'survey_data_verifier'] as $role) {
             $user = User::factory()->create(['role' => $role, 'allow_consumer_service_cables' => true]);
             $this->assertFalse($user->canEnterConsumerServiceCables());
         }
         $user = User::factory()->create(['role' => 'survey_data_entry_operator', 'status' => 'inactive', 'allow_consumer_service_cables' => true]);
         $this->assertFalse($user->canEnterConsumerServiceCables());
+    }
+
+    public function test_mobile_service_cable_entry_is_disabled_by_default_and_requires_an_active_enabled_account(): void
+    {
+        $mobile = User::factory()->create(['role' => 'mobile_survey_user']);
+        $this->assertFalse($mobile->canEnterConsumerServiceCables());
+        $mobile->update(['allow_consumer_service_cables' => true]);
+        $this->assertTrue($mobile->canEnterConsumerServiceCables());
+        $mobile->update(['status' => 'inactive']);
+        $this->assertFalse($mobile->canEnterConsumerServiceCables());
     }
 }

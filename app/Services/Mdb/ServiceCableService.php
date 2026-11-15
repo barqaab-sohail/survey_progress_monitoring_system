@@ -26,7 +26,7 @@ class ServiceCableService
         ];
     }
 
-    public function issues(array $transformer, array $points, array $sources = []): array
+    public function issues(array $transformer, array $points, array $sources = [], array $snapshot = []): array
     {
         $issues = $slots = $meters = [];
         foreach ($transformer['service_cables'] ?? [] as $cable) {
@@ -35,7 +35,13 @@ class ServiceCableService
                 $issues[] = ['code' => 'invalid_service_cable', 'message' => $label.$message,
                     'transformer_id' => $transformer['id'], 'entry_row_id' => $cable['entry_row_id'] ?? null];
             };
-            $validator = Validator::make($cable, $this->rules());
+            $mobile = MobileSurveyProvenance::cable($snapshot, $cable, $transformer);
+            $rules = $this->rules();
+            if ($mobile) {
+                $rules['source_pdf_id'] = 'nullable';
+                $rules['source_page'] = 'nullable';
+            }
+            $validator = Validator::make($cable, $rules);
             if ($validator->fails()) {
                 $add($validator->errors()->first());
                 continue;
@@ -93,7 +99,7 @@ class ServiceCableService
             if ($sources) {
                 $pdf = collect($sources)->firstWhere('id', $cable['source_pdf_id']);
                 $gpx = collect($sources)->firstWhere('id', $cable['gpx_source_id']);
-                if (! $pdf || $pdf['kind'] !== 'pdf' || $pdf['status'] !== 'ready' || $cable['source_page'] > ($pdf['metadata']['page_count'] ?? 0)) {
+                if (!$mobile && (! $pdf || $pdf['kind'] !== 'pdf' || $pdf['status'] !== 'ready' || $cable['source_page'] > ($pdf['metadata']['page_count'] ?? 0))) {
                     $add('The recorded PDF/page is unavailable.');
                 }
                 if (! $gpx || $gpx['kind'] !== 'gpx' || $gpx['status'] !== 'ready') {
@@ -119,9 +125,9 @@ class ServiceCableService
         return $issues;
     }
 
-    public function assertValid(array $transformer, array $points, array $sources = []): void
+    public function assertValid(array $transformer, array $points, array $sources = [], array $snapshot = []): void
     {
-        $issues = $this->issues($transformer, $points, $sources);
+        $issues = $this->issues($transformer, $points, $sources, $snapshot);
         if ($issues) throw ValidationException::withMessages(['service_cables' => array_column($issues, 'message')]);
     }
 

@@ -120,9 +120,27 @@ class MobileSurveySnapshot
                     'entry_rows' => [$start, $end], 'start_survey_identifier' => $start['composite_identifier'], 'end_survey_identifier' => $end['composite_identifier'],
                     'start_row_date' => $start['row_date'], 'end_row_date' => $end['row_date'], 'phase_entries_complete' => $phase['complete']]];
         }
+        $cables = [];
+        foreach ($survey->service_cables ?? [] as $i => $cable) {
+            $mapped = $report['mapping'][count($survey->rows) + $i] ?? null;
+            if (!$mapped || !$mapped['point']) $this->fail('Match every meter waypoint before confirming GPX.');
+            $point = $mapped['point'];
+            $pole = collect($entries)->firstWhere('mobile_row_id', $cable['pole_row_id']);
+            if (!$pole) $this->fail('A service cable has no matching E pole.');
+            $cables[] = ['id' => $i + 1, 'entry_row_id' => $pole['id'], 'category' => $cable['category'],
+                'consumer_number' => $cable['consumer_number'], 'group_number' => $cable['group'], 'row_date' => $cable['date'],
+                'waypoint_reference' => $cable['gps_waypoint'], 'composite_identifier' => $mapped['complete_waypoint'],
+                'gpx_source_id' => $point['source_id'], 'meter_waypoint_id' => $pointIds[$point['source_id'].':'.$point['point_index']],
+                'meter_number' => $cable['meter_number'] ?? null, 'consumer_reference' => $cable['consumer_reference'] ?? null,
+                'phase' => $cable['phase'] ?? null, 'conductor_code' => $cable['conductor_code'] ?? null,
+                'measured_length_m' => $cable['measured_length_m'] ?? null, 'length_evidence' => $cable['length_evidence'] ?? null,
+                'remarks' => $cable['remarks'] ?? null, 'source_pdf_id' => null, 'source_page' => null,
+                'mobile_cable_id' => $cable['cable_id'], 'mobile_survey_uuid' => $survey->client_uuid];
+        }
         $header = $survey->header;
         $transformer = ['id' => $survey->id, 'code' => $survey->transformer_code, 'capacity_kva' => $header['capacity_kva'] ?? null,
             'source_waypoint_id' => null, 'entry_rows' => $entries, 'sections' => $sections, 'pv_records' => $pvs,
+            'service_cables_enabled' => $cables !== [], 'service_cables' => $cables,
             'header' => ['manually_verified' => true, 'verification_method' => 'mobile_gpx_confirmation',
                 'feeder_identifier' => $survey->reference_snapshot['feeder_code'] ?? $survey->feeder->feeder_code,
                 'feeder_name' => $survey->reference_snapshot['feeder_name'] ?? $survey->feeder->feeder_name,
@@ -153,8 +171,8 @@ class MobileSurveySnapshot
         $snapshot = ['schema_version' => 1, 'batch' => ['id' => $survey->id, 'project_id' => $survey->team->project_id,
             'feeder_id' => $survey->feeder_id, 'survey_team_id' => $survey->survey_team_id, 'survey_date' => $survey->survey_date->format('Y-m-d'), 'revision' => $survey->revision],
             'mobile_survey' => ['uuid' => $survey->client_uuid, 'revision' => $survey->revision, 'sha256' => app(MobileGpxWorkflow::class)->surveyHash($survey),
-                'data' => $survey->only(['header', 'rows', 'solar', 'remarks']),
-                'data_sha256' => app(SnapshotService::class)->hash($survey->only(['header', 'rows', 'solar', 'remarks'])), 'linkage_report' => $report],
+                'data' => $survey->only(['header', 'rows', 'solar', 'service_cables', 'remarks']),
+                'data_sha256' => app(SnapshotService::class)->hash($survey->only(['header', 'rows', 'solar', 'service_cables', 'remarks'])), 'linkage_report' => $report],
             'sources' => $sources->map(fn ($s) => ['id' => $s->id, 'kind' => 'gpx', 'status' => 'ready', 'original_name' => $s->original_name, 'sha256' => $s->sha256])->all(),
             'waypoints' => $points, 'generation_inputs' => [], 'transformers' => [$transformer],
             'configuration' => $configuration?->only(['id', 'project_id', 'epsg', 'revision', 'settings', 'load_assumptions', 'approved_by', 'approved_at']),

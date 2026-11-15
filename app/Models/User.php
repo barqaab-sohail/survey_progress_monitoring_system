@@ -154,7 +154,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     public function canEnterConsumerServiceCables(): bool
     {
         return $this->isActive() && ($this->hasRole('super_admin')
-            || ($this->hasRole('survey_data_entry_operator') && $this->allow_consumer_service_cables));
+            || ($this->hasAnyRole(['survey_data_entry_operator', 'mobile_survey_user']) && $this->allow_consumer_service_cables));
     }
 
     public function canViewConsumerServiceCables(): bool

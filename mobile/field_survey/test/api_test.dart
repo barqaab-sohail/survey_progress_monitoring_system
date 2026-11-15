@@ -7,6 +7,45 @@ import 'models_test.dart' show testSession, readySurvey;
 
 void main() {
   test(
+    'compact bootstrap restores feeder lookups and requests compressed transfer',
+    () async {
+      final api = FieldApi(
+        client: MockClient((request) async {
+          expect(request.url.queryParameters['compact'], '1');
+          expect(request.headers['Accept-Encoding'], 'gzip');
+          return http.Response(
+            jsonEncode({
+              'feeders': [
+                {
+                  'id': '9',
+                  'project_id': 7,
+                  'team_ids': ['2'],
+                },
+              ],
+              'entry_lookups_by_project': {
+                '7': {
+                  'conductors': {'ANT': 'ANT'},
+                },
+              },
+              'entry_settings_by_project': {
+                '7': {'two_digit_year_start': '2000'},
+              },
+            }),
+            200,
+          );
+        }),
+      );
+      final data = await api.bootstrap(testSession);
+      expect(data['feeders'][0]['entry_lookups']['conductors']['ANT'], 'ANT');
+      expect(
+        data['feeders'][0]['entry_settings']['two_digit_year_start'],
+        2000,
+      );
+      expect(data['feeders'][0]['id'], 9);
+    },
+  );
+
+  test(
     'bootstrap normalizes string database IDs for dropdown selections',
     () async {
       final api = FieldApi(

@@ -47,7 +47,7 @@ class ExportPayloadBuilder
         foreach ($transformers as &$transformer) {
             $referenceIssues = \App\Services\TransformerRegistryService::issues($transformer);
             $this->require(! $referenceIssues, implode(' ', array_column($referenceIssues, 'message')));
-            app(ServiceCableService::class)->assertValid($transformer, $snapshot['waypoints'] ?? [], $snapshot['sources'] ?? []);
+            app(ServiceCableService::class)->assertValid($transformer, $snapshot['waypoints'] ?? [], $snapshot['sources'] ?? [], $snapshot);
             foreach ($transformer['service_cables'] ?? [] as $cable) {
                 if (! empty($cable['conductor_code'])) {
                     $this->require(in_array($cable['conductor_code'], ApprovedWarehouse::conductors(), true) && in_array($cable['conductor_code'], $template->metadata['equipment_references']['conductors'] ?? [], true),

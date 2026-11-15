@@ -46,7 +46,7 @@ class MdbOperatorEntryController extends Controller
             'pair_number' => 'required|integer|min:1|max:100000', 'designation' => 'required|in:S,E', 'group_number' => 'nullable|string|max:40', 'row_date' => 'nullable|date_format:Y-m-d',
             'waypoint_reference' => 'nullable|string|max:255', 'gpx_source_id' => 'nullable|integer', 'source_pdf_id' => 'nullable|integer',
             'source_page' => 'nullable|integer|min:1|max:10000', 'source_row' => 'nullable|string|max:40', 'conductors' => 'required|array:R,Y,B,N',
-            'equipment_type' => 'required|string|max:255', 'pole_class' => 'required|string|max:255', 'pole_height' => 'required|numeric|gt:0|max:10000', 'pole_height_unit' => 'nullable|in:m,ft',
+            'equipment_type' => 'required|string|max:255', 'pole_class' => 'required|string|max:255', 'pole_height' => 'required|numeric|min:30|max:10000', 'pole_height_unit' => 'nullable|in:m,ft',
             'consumers' => 'required|array:rs,rl,sc,lc,si,li,pb,ag,st,pv', 'intersection' => 'required|boolean',
             'consumer_phases' => 'sometimes|array:rs,sc,st',
             'pv_details' => 'nullable|array|max:100', 'pv_details.*' => 'array:reference,service_load_kw,installed_capacity_kw,meter_number,remarks',
@@ -69,6 +69,9 @@ class MdbOperatorEntryController extends Controller
         }
         if ((string) $request->input('identity_version') === '2') {
             $rules['pole_height_unit'] = 'nullable|in:ft';
+        }
+        if ($request->input('pole_height_unit') === 'm') {
+            $rules['pole_height'] = 'required|numeric|min:9.144|max:3048';
         }
         $validated = $request->validate($rules, [
             'row_date.date_format' => 'Enter a valid calendar date in DD/MM/YYYY.',

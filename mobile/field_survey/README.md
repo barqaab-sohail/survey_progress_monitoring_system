@@ -4,6 +4,20 @@ An Android first release connected to the existing Laravel survey monitoring sys
 
 ## Install and connect
 
+### Test against your local computer with an Android emulator
+
+Start Laravel from the repository root with `php artisan serve --host=127.0.0.1 --port=8000`, then start your Android emulator. From `mobile/field_survey`, run:
+
+```powershell
+.\tool\run-local-emulator.ps1
+# For a different emulator ID:
+.\tool\run-local-emulator.ps1 -Device emulator-5556
+```
+
+This debug launch uses `http://10.0.2.2:8000` (the Android emulator's address for your computer). Sign in with a local database account. Restart using this command after switching servers; hot reload does not change the compiled URL. Existing notebooks are preserved and scoped to their server. Normal builds continue to default to production, and release builds always use production.
+
+### Production connection
+
 1. Install the provided **debug APK** on an Android 7.0 / API 24 or newer phone. Android may ask you to allow installation from the application used to open the APK.
 2. Open **HAZECO Field Survey**. The application connects to `https://hazeco.barqaab.pk` automatically. Enter your existing account email and password; no server URL is requested. Mobile survey users can download every active feeder in the projects covered by their survey-team membership; team membership supplies the group code used for new rows. Individual feeder task assignments do not limit offline feeder selection. Super administrators can also collect.
 3. Sign in while connected and tap **Download feeder data** to cache every active feeder in the projects covered by your survey-team membership. Select **New survey** and choose any feeder. Imported transformer selection prefills values; check them in the field and edit as necessary.
@@ -97,3 +111,14 @@ The home screen separates **HT Network Update** and **LT Transformer Surveys**. 
 HT submissions use a separate SQLite v3 outbox with permanent UUIDs and immutable retries. No app-data reset is required. HT uploads before linked LT. Pending HT can support LT collection/submission; final GPX confirmation/JSON/MDB release requires independently verified HT. Admin returns keep LT data. Download feeder data or Sync now to retrieve verification status, then correct a returned HT update and resubmit using the original identity.
 
 Deploy the backend and the new migration before updating phones. See [HT deployment and operating guide](../../docs/mobile/HT_NETWORK_UPDATES.md). Maintain the original application ID/signing key. Never uninstall a field phone with unsynchronized data.
+
+
+## Optional consumer service-cable mapping
+
+Super Admin can enable **Allow consumer service-cable entry (PDF / mobile)** under Users for a Mobile Survey User. It is disabled by default. After enablement, use **Download feeder data** in the app to refresh permissions.
+
+Open a draft LT survey and use the cable icon on an E row or the **Service cables** tab. Select the E pole and consumer category, confirm the suggested three-digit meter GPS waypoint, and use **Save & add next meter**. The app retains pole group/date and advances to the next unused consumer number and waypoint. Meter number, consumer reference, recorded phase and measured cable details can be recorded when available. These entries describe consumers already counted at the E pole; they never increase consumer totals.
+
+Saved connections are retained offline with the survey and synchronize with it. Web GPX linking matches both pole and meter waypoints; confirmed SynerGEE JSON carries the mapping for local MDB generation. Permission revocation hides mobile entry after the next reference download and blocks changed cable records on the server immediately. Existing saved records are retained.
+
+Deploy the server migration `2026_11_15_180000_add_mobile_service_cables.php` before using an updated app against that server.

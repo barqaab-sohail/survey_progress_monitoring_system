@@ -25,13 +25,21 @@ class FieldApi {
   Json read(http.Response response) {
     Json data;
     try {
-      data = response.body.isEmpty
-          ? <String, dynamic>{}
-          : jsonDecode(response.body) as Json;
-    } catch (_) {
+      final body = utf8
+          .decode(response.bodyBytes)
+          .replaceFirst(RegExp(r'^\uFEFF'), '');
+      data = body.isEmpty ? <String, dynamic>{} : jsonDecode(body) as Json;
+    } catch (error) {
+      final uri = response.request?.url;
+      final address = uri == null ? '' : ' ${uri.origin}${uri.path}';
       throw ApiFailure(
         response.statusCode,
-        'The server did not return an API response. Check the application URL.',
+        'The server did not return an API response '
+        '(HTTP ${response.statusCode}).$address '
+        'Received ${response.bodyBytes.length} bytes, '
+        '${response.headers['content-type'] ?? 'unknown content type'}. '
+        '${error is FormatException ? 'Invalid JSON at offset ${error.offset ?? 'unknown'}.' : 'Unexpected response structure.'} '
+        '${response.statusCode >= 500 ? 'The server failed while processing this request.' : 'Check that this address serves the mobile API.'}',
       );
     }
     if (response.statusCode >= 400) {
@@ -93,7 +101,13 @@ class FieldApi {
   Future<Json> bootstrap(FieldSession session) async {
     final data = read(
       await client
-          .get(endpoint(session.url, '/bootstrap'), headers: headers(session))
+          .get(
+            endpoint(
+              session.url,
+              '/bootstrap',
+            ).replace(queryParameters: {'compact': '1'}),
+            headers: {...headers(session), 'Accept-Encoding': 'gzip'},
+          )
           .timeout(const Duration(seconds: 30)),
     );
     // Bootstrap data is also normalized when loaded from local storage so

@@ -24,7 +24,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class FieldSurveyApiController extends Controller
 {
-    public function bootstrap(Request $request, FieldSurveyAccess $access): JsonResponse
+    public function bootstrap(Request $request, FieldSurveyAccess $access): \Symfony\Component\HttpFoundation\Response
     {
         $user = $request->user();
         $mobileCollector = $user->hasRole('mobile_survey_user');
@@ -59,16 +59,17 @@ class FieldSurveyApiController extends Controller
         $personalTasks = SurveyorAssignment::where('surveyor_id', $user->id)->whereIn('feeder_id', $feeders->modelKeys())
             ->whereIn('status', ['assigned', 'in_progress', 'draft', 'returned', 'submitted'])->get()->groupBy('feeder_id');
 
-        return response()->json([
+        $payload = [
             'user' => $user->only(['id', 'name']),
             'capabilities' => [
                 'ht_network_updates' => $user->canUseHtNetworkUpdates(),
                 'voice_form_filling' => $user->canUseVoiceFormFilling(),
+                'service_cable_entry' => $user->canEnterConsumerServiceCables(),
             ],
             'mobile_survey_team' => $mobileSurveyTeam ? array_merge($mobileSurveyTeam->only(['id', 'code', 'name', 'group_code']), ['group_identifier' => SurveyTeamGroup::identifier($mobileSurveyTeam)]) : null,
             'teams' => $teams->map(fn ($team) => array_merge($team->toArray(), ['group_identifier' => SurveyTeamGroup::identifier($team)])),
             'feeders' => $feeders->map(fn ($feeder) => [
-                'id' => $feeder->id, 'feeder_code' => $feeder->feeder_code, 'feeder_name' => $feeder->feeder_name,
+                'id' => $feeder->id, 'project_id' => $feeder->project_id, 'feeder_code' => $feeder->feeder_code, 'feeder_name' => $feeder->feeder_name,
                 'entry_lookups' => $lookups[$feeder->project_id], 'entry_settings' => $settings[$feeder->project_id],
                 'grid_station_name' => $feeder->gridStation?->name, 'division_name' => $feeder->division?->name,
                 'sub_division_name' => $feeder->subDivision?->name, 'sub_division_code' => $feeder->subDivision?->code,
@@ -85,7 +86,42 @@ class FieldSurveyApiController extends Controller
             'ht_networks' => $user->canUseHtNetworkUpdates()
                 ? $feeders->mapWithKeys(fn ($f) => [$f->id => app(HtKmzService::class)->reference($f->id)])
                 : (object) [],
-        ]);
+        ];
+        // Older apps retain their original response. Updated apps request shared
+        // lookup dictionaries once per project rather than once per feeder.
+        if ($request->boolean('compact')) {
+            $payload['entry_lookups_by_project'] = $lookups;
+            $payload['entry_settings_by_project'] = $settings;
+            $payload['feeders'] = $payload['feeders']->map(function (array $feeder): array {
+                unset($feeder['entry_lookups'], $feeder['entry_settings']);
+                return $feeder;
+            });
+        }
+        $response = response()->json($payload);
+        $gzip = \Symfony\Component\HttpFoundation\AcceptHeader::fromString($request->header('Accept-Encoding', ''))->get('gzip');
+        if ($gzip && $gzip->getQuality() > 0 && function_exists('gzencode')) {
+            $compressed = gzencode($response->getContent(), 6);
+            if ($compressed !== false) {
+                $response = response($compressed, 200, ['Content-Type' => 'application/json', 'Content-Encoding' => 'gzip']);
+            }
+        }
+        $response->headers->set('Vary', 'Accept-Encoding');
+        $response->headers->set('Content-Length', (string) strlen($response->getContent()));
+        $response->headers->set('Cache-Control', 'private, no-store');
+        if (app()->environment('local') && $request->getHost() === '10.0.2.2') {
+            // This emulator's virtual network drops bytes from burst responses.
+            // Small paced writes avoid that loss; production is never paced.
+            $content = $response->getContent();
+            return response()->stream(function () use ($content): void {
+                for ($offset = 0, $size = strlen($content); $offset < $size; $offset += 1024) {
+                    echo substr($content, $offset, 1024);
+                    if (ob_get_level() > 0) ob_flush();
+                    flush();
+                    usleep(10000);
+                }
+            }, 200, $response->headers->all());
+        }
+        return $response;
     }
 
     public function authorizeVoice(Request $request): JsonResponse

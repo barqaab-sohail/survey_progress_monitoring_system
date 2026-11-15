@@ -1,3 +1,4 @@
+import 'service_cable_entry.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -30,6 +31,7 @@ class _SurveyEditorState extends State<SurveyEditor>
   bool dirty = false, saving = false, submitting = false, allowPop = false;
   String saveLabel = 'Saved on this phone';
   int section = 0;
+  String? serviceCablePoleId;
   int headerGeneration = 0;
   bool syncingHere = false;
   Map<String, String> errors = {};
@@ -134,7 +136,9 @@ class _SurveyEditorState extends State<SurveyEditor>
 
   void controllerChanged() {
     if (mounted) {
-      setState(() {});
+      setState(() {
+        if (section == 2 && !controller.canEnterServiceCables) section = 1;
+      });
       unawaited(loadPhotos());
     }
   }
@@ -290,6 +294,9 @@ class _SurveyEditorState extends State<SurveyEditor>
         setState(() => section = 1);
       } else if (found.keys.any((key) => key.startsWith('solar'))) {
         setState(() => section = 1);
+      } else if (controller.canEnterServiceCables &&
+          found.keys.any((key) => key.startsWith('service_cables'))) {
+        setState(() => section = 2);
       } else {
         setState(() => section = 0);
       }
@@ -565,7 +572,8 @@ class _SurveyEditorState extends State<SurveyEditor>
       record.scope,
       record.id,
     );
-    if (record.solar.any(
+    if (record.serviceCables.any((c) => rowIds.contains(c['pole_row_id'])) ||
+        record.solar.any(
           (pv) => pv['row_id'] != null && rowIds.contains(pv['row_id']),
         ) ||
         attached.any(
@@ -573,7 +581,7 @@ class _SurveyEditorState extends State<SurveyEditor>
               photo['row_id'] != null && rowIds.contains(photo['row_id']),
         )) {
       notice(
-        'This pair has linked PV or photos. Remove its pending media first; rows with uploaded photos must be retained.',
+        'This pair has linked meters, PV or photos. Remove its meter entries or pending media first. Remove its pending media first; rows with uploaded photos must be retained.',
       );
       return;
     }
@@ -911,13 +919,28 @@ class _SurveyEditorState extends State<SurveyEditor>
                 'Group ${row['group'].toString().isEmpty ? '—' : row['group']} · ${row['date']}'
                 '${hasErrors ? '\nReview missing or invalid values' : ''}',
               ),
-              trailing: editable
-                  ? IconButton(
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (controller.canEnterServiceCables && row['se'] == 'E')
+                    IconButton(
+                      tooltip: 'Map service cables',
+                      icon: const Icon(Icons.cable_outlined),
+                      onPressed: () => setState(() {
+                        serviceCablePoleId = row['row_id'];
+                        section = 2;
+                      }),
+                    ),
+                  if (editable)
+                    IconButton(
                       tooltip: 'Remove pair',
                       onPressed: () => deleteRow(index),
                       icon: const Icon(Icons.delete_outline),
                     )
-                  : const Icon(Icons.chevron_right),
+                  else
+                    const Icon(Icons.chevron_right),
+                ],
+              ),
             ),
           );
         }),
@@ -1277,7 +1300,7 @@ class _SurveyEditorState extends State<SurveyEditor>
                 ),
                 const SizedBox(height: 8),
                 if (!editable ||
-                    (section == 1 &&
+                    ((section == 1 || section == 2) &&
                         record.hasCompletePairWithEquipment(equipmentCodes)))
                   SizedBox(
                     width: double.infinity,
@@ -1345,7 +1368,7 @@ class _SurveyEditorState extends State<SurveyEditor>
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: SegmentedButton<int>(
-                segments: const [
+                segments: [
                   ButtonSegment(
                     value: 0,
                     label: Text('Details'),
@@ -1356,6 +1379,12 @@ class _SurveyEditorState extends State<SurveyEditor>
                     label: Text('S/E rows'),
                     icon: Icon(Icons.route_outlined),
                   ),
+                  if (controller.canEnterServiceCables)
+                    const ButtonSegment(
+                      value: 2,
+                      label: Text('Service cables'),
+                      icon: Icon(Icons.cable_outlined),
+                    ),
                 ],
                 selected: {section},
                 onSelectionChanged: (values) {
@@ -1371,6 +1400,14 @@ class _SurveyEditorState extends State<SurveyEditor>
             switch (section) {
               0 => headerSection(),
               1 => rowsSection(),
+              2 when controller.canEnterServiceCables =>
+                MobileServiceCableEntry(
+                  key: ValueKey(serviceCablePoleId),
+                  initialPoleId: serviceCablePoleId,
+                  record: record,
+                  enabled: editable,
+                  onChanged: () => touch(),
+                ),
               _ => rowsSection(),
             },
           ],
@@ -1527,6 +1564,10 @@ class _RowEditorState extends State<RowEditor> {
     error: errors['$prefix.$key'],
     onChanged: (value) {
       row[key] = value;
+      if (key == 'gps_waypoint') row['waypoint_check_required'] = false;
+      if (['group', 'gps_waypoint'].contains(key)) {
+        row['waypoint_confirmation'] = null;
+      }
       if (digits) row['entry_version'] = 2;
       changed();
     },
@@ -1681,6 +1722,7 @@ class _RowEditorState extends State<RowEditor> {
                     : null,
                 onChanged: (value) {
                   row['date'] = value;
+                  row['waypoint_confirmation'] = null;
                   changed();
                 },
               ),
@@ -1688,8 +1730,38 @@ class _RowEditorState extends State<RowEditor> {
                 'gps_waypoint',
                 'GPS waypoint identifier',
                 digits: true,
-                helper: 'Enter exactly three digits, keeping leading zeros.',
+                helper: row['waypoint_check_required'] == true
+                    ? 'Suggested waypoint: tick the check below, or type the correct identifier.'
+                    : 'Manually entered waypoint. No confirmation checkbox is required.',
               ),
+              if (row['waypoint_check_required'] == true)
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: Text('Waypoint ${row['gps_waypoint'] ?? ''} checked'),
+                  subtitle: const Text(
+                    'I checked this identifier against the GPS or survey sheet.',
+                  ),
+                  value: waypointIsChecked(row),
+                  onChanged:
+                      widget.editable &&
+                          RegExp(
+                            r'^\d{3}$',
+                          ).hasMatch('${row['gps_waypoint'] ?? ''}')
+                      ? (checked) {
+                          row['waypoint_check_required'] = true;
+                          row['waypoint_confirmation'] = checked == true
+                              ? waypointConfirmation(row)
+                              : null;
+                          changed();
+                        }
+                      : null,
+                ),
+              if (errors['$prefix.waypoint_confirmation'] != null)
+                Text(
+                  errors['$prefix.waypoint_confirmation']!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
             ],
           ),
           SectionCard(
@@ -1828,8 +1900,7 @@ class _RowEditorState extends State<RowEditor> {
                 'pole_height_ft',
                 'Pole height (ft)',
                 number: true,
-                helper:
-                    'Feet are the application convention; confirm the field measurement unit.',
+                helper: 'Enter a height from 30 to 10,000 feet.',
               ),
             ],
           ),
@@ -1839,7 +1910,7 @@ class _RowEditorState extends State<RowEditor> {
                 'Blank means not recorded. Enter 0 only when no consumers were observed.',
             children: [
               ...consumerLabels.entries.map(
-                (entry) => ['rs', 'sc'].contains(entry.key)
+                (entry) => ['rs', 'sc', 'st'].contains(entry.key)
                     ? phaseConsumerFields(entry.key, entry.value)
                     : EntryField(
                         label: entry.value,
@@ -2213,50 +2284,170 @@ class ConductorEntry extends StatefulWidget {
 }
 
 class _ConductorEntryState extends State<ConductorEntry> {
-  late bool other;
+  late final TextEditingController controller;
+  final focus = FocusNode();
+  static const shortcuts = {'A': 'ANT', 'W': 'WASP', 'G': 'GNAT'};
+  Map<String, String> get options {
+    final source = widget.options.isEmpty
+        ? {
+            for (final code in conductorChoices.where((c) => c != 'Other'))
+              code: code,
+          }
+        : widget.options;
+    return {
+      for (final code in ['ANT', 'WASP', 'GNAT'])
+        if (source.containsKey(code)) code: source[code]!,
+      for (final entry in source.entries)
+        if (!['ANT', 'WASP', 'GNAT'].contains(entry.key))
+          entry.key: entry.value,
+      '__none__': 'None / Not Present',
+    };
+  }
+
+  String label(String code) => options[code] ?? code;
   @override
   void initState() {
     super.initState();
-    other =
-        widget.value == 'Other' ||
-        widget.value.isNotEmpty &&
-            widget.value != '__none__' &&
-            !_optionsMap.containsKey(widget.value) &&
-            !conductorChoices.contains(widget.value);
+    controller = TextEditingController(text: label(widget.value));
+    focus.addListener(restoreSelection);
   }
 
-  Map<String, String> get _optionsMap => widget.options.isEmpty
-      ? {
-          for (final code in conductorChoices.where((c) => c != 'Other'))
-            code: code,
-        }
-      : widget.options;
+  void restoreSelection() {
+    if (!focus.hasFocus && controller.text.isEmpty) {
+      setText(label(widget.value));
+    }
+  }
 
   @override
-  Widget build(BuildContext context) => Column(
+  void didUpdateWidget(covariant ConductorEntry oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.enabled) focus.unfocus();
+    if (oldWidget.value != widget.value &&
+        controller.text != label(widget.value)) {
+      setText(label(widget.value));
+    }
+  }
+
+  void setText(String text) {
+    controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+
+  void choose(String code) {
+    setText(label(code));
+    widget.onChanged(code);
+  }
+
+  void typed(String text) {
+    final input = text.trim().toUpperCase();
+    final shortcut = shortcuts[input];
+    if (shortcut != null && options.containsKey(shortcut)) {
+      choose(shortcut);
+      return;
+    }
+    final matches = options.keys.where(
+      (code) =>
+          code.toUpperCase() == input || label(code).toUpperCase() == input,
+    );
+    widget.onChanged(matches.isEmpty ? text : matches.first);
+  }
+
+  @override
+  void dispose() {
+    focus.removeListener(restoreSelection);
+    controller.dispose();
+    focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Row(
     children: [
-      ChoiceField(
-        label: widget.label,
-        error: widget.error,
-        value: other ? 'Other' : widget.value,
-        enabled: widget.enabled,
-        values: ['', '__none__', ..._optionsMap.keys, 'Other'],
-        labels: {'__none__': 'None / Not Present', ..._optionsMap},
-        onChanged: (value) {
-          setState(() => other = value == 'Other');
-          widget.onChanged(value);
-        },
-      ),
-      if (other)
-        Padding(
-          padding: const EdgeInsets.only(top: 10),
-          child: EntryField(
-            label: '${widget.label} description',
-            value: widget.value == 'Other' ? '' : widget.value,
-            enabled: widget.enabled,
-            error: widget.error,
-            onChanged: widget.onChanged,
+      Expanded(
+        child: LayoutBuilder(
+          builder: (context, constraints) => RawAutocomplete<String>(
+            textEditingController: controller,
+            focusNode: focus,
+            displayStringForOption: label,
+            optionsBuilder: (value) {
+              final query = value.text.trim().toUpperCase();
+              return options.keys.where(
+                (code) =>
+                    query.isEmpty ||
+                    code.toUpperCase().contains(query) ||
+                    label(code).toUpperCase().contains(query),
+              );
+            },
+            onSelected: choose,
+            fieldViewBuilder: (context, text, node, submit) => TextField(
+              key: ValueKey('${widget.label}-conductor'),
+              controller: text,
+              focusNode: node,
+              enabled: widget.enabled,
+              textCapitalization: TextCapitalization.characters,
+              decoration: InputDecoration(
+                labelText: widget.label,
+                errorText: widget.error,
+                errorMaxLines: 3,
+                suffixIcon: IconButton(
+                  tooltip: 'Choose conductor',
+                  onPressed: widget.enabled
+                      ? () {
+                          controller.clear();
+                          focus.requestFocus();
+                        }
+                      : null,
+                  icon: const Icon(Icons.arrow_drop_down),
+                ),
+              ),
+              onTap: () {
+                controller.selection = TextSelection(
+                  baseOffset: 0,
+                  extentOffset: controller.text.length,
+                );
+              },
+              onChanged: typed,
+              onSubmitted: (_) => submit(),
+            ),
+            optionsViewBuilder: (context, select, values) => Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 6,
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: constraints.maxWidth,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 280),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      shrinkWrap: true,
+                      itemCount: values.length,
+                      itemBuilder: (context, index) {
+                        final code = values.elementAt(index);
+                        return ListTile(
+                          dense: true,
+                          title: Text(label(code)),
+                          onTap: () => select(code),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
+        ),
+      ),
+      if (widget.enabled && VoiceInputScope.allowed(context))
+        VoiceInputButton(
+          field: VoiceFieldSpec(
+            label: widget.label,
+            kind: VoiceValueKind.choice,
+            choices: options,
+          ),
+          onApplied: choose,
         ),
     ],
   );

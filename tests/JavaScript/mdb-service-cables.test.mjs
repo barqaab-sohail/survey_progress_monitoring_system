@@ -7,7 +7,7 @@ import {isoDate, displayDate, completeWaypoint, waypointMatches} from '../../pub
 function fixture() {
     const fields = ['entry_row_id','category','gpx_source_id','source_pdf_id','meter_waypoint_id'];
     const inputs = ['consumer_number','group_number','row_date','waypoint_reference','composite_identifier','consumer_reference','meter_number','recorded_phase','conductor_code','measured_length_m','length_evidence','source_page','source_row','remarks'];
-    const dom = new JSDOM(`<section id="entry-service-cables"><input type="checkbox" id="service-cables-enabled"><p id="service-cable-status"></p><div id="service-cable-content"><div id="service-cable-coverage"></div><input id="service-cable-search"><select id="service-cable-filter-pole"></select><select id="service-cable-filter-status"><option value=""></option><option value="incomplete">Incomplete</option></select><span id="service-cable-count"></span><button id="service-cable-prev"></button><span id="service-cable-page"></span><button id="service-cable-next"></button><div id="service-cable-list"></div><details id="service-cable-editor"><form id="service-cable-form">${fields.map(name=>`<select name="${name}">${name==='category' ? '<option value="rs">RS</option><option value="rl">RL</option>' : ''}</select>`).join('')}${inputs.map(name=>`<input name="${name}">`).join('')}<span id="service-cable-save-status"></span><button id="service-cable-save-stay" type="submit" value="stay">Save</button><p id="service-cable-coordinates"></p><button type="button" id="service-cable-pole-location">At E</button><button type="submit">Save</button><button type="button" id="service-cable-cancel">Cancel</button></form></details></div></section>`, {url:'http://localhost'});
+    const dom = new JSDOM(`<section id="entry-service-cables"><input type="checkbox" id="service-cables-enabled"><button type="button" id="service-cable-add">Add cable</button><p id="service-cable-status"></p><div id="service-cable-content"><div id="service-cable-coverage"></div><input id="service-cable-search"><select id="service-cable-filter-pole"></select><select id="service-cable-filter-status"><option value=""></option><option value="incomplete">Incomplete</option></select><span id="service-cable-count"></span><button id="service-cable-prev"></button><span id="service-cable-page"></span><button id="service-cable-next"></button><div id="service-cable-list"></div><details id="service-cable-editor"><form id="service-cable-form">${fields.map(name=>`<select name="${name}">${name==='category' ? '<option value="rs">RS</option><option value="rl">RL</option>' : ''}</select>`).join('')}${inputs.map(name=>`<input name="${name}">`).join('')}<span id="service-cable-save-status"></span><button id="service-cable-save-stay" type="submit" value="stay">Save</button><p id="service-cable-coordinates"></p><button type="button" id="service-cable-pole-location">At E</button><button type="submit">Save</button><button type="button" id="service-cable-cancel">Cancel</button></form></details></div></section>`, {url:'http://localhost'});
     Object.assign(globalThis, {window:dom.window,document:dom.window.document,Option:dom.window.Option});
     let state = {revision:1,service_cables_can_enter:true,entry_settings:{two_digit_year_start:2000},
         sources:[{id:1,kind:'gpx',status:'ready',original_name:'Survey.gpx'},{id:2,kind:'pdf',status:'ready',original_name:'Survey.pdf'}],
@@ -230,5 +230,23 @@ test('an unconfirmed server response preserves cable values and reports failure 
         assert.equal(f.field('waypoint_reference').value,'026');
         assert.match(f.dom.window.document.getElementById('service-cable-status').textContent,/did not confirm/);
         assert.equal(f.dom.window.document.getElementById('entry-save-toast').dataset.state,'error');
+    } finally {f.close();}
+});
+
+
+test('first meter uses the filtered E pole instead of the first zero-consumer pole',()=>{
+    const f=fixture();
+    try {
+        const pole=f.state().transformers[0].rows[0];
+        pole.consumers.rs=23;
+        f.state().transformers[0].rows.unshift({...pole,id:1,consumers:{rs:0}});
+        f.feature.render();
+        const filter=f.dom.window.document.getElementById('service-cable-filter-pole');
+        filter.value='2';
+        filter.dispatchEvent(new f.dom.window.Event('change',{bubbles:true}));
+        f.dom.window.document.getElementById('service-cable-add').click();
+        assert.equal(f.field('entry_row_id').value,'2');
+        assert.equal(f.field('category').value,'rs');
+        assert.equal(f.field('consumer_number').value,'1');
     } finally {f.close();}
 });
