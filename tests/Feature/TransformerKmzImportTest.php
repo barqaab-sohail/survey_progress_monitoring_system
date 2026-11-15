@@ -252,8 +252,9 @@ class TransformerKmzImportTest extends TestCase
             'stored_path' => 'old.kmz', 'status' => 'completed', 'transformer_count' => 161,
             'errors' => [['message' => 'Count imported only']]]);
         $message = ListTransformerKmzImports::existingTransformerNotice($this->feeder->id);
-        $this->assertStringContainsString('161 transformers counted', $message);
+        $this->assertStringContainsString('counted 161 transformers', $message);
         $this->assertStringContainsString('no transformer detail records', $message);
+        $this->assertStringContainsString('You can upload the KMZ again', $message);
         $this->assertNull(ListTransformerKmzImports::existingTransformerNotice(null));
     }
 

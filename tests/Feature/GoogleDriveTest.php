@@ -33,6 +33,29 @@ class GoogleDriveTest extends TestCase
         $this->post('/auth/google')->assertStatus(503);
     }
 
+    public function test_unreadable_drive_token_does_not_block_pdf_entry_or_reconnection(): void
+    {
+        $user = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $otherEncrypter = new \Illuminate\Encryption\Encrypter(random_bytes(32), 'AES-256-CBC');
+        $stored = $otherEncrypter->encryptString(json_encode(['access_token' => 'old-key-token']));
+        DB::table('users')->where('id', $user->id)->update(['google_drive_token' => $stored]);
+        $user = $user->fresh();
+
+        $this->assertNull($user->readableGoogleDriveToken());
+        $this->actingAs($user)->get(route('mdb-workflow.create'))
+            ->assertOk()->assertSee('Connect Google Drive, then reload this form')
+            ->assertSee('data-source-local required', false);
+        $this->get(route('google-drive.index'))->assertOk()->assertViewHas('connected', false);
+        $this->assertSame($stored, DB::table('users')->where('id', $user->id)->value('google_drive_token'));
+        try {
+            app(\App\Services\Mdb\SourceService::class)->withDriveFile($user, 'abcdefghijk', fn () => null);
+            $this->fail('An unreadable connection must require reconnection.');
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            $this->assertArrayHasKey('drive_file_id', $exception->errors());
+        }
+        Http::assertNothingSent();
+    }
+
     public function test_authorization_uses_exact_callback_and_encrypted_hidden_tokens(): void
     {
         $user = User::factory()->create();

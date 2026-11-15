@@ -84,10 +84,10 @@ class SourceService
 
     public function withDriveFile(User $actor, string $fileId, callable $callback, ?string $expectedKind = null): mixed
     {
-        if (! preg_match('/^[A-Za-z0-9_-]{10,200}$/', $fileId) || ! config('services.google_drive.enabled') || ! $actor->google_drive_token) {
+        $token = $actor->readableGoogleDriveToken();
+        if (! preg_match('/^[A-Za-z0-9_-]{10,200}$/', $fileId) || ! config('services.google_drive.enabled') || ! $token) {
             throw ValidationException::withMessages(['drive_file_id' => 'Connect Google Drive and supply an authorized Drive file ID.']);
         }
-        $token = $actor->google_drive_token;
         if (($token['expires_at'] ?? 0) <= now()->timestamp + 30) {
             if (empty($token['refresh_token'])) {
                 throw ValidationException::withMessages(['drive_file_id' => 'Reconnect Google Drive; the access token has expired.']);

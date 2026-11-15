@@ -73,6 +73,17 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         ];
     }
 
+    public function readableGoogleDriveToken(): ?array
+    {
+        try {
+            return $this->google_drive_token;
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $exception) {
+            // A connection encrypted with a different key must be reconnected.
+            // Preserve the stored value in case the original key is recovered.
+            return null;
+        }
+    }
+
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);

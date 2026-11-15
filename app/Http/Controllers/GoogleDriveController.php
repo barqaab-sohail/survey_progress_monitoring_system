@@ -14,7 +14,7 @@ class GoogleDriveController extends Controller
     {
         return view('google-drive.index', [
             'configured' => $this->configured(),
-            'connected' => (bool) $request->user()->google_drive_token,
+            'connected' => (bool) $request->user()->readableGoogleDriveToken(),
             'storageConnection' => $request->user()->hasRole('super_admin') ? \App\Models\DriveStorageConnection::find(1) : null,
             'storagePending' => $request->user()->hasRole('super_admin') ? \App\Models\DriveStoredFile::where('status', '!=', 'uploaded')->count() : 0,
             'duplicateGroups' => $request->user()->hasRole('super_admin') ? app(DuplicateFiles::class)->groups() : [],

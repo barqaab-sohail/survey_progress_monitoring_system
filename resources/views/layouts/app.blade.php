@@ -46,6 +46,12 @@
             @can('mdb-workflow.view')
                 <a class="nav-link {{ request()->routeIs('mdb-workflow.*') ? 'active' : '' }}" href="{{ route('mdb-workflow.index') }}">MDB Creation &amp; Validation</a>
             @endcan
+            @can('mdb-workflow.edit')
+                <a class="nav-link {{ request()->routeIs('mdb-workflow.index') && request('queue') === 'entry' ? 'active' : '' }}" href="{{ route('mdb-workflow.index', ['queue' => 'entry']) }}">PDF Data Entry</a>
+            @endcan
+            @can('mdb-workflow.surveyVerify')
+                <a class="nav-link {{ request()->routeIs('mdb-workflow.index') && request('queue') === 'survey_verification' ? 'active' : '' }}" href="{{ route('mdb-workflow.index', ['queue' => 'survey_verification']) }}">Data Verification</a>
+            @endcan
             @unless($dataEntryNavigation)
             @if(PHP_OS_FAMILY === 'Windows' && config('data_entry_mdb.offline_conversion_enabled'))
                 @can('mdb-workflow.export')<a class="nav-link {{ request()->routeIs('mdb-workflow.offline-mdb.*') ? 'active' : '' }}" href="{{ route('mdb-workflow.offline-mdb.index') }}">JSON to MDB</a>@endcan

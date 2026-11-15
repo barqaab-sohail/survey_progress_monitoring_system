@@ -36,7 +36,7 @@ class ListTransformerKmzImports extends ListRecords
         }
         $previous = TransformerKmzImport::where('feeder_id', $feeder->id)->where('status', 'completed')->latest('id')->first();
         if ($previous) {
-            return "This feeder already has a completed KMZ import ({$previous->transformer_count} transformers counted), but no transformer detail records. Review the previous import's warnings before importing again.";
+            return "The previous KMZ import counted {$previous->transformer_count} transformers but saved no transformer detail records. You can upload the KMZ again to create the missing records. Duplicate transformer numbers will be kept as separate working references requiring client confirmation.";
         }
 
         return null;
