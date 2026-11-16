@@ -37,6 +37,8 @@ test('meter entry suggests consecutive GPX waypoints and preserves identity and 
     try {
         assert.equal(f.field('entry_row_id').value,'2');
         assert.equal(f.field('group_number').value,'02');
+        assert.equal(f.field('group_number').readOnly,true);
+        assert.equal(f.field('row_date').readOnly,true);
         assert.equal(f.field('row_date').value,'081026');
         assert.equal(f.field('waypoint_reference').value,'026');
         assert.equal(f.field('conductor_code').value,'PVC 7/0.052');
@@ -248,5 +250,21 @@ test('first meter uses the filtered E pole instead of the first zero-consumer po
         assert.equal(f.field('entry_row_id').value,'2');
         assert.equal(f.field('category').value,'rs');
         assert.equal(f.field('consumer_number').value,'1');
+    } finally {f.close();}
+});
+
+
+test('blank consumer counts derive coverage from cables and keep entry open', async()=>{
+    const f=fixture();
+    try {
+        f.state().transformers[0].rows[0].consumers.rs=null;
+        f.feature.render();
+        f.form.dispatchEvent(new f.dom.window.Event('submit',{bubbles:true,cancelable:true}));
+        await settle();
+        assert.ok(f.posted());
+        assert.equal(f.state().transformers[0].rows[0].consumers.rs,null);
+        assert.equal(f.field('category').value,'rs');
+        assert.equal(f.field('consumer_number').value,'2');
+        assert.match(f.dom.window.document.getElementById('service-cable-coverage').textContent,/1 consumers; 1 meter waypoints recorded; 0 without/);
     } finally {f.close();}
 });

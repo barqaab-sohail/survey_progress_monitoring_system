@@ -179,7 +179,12 @@ class EntryService
         $rows->each(fn ($row) => $row->updateQuietly(['section_id' => $section->id]));
         $section->updateQuietly(['original_entry' => array_replace($section->original_entry, ['entry_rows' => $rows->map->surveyData()->values()->all()])]);
         foreach (array_diff(array_keys(EntryLookups::CONSUMERS), ['pv']) as $category) {
-            $entered = $rows->pluck('consumers.'.$category)->filter(fn ($value) => $value !== null);
+            $entered = $rows->map(function ($row) use ($transformer, $category) {
+                $count = $row->consumers[$category] ?? null;
+                if ($count !== null || $row->designation !== 'E') return $count;
+                $cables = $transformer->serviceCables()->where('entry_row_id', $row->id)->where('category', $category)->count();
+                return $cables > 0 ? $cables : null;
+            })->filter(fn ($value) => $value !== null);
             $count = $entered->isEmpty() ? null : $entered->sum();
             $consumer = $section->consumers()->firstOrNew(['category' => $category]);
             $demand = $consumer->count === $count ? $consumer->demand : null;

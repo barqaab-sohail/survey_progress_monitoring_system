@@ -36,8 +36,19 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
         for (const [value, label] of entries) select.add(new Option(label, String(value)));
         select.value = selected;
     }
+    function inheritPoleIdentity() {
+        const pole = active()?.rows?.find(r => r.id === Number(control('entry_row_id')?.value));
+        for (const name of ['group_number', 'row_date']) control(name).readOnly = true;
+        control('group_number').value = pole?.group_number || '';
+        control('row_date').value = pole?.row_date ? displayDate(pole.row_date) : '';
+        for (const name of ['gpx_source_id', 'source_pdf_id']) {
+            control(name).value = pole?.[name] || '';
+            control(name).disabled = true;
+        }
+    }
     function identity() {
         if (!form) return;
+        inheritPoleIdentity();
         try {
             control('composite_identifier').value = completeWaypoint(control('group_number').value, control('row_date').value,
                 control('waypoint_reference').value, data().entry_settings?.two_digit_year_start ?? 2000);
@@ -113,10 +124,12 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
             control('category').value = previous.category || 'rs';
             const eRow = active()?.rows.find(r => r.id === Number(control('entry_row_id').value));
             const available = [...control('category').options].find(option => {
-                const count = Number(eRow?.consumers?.[option.value] || 0);
+                const recorded = eRow?.consumers?.[option.value];
+                const count = recorded == null || recorded === '' ? Infinity : Number(recorded);
                 return count > (active()?.service_cables || []).filter(c => c.entry_row_id === eRow?.id && c.category === option.value).length;
             });
-            const currentCount = Number(eRow?.consumers?.[control('category').value] || 0);
+            const recorded = eRow?.consumers?.[control('category').value];
+            const currentCount = recorded == null || recorded === '' ? Infinity : Number(recorded);
             const entered = (active()?.service_cables || []).filter(c => c.entry_row_id === eRow?.id && c.category === control('category').value).length;
             if (entered >= currentCount && available) control('category').value = available.value;
             seed();
@@ -132,7 +145,7 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
     function lock(value = isBusy()) {
         $('service-cables-enabled').disabled = value || !canEdit() || !active();
         if ($('service-cable-add')) $('service-cable-add').disabled = value || !canEdit();
-        form?.querySelectorAll('input,select,textarea,button').forEach(el => el.disabled = value || !canEdit());
+        form?.querySelectorAll('input,select,textarea,button').forEach(el => el.disabled = value || !canEdit() || ['gpx_source_id','source_pdf_id'].includes(el.name));
         root.querySelectorAll('[data-service-edit],[data-service-delete]').forEach(el => el.disabled = value || !canEdit());
     }
     async function run(path, method, body, success, clear = false, advance = true) {
@@ -166,7 +179,7 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
                 const cables = (active()?.service_cables || []).filter(c => c.entry_row_id === row?.id);
                 completedPole = counts.some(([, count]) => Number(count) > 0) && counts.every(([category, count]) => {
                     const slots = new Set(cables.filter(c => c.category === category).map(c => Number(c.consumer_number)));
-                    return slots.size === Number(count || 0);
+                    return count != null && count !== '' && slots.size === Number(count);
                 });
                 if (completedPole && advance) $('service-cable-editor').open = false;
             }
@@ -203,10 +216,10 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
         const ends = (t.rows || []).filter(row => row.designation === 'E');
         const cables = t.service_cables || [];
         $('service-cable-coverage').innerHTML = ends.map(row => {
-            const total = Object.entries(row.consumers || {}).filter(([category]) => category !== 'pv').reduce((sum, [,n]) => sum + Number(n || 0), 0);
+            const total = Object.entries(row.consumers || {}).filter(([category]) => category !== 'pv').reduce((sum, [category,n]) => sum + (n == null || n === '' ? (t.service_cables || []).filter(c => c.entry_row_id === row.id && c.category === category).length : Number(n)), 0);
             const count = cables.filter(c => c.entry_row_id === row.id).length;
             return `<p>E ${esc(row.composite_identifier || row.waypoint_reference)}: ${total} consumers; ${count} meter waypoints recorded; ${Math.max(0,total-count)} without meter waypoints.</p>`;
-        }).join('') || '<p>Save an S/E pair with consumer counts before adding meter connections.</p>';
+        }).join('') || '<p>Save an S/E pair before adding meter connections. Leave consumer counts blank to determine them from service cables.</p>';
         if ($('service-cable-count')) $('service-cable-count').textContent = '('+cables.length+')';
         const poleFilter = $('service-cable-filter-pole');
         if (poleFilter) options(poleFilter, ends.map(e => [e.id, 'E '+(e.composite_identifier || e.waypoint_reference)]), poleFilter.value, 'All poles');
@@ -222,9 +235,9 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
         if ($('service-cable-page')) $('service-cable-page').textContent = 'Page '+page+' of '+pages+' / '+filtered.length+' matching cables';
         if ($('service-cable-prev')) $('service-cable-prev').disabled = page === 1;
         if ($('service-cable-next')) $('service-cable-next').disabled = page === pages;
-        $('service-cable-list').innerHTML = filtered.length ? '<table class="table"><thead><tr><th>E pole / consumer</th><th>Meter waypoint</th><th>Meter / phase</th><th>Length</th><th>Source</th><th></th></tr></thead><tbody>'+filtered.slice((page-1)*pageSize,page*pageSize).map(c => {
+        $('service-cable-list').innerHTML = filtered.length ? '<table class="table"><thead><tr><th>E pole / consumer</th><th>Meter waypoint</th><th>Phase</th><th>Length</th><th>Source</th><th></th></tr></thead><tbody>'+filtered.slice((page-1)*pageSize,page*pageSize).map(c => {
             const row = ends.find(e => e.id === c.entry_row_id);
-            return `<tr><td>${esc(row?.waypoint_reference)} / ${esc(c.category.toUpperCase())} ${c.consumer_number}</td><td>${esc(c.composite_identifier)}</td><td>${esc(c.meter_number || c.consumer_reference || 'Not recorded')} / ${esc(c.phase || 'Not recorded')}</td><td>${lengthLabel(c.measured_length_m, polePoint(row), (data().waypoints || []).find(p => p.id === Number(c.meter_waypoint_id)))}</td><td>PDF #${c.source_pdf_id}, page ${c.source_page}<small>${esc(c.source_row)}</small></td><td>${canEdit() ? `<button type="button" class="btn btn-sm btn-light" data-service-edit="${c.id}">Edit</button> <button type="button" class="btn btn-sm btn-light" data-service-delete="${c.id}">Delete</button>` : ''}</td></tr>`;
+            return `<tr><td>${esc(row?.waypoint_reference)} / ${esc(c.category.toUpperCase())} ${c.consumer_number}</td><td>${esc(c.composite_identifier)}</td><td>${esc(c.phase || 'Not recorded')}</td><td>${lengthLabel(c.measured_length_m, polePoint(row), (data().waypoints || []).find(p => p.id === Number(c.meter_waypoint_id)))}</td><td>PDF #${c.source_pdf_id}, page ${c.source_page}<small>${esc(c.source_row)}</small></td><td>${canEdit() ? `<button type="button" class="btn btn-sm btn-light" data-service-edit="${c.id}">Edit</button> <button type="button" class="btn btn-sm btn-light" data-service-delete="${c.id}">Delete</button>` : ''}</td></tr>`;
         }).join('')+'</tbody></table>' : '<p>No matching meter waypoints.</p>';
         if (form) {
             const retained = changed ? drafts.get(t.id) : {values:current, cableId};
@@ -269,6 +282,7 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
     });
     form?.addEventListener('submit', event => {
         event.preventDefault();
+        identity();
         if (!form.reportValidity()) return;
         advanceAfterSave = event.submitter?.value !== 'stay';
         const body = values();
@@ -329,7 +343,7 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
             identity(); control('meter_waypoint_id').value = cable.meter_waypoint_id;coordinates();
             dirty = false;openEditor();message('Saved cable loaded for editing.');
         }
-        if (remove && !isBusy() && guardDraft() && window.confirm('Remove this meter connection? The consumer count at the E pole will stay the same.')) {
+        if (remove && !isBusy() && guardDraft() && window.confirm('Remove this meter connection? Consumer totals derived from service cables will update.')) {
             run(`/transformers/${active().id}/service-cables/${remove.dataset.serviceDelete}`, 'DELETE', {}, 'Meter connection removed. Consumer totals are unchanged.', true);
         }
     });

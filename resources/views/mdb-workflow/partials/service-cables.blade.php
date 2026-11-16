@@ -1,7 +1,7 @@
 @if(auth()->user()->canViewConsumerServiceCables())
 <section class="card" id="entry-service-cables">
     <h2>Consumer service cables <span id="service-cable-count"></span></h2>
-    <p class="mdb-note">Each meter describes a consumer already counted at an E pole. It does not increase the consumer total. Select the shared E pole once, then save its meters one by one. The next waypoint is suggested automatically; confirm it against the survey sheet and imported GPX.</p>
+    <p class="mdb-note">An entered consumer count (including zero) limits service cables for that category at the E pole. Leave the count blank when it is unknown; saved service cables then determine that category?s consumer total. Select the shared E pole once, then save its meters one by one. The next waypoint is suggested automatically; confirm it against the survey sheet and imported GPX.</p>
     <label class="mdb-check"><input id="service-cables-enabled" type="checkbox"> Meter/service-cable waypoints available for this transformer</label>
     <p id="service-cable-status" role="status" aria-live="polite"></p>
     <div id="service-cable-content" hidden>
@@ -16,10 +16,10 @@
                 <label>Starting E pole<select name="entry_row_id" required></select></label>
                 <label>Consumer category<select name="category" required>@foreach(array_diff_key(\App\Services\Mdb\EntryLookups::CONSUMERS, ['pv' => true]) as $key => $label)<option value="{{ $key }}">{{ strtoupper($key) }} — {{ $label }}</option>@endforeach</select></label>
                 <label>Consumer number within category<input name="consumer_number" type="number" required min="1" step="1"><small>For example, RS consumer 1 of the five RS consumers recorded at this E pole.</small></label>
-                <label>Meter group<input name="group_number" required inputmode="numeric" pattern="[0-9]{2}" maxlength="2" placeholder="02"></label>
-                <label>Meter date (DDMMYY)<input name="row_date" required inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="081026"></label>
+                <label>Meter group (from E pole)<input name="group_number" readonly inputmode="numeric" pattern="[0-9]{2}" maxlength="2" placeholder="02"></label>
+                <label>Meter date (DDMMYY, from E pole)<input name="row_date" readonly inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="081026"></label>
                 <label>Meter waypoint (next number suggested)<input name="waypoint_reference" required inputmode="numeric" pattern="[0-9]{3}" maxlength="3" placeholder="026"></label>
-                <label>Meter GPX source<select name="gpx_source_id" required></select></label>
+                <label>Meter GPX source (from E pole)<select name="gpx_source_id" disabled></select></label>
                 <label>Exact meter waypoint<select name="meter_waypoint_id" required></select></label>
                 <label>Complete meter identity<input name="composite_identifier" readonly tabindex="-1" placeholder="GGDDMMYYWWW"></label>
                 <label>Consumer/reference number<input name="consumer_reference" maxlength="255"></label>
@@ -28,7 +28,7 @@
                 <label>Service cable<select name="conductor_code"><option value="">Not recorded</option>@foreach(\App\Services\Mdb\ApprovedWarehouse::conductors() as $code)<option value="{{ $code }}">{{ $code }}</option>@endforeach</select><small>Single phase: PVC 7/0.052. Three phase: PVC 19/0.052. Correct this if the survey records another cable; export requires an approved library code.</small></label>
                 <label>Measured cable length (m)<input name="measured_length_m" type="number" min="0.001" max="100000" step="any"><small>Without a measured length, export uses the straight distance between recorded waypoints, labelled as an estimate.</small></label>
                 <label>Measured length evidence<input name="length_evidence" maxlength="4000"></label>
-                <label>Source PDF<select name="source_pdf_id" required></select></label>
+                <label>Source PDF (from E pole)<select name="source_pdf_id" disabled></select></label>
                 <label>PDF page<input name="source_page" required type="number" min="1" max="10000" step="1"></label>
                 <label>PDF row / reference<input name="source_row" maxlength="255"></label>
                 <label>Remarks<textarea name="remarks" maxlength="4000" rows="2"></textarea></label>

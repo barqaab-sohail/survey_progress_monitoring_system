@@ -333,12 +333,47 @@ class MdbOperatorEntryTest extends TestCase
     private function serviceCableFixture(): array
     {
         $this->save(['identity_version' => 2]);
-        $end = $this->save(['identity_version' => 2, 'designation' => 'E', 'waypoint_reference' => '010',
+        $end = $this->save(['identity_version' => 2, 'group_number' => '02', 'designation' => 'E', 'waypoint_reference' => '010',
             'consumers' => array_replace(array_fill_keys(array_keys(EntryLookups::CONSUMERS), null), ['rs' => 5])]);
         $point = $this->gpx->waypoints()->create(['batch_id' => $this->batch->id, 'name' => '026', 'latitude' => 30.002, 'longitude' => 71.002]);
         return ['revision' => $this->batch->fresh()->revision, 'entry_row_id' => $end->id, 'category' => 'rs', 'consumer_number' => 1,
             'group_number' => '02', 'row_date' => '2026-10-08', 'waypoint_reference' => '026', 'gpx_source_id' => $this->gpx->id,
             'meter_waypoint_id' => $point->id, 'source_pdf_id' => $this->pdf->id, 'source_page' => 1, 'phase' => 'R', 'meter_number' => 'M-001'];
+    }
+
+    public function test_service_cable_group_and_date_are_inherited_from_e_pole(): void
+    {
+        $data = $this->serviceCableFixture();
+        $this->transformer->update(['service_cables_enabled' => true]);
+        $pole = $this->transformer->entryRows()->findOrFail($data['entry_row_id']);
+        $data['group_number'] = '99';
+        $data['row_date'] = '2020-01-01';
+        $data['gpx_source_id'] = $this->pdf->id;
+        $data['source_pdf_id'] = $this->gpx->id;
+        $this->postJson(route('mdb-workflow.service-cables.store', [$this->batch, $this->transformer]), $data)->assertOk()
+            ->assertJsonPath('transformers.0.service_cables.0.gpx_source_id', $pole->gpx_source_id)
+            ->assertJsonPath('transformers.0.service_cables.0.source_pdf_id', $pole->source_pdf_id)
+            ->assertJsonPath('transformers.0.service_cables.0.group_number', $pole->group_number)
+            ->assertJsonPath('transformers.0.service_cables.0.row_date', $pole->row_date->format('Y-m-d'));
+    }
+
+    public function test_blank_pole_counts_derive_from_cables_while_explicit_zero_blocks_entry(): void
+    {
+        $data = $this->serviceCableFixture();
+        $this->transformer->update(['service_cables_enabled' => true]);
+        $end = $this->transformer->entryRows()->findOrFail($data['entry_row_id']);
+        $end->update(['consumers' => array_replace($end->consumers, ['rs' => 0]), 'original_entry' => array_replace($end->original_entry ?? [], ['consumer_phases' => []])]);
+        $url = route('mdb-workflow.service-cables.store', [$this->batch, $this->transformer]);
+        $this->postJson($url, $data)->assertUnprocessable();
+        $end->update(['consumers' => array_replace($end->consumers, ['rs' => null])]);
+        $this->postJson($url, $data)->assertOk();
+        $this->assertNull($end->fresh()->consumers['rs']);
+        $section = $this->transformer->sections()->first();
+        $this->assertSame(1, $section->consumers()->where('category', 'rs')->value('count'));
+        $cable = $this->transformer->serviceCables()->first();
+        $this->deleteJson(route('mdb-workflow.service-cables.destroy', [$this->batch, $this->transformer, $cable]),
+            ['revision' => $this->batch->fresh()->revision])->assertOk();
+        $this->assertNull($section->consumers()->where('category', 'rs')->value('count'));
     }
 
     public function test_service_cables_store_real_identity_preserve_counts_and_enter_snapshots_and_review(): void
@@ -366,7 +401,7 @@ class MdbOperatorEntryTest extends TestCase
         $data = $this->serviceCableFixture();
         $this->transformer->update(['service_cables_enabled' => true]);
         $url = route('mdb-workflow.service-cables.store', [$this->batch, $this->transformer]);
-        foreach (['consumer_number' => 6, 'gpx_source_id' => $this->pdf->id, 'meter_waypoint_id' => $this->gpx->waypoints()->first()->id, 'phase' => 'Y'] as $field => $value) {
+        foreach (['consumer_number' => 6, 'meter_waypoint_id' => $this->gpx->waypoints()->first()->id, 'phase' => 'Y'] as $field => $value) {
             $this->postJson($url, array_replace($data, [$field => $value]))->assertUnprocessable();
         }
         $this->postJson($url, $data)->assertOk();

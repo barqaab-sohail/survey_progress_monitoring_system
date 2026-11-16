@@ -1,8 +1,9 @@
+import {installPdfReadingAids} from './mdb-pdf-reading-aids.js?v=2';
 import {saveFeedback, savedTime} from './mdb-save-feedback.js?v=2';
 import {installCompactSelects} from './mdb-entry-select.js?v=4';
 import {pdfLoadErrorMessage, clearPdfFallback, showPdfFallback} from './mdb-pdf-errors.js';
 import {phaseEntryState, updatePhaseFields} from './survey-phase-consistency.js?v=1';
-import {installServiceCableEntry} from './mdb-service-cables.js?v=6';
+import {installServiceCableEntry} from './mdb-service-cables.js?v=8';
 
 export function transformerCodeKey(code) {
     return String(code ?? '').toLowerCase().replace(/[\u2010-\u2014\u2212]/g,'-').replace(/\s+/gu,'');
@@ -840,6 +841,7 @@ function initialize(boot) {
         catch(e){error('Red line could not be removed.',e.errors || {line:[e.message]});}
         finally{setBusy(false);}
     }
+    const readingAids = installPdfReadingAids({source: () => $('entry-pdf-source').value, page: () => pageNumber});
     function renderPdf() {
         const token=pdfGeneration, document=pdf, selectedPage=pageNumber, selectedRotation=rotation, selectedZoom=zoom;
         if(!document) return Promise.resolve();
@@ -857,6 +859,7 @@ function initialize(boot) {
                 if(token!==pdfGeneration)return;
                 renderedPdfLocation=`${number($('entry-pdf-source').value)}:${selectedPage}:${selectedRotation}:${selectedZoom}`;
                 renderPdfRows();
+                readingAids.rendered();
             }catch(e){if(e.name!=='RenderingCancelledException'){$('entry-pdf-message').textContent='PDF rendering failed. Use Open PDF; entered fields are retained.';$('entry-pdf-message').hidden=false;}}
         });
         return renderChain;
@@ -867,6 +870,7 @@ function initialize(boot) {
         const source=number($('entry-pdf-source').value), token=++pdfGeneration;
         const previousLoading=pdfLoading;
         renderTask?.cancel();pdfLoading=null;pdf=null;
+        readingAids.loading();
         $('entry-pdf-canvas').hidden=true;$('entry-pdf-message').hidden=false;$('entry-pdf-message').textContent=source ? 'Loading PDF…' : 'Upload a PDF and GPX to begin.';
         cancelLineDrawing();renderPdfRows();
         try {

@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
-/** Optional observations describing existing consumers, never additional consumer counts. */
+/** Meter observations can supply consumer counts when pole counts are unrecorded. */
 class ServiceCableService
 {
     public function rules(): array
@@ -55,7 +55,7 @@ class ServiceCableService
                 continue;
             }
             $count = $row['consumers'][$cable['category']] ?? null;
-            if ($count === null || $cable['consumer_number'] > $count) {
+            if ($count !== null && $count !== '' && $cable['consumer_number'] > $count) {
                 $add('Consumer number exceeds the recorded '.strtoupper($cable['category']).' count at this E pole.');
             }
             $slot = $row['id'].':'.$cable['category'].':'.$cable['consumer_number'];

@@ -15,6 +15,20 @@
             <div class="actions"><button type="button" class="btn btn-sm btn-light" id="entry-zoom-out" aria-label="Zoom out">−</button><button type="button" class="btn btn-sm btn-light" id="entry-zoom-fit">Fit width</button><button type="button" class="btn btn-sm btn-light" id="entry-zoom-in" aria-label="Zoom in">+</button><button type="button" class="btn btn-sm btn-light" id="entry-rotate" aria-label="Rotate PDF clockwise">Rotate ↻</button><a class="btn btn-sm btn-light" id="entry-pdf-open" target="_blank" rel="noopener">Open PDF</a></div>
             <label class="entry-height">Viewing height <input id="entry-viewer-height" type="range" min="180" max="600" step="20" value="240"><output id="entry-height-value">240 px</output></label>
         </div>
+        <details class="entry-reading-tools"><summary>PDF reading aids: pin header / phase guides</summary>
+            <div class="actions">
+                <button type="button" class="btn btn-sm btn-light" id="entry-aid-pin">Select header to pin</button>
+                <button type="button" class="btn btn-sm btn-light" id="entry-aid-unpin">Clear header</button>
+                <label><input type="checkbox" id="entry-aid-guides"> Column guides</label>
+                <label>Guide label <select id="entry-aid-label"><option>RS-R</option><option>RS-Y</option><option>RS-B</option><option>RL</option><option>SC-R</option><option>SC-Y</option><option>SC-B</option><option>LC</option><option>SI</option><option>LI</option><option>PB</option><option>AG</option><option>ST</option><option>PV</option></select></label>
+                <button type="button" class="btn btn-sm btn-light" id="entry-aid-add">Place guide</button>
+                <button type="button" class="btn btn-sm btn-light" id="entry-aid-clear">Clear guides</button>
+                <label><input type="checkbox" id="entry-aid-row"> Follow row</label>
+                <label>Straighten <input type="number" id="entry-aid-angle" min="-5" max="5" step="0.1" value="0"> degrees</label>
+            </div>
+            <small id="entry-aid-status" role="status">Select a header on a page that contains it. It stays visible when you change pages. Align guides with the printed columns before reading counts.</small>
+        </details>
+        <div id="entry-aid-header" class="entry-aid-header" hidden><small id="entry-aid-header-label"></small><div id="entry-aid-header-window"><canvas id="entry-aid-header-canvas"></canvas></div></div>
         <div id="entry-pdf-scroll" class="entry-pdf-scroll"><div id="entry-pdf-stage" class="entry-pdf-stage"><canvas id="entry-pdf-canvas" aria-label="Current survey PDF page"></canvas><div id="entry-pdf-rows" class="entry-pdf-rows" aria-label="Selectable saved survey rows"></div><svg id="entry-pdf-lines" class="entry-pdf-lines" viewBox="0 0 1 1" preserveAspectRatio="none" aria-label="Entered row red lines"></svg></div><p id="entry-pdf-message" role="status">Choose an uploaded survey PDF.</p></div>
         <div class="entry-document-foot entry-line-toolbar">
             @if($canEdit)<button type="button" class="btn btn-sm btn-light" id="entry-pdf-draw" aria-pressed="false" title="Click a row for a full-width red line, or drag across it">Draw line</button><button type="button" class="btn btn-sm btn-light" id="entry-line-undo" hidden>Undo line</button>@endif

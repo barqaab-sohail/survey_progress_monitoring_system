@@ -26,8 +26,13 @@ class ConsumerPhaseConnections
             $count = $consumer['count'] ?? null;
             $observed = null;
             foreach ($rows as $row) {
-                if (($row['consumers'][$category] ?? null) !== null) {
-                    $observed = ($observed ?? 0) + $this->count($row['consumers'][$category], $label.' '.$category);
+                $rowCount = $row['consumers'][$category] ?? null;
+                if ($rowCount === null && ($row['designation'] ?? '') === 'E') {
+                    $cables = collect($section['service_cables'] ?? [])->where('entry_row_id', $row['id'])->where('category', $category)->count();
+                    $rowCount = $cables > 0 ? $cables : null;
+                }
+                if ($rowCount !== null) {
+                    $observed = ($observed ?? 0) + $this->count($rowCount, $label.' '.$category);
                 }
             }
             $this->check($observed === null || ($count !== null && $observed === $this->count($count, $label.' '.$category)),

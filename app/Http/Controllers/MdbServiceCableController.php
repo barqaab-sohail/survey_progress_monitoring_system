@@ -34,6 +34,13 @@ class MdbServiceCableController extends Controller
     {
         $this->authorizeFeature($request, $batch, $transformer);
         abort_unless(! $cable || $cable->transformer_id === $transformer->id, 404);
+        $pole = $transformer->entryRows()->where('designation', 'E')->find($request->input('entry_row_id'));
+        if (! $pole) {
+            throw ValidationException::withMessages(['entry_row_id' => 'Select an E pole belonging to this transformer.']);
+        }
+        // Meter survey identity and uploaded sources come from its starting pole.
+        $request->merge(['group_number' => $pole->group_number, 'row_date' => $pole->row_date?->format('Y-m-d'),
+            'gpx_source_id' => $pole->gpx_source_id, 'source_pdf_id' => $pole->source_pdf_id]);
         $data = $request->validate(['revision' => 'required|integer'] + app(ServiceCableService::class)->rules());
         unset($data['revision']);
         $data['composite_identifier'] = app(SurveyWaypoint::class)->compose($data['group_number'], $data['row_date'], $data['waypoint_reference'],
@@ -85,6 +92,10 @@ class MdbServiceCableController extends Controller
             $transformer->refresh();
             $before = ['enabled' => $transformer->service_cables_enabled, 'cables' => $transformer->serviceCables()->get()->map->surveyData()->all()];
             $change();
+            // Keep derived counts current after additions, edits, moves and deletions.
+            foreach ($transformer->entryRows()->distinct()->pluck('pair_number') as $pairNumber) {
+                app(EntryService::class)->synchronizePair($transformer, (int) $pairNumber);
+            }
             app(WorkflowAccess::class)->recordEntry($locked, $request->user());
             app(SnapshotService::class)->invalidate($locked);
             $header = $transformer->header ?? [];
