@@ -1,3 +1,4 @@
+import {installEntryCorrections} from './mdb-entry-corrections.js?v=3';
 import {installPdfReadingAids} from './mdb-pdf-reading-aids.js?v=2';
 import {saveFeedback, savedTime} from './mdb-save-feedback.js?v=2';
 import {installCompactSelects} from './mdb-entry-select.js?v=4';
@@ -329,7 +330,8 @@ function initialize(boot) {
     }
     async function api(path, method = 'GET', body) {
         let response;
-        try{response = await fetch(`${boot.base_url}${path}`, {method, credentials:'same-origin', headers:{Accept:'application/json','Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, ...(body ? {body:JSON.stringify(body)} : {})});}
+        const multipart = body instanceof FormData;
+        try{response = await fetch(`${boot.base_url}${path}`, {method, credentials:'same-origin', headers:{Accept:'application/json',...(!multipart ? {'Content-Type':'application/json'} : {}),'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, ...(body ? {body:multipart ? body : JSON.stringify(body)} : {})});}
         catch{throw new Error('Could not reach the server. Check your connection and retry. Your entered fields are retained.');}
         const reasons={401:'Your sign-in session has ended. Sign in again, then retry with the retained fields.',403:'You do not have permission for this action, or survey entry is locked.',404:'The selected survey or record could not be found. Refresh saved records before retrying.',
             419:'Your session has expired. Reload this page and sign in again if needed. Your entered fields are kept in this browser.',429:'Too many requests were sent. Wait a moment and retry.',500:'The server could not confirm saving. Refresh saved records before retrying to check whether the record was saved.'};
@@ -384,7 +386,11 @@ function initialize(boot) {
         header.capacity_kva=capacityValue();
         return {source_pdf_id:number(val(headerForm,'header[pdf_source_id]')),source_page:number(val(headerForm,'header[pdf_start_page]')),code:active()?.code ?? registered()?.code ?? val(headerForm,'code').trim(),manual_transformer:manualTransformer,registered_transformer_id:active()?.header?.registered_transformer_id ?? registered()?.id ?? null,capacity_kva:capacityValue(),header};
     }
+    function showTransformerPanel(open = true) {
+        if ($('entry-transformer-panel')) $('entry-transformer-panel').open = open;
+    }
     function fillHeader(payload) {
+        if ($('entry-transformer-panel-caption')) $('entry-transformer-panel-caption').textContent = 'Transformer'+(payload.code || active()?.code || registered()?.code ? ': '+(payload.code || active()?.code || registered()?.code) : '');
         if (!headerForm) {
             $('entry-readonly-header').innerHTML = Object.entries(payload.header || {}).filter(([k,v])=>typeof v==='string' && !['location_source','source_survey_identifier'].includes(k)).map(([k,v])=>`<div>${esc(k.replaceAll('_',' '))}: ${esc(v)}</div>`).join('');
             return;
@@ -602,7 +608,7 @@ function initialize(boot) {
         manualTransformer=false;
         registeredId=match ? Number(match[1]) : null;activeId=match || manualTransformer ? null : number(id); clearErrors(); renderLists();
         fillHeader(active() || {registered_transformer_id:registeredId,manual_transformer:manualTransformer,header:data.defaults}); headerDirty=!!registered() || manualTransformer;
-        $('entry-header-panel').open=!active(); renderSaved(); newRow(); updateAssociation();
+        $('entry-header-panel').open=!active();showTransformerPanel(!active()); renderSaved(); newRow(); updateAssociation();
         if(manualTransformer)status('Enter the missing transformer code, complete its header and save.','dirty');
         if(registered())status('Registered transformer selected. Complete and save its survey header.','dirty');
         const url=new URL(location.href); activeId ? url.searchParams.set('transformer_id',activeId) : url.searchParams.delete('transformer_id'); history.replaceState(null,'',url);
@@ -657,13 +663,13 @@ function initialize(boot) {
         try {
             const saved=await api(path,active() ? 'PUT' : 'POST',body);
             if(!saved.transformers?.some(transformer=>transformer.id===Number(saved.active_transformer_id)))throw new Error('The server response did not confirm the saved header. Refresh saved records before retrying. Your fields are retained.');
-            data=saved;activeId=data.active_transformer_id;manualTransformer=false;headerDirty=false;renderLists();fillHeader(active());renderSaved();if(!rowDirty)newRow();$('entry-header-panel').open=false;status('Transformer header saved.');persist();
+            data=saved;activeId=data.active_transformer_id;manualTransformer=false;headerDirty=false;renderLists();fillHeader(active());renderSaved();if(!rowDirty)newRow();$('entry-header-panel').open=false;showTransformerPanel(false);status('Transformer header saved.');persist();
         }
         catch(e){failed=true;headerDirty=true;error(`Header not saved. ${e.message} Your entered fields are retained.${e.reference ? ' Reference: '+e.reference : ''}`,e.errors || {},headerForm);persist();}
         finally{setBusy(false);if(failed)revealHeaderErrors();}
     }
     function revealHeaderErrors() {
-        $('entry-header-panel').open=true;
+        $('entry-header-panel').open=true;showTransformerPanel();
         $('entry-errors').scrollIntoView({block:'nearest',behavior:'smooth'});
         const invalid=Array.from(headerForm.elements).find(element=>element.getAttribute('aria-invalid')==='true' && element.type!=='hidden');
         (invalid || $('entry-errors')).focus({preventScroll:true});
@@ -1002,6 +1008,7 @@ function initialize(boot) {
         finally{setBusy(false);}
     });
     $('entry-next-transformer-cancel')?.addEventListener('click',()=>nextTransformerDialog.close());
+    rowForm?.addEventListener('focusin',()=>{if(active() && !headerDirty)showTransformerPanel(false);});
     rowForm?.addEventListener('submit',event=>{event.preventDefault();saveRow(true);});rowForm?.addEventListener('input',event=>markDirty(event,'row'));rowForm?.addEventListener('change',event=>markDirty(event,'row'));
     $('entry-save-draft')?.addEventListener('click',()=>saveRow(false));$('entry-row-new')?.addEventListener('click',()=>{if(allowSwitch()){newRow();status('New draft row.');}});
     $('entry-transformer').addEventListener('change',()=>{if(allowSwitch()){chooseTransformer($('entry-transformer').value);persist();}else $('entry-transformer').value=transformerSelection();});
@@ -1074,6 +1081,17 @@ function initialize(boot) {
     window.addEventListener('pagehide',()=>{if(sourcePoll)window.clearInterval(sourcePoll);});
     document.querySelectorAll('[data-entry-leave]').forEach(link=>link.addEventListener('click',event=>{if(busy || ((headerDirty || rowDirty) && !window.confirm('Some fields are saved only in this browser. Leave entry now? Use Save Draft to store them in the application.')))event.preventDefault();else persist();}));
     window.addEventListener('beforeunload',event=>{persist();if(headerDirty || rowDirty || (busy && !submissionNavigation)){event.preventDefault();event.returnValue='';}});
-    document.addEventListener('keydown',event=>{if(event.target.closest?.('#service-cable-form')){if(event.ctrlKey && (event.key==='Enter' || event.key.toLowerCase()==='s')){event.preventDefault();$('service-cable-form').requestSubmit(event.key.toLowerCase()==='s' ? $('service-cable-save-stay') : undefined);}return;}if(event.ctrlKey && event.key==='Enter'){event.preventDefault();saveRow(true);}if(event.ctrlKey && event.key.toLowerCase()==='s'){event.preventDefault();headerDirty ? saveHeader() : saveRow(false);}if(event.altKey && ['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();setPage(pageNumber+(event.key==='ArrowLeft' ? -1 : 1));}});
+    document.addEventListener('keydown',event=>{if(event.target.closest?.('#entry-corrections')){if(event.ctrlKey && (event.key==='Enter' || event.key.toLowerCase()==='s')){event.preventDefault();event.target.closest('form')?.requestSubmit();}return;}if(event.target.closest?.('#service-cable-form')){if(event.ctrlKey && (event.key==='Enter' || event.key.toLowerCase()==='s')){event.preventDefault();$('service-cable-form').requestSubmit(event.key.toLowerCase()==='s' ? $('service-cable-save-stay') : undefined);}return;}if(event.ctrlKey && event.key==='Enter'){event.preventDefault();saveRow(true);}if(event.ctrlKey && event.key.toLowerCase()==='s'){event.preventDefault();headerDirty ? saveHeader() : saveRow(false);}if(event.altKey && ['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();setPage(pageNumber+(event.key==='ArrowLeft' ? -1 : 1));}});
+    installEntryCorrections({initial:boot.entry_corrections || [], api, isBusy:()=>busy, setBusy,
+        storageKey:boot.storage_key+':pdf-correction',
+        context:()=>({transformer_id:active()?.id || null, transformer_reference:active()?.code || val(headerForm,'code') || registered()?.code || '',
+            source_file_id:number($('entry-pdf-source').value), source_page:pageNumber}),
+        chooseNext:()=>{
+            if (!allowSwitch()) return;
+            selectedPdfRowId=null;cancelLineDrawing();chooseTransformer('');
+            $('entry-transformer-search').value='';filterSelect($('entry-transformer'),'');persist();
+            status('Comment saved. Choose the next registered transformer. The same PDF is open.');
+            $('entry-transformer').focus();$('entry-header-panel').scrollIntoView({block:'nearest'});
+        }});
     loadPdf();persist();
 }

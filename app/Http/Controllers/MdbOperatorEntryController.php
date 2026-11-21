@@ -552,6 +552,12 @@ class MdbOperatorEntryController extends Controller
             $this->access->authorize($request->user(), $locked, 'edit');
             $this->access->recordEntry($locked, $request->user());
             $this->assertRevision($locked, (int) $data['revision']);
+            if ($locked->entryCorrections()->where('status', 'open')->where(function ($query) use ($transformer) {
+                $query->where('transformer_id', $transformer->id)
+                    ->orWhere(fn ($unlinked) => $unlinked->whereNull('transformer_id')->where('transformer_reference', $transformer->code));
+            })->exists()) {
+                throw ValidationException::withMessages(['entry_corrections' => 'This transformer has an open PDF correction. Super Admin must resolve it before submission.']);
+            }
             $issues = collect($this->entries->issues($locked))->where('transformer_id', $transformer->id);
             if ($issues->isNotEmpty()) {
                 throw ValidationException::withMessages(['rows' => $issues->pluck('message')->all()]);

@@ -63,6 +63,25 @@ class MdbWorkflowTest extends TestCase
         $this->actingAs($this->admin);
     }
 
+    public function test_batch_list_displays_and_filters_by_assigned_user_with_operator_and_creator_fallbacks(): void
+    {
+        $assigned = User::factory()->create(['name' => 'Assigned Entry User']);
+        $operator = User::factory()->create(['name' => 'Previous Entry User']);
+        $this->batch->update(['entry_assigned_to' => $assigned->id, 'entry_operator_id' => $operator->id]);
+        $operatorBatch = $this->batch->replicate();
+        $operatorBatch->entry_assigned_to = null;
+        $operatorBatch->save();
+        $creatorBatch = $operatorBatch->replicate();
+        $creatorBatch->entry_operator_id = null;
+        $creatorBatch->save();
+        $this->get(route('mdb-workflow.index'))->assertOk()->assertSee('User / date')->assertSee('All users')
+            ->assertSee($assigned->name)->assertSee($operator->name)->assertSee($this->admin->name)->assertDontSee('Team / date');
+        foreach ([[$assigned, $this->batch], [$operator, $operatorBatch], [$this->admin, $creatorBatch]] as [$user, $batch]) {
+            $this->get(route('mdb-workflow.index', ['user_id' => $user->id]))->assertOk()
+                ->assertViewHas('batches', fn ($batches) => $batches->pluck('id')->all() === [$batch->id]);
+        }
+    }
+
     public function test_section_deletion_audits_changed_provenance_without_touching_frozen_history(): void
     {
         $transformer = $this->batch->transformers()->create(['code' => 'AUDIT-SECTION', 'capacity_kva' => 100]);

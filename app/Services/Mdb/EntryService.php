@@ -29,6 +29,7 @@ class EntryService
         $feeder = $batch->feeder;
 
         return ['batch_id' => $batch->id, 'revision' => $batch->revision, 'status' => $batch->status,
+            'entry_corrections' => $batch->entryCorrections()->latest('id')->get()->toArray(),
             'service_cables_can_enter' => auth()->user()?->canEnterConsumerServiceCables() ?? false,
             'staged_workflow' => $batch->staged_workflow, 'survey_status' => $batch->survey_status,
             'pdf_rows' => PdfRow::whereIn('source_file_id', $batch->sources->pluck('id'))->orderBy('page')->orderBy('row_number')->get()->toArray(),
@@ -382,6 +383,9 @@ class EntryService
 
     public function assertComplete(SurveyBatch $batch): void
     {
+        if ($batch->entryCorrections()->where('status', 'open')->exists()) {
+            throw ValidationException::withMessages(['entry_corrections' => 'PDF corrections are still open. Super Admin must resolve the operator comments before this batch can be submitted.']);
+        }
         $issues = $this->issues($batch);
         if ($issues) {
             throw ValidationException::withMessages(['rows' => array_column($issues, 'message')]);

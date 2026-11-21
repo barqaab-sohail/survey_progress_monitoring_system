@@ -52,9 +52,11 @@ class MdbWorkflowController extends Controller
     public function index(Request $request)
     {
         Gate::authorize('mdb-workflow.view');
-        $filters = $request->validate(['project_id' => 'nullable|integer', 'feeder_id' => 'nullable|integer', 'survey_team_id' => 'nullable|integer',
-            'survey_date' => 'nullable|date', 'date_from' => 'nullable|date', 'date_to' => 'nullable|date|after_or_equal:date_from', 'transformer' => 'nullable|string|max:255', 'status' => 'nullable|string|max:40']);
+        $filters = $request->validate(['project_id' => 'nullable|integer', 'feeder_id' => 'nullable|integer', 'survey_team_id' => 'nullable|integer', 'user_id' => 'nullable|integer|min:1',
+            'survey_date' => 'nullable|date', 'date_from' => 'nullable|date', 'date_to' => 'nullable|date|after_or_equal:date_from', 'transformer' => 'nullable|string|max:255', 'status' => 'nullable|string|max:40', 'pdf_corrections' => 'nullable|in:open,resolved']);
         $query = $this->access->visible($request->user());
+        $batchUsers = User::whereIn('id', (clone $query)->selectRaw('COALESCE(entry_assigned_to, entry_operator_id, created_by)'))
+            ->orderBy('name')->get(['id', 'name']);
         $stageScope = (clone $query)->where('staged_workflow', true);
         $stageCounts = [
             'entry' => (clone $stageScope)->whereIn('survey_status', ['entry', 'returned'])->count(),
@@ -84,6 +86,12 @@ class MdbWorkflowController extends Controller
             if (! empty($filters[$field])) {
                 $query->where($field, $filters[$field]);
             }
+        }
+        if (! empty($filters['user_id'])) {
+            $query->whereRaw('COALESCE(entry_assigned_to, entry_operator_id, created_by) = ?', [(int) $filters['user_id']]);
+        }
+        if (! empty($filters['pdf_corrections'])) {
+            $query->whereHas('entryCorrections', fn ($q) => $q->where('status', $filters['pdf_corrections']));
         }
         if (! empty($filters['status'])) {
             if ($filters['status'] === 'mdb_created') {
@@ -122,8 +130,10 @@ class MdbWorkflowController extends Controller
                 fn () => count(app(NetworkValidator::class)->validate($record)['errors']));
         }
 
-        return view('mdb-workflow.index', ['batches' => $query->with(['project', 'feeder', 'surveyTeam', 'transformers', 'sources'])->withCount(['transformers', 'sources', 'exports'])->latest()->paginate(20)->withQueryString(),
-            'metrics' => $metrics, 'filters' => $filters, 'stageCounts' => $stageCounts] + $this->references($request));
+        return view('mdb-workflow.index', ['batches' => $query->with(['project', 'feeder', 'entryAssignee', 'entryOperator', 'creator', 'transformers', 'sources',
+            'entryCorrections' => fn ($q) => $q->where('status', 'open')->latest('id')])->withCount(['transformers', 'sources', 'exports',
+                'entryCorrections as open_pdf_corrections_count' => fn ($q) => $q->where('status', 'open')])->latest()->paginate(20)->withQueryString(),
+            'metrics' => $metrics, 'filters' => $filters, 'stageCounts' => $stageCounts, 'batchUsers' => $batchUsers] + $this->references($request));
     }
 
     public function create(Request $request)
@@ -264,6 +274,8 @@ class MdbWorkflowController extends Controller
                     }
                 }
                 $files = array_merge($files, DB::table('mdb_workflow_generation_inputs')->where('batch_id', $locked->id)->get(['disk', 'path'])->map(fn ($file) => (array) $file)->all());
+                $files = array_merge($files, $locked->entryCorrections()->whereNotNull('screenshot_path')->pluck('screenshot_path')
+                    ->map(fn ($path) => ['disk' => 'local', 'path' => $path])->all());
                 $files = array_merge($files, $locked->exports()->get(['output_disk', 'output_path', 'payload_path'])->flatMap(fn ($export) => collect([
                     ['disk' => $export->output_disk, 'path' => $export->output_path], ['disk' => $export->output_disk, 'path' => $export->payload_path],
                 ]))->all());

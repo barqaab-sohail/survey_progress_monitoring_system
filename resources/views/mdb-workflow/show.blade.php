@@ -40,7 +40,8 @@
     <div class="entry-form-column">
     <div class="entry-save-bar"><span id="entry-save-status" role="status" aria-live="polite">Saved records loaded.</span><div id="entry-errors" class="entry-error-summary" role="alert" tabindex="-1" hidden></div><button type="button" class="btn btn-sm btn-light" id="entry-refresh">Refresh saved records</button></div>
     <noscript><p class="entry-error-summary">Enable JavaScript to use the PDF viewer and row editor. <a href="{{ route('mdb-workflow.advanced', $batch) }}">Open the existing record editor</a>.</p></noscript>
-    <section class="card entry-transformer">
+    <details class="card entry-transformer" id="entry-transformer-panel" open>
+        <summary><strong id="entry-transformer-panel-caption">Transformer</strong> <span class="entry-legend-note">Change / header / comments</span></summary>
         @if(auth()->user()->role?->value === 'super_admin')
         <details open><summary>Transformers in this batch (<span id="entry-transformer-count">{{ count($editorData['transformers']) }}</span>)</summary>
             <div id="entry-transformer-list" class="table-wrap"><table class="table"><thead><tr><th>Transformer</th><th>Saved rows</th><th>Action</th></tr></thead><tbody>
@@ -72,7 +73,8 @@
             </div><div class="mdb-form-actions"><button class="btn btn-primary" type="submit">Save transformer header</button><small>Verification opens the selected PDF at the saved starting page.</small></div></form>
             @else<div id="entry-readonly-header" class="entry-fields"></div>@endif
         </details>
-    </section>
+    @include('mdb-workflow.partials.entry-corrections', ['allowReport' => $canUpload && ($batch->staged_workflow || in_array($batch->status, ['draft', 'returned'], true))])
+    </details>
     @if($canEdit)<section class="card" id="entry-row-panel">
         <div class="row-card-head"><h2 id="entry-row-title">Enter S/E row</h2><span id="entry-row-page"></span><button type="button" class="btn btn-sm btn-light" id="entry-use-page">Use displayed PDF page</button></div>
         <p id="entry-project-settings" class="entry-setting-note"></p>

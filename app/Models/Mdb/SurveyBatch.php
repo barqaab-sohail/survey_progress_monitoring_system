@@ -88,6 +88,11 @@ class SurveyBatch extends Model
         return $this->hasMany(NetworkTransformer::class, 'batch_id');
     }
 
+    public function entryCorrections()
+    {
+        return $this->hasMany(EntryCorrection::class, 'batch_id');
+    }
+
     public function revisions()
     {
         return $this->hasMany(Revision::class, 'batch_id');

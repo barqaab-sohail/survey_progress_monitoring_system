@@ -482,6 +482,154 @@ class MdbOperatorEntryTest extends TestCase
         $this->assertSame(30.0, (float) $this->transformer->entryRows()->firstOrFail()->pole_height);
     }
 
+    private function correctionScreenshot(): UploadedFile
+    {
+        return UploadedFile::fake()->createWithContent('error.png', base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aQ1cAAAAASUVORK5CYII='));
+    }
+
+    public function test_pdf_correction_screenshots_are_private_retry_safe_and_visible_to_super_admin(): void
+    {
+        $body = $this->correctionPayload(['screenshot' => $this->correctionScreenshot()]);
+        $response = $this->postJson(route('mdb-workflow.entry-corrections.store', $this->batch), $body)->assertOk();
+        $note = $this->batch->entryCorrections()->sole();
+        Storage::disk('local')->assertExists($note->screenshot_path);
+        $url = $response->json('corrections.0.screenshot_url');
+        $this->assertNotEmpty($url);
+        $response->assertJsonMissingPath('corrections.0.screenshot_path')->assertJsonMissingPath('corrections.0.screenshot_sha256');
+        $this->get($url)->assertOk()->assertHeader('Content-Type', 'image/png')->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->postJson(route('mdb-workflow.entry-corrections.store', $this->batch), $body)->assertOk();
+        $this->assertCount(1, Storage::disk('local')->allFiles('mdb-entry-corrections'));
+        unset($body['screenshot']);
+        $this->postJson(route('mdb-workflow.entry-corrections.store', $this->batch), $body)->assertConflict();
+        $other = $this->batch->replicate();$other->save();
+        $this->get(route('mdb-workflow.entry-corrections.screenshot', [$other, $note]))->assertNotFound();
+        $operator = User::factory()->create(['role' => 'survey_data_entry_operator']);
+        $this->batch->update(['staged_workflow' => true, 'survey_status' => 'entry', 'entry_assigned_to' => $operator->id]);
+        $this->actingAs($operator)->get($url)->assertOk();
+        $unrelated = User::factory()->create(['role' => 'survey_data_entry_operator']);
+        $this->actingAs($unrelated)->get($url)->assertForbidden();
+        $this->actingAs($this->admin)->get(route('mdb-workflow.show', $this->batch))->assertOk()->assertSee('View error screenshot');
+    }
+
+    public function test_pdf_correction_rejects_invalid_or_oversized_screenshots_and_cleans_up_on_batch_deletion(): void
+    {
+        $url = route('mdb-workflow.entry-corrections.store', $this->batch);
+        foreach ([UploadedFile::fake()->createWithContent('fake.png', 'This is not an image.'),
+            UploadedFile::fake()->createWithContent('error.svg', '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'),
+            $this->correctionScreenshot()->size(5121)] as $file) {
+            $result = $this->postJson($url, $this->correctionPayload(['screenshot' => $file]));
+            $this->assertSame(422, $result->status(), $file->getClientOriginalName().' size '.$file->getSize());
+            $result->assertJsonValidationErrors('screenshot');
+        }
+        $this->assertDatabaseCount('mdb_workflow_entry_corrections', 0);
+        $this->assertCount(0, Storage::disk('local')->allFiles('mdb-entry-corrections'));
+        $this->postJson($url, $this->correctionPayload(['screenshot' => $this->correctionScreenshot()]))->assertOk();
+        $path = $this->batch->entryCorrections()->sole()->screenshot_path;
+        $this->delete(route('mdb-workflow.destroy', $this->batch), ['confirmed' => true])->assertRedirect();
+        Storage::disk('local')->assertMissing($path);
+        $this->assertDatabaseCount('mdb_workflow_entry_corrections', 0);
+    }
+
+    private function correctionPayload(array $changes = []): array
+    {
+        return array_replace(['client_uuid' => (string) Str::uuid(), 'transformer_id' => $this->transformer->id,
+            'transformer_reference' => $this->transformer->code, 'source_file_id' => $this->pdf->id,
+            'source_page' => 2, 'source_row' => 'Pole 025', 'comment' => 'The PDF has no conductor details for this pole. Please correct it.'], $changes);
+    }
+
+    public function test_operator_can_report_a_pdf_correction_without_completing_the_header_and_retry_without_duplicates(): void
+    {
+        $operator = User::factory()->create(['role' => 'survey_data_entry_operator']);
+        $this->batch->update(['staged_workflow' => true, 'survey_status' => 'entry', 'entry_assigned_to' => $operator->id]);
+        $this->gpx->update(['status' => 'failed']);
+        $revision = $this->batch->fresh()->revision;
+        $header = $this->transformer->header;
+        $this->actingAs($operator);
+        $body = $this->correctionPayload(['transformer_id' => null, 'transformer_reference' => 'T-unsaved-header']);
+        $response = $this->postJson(route('mdb-workflow.entry-corrections.store', $this->batch), $body)->assertOk();
+        $response->assertJsonPath('corrections.0.status', 'open')->assertJsonPath('corrections.0.reporter_name', $operator->name)
+            ->assertJsonPath('corrections.0.transformer_reference', 'T-unsaved-header');
+        $this->postJson(route('mdb-workflow.entry-corrections.store', $this->batch), $body)->assertOk();
+        $this->assertDatabaseCount('mdb_workflow_entry_corrections', 1);
+        $this->assertSame(1, AuditLog::where('action', 'mdb.entry_correction_reported')->count());
+        $this->assertSame($revision, $this->batch->fresh()->revision);
+        $this->assertSame($header, $this->transformer->fresh()->header);
+        $this->postJson(route('mdb-workflow.entry-corrections.store', $this->batch), array_replace($body, ['comment' => 'Different text for same retry UUID.']))->assertConflict();
+        $this->getJson(route('mdb-workflow.entry.data', $this->batch))->assertOk()->assertJsonPath('entry_corrections.0.comment', $body['comment']);
+        $this->get(route('mdb-workflow.show', $this->batch))->assertOk()->assertSee('Record why entry stopped')->assertSee('T-unsaved-header')->assertDontSee('data-resolve-correction=', false);
+    }
+
+    public function test_only_super_admin_resolves_pdf_corrections_and_both_comments_remain_visible(): void
+    {
+        $operator = User::factory()->create(['role' => 'survey_data_entry_operator']);
+        $this->batch->update(['staged_workflow' => true, 'survey_status' => 'entry', 'entry_assigned_to' => $operator->id]);
+        $body = $this->correctionPayload();
+        $this->actingAs($operator)->postJson(route('mdb-workflow.entry-corrections.store', $this->batch), $body)->assertOk();
+        $note = $this->batch->entryCorrections()->sole();
+        $url = route('mdb-workflow.entry-corrections.resolve', [$this->batch, $note]);
+        $this->putJson($url, ['resolution' => 'Corrected the PDF and confirmed the conductor.'])->assertForbidden();
+        $other = User::factory()->create(['role' => 'survey_data_entry_operator']);
+        $this->actingAs($other)->getJson(route('mdb-workflow.entry-corrections.index', $this->batch))->assertForbidden();
+        $this->postJson(route('mdb-workflow.entry-corrections.store', $this->batch), $this->correctionPayload())->assertForbidden();
+        $this->actingAs($this->admin)->get(route('mdb-workflow.index', ['pdf_corrections' => 'open']))->assertOk()
+            ->assertSee('awaiting PDF correction')->assertSee($operator->name)
+            ->assertViewHas('batches', fn ($batches) => $batches->pluck('id')->all() === [$this->batch->id]);
+        $this->putJson($url, ['resolution' => ''])->assertUnprocessable()->assertJsonValidationErrors('resolution');
+        $revision = $this->batch->fresh()->revision;
+        $this->putJson($url, ['resolution' => 'Corrected the PDF and confirmed the conductor.'])->assertOk()
+            ->assertJsonPath('corrections.0.status', 'resolved')->assertJsonPath('corrections.0.comment', $body['comment'])
+            ->assertJsonPath('corrections.0.resolver_name', $this->admin->name);
+        $this->assertNotNull($note->fresh()->resolved_at);
+        $this->assertSame($revision, $this->batch->fresh()->revision);
+        $this->assertSame(1, AuditLog::where('action', 'mdb.entry_correction_resolved')->count());
+        $this->get(route('mdb-workflow.index', ['pdf_corrections' => 'open']))->assertOk()->assertViewHas('batches', fn ($batches) => $batches->isEmpty());
+        $this->get(route('mdb-workflow.review', $this->batch))->assertOk()->assertSee($body['comment'])->assertSee('Corrected the PDF and confirmed the conductor.');
+        $this->putJson($url, ['resolution' => 'Overwriting the earlier resolution.'])->assertConflict();
+        $this->actingAs($operator)->getJson(route('mdb-workflow.entry-corrections.index', $this->batch))->assertOk()
+            ->assertJsonPath('corrections.0.resolution', 'Corrected the PDF and confirmed the conductor.');
+    }
+
+    public function test_pdf_corrections_validate_source_page_cross_batch_links_and_workflow_lock(): void
+    {
+        $other = $this->batch->replicate();$other->save();
+        $foreignTransformer = $other->transformers()->create(['code' => 'OTHER']);
+        $url = route('mdb-workflow.entry-corrections.store', $this->batch);
+        $this->postJson($url, $this->correctionPayload(['transformer_id' => $foreignTransformer->id]))->assertNotFound();
+        $foreignPdf = $this->pdf->replicate();$foreignPdf->batch_id=$other->id;$foreignPdf->save();
+        $this->postJson($url, $this->correctionPayload(['source_file_id' => $foreignPdf->id]))->assertNotFound();
+        $this->postJson($url, $this->correctionPayload(['source_file_id' => $this->gpx->id]))->assertNotFound();
+        $this->postJson($url, $this->correctionPayload(['source_page' => 15]))->assertUnprocessable()->assertJsonValidationErrors('source_page');
+        $this->postJson($url, $this->correctionPayload(['comment' => '   ']))->assertUnprocessable()->assertJsonValidationErrors('comment');
+        $this->postJson($url, $this->correctionPayload())->assertOk();
+        $note = $this->batch->entryCorrections()->sole();
+        $this->putJson(route('mdb-workflow.entry-corrections.resolve', [$other, $note]), ['resolution' => 'Wrong batch resolution.'])->assertNotFound();
+        $this->pdf->update(['original_name' => 'corrected.pdf', 'version' => 2]);
+        $this->assertSame('A081026.pdf', $note->fresh()->pdf_name);
+        $this->transformer->delete();
+        $this->assertNull($note->fresh()->transformer_id);
+        $this->assertSame('T-entry', $note->fresh()->transformer_reference);
+        $this->batch->update(['staged_workflow' => true, 'survey_status' => 'approved']);
+        $this->postJson($url, $this->correctionPayload(['transformer_id' => null]))->assertForbidden();
+    }
+
+    public function test_open_pdf_corrections_block_submission_but_not_other_transformer_entry(): void
+    {
+        $this->batch->update(['staged_workflow' => true, 'survey_status' => 'entry']);
+        $this->postJson(route('mdb-workflow.entry-corrections.store', $this->batch), $this->correctionPayload())->assertOk();
+        $revision = $this->batch->fresh()->revision;
+        $this->postJson(route('mdb-workflow.entry.review', $this->batch), ['revision' => $revision, 'transformer_id' => $this->transformer->id, 'confirmed' => true])
+            ->assertUnprocessable()->assertJsonValidationErrors('entry_corrections');
+        $this->postJson(route('mdb-workflow.survey.decision', $this->batch), ['revision' => $revision, 'action' => 'submit'])
+            ->assertUnprocessable()->assertJsonValidationErrors('entry_corrections');
+        // A different transformer can still be selected and saved as a draft.
+        $this->postJson(route('mdb-workflow.entry.headers.store', $this->batch), $this->headerPayload(['header' => $this->transformer->header]))
+            ->assertOk();
+        $note = $this->batch->entryCorrections()->sole();
+        $this->putJson(route('mdb-workflow.entry-corrections.resolve', [$this->batch, $note]), ['resolution' => 'The missing PDF information is now corrected.'])->assertOk();
+        $this->postJson(route('mdb-workflow.survey.decision', $this->batch), ['revision' => $this->batch->fresh()->revision, 'action' => 'submit'])
+            ->assertUnprocessable()->assertJsonValidationErrors('rows')->assertJsonMissingValidationErrors('entry_corrections');
+    }
+
     private function payload(array $changes = []): array
     {
         return array_replace(['revision' => $this->batch->fresh()->revision, 'client_uuid' => (string) Str::uuid(), 'save_uuid' => (string) Str::uuid(),

@@ -59,6 +59,10 @@ Route::middleware(['auth', 'active'])->prefix('mdb-workflow')->name('mdb-workflo
     Route::put('/{batch}/verification/{transformer}/header', [MdbSurveyReviewController::class, 'header'])->name('verification.header');
     Route::put('/{batch}/verification/{transformer}/rows/{row}', [MdbSurveyReviewController::class, 'row'])->name('verification.row');
     Route::get('/{batch}/entry-data', [MdbOperatorEntryController::class, 'data'])->name('entry.data');
+    Route::get('/{batch}/entry-corrections', [\App\Http\Controllers\MdbEntryCorrectionController::class, 'index'])->name('entry-corrections.index');
+    Route::get('/{batch}/entry-corrections/{correction}/screenshot', [\App\Http\Controllers\MdbEntryCorrectionController::class, 'screenshot'])->name('entry-corrections.screenshot');
+    Route::post('/{batch}/entry-corrections', [\App\Http\Controllers\MdbEntryCorrectionController::class, 'store'])->name('entry-corrections.store');
+    Route::put('/{batch}/entry-corrections/{correction}/resolve', [\App\Http\Controllers\MdbEntryCorrectionController::class, 'resolve'])->middleware('role:super_admin')->name('entry-corrections.resolve');
     Route::put('/{batch}/sources/{source}/row-layout', [MdbPdfProgressController::class, 'layout'])->name('entry.pdf.layout');
     Route::put('/{batch}/pdf-rows/{pdfRow}', [MdbPdfProgressController::class, 'mark'])->name('entry.pdf.mark');
     Route::post('/{batch}/sources/{source}/lines', [MdbPdfProgressController::class, 'line'])->name('entry.pdf.line');
