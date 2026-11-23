@@ -57,7 +57,7 @@ class HtNetworkWorkflow
             }
             Feeder::whereKey($data['feeder_id'])->lockForUpdate()->firstOrFail();
             $existing = HtNetworkUpdate::where('client_uuid', $data['client_uuid'])->lockForUpdate()->first();
-            abort_if($existing && $existing->collected_by !== $actor->id, 409, 'HT update UUID belongs to another account.');
+            abort_if($existing && $existing->collected_by !== $actor->id && ! ($web && $actor->hasRole('super_admin')), 409, 'HT update UUID belongs to another account.');
             $revision = $data['base_revision'];
             unset($data['base_revision']);
             $hash = app(SnapshotService::class)->hash($data);
@@ -108,7 +108,7 @@ class HtNetworkWorkflow
             $before = $existing?->toArray() ?? [];
             $update = $existing ?? new HtNetworkUpdate;
             $update->fill(['client_uuid' => $data['client_uuid'], 'feeder_id' => $data['feeder_id'], 'survey_team_id' => $data['survey_team_id'],
-                'collected_by' => $actor->id, 'transformer_code' => $data['transformer_code'], 'transformer_key' => $key,
+                'collected_by' => $existing?->collected_by ?? $actor->id, 'transformer_code' => $data['transformer_code'], 'transformer_key' => $key,
                 'revision' => ($existing?->revision ?? 0) + 1, 'payload' => $data, 'payload_hash' => $hash, 'status' => 'pending',
                 'reviewed_by' => null, 'reviewed_at' => null, 'review_note' => null])->save();
             app(AuditService::class)->record($actor, 'ht_update.submitted', $update, array_diff_key($before, ['payload' => 1]), $update->only(['client_uuid', 'revision', 'status', 'transformer_code']));
@@ -120,7 +120,7 @@ class HtNetworkWorkflow
     public function review(User $actor, HtNetworkUpdate $update, array $data): HtNetworkUpdate
     {
         abort_unless($actor->hasAnyRole(['super_admin', 'project_manager']), 403);
-        abort_if($update->collected_by === $actor->id, 403, 'The collector cannot verify their own HT update.');
+        abort_if($update->collected_by === $actor->id && ! $actor->hasRole('super_admin'), 403, 'Only a Super Admin can verify their own HT update.');
 
         return DB::transaction(function () use ($actor, $update, $data) {
             $feeder = Feeder::whereKey($update->feeder_id)->lockForUpdate()->firstOrFail();

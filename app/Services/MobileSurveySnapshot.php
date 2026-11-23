@@ -134,6 +134,7 @@ class MobileSurveySnapshot
                 'meter_number' => $cable['meter_number'] ?? null, 'consumer_reference' => $cable['consumer_reference'] ?? null,
                 'phase' => $cable['phase'] ?? null, 'conductor_code' => $cable['conductor_code'] ?? null,
                 'measured_length_m' => $cable['measured_length_m'] ?? null, 'length_evidence' => $cable['length_evidence'] ?? null,
+                'route_points' => $cable['route_points'] ?? [], 'route_length_m' => $cable['route_length_m'] ?? null,
                 'remarks' => $cable['remarks'] ?? null, 'source_pdf_id' => null, 'source_page' => null,
                 'mobile_cable_id' => $cable['cable_id'], 'mobile_survey_uuid' => $survey->client_uuid];
         }

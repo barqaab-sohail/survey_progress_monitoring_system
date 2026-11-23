@@ -28,6 +28,7 @@ class ShieldPermissionSeeder extends Seeder
         }
 
         Permission::findOrCreate('Access:AdminPanel', 'web');
+        Permission::findOrCreate('ServiceCables:ExportFeeder', 'web');
 
         $superAdmin = Role::findOrCreate(UserRole::SuperAdmin->value, 'web');
         $superAdmin->syncPermissions(Permission::where('guard_name', 'web')->get());

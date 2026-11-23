@@ -1,10 +1,10 @@
-import {installEntryCorrections} from './mdb-entry-corrections.js?v=3';
+import {installEntryCorrections} from './mdb-entry-corrections.js?v=5';
 import {installPdfReadingAids} from './mdb-pdf-reading-aids.js?v=2';
 import {saveFeedback, savedTime} from './mdb-save-feedback.js?v=2';
 import {installCompactSelects} from './mdb-entry-select.js?v=4';
 import {pdfLoadErrorMessage, clearPdfFallback, showPdfFallback} from './mdb-pdf-errors.js';
 import {phaseEntryState, updatePhaseFields} from './survey-phase-consistency.js?v=1';
-import {installServiceCableEntry} from './mdb-service-cables.js?v=8';
+import {installServiceCableEntry} from './mdb-service-cables.js?v=9';
 
 export function transformerCodeKey(code) {
     return String(code ?? '').toLowerCase().replace(/[\u2010-\u2014\u2212]/g,'-').replace(/\s+/gu,'');

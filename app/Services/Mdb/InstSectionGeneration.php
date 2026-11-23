@@ -125,7 +125,8 @@ class InstSectionGeneration
                         if ($recordedCable) {
                             $serviceCableProvenance[] = ['service_cable_id' => $recordedCable['id'], 'section_id' => $customerId,
                                 'from_node_id' => $to['NodeId'], 'to_node_id' => $customer['NodeId'], 'meter_identity' => $recordedCable['composite_identifier'],
-                                'length_m' => $cable, 'length_source' => ($recordedCable['measured_length_m'] ?? null) !== null ? 'recorded_measured' : 'coordinate_distance_estimate'];
+                                'length_m' => $cable, 'length_source' => ! empty($recordedCable['route_points']) ? 'mapped_route'
+                                    : (($recordedCable['measured_length_m'] ?? null) !== null ? 'recorded_measured' : 'coordinate_distance_estimate')];
                         }
                     }
                 }

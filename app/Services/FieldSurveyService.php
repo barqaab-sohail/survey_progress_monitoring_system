@@ -34,8 +34,12 @@ class FieldSurveyService
                 $survey = FieldSurvey::withTrashed()->where('client_uuid', $data['client_uuid'])->lockForUpdate()->first();
                 abort_if($survey?->trashed(), 409, 'This survey was deleted on the server. Your phone copy cannot recreate it.');
                 abort_if($survey && $survey->collected_by !== $actor->id, 409, 'This survey UUID belongs to another account.');
-                $existingCables = $survey?->service_cables ?? [];
+                // JSON storage may decode whole-number coordinates as integers. Compare
+                // normalized routes on both sides so an unchanged route remains readable
+                // after service-cable entry permission is revoked.
+                $existingCables = app(ServiceCableRoute::class)->normalizeMany($survey?->service_cables ?? []);
                 $data['service_cables'] ??= $existingCables;
+                $data['service_cables'] = app(ServiceCableRoute::class)->normalizeMany($data['service_cables']);
                 if ($data['service_cables'] !== $existingCables) {
                     abort_unless($actor->canEnterConsumerServiceCables(), 403, 'Service-cable entry is not enabled for your account. Contact Super Admin.');
                 }
@@ -202,8 +206,9 @@ class FieldSurveyService
                 }
             }
             $this->validateRowOwnershipAndGroups($data, $locked, SurveyTeamGroup::identifier($locked->team));
-            $existingCables = $locked->service_cables ?? [];
+            $existingCables = app(ServiceCableRoute::class)->normalizeMany($locked->service_cables ?? []);
             $data['service_cables'] ??= $existingCables;
+            $data['service_cables'] = app(ServiceCableRoute::class)->normalizeMany($data['service_cables']);
             if ($data['service_cables'] !== $existingCables) {
                 abort_unless($actor->canEnterConsumerServiceCables(), 403, 'Service-cable entry is not enabled for your account.');
             }

@@ -5,6 +5,8 @@
 @endpush
 @section('content')
 <div class="page-head"><div><h1>LT Transformer Surveys</h1><p>LT transformer survey sheets collected in the mobile app. HT verification is tracked separately.</p></div></div>
+@if(app(\App\Services\ServiceCableExportAccess::class)->allows(auth()->user()))<p><a class="btn btn-primary" href="{{ route('service-cable-exports.index') }}">Export feeder service cables (Excel)</a></p>@endif
+@if(auth()->user()->canViewConsumerServiceCables())<p><a class="btn btn-primary" href="{{ route('service-cable-exports.index') }}">Export feeder service cables (Excel)</a></p>@endif
 <form class="card lt-survey-filters" method="GET" action="{{ route('field-surveys.index') }}">
     <div class="lt-survey-filter-grid">
         <div class="field lt-survey-filter-search">

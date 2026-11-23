@@ -341,6 +341,30 @@ class MdbOperatorEntryTest extends TestCase
             'meter_waypoint_id' => $point->id, 'source_pdf_id' => $this->pdf->id, 'source_page' => 1, 'phase' => 'R', 'meter_number' => 'M-001'];
     }
 
+    public function test_service_cable_route_length_is_calculated_and_survives_snapshot_capture(): void
+    {
+        $data = $this->serviceCableFixture();
+        $this->transformer->update(['service_cables_enabled' => true]);
+        $data['route_points'] = [
+            ['latitude' => 30.001, 'longitude' => 71.001, 'waypoint' => 'E pole'],
+            ['latitude' => 30.002, 'longitude' => 71.001, 'waypoint' => 'Street turn'],
+            ['latitude' => 30.002, 'longitude' => 71.002, 'waypoint' => '026'],
+        ];
+        $data['route_length_m'] = 1;
+        $url = route('mdb-workflow.service-cables.store', [$this->batch, $this->transformer]);
+        $invalid = array_replace($data, ['route_points' => [$data['route_points'][0]]]);
+        $this->postJson($url, $invalid)->assertUnprocessable()->assertJsonValidationErrors('service_cable.route_points');
+        $this->assertSame(0, $this->transformer->serviceCables()->count());
+        $expected = app(\App\Services\ServiceCableRoute::class)->normalize($data)['route_length_m'];
+        $this->postJson($url, $data)->assertOk()->assertJsonPath('transformers.0.service_cables.0.route_length_m', $expected);
+        $saved = $this->transformer->serviceCables()->firstOrFail();
+        $this->assertSame($expected, $saved->route_length_m);
+        $this->assertSame('Street turn', $saved->route_points[1]['waypoint']);
+        $snapshot = app(SnapshotService::class)->snapshot($this->batch->fresh(), false);
+        $this->assertSame($expected, $snapshot['transformers'][0]['service_cables'][0]['route_length_m']);
+        $this->assertCount(3, $snapshot['transformers'][0]['service_cables'][0]['route_points']);
+    }
+
     public function test_service_cable_group_and_date_are_inherited_from_e_pole(): void
     {
         $data = $this->serviceCableFixture();

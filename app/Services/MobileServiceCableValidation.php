@@ -14,7 +14,7 @@ class MobileServiceCableValidation
     {
         return [
             'service_cables' => 'sometimes|array|max:5000',
-            'service_cables.*' => 'array:cable_id,pole_row_id,category,consumer_number,group,date,gps_waypoint,meter_number,consumer_reference,phase,conductor_code,measured_length_m,length_evidence,remarks',
+            'service_cables.*' => 'array:cable_id,pole_row_id,category,consumer_number,group,date,gps_waypoint,meter_number,consumer_reference,phase,conductor_code,measured_length_m,length_evidence,remarks,route_points,route_length_m',
             'service_cables.*.cable_id' => 'required|uuid|distinct',
             'service_cables.*.pole_row_id' => 'required|uuid',
             'service_cables.*.category' => ['required', Rule::in(array_diff(array_keys(EntryLookups::CONSUMERS), ['pv']))],
@@ -29,12 +29,14 @@ class MobileServiceCableValidation
             'service_cables.*.measured_length_m' => 'nullable|numeric|gt:0|max:100000',
             'service_cables.*.length_evidence' => 'required_with:service_cables.*.measured_length_m|nullable|string|max:4000',
             'service_cables.*.remarks' => 'nullable|string|max:4000',
-        ];
+            'service_cables.*.route_length_m' => 'nullable|numeric',
+        ] + app(ServiceCableRoute::class)->rules('service_cables.*');
     }
 
     public function assertValid(array $data): void
     {
         Validator::make($data, $this->rules())->validate();
+        app(ServiceCableRoute::class)->normalizeMany($data['service_cables'] ?? []);
         $errors = $slots = $meters = [];
         $identity = fn ($row) => ($row['group'] ?? '').'|'.($row['date'] ?? '').'|'.($row['gps_waypoint'] ?? '');
         $rows = $data['rows'] ?? [];

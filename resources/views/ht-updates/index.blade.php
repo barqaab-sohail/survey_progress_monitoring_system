@@ -1,12 +1,23 @@
 @extends('layouts.app')
 @section('title', 'HT Network Updates')
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/ht-updates.css').'?v='.filemtime(public_path('css/ht-updates.css')) }}">
+@endpush
 @section('content')
+<div class="ht-update">
+@php($isSuperAdmin = auth()->user()->hasRole('super_admin'))
 @if(auth()->user()->hasAnyRole(['super_admin','project_manager']))<p><a class="btn btn-primary" href="{{ route('feeder-kmz.index') }}">Feeder HT + approved LT</a></p>@endif
 @if(app(\App\Services\HtNetworkWorkflow::class)->canCreateWeb(auth()->user()))<p><a class="btn btn-primary" href="{{ route('ht-updates.create') }}">New HT Network Update ? 11 kV feeder</a></p>@endif
-<div class="page-head"><div><h1>HT Network Updates</h1><p>11 kV feeder additions awaiting independent HT verification. Complete HT approval before starting LT entry.</p></div><a class="btn btn-light" href="{{ route('field-surveys.index') }}">LT Transformer Surveys</a></div>
-<section class="card"><div style="overflow:auto"><table class="table"><thead><tr><th>Transformer</th><th>Feeder</th><th>Surveyor</th><th>HT verification</th><th>Updated</th></tr></thead><tbody>
+<div class="page-head"><div><h1>HT Network Updates</h1><p>11 kV feeder additions awaiting HT verification. Complete HT approval before starting LT entry.</p></div><a class="btn btn-light" href="{{ route('field-surveys.index') }}">LT Transformer Surveys</a></div>
+<section class="card"><div style="overflow:auto"><table class="table"><thead><tr><th>Transformer</th><th>Feeder</th><th>Surveyor</th><th>HT verification</th><th>Updated</th>@if($isSuperAdmin)<th>Actions</th>@endif</tr></thead><tbody>
 @forelse($updates as $update)
-<tr><td><a href="{{ route('ht-updates.show', $update) }}">{{ $update->transformer_code }}</a></td><td>{{ $update->feeder->feeder_code }} · {{ $update->feeder->feeder_name }}</td><td>{{ $update->collector->name }}</td><td>{{ ucfirst($update->status) }}</td><td>{{ $update->updated_at }}</td></tr>
-@empty<tr><td colspan="5">No HT Network Updates submitted.</td></tr>@endforelse
+<tr><td><a href="{{ route('ht-updates.show', $update) }}">{{ $update->transformer_code }}</a></td><td>{{ $update->feeder->feeder_code }} · {{ $update->feeder->feeder_name }}</td><td>{{ $update->collector->name }}</td><td>{{ ucfirst($update->status) }}</td><td>{{ $update->updated_at }}</td>@if($isSuperAdmin)<td>
+@if($update->status !== 'verified')
+<div class="ht-list-actions"><a class="btn btn-light btn-sm" href="{{ route('ht-updates.edit', $update) }}">Edit</a>
+<form method="POST" action="{{ route('ht-updates.destroy', $update) }}" onsubmit="return confirm('Delete this HT update? This cannot be undone. Linked LT survey work will prevent deletion.');">@csrf @method('DELETE')<input type="hidden" name="revision" value="{{ $update->revision }}"><button type="submit" class="btn btn-sm ht-delete-button" aria-label="Delete HT update {{ $update->transformer_code }}">Delete</button></form></div>
+@else<span class="ht-list-protected">Approved network record</span>@endif
+</td>@endif</tr>
+@empty<tr><td colspan="{{ $isSuperAdmin ? 6 : 5 }}">No HT Network Updates submitted.</td></tr>@endforelse
 </tbody></table></div>{{ $updates->links() }}</section>
+</div>
 @endsection

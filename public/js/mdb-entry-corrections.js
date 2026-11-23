@@ -8,7 +8,7 @@ export function installEntryCorrections({initial = [], api, context, isBusy, set
     const field = name => form?.elements.namedItem(name);
     const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const time = value => value ? new Date(value).toLocaleString('en-GB', {timeZone:'Asia/Karachi'}) : '';
-    let notes = initial, dirty = false, clientUuid = null, requestPending = false, screenshotName = '', previewUrl = null;
+    let notes = initial, dirty = false, clientUuid = null, requestPending = false, screenshotName = '', previewUrl = null, screenshotFile = null;
     const values = () => Object.fromEntries([...form.elements].filter(el => el.name && el.type !== 'file').map(el => [el.name, el.value]));
     function persist() {
         if (!form || !storageKey) return;
@@ -59,38 +59,65 @@ export function installEntryCorrections({initial = [], api, context, isBusy, set
     form?.addEventListener('change', () => {dirty = true;clientUuid = null;persist();});
     function clearScreenshot() {
         if (previewUrl) window.URL.revokeObjectURL?.(previewUrl);
-        previewUrl = null;screenshotName = '';
-        if (field('screenshot')) {field('screenshot').value = '';field('screenshot').setCustomValidity('');}
+        previewUrl = null;screenshotName = '';screenshotFile = null;
+
         if ($('entry-correction-preview')) {$('entry-correction-preview').hidden = true;$('entry-correction-preview').removeAttribute('src');}
         if ($('entry-correction-screenshot-help')) $('entry-correction-screenshot-help').textContent = '';
         if ($('entry-correction-remove-screenshot')) $('entry-correction-remove-screenshot').hidden = true;
     }
-    field('screenshot')?.addEventListener('change', () => {
-        const file = field('screenshot').files?.[0];
+    function attachClipboardScreenshot(file) {
+        if (isBusy() || requestPending) return;
+        if (!['image/png','image/jpeg','image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+            $('entry-correction-screenshot-help').textContent = 'Paste a PNG, JPG or WebP image up to 5 MB.';
+            return;
+        }
+        const extension = {'image/png':'png','image/jpeg':'jpg','image/webp':'webp'}[file.type];
+        screenshotFile = new File([file], `screenshot-${Date.now()}.${extension}`, {type:file.type});
+        screenshotName = screenshotFile.name;
         if (previewUrl) window.URL.revokeObjectURL?.(previewUrl);
-        previewUrl = null;screenshotName = file?.name || '';
-        const valid = !file || (file.size <= 5 * 1024 * 1024 && ['image/png','image/jpeg','image/webp'].includes(file.type));
-        field('screenshot').setCustomValidity(valid ? '' : 'Choose a PNG, JPG or WebP image up to 5 MB.');
-        if ($('entry-correction-screenshot-help')) $('entry-correction-screenshot-help').textContent = screenshotName;
-        if ($('entry-correction-remove-screenshot')) $('entry-correction-remove-screenshot').hidden = !file;
-        if ($('entry-correction-preview')) {
-            if (file && valid && window.URL.createObjectURL) previewUrl = window.URL.createObjectURL(file);
-            $('entry-correction-preview').hidden = !previewUrl;
-            if (previewUrl) $('entry-correction-preview').src = previewUrl;
-            else $('entry-correction-preview').removeAttribute('src');
+        previewUrl = window.URL.createObjectURL(screenshotFile);
+        $('entry-correction-preview').src = previewUrl;
+        $('entry-correction-preview').hidden = false;
+        $('entry-correction-screenshot-help').textContent = 'Screenshot attached. Paste another image to replace it.';
+        $('entry-correction-remove-screenshot').hidden = false;
+        $('entry-correction-paste-target').value = '';
+        dirty = true;clientUuid = null;persist();
+    }
+    document.addEventListener('paste', event => {
+        if (!form || !root.open || !$('entry-correction-editor')?.open || isBusy() || requestPending) return;
+        const item = [...(event.clipboardData?.items || [])].find(item => item.kind === 'file' && item.type.startsWith('image/'));
+        const file = item?.getAsFile() || [...(event.clipboardData?.files || [])].find(file => file.type.startsWith('image/'));
+        if (!file) return;
+        event.preventDefault();
+        attachClipboardScreenshot(file);
+    });
+    $('entry-correction-paste-screenshot')?.addEventListener('click', async () => {
+        if (isBusy() || requestPending) return;
+        try {
+            if (!navigator.clipboard?.read) throw new Error('Clipboard reading unavailable');
+            const items = await navigator.clipboard.read();
+            for (const item of items) {
+                const type = item.types.find(type => ['image/png','image/jpeg','image/webp'].includes(type));
+                if (type) {attachClipboardScreenshot(await item.getType(type));return;}
+            }
+            $('entry-correction-screenshot-help').textContent = 'No screenshot found. Copy an image first, then paste it here.';
+        } catch {
+            $('entry-correction-screenshot-help').textContent = 'Click the paste box and press Ctrl+V (Cmd+V on Mac) to paste your screenshot.';
+            $('entry-correction-paste-target')?.focus();
         }
     });
     $('entry-correction-remove-screenshot')?.addEventListener('click', () => {clearScreenshot();dirty=true;clientUuid=null;persist();});
     form?.addEventListener('submit', async event => {
         event.preventDefault();
         if (isBusy() || requestPending || !form.reportValidity()) return;
+        if (screenshotName && !screenshotFile) {feedback('Paste the screenshot again, or remove it before saving.', true);return;}
         const body = values();
         clientUuid ||= crypto.randomUUID();
         dirty = true;persist();
         Object.assign(body, {client_uuid:clientUuid, transformer_id:body.transformer_id ? Number(body.transformer_id) : null,
             source_file_id:Number(body.source_file_id), source_page:Number(body.source_page)});
         let requestBody = body;
-        const screenshot = field('screenshot')?.files?.[0];
+        const screenshot = screenshotFile;
         if (screenshot) {
             requestBody = new FormData();
             for (const [key,value] of Object.entries(body)) if (value !== null && value !== undefined) requestBody.append(key, String(value));
@@ -142,9 +169,8 @@ export function installEntryCorrections({initial = [], api, context, isBusy, set
                 for (const [name,value] of Object.entries(saved.values)) if (field(name) && field(name).type !== 'file') field(name).value = value;
                 dirty = true;clientUuid = saved.clientUuid;
                 screenshotName = saved.screenshotName || '';
-                if (screenshotName && field('screenshot')) {
-                    field('screenshot').setCustomValidity('Reattach the screenshot, or remove it before saving.');
-                    if ($('entry-correction-screenshot-help')) $('entry-correction-screenshot-help').textContent = `Please reattach ${screenshotName}; browsers cannot restore a selected file after reloading.`;
+                if (screenshotName) {
+                    if ($('entry-correction-screenshot-help')) $('entry-correction-screenshot-help').textContent = `Please paste ${screenshotName} again; browsers cannot restore a screenshot after reloading.`;
                     if ($('entry-correction-remove-screenshot')) $('entry-correction-remove-screenshot').hidden = false;
                 }
                 field('transformer_reference').readOnly = !!field('transformer_id').value;

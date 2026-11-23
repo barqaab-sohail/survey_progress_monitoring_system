@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 import 'models.dart';
+import 'service_cable_route_entry.dart';
 
 class MobileServiceCableEntry extends StatefulWidget {
   const MobileServiceCableEntry({
@@ -30,6 +31,7 @@ class _MobileServiceCableEntryState extends State<MobileServiceCableEntry> {
   String category = 'rs', phase = '', conductor = 'PVC 7/0.052', message = '';
   bool failed = false;
   int consumer = 1, page = 0;
+  List<Json> routePoints = [];
   List<Json> get poles => widget.record.rows
       .where((r) => r['se'] == 'E' && r['row_id'] != null)
       .toList();
@@ -75,6 +77,7 @@ class _MobileServiceCableEntryState extends State<MobileServiceCableEntry> {
   }
 
   void seed() {
+    routePoints = [];
     editingId = null;
     final available = consumerLabels.keys.where(
       (c) => count(c) >= nextConsumer(c),
@@ -122,6 +125,9 @@ class _MobileServiceCableEntryState extends State<MobileServiceCableEntry> {
       length.text = '${c['measured_length_m'] ?? ''}';
       phase = c['phase'] ?? '';
       conductor = c['conductor_code'] ?? 'PVC 7/0.052';
+      routePoints = ((c['route_points'] ?? []) as List)
+          .map((p) => Map<String, dynamic>.from(p as Map))
+          .toList();
       message = '';
     });
     gpsFocus.requestFocus();
@@ -149,6 +155,7 @@ class _MobileServiceCableEntryState extends State<MobileServiceCableEntry> {
           : reference.text.trim(),
       'phase': phase.isEmpty ? null : phase,
       'conductor_code': conductor,
+      'route_points': routePoints,
       'measured_length_m': length.text.trim().isEmpty
           ? null
           : num.tryParse(length.text.trim()),
@@ -156,6 +163,8 @@ class _MobileServiceCableEntryState extends State<MobileServiceCableEntry> {
           ? null
           : 'Measured during mobile field survey',
     };
+    // The server recomputes route length from these saved GPS points.
+    candidate.remove('route_length_m');
     if (length.text.trim().isNotEmpty &&
         candidate['measured_length_m'] == null) {
       setState(() {
@@ -223,6 +232,10 @@ class _MobileServiceCableEntryState extends State<MobileServiceCableEntry> {
           'Select the E pole once, then record its meter waypoints. These describe existing consumers; they do not increase consumer totals. GPX matching is completed on the web application.',
         ),
         const SizedBox(height: 16),
+        const Text(
+          'Survey target: five transformers per feeder. Export saved service cables at any stage; this target does not block export.',
+        ),
+        const SizedBox(height: 12),
         if (serviceCableErrors(widget.record).isNotEmpty)
           Text(
             serviceCableErrors(widget.record).values.toSet().join('\n'),
@@ -333,6 +346,11 @@ class _MobileServiceCableEntryState extends State<MobileServiceCableEntry> {
                       .toList(),
               onChanged: (v) => setState(() => phase = v!),
             ),
+            ServiceCableRouteEntry(
+              points: routePoints,
+              pole: pole,
+              onChanged: (points) => setState(() => routePoints = points),
+            ),
             ExpansionTile(
               title: const Text('Cable details (optional)'),
               children: [
@@ -360,7 +378,7 @@ class _MobileServiceCableEntryState extends State<MobileServiceCableEntry> {
                   decoration: const InputDecoration(
                     labelText: 'Measured length (m)',
                     helperText:
-                        'Leave blank to use the E-to-meter GPX distance later.',
+                        'Use a field-measured length only. The service cable Excel export does not use straight-line estimates.',
                   ),
                 ),
               ],

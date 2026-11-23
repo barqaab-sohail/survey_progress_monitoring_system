@@ -16,7 +16,8 @@ class MobileSurveyProvenance
         if (!$original || !$pole || !self::row($snapshot, $pole, $rows) || ($pole['mobile_row_id'] ?? null) !== $original['pole_row_id']) return false;
         foreach (['category'=>'category', 'consumer_number'=>'consumer_number', 'group_number'=>'group', 'row_date'=>'date', 'waypoint_reference'=>'gps_waypoint',
             'meter_number'=>'meter_number', 'consumer_reference'=>'consumer_reference', 'phase'=>'phase', 'conductor_code'=>'conductor_code',
-            'measured_length_m'=>'measured_length_m', 'length_evidence'=>'length_evidence'] as $key => $source) {
+            'measured_length_m'=>'measured_length_m', 'length_evidence'=>'length_evidence',
+            'route_points'=>'route_points', 'route_length_m'=>'route_length_m'] as $key => $source) {
             if (($cable[$key] ?? null) != ($original[$source] ?? null)) return false;
         }
         return true;

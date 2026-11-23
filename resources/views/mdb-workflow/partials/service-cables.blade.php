@@ -26,13 +26,21 @@
                 <label>Meter number<input name="meter_number" maxlength="255"></label>
                 <label>Recorded phase<select name="recorded_phase"><option value="">Not recorded</option><option>R</option><option>Y</option><option>B</option><option value="RYB">Three phase (RYB)</option></select></label>
                 <label>Service cable<select name="conductor_code"><option value="">Not recorded</option>@foreach(\App\Services\Mdb\ApprovedWarehouse::conductors() as $code)<option value="{{ $code }}">{{ $code }}</option>@endforeach</select><small>Single phase: PVC 7/0.052. Three phase: PVC 19/0.052. Correct this if the survey records another cable; export requires an approved library code.</small></label>
-                <label>Measured cable length (m)<input name="measured_length_m" type="number" min="0.001" max="100000" step="any"><small>Without a measured length, export uses the straight distance between recorded waypoints, labelled as an estimate.</small></label>
+                <label>Measured cable length (m)<input name="measured_length_m" type="number" min="0.001" max="100000" step="any"><small>Record a field-measured length with evidence when available. Feeder Excel exports use mapped route or measured lengths; endpoint estimates are excluded.</small></label>
                 <label>Measured length evidence<input name="length_evidence" maxlength="4000"></label>
                 <label>Source PDF (from E pole)<select name="source_pdf_id" disabled></select></label>
                 <label>PDF page<input name="source_page" required type="number" min="1" max="10000" step="1"></label>
                 <label>PDF row / reference<input name="source_row" maxlength="255"></label>
                 <label>Remarks<textarea name="remarks" maxlength="4000" rows="2"></textarea></label>
             </div>
+            <fieldset class="service-cable-route"><legend>Actual service cable route</legend>
+                <p class="mdb-note">Record the full route from the starting E pole to the consumer meter, including every bend and street turn. Enter one point per line in route order: <strong>latitude, longitude, optional waypoint label</strong>. Coordinates use decimal degrees; calculated length uses the complete mapped path in metres.</p>
+                <label for="service-cable-route-points">Ordered GPS route points</label>
+                <textarea id="service-cable-route-points" name="route_points" rows="6" spellcheck="false" aria-describedby="service-cable-route-preview" placeholder="34.100000, 73.200000, E pole&#10;34.100200, 73.200000, Street turn&#10;34.100200, 73.200300, Consumer meter"></textarea>
+                <button type="button" class="btn btn-light" id="service-cable-route-endpoints">Start route with pole and meter</button>
+                <p class="mdb-note">Insert intermediate points between these endpoints. Use only points recorded along the actual cable route.</p>
+                <p id="service-cable-route-preview" class="mdb-note" role="status" aria-live="polite"></p>
+            </fieldset>
             <button class="btn btn-light" type="button" id="service-cable-copy">Copy previous phase / cable type</button><button class="btn btn-light" type="button" id="service-cable-pole-location">Use meter waypoint at E coordinates</button>
             <p class="mdb-note">Pole-mounted meters each keep their own waypoint number, even when their coordinates match E.</p>
             <p id="service-cable-coordinates" class="mdb-note"></p>

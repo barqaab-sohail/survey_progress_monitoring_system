@@ -161,10 +161,14 @@ class HtKmzService
                     }
                 }
                 if ($xp->query('.//*[local-name()="LineString"]', $candidate)->length) {
-                    $lineTemplate ??= $candidate;
+                    $normal = [];
+                    foreach ($attrs as $key => $value) $normal[strtolower(preg_replace('/[^a-z0-9]/i', '', $key))] = $value;
+                    if (strtolower($normal['linevoltage'] ?? '') === '11kv' || strtolower($normal['linetype'] ?? '') === 'primary') {
+                        $lineTemplate ??= $candidate;
+                    }
                 }
             }
-            abort_unless($pointTemplate && $lineTemplate, 422, 'Baseline requires transformer and line templates for compatible export.');
+            abort_unless($pointTemplate && ($p['kind'] !== 'ht_extension' || $lineTemplate), 422, 'Baseline requires a transformer template and, for an extension, a primary HT line template for compatible export.');
             $remove = [];
             foreach ($xp->query('//*[local-name()="Placemark"]') as $candidate) {
                 $attrs = $this->attributes($candidate);

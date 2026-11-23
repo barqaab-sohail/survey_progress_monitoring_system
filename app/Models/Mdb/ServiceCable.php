@@ -12,7 +12,8 @@ class ServiceCable extends Model
 
     protected function casts(): array
     {
-        return ['consumer_number' => 'integer', 'measured_length_m' => 'float', 'source_page' => 'integer'];
+        return ['consumer_number' => 'integer', 'measured_length_m' => 'float', 'source_page' => 'integer',
+            'route_points' => 'array', 'route_length_m' => 'float'];
     }
 
     public function surveyData(): array

@@ -46,6 +46,10 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', 'active'])->group(function () {
+    Route::get('/service-cable-exports', [\App\Http\Controllers\ServiceCableExportController::class, 'index'])->name('service-cable-exports.index');
+    Route::get('/service-cable-exports/{feeder}/download', [\App\Http\Controllers\ServiceCableExportController::class, 'download'])->name('service-cable-exports.download');
+    Route::get('/service-cable-exports', [\App\Http\Controllers\ServiceCableExportController::class, 'index'])->name('service-cable-exports.index');
+    Route::get('/service-cable-exports/{feeder}/download', [\App\Http\Controllers\ServiceCableExportController::class, 'download'])->name('service-cable-exports.download');
     Route::get('/feeder-kmz', [\App\Http\Controllers\FeederKmzController::class, 'index'])->name('feeder-kmz.index');
     Route::get('/feeder-kmz/{feeder}/download', [\App\Http\Controllers\FeederKmzController::class, 'export'])->name('feeder-kmz.export');
     Route::get('/feeder-kmz/{feeder}/preview', [\App\Http\Controllers\FeederKmzController::class, 'preview'])->name('feeder-kmz.preview');
@@ -58,6 +62,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/', 'store')->name('store');
         Route::get('/{update}/edit', 'edit')->name('edit');
         Route::put('/{update}', 'store')->name('update');
+        Route::delete('/{update}', 'destroy')->name('destroy');
         Route::get('/feeder/{feeder}/kmz', 'export')->name('export');
         Route::get('/{update}', 'show')->name('show');
         Route::post('/{update}/review', 'review')->name('review');

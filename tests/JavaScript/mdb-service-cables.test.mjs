@@ -1,13 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from '../../tmp/mdb-entry-qa/node_modules/jsdom/lib/api.js';
-import {installServiceCableEntry, serviceCableDistance} from '../../public/js/mdb-service-cables.js';
+import {installServiceCableEntry, serviceCableDistance, parseServiceCableRoute, serviceCableRouteLength} from '../../public/js/mdb-service-cables.js';
 import {isoDate, displayDate, completeWaypoint, waypointMatches} from '../../public/js/mdb-entry.js';
 
-function fixture() {
+function fixture({route = false} = {}) {
     const fields = ['entry_row_id','category','gpx_source_id','source_pdf_id','meter_waypoint_id'];
     const inputs = ['consumer_number','group_number','row_date','waypoint_reference','composite_identifier','consumer_reference','meter_number','recorded_phase','conductor_code','measured_length_m','length_evidence','source_page','source_row','remarks'];
     const dom = new JSDOM(`<section id="entry-service-cables"><input type="checkbox" id="service-cables-enabled"><button type="button" id="service-cable-add">Add cable</button><p id="service-cable-status"></p><div id="service-cable-content"><div id="service-cable-coverage"></div><input id="service-cable-search"><select id="service-cable-filter-pole"></select><select id="service-cable-filter-status"><option value=""></option><option value="incomplete">Incomplete</option></select><span id="service-cable-count"></span><button id="service-cable-prev"></button><span id="service-cable-page"></span><button id="service-cable-next"></button><div id="service-cable-list"></div><details id="service-cable-editor"><form id="service-cable-form">${fields.map(name=>`<select name="${name}">${name==='category' ? '<option value="rs">RS</option><option value="rl">RL</option>' : ''}</select>`).join('')}${inputs.map(name=>`<input name="${name}">`).join('')}<span id="service-cable-save-status"></span><button id="service-cable-save-stay" type="submit" value="stay">Save</button><p id="service-cable-coordinates"></p><button type="button" id="service-cable-pole-location">At E</button><button type="submit">Save</button><button type="button" id="service-cable-cancel">Cancel</button></form></details></div></section>`, {url:'http://localhost'});
+    if (route) dom.window.document.getElementById('service-cable-form').insertAdjacentHTML('beforeend', '<textarea name="route_points"></textarea><p id="service-cable-route-preview"></p><button type="button" id="service-cable-route-endpoints">Route endpoints</button>');
     Object.assign(globalThis, {window:dom.window,document:dom.window.document,Option:dom.window.Option});
     let state = {revision:1,service_cables_can_enter:true,entry_settings:{two_digit_year_start:2000},
         sources:[{id:1,kind:'gpx',status:'ready',original_name:'Survey.gpx'},{id:2,kind:'pdf',status:'ready',original_name:'Survey.pdf'}],
@@ -266,5 +267,43 @@ test('blank consumer counts derive coverage from cables and keep entry open', as
         assert.equal(f.field('category').value,'rs');
         assert.equal(f.field('consumer_number').value,'2');
         assert.match(f.dom.window.document.getElementById('service-cable-coverage').textContent,/1 consumers; 1 meter waypoints recorded; 0 without/);
+    } finally {f.close();}
+});
+
+test('mapped cable route follows every bend, validates input and allows no route', () => {
+    const text = '34, 73, E pole\n34.001, 73, Street bend\n34.001, 73.001, Meter';
+    const points = parseServiceCableRoute(text);
+    assert.equal(points.length, 3);
+    assert.equal(points[1].waypoint, 'Street bend');
+    const routed = serviceCableRouteLength(points);
+    const direct = serviceCableRouteLength([points[0], points[2]]);
+    assert.ok(routed > direct + 40, 'bend route must not collapse to endpoint distance');
+    assert.ok(Math.abs(routed - 203.38) < 0.1);
+    assert.deepEqual(parseServiceCableRoute(''), []);
+    assert.equal(serviceCableRouteLength([]), null);
+    assert.throws(() => parseServiceCableRoute('34, 73'), /at least/);
+    assert.throws(() => parseServiceCableRoute('34, 73\n91, 73'), /Route point 2/);
+    assert.throws(() => parseServiceCableRoute('34, 73\n34.1,'), /Route point 2/);
+});
+
+test('route editor saves the complete ordered path, restores edits and preserves failed drafts', async () => {
+    const f = fixture({route:true});
+    try {
+        const route = '34.1, 73.2, E pole\n34.1001, 73.2, Turn\n34.1001, 73.2002, Meter';
+        f.field('route_points').value = route;
+        f.field('route_points').dispatchEvent(new f.dom.window.Event('input', {bubbles:true}));
+        assert.match(f.dom.window.document.getElementById('service-cable-route-preview').textContent, /3 recorded route points/);
+        const submitter = f.dom.window.document.getElementById('service-cable-save-stay');
+        f.form.dispatchEvent(new f.dom.window.SubmitEvent('submit', {bubbles:true, cancelable:true, submitter}));
+        await settle();
+        assert.deepEqual(f.posted().route_points, parseServiceCableRoute(route));
+        assert.equal(f.field('route_points').value, route);
+        f.reject();
+        f.field('route_points').value = route.replace('Turn', 'Street turn');
+        f.field('route_points').dispatchEvent(new f.dom.window.Event('input', {bubbles:true}));
+        f.form.dispatchEvent(new f.dom.window.SubmitEvent('submit', {bubbles:true, cancelable:true, submitter}));
+        await settle();
+        assert.match(f.field('route_points').value, /Street turn/);
+        assert.match(f.dom.window.document.getElementById('service-cable-status').textContent, /Not saved/);
     } finally {f.close();}
 });

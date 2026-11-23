@@ -149,3 +149,7 @@
 .entry-correction-footer .btn{min-height:36px;padding:8px 12px;font-size:12px;line-height:1.4;gap:8px}
 @media(max-width:1000px){.entry-correction-footer{align-items:flex-start;flex-direction:column}.mdb-entry .entry-correction-location{grid-template-columns:1fr 1fr}.entry-correction-content{grid-template-columns:minmax(0,1.5fr) minmax(200px,1fr)}}
 @media(max-width:600px){.entry-correction-form{padding:10px}.entry-correction-content{grid-template-columns:1fr}.entry-correction-footer .actions{width:100%}.entry-correction-footer .btn{flex:1}}
+#service-cable-editor .service-cable-route{padding:14px;border:1px solid #cfdae7;border-radius:8px;background:#f8fafc}
+#service-cable-editor .service-cable-route legend{padding:0 6px;font-size:13px;font-weight:650}
+#service-cable-editor .service-cable-route label{display:block;font-size:12px;font-weight:650;margin-bottom:6px}
+#service-cable-editor .service-cable-route textarea{display:block;box-sizing:border-box;width:100%;padding:10px;border:1px solid #bfcee1;border-radius:6px;background:#fff;font:12px/1.7 monospace;resize:vertical;margin-bottom:10px}

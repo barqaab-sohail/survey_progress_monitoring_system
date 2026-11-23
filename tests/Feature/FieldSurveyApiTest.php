@@ -109,6 +109,53 @@ class FieldSurveyApiTest extends TestCase
         $this->assertSame('010', $saved->fresh()->service_cables[0]['gps_waypoint']);
     }
 
+    public function test_mobile_service_cable_route_is_saved_with_server_calculated_length(): void
+    {
+        $this->leader->update(['allow_consumer_service_cables' => true]);
+        $data = $this->payload('draft');
+        $transformer = Transformer::create(['feeder_id' => $this->feeder->id, 'transformer_code' => 'ROUTED-SERVICE', 'capacity_kva' => 50, 'latitude' => 34.1, 'longitude' => 73.2]);
+        $data['transformer_id'] = $transformer->id;
+        $data['transformer_code'] = $transformer->transformer_code;
+        foreach ($data['rows'] as &$row) { $row['conductor_r'] = 'ANT'; $row['pole_height_ft'] = 36; }
+        unset($row);
+        $data['rows'][1]['consumers'] = ['rs' => 1];
+        $data['service_cables'] = [['cable_id' => (string) Str::uuid(), 'pole_row_id' => $data['rows'][1]['row_id'],
+            'category' => 'rs', 'consumer_number' => 1, 'group' => '01', 'date' => today()->toDateString(), 'gps_waypoint' => '010',
+            'phase' => 'R', 'conductor_code' => 'PVC 7/0.052', 'route_length_m' => 1,
+            // Whole-number coordinates become JSON integers when stored, whereas
+            // route normalization produces floats. Their retry must remain equivalent.
+            'route_points' => [['latitude' => 34, 'longitude' => 73, 'waypoint' => 'Pole'],
+                ['latitude' => 34.001, 'longitude' => 73, 'waypoint' => 'Turn'],
+                ['latitude' => 34.001, 'longitude' => 73.001, 'waypoint' => 'Meter']]]];
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertCreated();
+        $saved = FieldSurvey::where('client_uuid', $data['client_uuid'])->firstOrFail();
+        $this->assertCount(3, $saved->service_cables[0]['route_points']);
+        $this->assertGreaterThan(200, $saved->service_cables[0]['route_length_m']);
+        $expected = app(\App\Services\ServiceCableRoute::class)->normalize($data['service_cables'][0]);
+        $this->assertSame($expected['route_length_m'], $saved->service_cables[0]['route_length_m']);
+        // A client omitting the server-owned total can retry unchanged route data after permission revocation.
+        unset($data['service_cables'][0]['route_length_m']);
+        $this->leader->update(['allow_consumer_service_cables' => false]);
+        $this->postJson('/api/v1/field/surveys/sync', $data)->assertOk();
+        $this->assertSame(1, $saved->fresh()->revision);
+        // Server-side managers without cable entry permission can also retain
+        // unchanged routes while correcting the rest of the survey.
+        $manager = User::factory()->create(['role' => UserRole::ProjectManager]);
+        $serverData = array_replace($data, ['base_revision' => 1]);
+        $corrected = app(\App\Services\FieldSurveyService::class)->updateOnServer($manager, $saved->fresh(), $serverData);
+        $this->assertSame(2, $corrected->revision);
+        $this->assertSame($expected['route_length_m'], $corrected->service_cables[0]['route_length_m']);
+        $serverData['base_revision'] = 2;
+        $serverData['service_cables'][0]['route_points'][1]['latitude'] = 34.002;
+        try {
+            app(\App\Services\FieldSurveyService::class)->updateOnServer($manager, $corrected, $serverData);
+            $this->fail('Managers without cable entry permission cannot change route points.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+            $this->assertSame(403, $exception->getStatusCode());
+            $this->assertSame(2, $saved->fresh()->revision);
+        }
+    }
+
     public function test_compact_bootstrap_shares_project_lookups_and_supports_gzip_without_changing_legacy_clients(): void
     {
         $this->getJson('/api/v1/field/bootstrap')->assertOk()

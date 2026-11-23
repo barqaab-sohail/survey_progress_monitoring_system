@@ -20,8 +20,11 @@
             <div class="entry-correction-content">
                 <label class="entry-correction-reason"><span>Why did entry stop? <span class="entry-required" aria-hidden="true">*</span></span><textarea name="comment" required minlength="5" maxlength="4000" rows="4" placeholder="Describe what is missing or incorrect, and which correction is needed."></textarea></label>
                 <div class="entry-correction-attachment">
-                    <label class="entry-correction-upload"><span>Screenshot <span class="entry-correction-optional">Optional</span></span><input type="file" name="screenshot" accept="image/png,image/jpeg,image/webp" aria-describedby="entry-correction-upload-hint entry-correction-screenshot-help"><small id="entry-correction-upload-hint">Help Super Admin see the issue.<br>PNG, JPG or WebP &middot; Up to 5 MB</small></label>
-                    <p id="entry-correction-screenshot-help" class="mdb-note"></p>
+                    <div class="entry-correction-upload"><span>Screenshot <span class="entry-correction-optional">Optional</span></span>
+                    <textarea id="entry-correction-paste-target" rows="2" aria-label="Paste screenshot here" placeholder="Click here and press Ctrl+V to paste a screenshot" aria-describedby="entry-correction-upload-hint entry-correction-screenshot-help"></textarea>
+                    <button type="button" class="btn btn-sm btn-light" id="entry-correction-paste-screenshot">Paste screenshot</button>
+                    <small id="entry-correction-upload-hint">Take a screenshot with Win+Shift+S, then click the box and press Ctrl+V (Cmd+V on Mac).<br>PNG, JPG or WebP &middot; Up to 5 MB</small></div>
+                    <p id="entry-correction-screenshot-help" class="mdb-note" role="status" aria-live="polite"></p>
                     <img id="entry-correction-preview" class="entry-correction-preview" alt="Selected error screenshot" hidden>
                     <button type="button" class="btn btn-sm btn-light" id="entry-correction-remove-screenshot" hidden>Remove screenshot</button>
                 </div>

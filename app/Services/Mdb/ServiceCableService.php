@@ -23,7 +23,8 @@ class ServiceCableService
             'length_evidence' => 'required_with:measured_length_m|nullable|string|max:4000',
             'source_pdf_id' => 'required|integer', 'source_page' => 'required|integer|min:1|max:10000',
             'source_row' => 'nullable|string|max:255', 'remarks' => 'nullable|string|max:4000',
-        ];
+            'route_length_m' => 'nullable|numeric',
+        ] + app(\App\Services\ServiceCableRoute::class)->rules();
     }
 
     public function issues(array $transformer, array $points, array $sources = [], array $snapshot = []): array
@@ -44,6 +45,12 @@ class ServiceCableService
             $validator = Validator::make($cable, $rules);
             if ($validator->fails()) {
                 $add($validator->errors()->first());
+                continue;
+            }
+            try {
+                app(\App\Services\ServiceCableRoute::class)->normalize($cable);
+            } catch (ValidationException $exception) {
+                $add($exception->validator?->errors()->first() ?: $exception->getMessage());
                 continue;
             }
             if (empty($transformer['service_cables_enabled'])) {
@@ -202,6 +209,9 @@ class ServiceCableService
 
     public function length(array $cable, array $pole, array $meter): float
     {
+        if (! empty($cable['route_points'])) {
+            return app(\App\Services\ServiceCableRoute::class)->normalize($cable)['route_length_m'];
+        }
         if (($cable['measured_length_m'] ?? null) !== null) return (float) $cable['measured_length_m'];
         foreach (['pole', 'meter'] as $name) {
             $point = $$name;

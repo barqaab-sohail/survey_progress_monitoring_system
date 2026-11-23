@@ -43,6 +43,7 @@ class MdbServiceCableController extends Controller
             'gpx_source_id' => $pole->gpx_source_id, 'source_pdf_id' => $pole->source_pdf_id]);
         $data = $request->validate(['revision' => 'required|integer'] + app(ServiceCableService::class)->rules());
         unset($data['revision']);
+        $data = app(\App\Services\ServiceCableRoute::class)->normalize($data);
         $data['composite_identifier'] = app(SurveyWaypoint::class)->compose($data['group_number'], $data['row_date'], $data['waypoint_reference'],
             app(SurveyWaypoint::class)->settings($batch->project_id)['two_digit_year_start']);
 

@@ -129,6 +129,100 @@ class HtNetworkUpdateTest extends TestCase
             'decision' => 'verified', 'review_note' => 'Route, coordinates and upstream connection checked', 'nodes' => $update->payload['nodes']]);
     }
 
+    public function test_web_transformer_only_and_multiple_pole_updates_export_the_correct_assets(): void
+    {
+        $baseline = $this->baseline();
+        $originalHash = hash_file('sha256', Storage::disk('local')->path($baseline->stored_path));
+        $reviewer = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $this->actingAs($this->admin)->get(route('ht-updates.create', ['feeder_id' => $this->feeder->id]))
+            ->assertOk()->assertSee('Transformer only')->assertSee('New poles, then transformer')
+            ->assertSee('Number of poles to add')->assertSee('Review and download updated KMZ');
+
+        foreach (['missing_transformer', 'ht_extension'] as $kind) {
+            $this->actingAs($this->admin);
+            $data = $this->htPayload();
+            unset($data['photos']);
+            $data['kind'] = $kind;
+            $data['transformer_code'] = 'NEW-'.$kind;
+            if ($kind === 'ht_extension') {
+                array_splice($data['nodes'], 1, 0, [
+                    ['waypoint' => 'POLE-1', 'latitude' => 34.0002, 'longitude' => 73.0002, 'pole_type' => 'PCO', 'pole_height' => 36],
+                    ['waypoint' => 'POLE-2', 'latitude' => 34.0004, 'longitude' => 73.0004, 'pole_type' => 'PCO', 'pole_height' => 36],
+                ]);
+            } else {
+                // A transformer on the existing pole may share its waypoint.
+                $data['nodes'][1]['waypoint'] = $data['nodes'][0]['waypoint'];
+                $data['nodes'][1]['latitude'] = 34;
+                $data['nodes'][1]['longitude'] = 73;
+            }
+            $this->post(route('ht-updates.store'), $data)->assertRedirect();
+            $update = HtNetworkUpdate::where('client_uuid', $data['client_uuid'])->firstOrFail();
+            $pendingPath = app(HtKmzService::class)->export($this->feeder);
+            $zip = new \ZipArchive;
+            $zip->open($pendingPath);
+            $this->assertStringNotContainsString('field-'.$update->client_uuid, $zip->getFromName('doc.kml'));
+            $zip->close();
+            unlink($pendingPath);
+
+            $this->actingAs($reviewer)->post(route('ht-updates.review', $update), [
+                'revision' => 1, 'decision' => 'verified', 'connection_confirmed' => 1,
+                'review_note' => 'Checked route and HT connection', 'nodes' => $data['nodes'],
+            ])->assertRedirect()->assertSessionHasNoErrors();
+            $this->assertSame('verified', $update->fresh()->status);
+            $this->get(route('ht-updates.show', $update))->assertOk()->assertSee('Download updated HT feeder KMZ');
+            $path = app(HtKmzService::class)->export($this->feeder);
+            $zip->open($path);
+            $doc = new \DOMDocument;
+            $this->assertTrue($doc->loadXML($zip->getFromName('doc.kml')));
+            $this->assertSame('original-icon-bytes', $zip->getFromName('files/icon.png'));
+            $zip->close();
+            unlink($path);
+            $xp = new \DOMXPath($doc);
+            $prefix = 'field-'.$update->client_uuid;
+            $this->assertSame($kind === 'ht_extension' ? 3 : 1, $xp->query('//*[starts-with(@id,"'.$prefix.'-p")]')->length);
+            $this->assertSame($kind === 'ht_extension' ? 3 : 0, $xp->query('//*[starts-with(@id,"'.$prefix.'-l")]')->length);
+            if ($kind === 'ht_extension') {
+                $this->assertStringContainsString('Primary Pole', $xp->query('//*[@id="'.$prefix.'-p1"]')->item(0)->textContent);
+                $this->assertStringContainsString('POLE-2', $xp->query('//*[@id="'.$prefix.'-p2"]')->item(0)->textContent);
+                $this->assertSame('73.0004,34.0004,0 73.001,34.001,0', $xp->query('//*[@id="'.$prefix.'-l3"]//*[local-name()="coordinates"]')->item(0)->textContent);
+            }
+            $this->assertSame($originalHash, hash_file('sha256', Storage::disk('local')->path($baseline->stored_path)));
+        }
+    }
+
+    public function test_web_ht_picker_requires_an_available_completed_kmz_import(): void
+    {
+        $url = route('ht-updates.create', ['feeder_id' => $this->feeder->id]);
+        $this->actingAs($this->admin)->get($url)->assertOk()
+            ->assertViewHas('feeders', fn ($feeders) => $feeders->isEmpty())
+            ->assertSee('The selected feeder has no available imported KMZ');
+
+        $import = $this->baseline();
+        $this->get($url)->assertOk()
+            ->assertViewHas('feeders', fn ($feeders) => $feeders->contains('id', $this->feeder->id))
+            ->assertSee('ht-line');
+
+        $import->update(['status' => 'failed']);
+        $this->get($url)->assertOk()->assertViewHas('feeders', fn ($feeders) => $feeders->isEmpty());
+        $import->update(['status' => 'completed']);
+
+        Storage::disk('local')->put($import->stored_path, 'changed file');
+        $this->get($url)->assertOk()->assertViewHas('feeders', fn ($feeders) => $feeders->isEmpty());
+        Storage::disk('local')->delete($import->stored_path);
+        $this->get($url)->assertOk()->assertViewHas('feeders', fn ($feeders) => $feeders->isEmpty());
+        $this->post(route('ht-updates.store'), ['feeder_id' => $this->feeder->id])
+            ->assertSessionHasErrors('feeder_id');
+    }
+
+    public function test_web_ht_picker_does_not_fall_back_to_an_older_import(): void
+    {
+        $this->baseline();
+        TransformerKmzImport::create(['feeder_id' => $this->feeder->id, 'imported_by' => $this->admin->id,
+            'file_name' => 'missing.kmz', 'stored_path' => 'missing.kmz', 'status' => 'completed']);
+        $this->actingAs($this->admin)->get(route('ht-updates.create', ['feeder_id' => $this->feeder->id]))
+            ->assertOk()->assertViewHas('feeders', fn ($feeders) => $feeders->isEmpty());
+    }
+
     public function test_web_minimal_ht_update_verifies_on_correct_feeder_and_keeps_optional_rating_unknown(): void
     {
         $this->baseline();
@@ -139,22 +233,96 @@ class HtNetworkUpdateTest extends TestCase
             'transformer_code' => 'WEB-HT-001', 'kind' => 'missing_transformer',
             'upstream_feature_id' => 'ht-line', 'baseline_sha256' => $this->baseline()->file_sha256,
             'nodes' => [['waypoint' => 'J1'], ['waypoint' => 'NEW-TR']]];
-        $this->post(route('ht-updates.store'), $data)->assertRedirect();
+        $this->from(route('ht-updates.create', ['feeder_id' => $this->feeder->id]))
+            ->post(route('ht-updates.store'), $data)->assertRedirect()
+            ->assertSessionHasErrors(['nodes.0.latitude', 'nodes.0.longitude', 'nodes.1.latitude', 'nodes.1.longitude']);
+        $this->assertDatabaseMissing('ht_network_updates', ['client_uuid' => $data['client_uuid']]);
+        $this->assertStringContainsString('route row #1', session('errors')->first('nodes.0.latitude'));
+        foreach ($data['nodes'] as &$node) {
+            $node['latitude'] = 34;
+            $node['longitude'] = 73;
+        }
+        unset($node);
+        $this->post(route('ht-updates.store'), $data)->assertRedirect()->assertSessionHasNoErrors();
         $update = HtNetworkUpdate::where('transformer_code', 'WEB-HT-001')->firstOrFail();
+        $incomplete = $data;
+        $incomplete['base_revision'] = 1;
+        unset($incomplete['nodes'][1]['longitude']);
+        $this->put(route('ht-updates.update', $update), $incomplete)->assertSessionHasErrors('nodes.1.longitude');
+        $this->assertSame(1, $update->fresh()->revision);
         $this->assertSame('pending', $update->status);
         $this->assertNull($update->payload['capacity_kva']);
         $this->assertSame([], $update->payload['photos']);
         $this->assertNull($update->transformer_id);
+        $this->get(route('ht-updates.show', $update))->assertOk()->assertSee('Verify HT Network Update');
         $this->post(route('ht-updates.review', $update), ['revision' => 1, 'decision' => 'verified',
-            'connection_confirmed' => 1, 'review_note' => 'Checked', 'nodes' => [['latitude'=>34,'longitude'=>73],['latitude'=>34,'longitude'=>73]]])->assertForbidden();
-        $reviewer = User::factory()->create(['role' => UserRole::SuperAdmin]);
-        $this->actingAs($reviewer)->post(route('ht-updates.review', $update), ['revision' => 1, 'decision' => 'verified',
-            'connection_confirmed' => 1, 'review_note' => 'Checked HT connection', 'nodes' => [['latitude'=>34,'longitude'=>73],['latitude'=>34,'longitude'=>73]]])->assertRedirect();
+            'connection_confirmed' => 1, 'review_note' => 'Checked HT connection', 'nodes' => [['latitude'=>34,'longitude'=>73],['latitude'=>34,'longitude'=>73]]])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('verified', $update->fresh()->status);
+        $this->assertSame($this->admin->id, $update->fresh()->reviewed_by);
         $registered = $update->fresh()->transformer;
         $this->assertSame($this->feeder->id, $registered->feeder_id);
         $this->assertSame('pending_field', $registered->capacity_verification_status);
         $this->assertNull($registered->capacity_kva);
         $this->actingAs($this->admin)->put(route('ht-updates.update', $update), $data)->assertForbidden();
+    }
+
+    public function test_web_super_admin_can_edit_and_delete_another_collectors_pending_update(): void
+    {
+        $manager = User::factory()->create(['role' => UserRole::ProjectManager]);
+        $data = $this->htPayload();
+        $update = app(HtNetworkWorkflow::class)->syncWeb($manager, $data);
+        $this->actingAs($this->admin)->get(route('ht-updates.index'))->assertOk()
+            ->assertSee(route('ht-updates.edit', $update))->assertSee(route('ht-updates.destroy', $update));
+        $this->get(route('ht-updates.edit', $update))->assertOk();
+        $data['base_revision'] = 1;
+        $data['remarks'] = 'Corrected by Super Admin';
+        unset($data['photos']);
+        $this->put(route('ht-updates.update', $update), $data)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame($manager->id, $update->fresh()->collected_by);
+        $this->assertSame('Corrected by Super Admin', $update->fresh()->payload['remarks']);
+        $this->delete(route('ht-updates.destroy', $update), ['revision' => 1])->assertSessionHasErrors('ht_update');
+        $this->assertModelExists($update);
+        $this->actingAs($manager)->delete(route('ht-updates.destroy', $update), ['revision' => 2])->assertForbidden();
+        $this->actingAs($this->admin)->delete(route('ht-updates.destroy', $update), ['revision' => 2])
+            ->assertRedirect(route('ht-updates.index'))->assertSessionHasNoErrors();
+        $this->assertModelMissing($update);
+        $this->get(route('ht-updates.index'))->assertOk()->assertSee('No HT Network Updates submitted.');
+        $this->assertDatabaseHas('audit_logs', ['action' => 'ht_update.deleted', 'auditable_id' => $update->id, 'user_id' => $this->admin->id]);
+    }
+
+    public function test_web_super_admin_cannot_delete_verified_or_lt_linked_updates(): void
+    {
+        $update = app(HtNetworkWorkflow::class)->syncWeb($this->admin, $this->htPayload());
+        $payload = $this->payload('draft');
+        $survey = \App\Models\FieldSurvey::forceCreate([
+            'client_uuid' => $payload['client_uuid'], 'collected_by' => $this->leader->id,
+            'survey_team_id' => $this->team->id, 'feeder_id' => $this->feeder->id,
+            'transformer_code' => $update->transformer_code, 'ht_network_update_id' => $update->id,
+            'survey_date' => today(), 'status' => 'draft', 'revision' => 1,
+            'payload_hash' => str_repeat('a', 64), 'header' => [], 'rows' => [], 'solar' => [], 'reference_snapshot' => [],
+        ]);
+        $survey->delete();
+        $this->actingAs($this->admin)->delete(route('ht-updates.destroy', $update), ['revision' => 1])
+            ->assertSessionHasErrors('ht_update');
+        $this->assertModelExists($update);
+        $this->verify($update->fresh());
+        $this->get(route('ht-updates.edit', $update))->assertForbidden();
+        $this->delete(route('ht-updates.destroy', $update), ['revision' => 2])->assertSessionHasErrors('ht_update');
+        $this->assertModelExists($update);
+        $this->assertSame('verified', $update->fresh()->status);
+    }
+
+    public function test_web_project_manager_still_cannot_review_own_ht_update(): void
+    {
+        $manager = User::factory()->create(['role' => UserRole::ProjectManager]);
+        $update = app(HtNetworkWorkflow::class)->syncWeb($manager, $this->htPayload());
+        $decision = ['revision' => 1, 'decision' => 'returned', 'review_note' => 'Own update review'];
+        $this->actingAs($manager)->get(route('ht-updates.show', $update))
+            ->assertOk()->assertDontSee('Verify HT Network Update');
+        $this->post(route('ht-updates.review', $update), $decision)->assertForbidden();
+        $this->assertSame('pending', $update->fresh()->status);
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        app(HtNetworkWorkflow::class)->review($manager, $update, $decision);
     }
 
     public function test_web_ht_rejects_stale_revision_duplicate_and_wrong_feeder_connection(): void

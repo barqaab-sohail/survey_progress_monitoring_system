@@ -27,8 +27,64 @@
 .ht-pole-details{margin-top:20px;border-top:1px solid #e1e8f0;padding-top:16px}
 .ht-remove{margin-top:18px}
 .ht-optional-fields{margin-top:8px}
+.ht-kind-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;padding:16px;border:1px solid #d7e2ed;border-radius:10px;margin-bottom:24px}
+.ht-kind-options legend{font-weight:700;padding:0 8px}
+.ht-update .ht-kind-card{display:flex;align-items:flex-start;gap:12px;padding:16px;border:1px solid #cbd6e2;border-radius:8px;cursor:pointer;background:#fbfcfe}
+.ht-update .ht-kind-card:has(input:checked){border-color:#1358a2;background:#eff6ff}
+.ht-update .ht-kind-card input{width:18px;min-height:18px;height:18px;flex:0 0 18px;margin:3px 0 0;accent-color:#1358a2}
+.ht-kind-card small{display:block;font-weight:400;margin-top:8px;line-height:1.6}
+.ht-route-summary{padding:12px 16px;background:#eff6ff;border-radius:8px;font-weight:650}
+#ht-pole-tools{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}
+#ht-pole-tools label{max-width:200px}
+#ht-pole-tools p{flex-basis:100%}
 .ht-wide{grid-column:1/-1}
 .ht-submit{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:8px 0 24px}
 .ht-submit .btn{min-height:46px;white-space:normal;text-align:center}
 .ht-submit p{margin:0}
+.ht-review-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+.ht-eyebrow{display:block;margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;color:#61738b}
+.ht-review-heading h2{margin:0;font-size:24px}
+.ht-review-status{padding:6px 12px;border-radius:20px;background:#fff7e6;color:#885912;font-size:12px;font-weight:650}
+.ht-review-section{padding:24px 0;border-top:1px solid #e1e8f0}
+.ht-review-section:last-child{padding-bottom:0}
+.ht-review-section h3{font-size:16px;margin:0 0 8px;color:var(--ink,#18314d)}
+.ht-review-section>p{margin:0 0 16px}
+.ht-review-table-wrap{overflow:auto;border:1px solid #dbe4ee;border-radius:10px}
+.ht-review-table{width:100%;border-collapse:collapse;margin:0}
+.ht-review-table th{padding:12px 16px;background:#f3f6fa;text-align:left;font-size:11px;letter-spacing:.03em;white-space:nowrap}
+.ht-review-table td{padding:16px;border-top:1px solid #e1e8f0;vertical-align:top;font-size:13px}
+.ht-review-table td:nth-last-child(-n+2){width:20%;min-width:170px}
+.ht-review-table input{margin:0;min-height:44px;font-variant-numeric:tabular-nums}
+.ht-review-table small{display:block;font-size:11px;color:#61738b;margin-top:6px}
+.ht-route-identity{display:flex;gap:10px;align-items:flex-start;min-width:180px}
+.ht-route-number{flex:0 0 26px;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#e8f0fb;color:#1358a2;font-size:12px;font-weight:700}
+.ht-route-identity strong{display:block;line-height:1.5}
+.ht-conductor-values{line-height:1.7}
+.ht-update .ht-field-help{font-size:12px;margin:4px 0 8px}
+.ht-update .ht-field-error{display:block;color:#b42318;font-size:12px;margin-top:6px;line-height:1.5}
+.ht-update [aria-invalid=true]{border-color:#b42318;background:#fff8f7}
+.ht-reconcile{margin-top:22px;padding:16px;border:1px solid #dbe4ee;border-radius:8px;background:#fafbfd}
+.ht-reconcile p{margin:12px 0}
+.ht-reconcile input{max-width:340px}
+.ht-update .ht-review-confirm{display:flex;gap:12px;align-items:flex-start;padding:16px;border:1px solid #cbdced;border-radius:10px;background:#f6f9fd;cursor:pointer}
+.ht-update .ht-review-confirm input{width:18px;height:18px;min-height:18px;flex:0 0 18px;margin:3px 0 0;padding:0;accent-color:#1358a2}
+.ht-review-confirm small{display:block;margin-top:5px;font-size:12px;line-height:1.6;font-weight:400;color:#61738b}
+.ht-review-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
+.ht-review-actions .btn{min-height:44px;padding:12px 20px;text-align:center;white-space:normal}
+.ht-update .ht-review-footer{font-size:12px;margin:12px 0 0}
+.ht-update .ht-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.ht-list-actions{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.ht-list-actions form{margin:0}
+.ht-list-actions .btn{min-height:36px;padding:8px 14px}
+.ht-update .ht-list-actions input[type=hidden]{display:none}
+.ht-delete-button{background:#fff5f4;border:1px solid #f2c6c2;color:#b42318}
+.ht-delete-button:hover{background:#fee4e2;border-color:#e89e96}
+.ht-list-protected{font-size:12px;color:#61738b}
+.cable-export-selection-tools{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin:18px 0;font-size:13px;color:#61738b}
+.ht-update .cable-export-check{display:flex;gap:10px;align-items:center;cursor:pointer}
+.ht-update .cable-export-check input[type=checkbox]{display:inline-block;flex:0 0 18px;width:18px;height:18px;min-height:18px;margin:0;padding:0;accent-color:#1358a2}
+.cable-export-table td{vertical-align:middle}
+.cable-export-table td small{display:block;color:#9b3d18;margin-top:4px;font-size:11px}
+.cable-export-table tr:has(input:checked){background:#eff6ff}
+@media(max-width:760px){.ht-review-table-wrap{border:0;overflow:visible}.ht-review-table thead{display:none}.ht-review-table,.ht-review-table tbody{display:block}.ht-review-table tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:1px solid #dbe4ee;border-radius:10px;margin-bottom:14px;padding:12px;gap:12px;background:#fbfcfe}.ht-review-table td{display:block;border:0;padding:0;min-width:0!important;width:auto!important}.ht-review-table td:first-child{grid-column:1/-1}.ht-review-table td:not(:first-child)::before{content:attr(data-label);display:block;font-size:11px;font-weight:650;color:#61738b;margin-bottom:6px}.ht-review-table td:nth-child(3){grid-column:1/-1}.ht-review-actions .btn{width:100%}.ht-review-section{padding:20px 0}}
 @media(max-width:760px){.ht-fields,.ht-node-primary{grid-template-columns:1fr}.ht-update .card{padding:18px}.ht-node{padding:16px}.ht-update .page-head h1{font-size:22px}.ht-feeder-picker label{min-width:0;flex-basis:100%;max-width:none}.ht-submit .btn,.ht-feeder-picker .btn{width:100%}}

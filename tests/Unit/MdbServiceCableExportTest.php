@@ -81,6 +81,24 @@ class MdbServiceCableExportTest extends TestCase
         $this->assertSame('recorded_measured', $result['service_cable_provenance'][0]['length_source']);
     }
 
+    public function test_recorded_route_uses_all_bends_and_is_labelled_as_mapped_route(): void
+    {
+        $s = $this->snapshot();
+        $s['transformers'][0]['service_cables_enabled'] = true;
+        $cable = $this->cable(['route_points' => [
+            ['latitude' => 34.163863, 'longitude' => 73.257402, 'waypoint' => 'E pole'],
+            ['latitude' => 34.164, 'longitude' => 73.257402, 'waypoint' => 'Bend'],
+            ['latitude' => 34.164, 'longitude' => 73.258, 'waypoint' => 'Meter'],
+        ]]);
+        $cable = app(\App\Services\ServiceCableRoute::class)->normalize($cable);
+        $s['transformers'][0]['service_cables'] = [$cable];
+        $result = $this->build($s);
+        $this->assertSame('mapped_route', $result['service_cable_provenance'][0]['length_source']);
+        $this->assertSame($cable['route_length_m'], $result['service_cable_provenance'][0]['length_m']);
+        $sections = array_column($result['tables']['InstSection'], null, 'SectionId');
+        $this->assertSame($cable['route_length_m'], $sections['00040701081026001.1']['SectionLength_MUL']);
+    }
+
     public function test_waypoint_distance_is_labelled_as_estimated_and_does_not_use_the_pole_height_formula(): void
     {
         $s = $this->snapshot();

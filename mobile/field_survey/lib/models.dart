@@ -1,4 +1,5 @@
 import 'approved_entry_values.dart';
+import 'service_cable_route.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
@@ -665,6 +666,8 @@ Map<String, String> serviceCableErrors(SurveyRecord record) {
   String identity(Json r) => '${r['group']}|${r['date']}|${r['gps_waypoint']}';
   for (final entry in record.serviceCables.asMap().entries) {
     final c = entry.value, path = 'service_cables.${entry.key}';
+    final routeError = serviceCableRouteError(c['route_points']);
+    if (routeError != null) errors['$path.route_points'] = routeError;
     final poles = record.rows.where(
       (r) => r['row_id'] == c['pole_row_id'] && r['se'] == 'E',
     );

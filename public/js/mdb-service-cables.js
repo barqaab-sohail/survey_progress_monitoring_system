@@ -5,6 +5,36 @@ export function serviceCableDistance(pole, meter) {
     return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+export function parseServiceCableRoute(text) {
+    const lines = String(text || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    if (!lines.length) return [];
+    if (lines.length < 2) throw new Error('Record at least the starting pole and ending meter coordinates.');
+    if (lines.length > 500) throw new Error('A service cable route may contain at most 500 points.');
+    return lines.map((line, index) => {
+        const parts = line.split(',').map(value => value.trim());
+        const latitude = Number(parts[0]), longitude = Number(parts[1]);
+        if (parts.length < 2 || !parts[0] || !parts[1] || !Number.isFinite(latitude) || !Number.isFinite(longitude)
+            || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+            throw new Error(`Route point ${index + 1}: enter latitude, longitude in decimal degrees.`);
+        }
+        const waypoint = parts.slice(2).join(',').trim();
+        if (waypoint.length > 100) throw new Error(`Route point ${index + 1}: the waypoint label is too long (maximum 100 characters).`);
+        return {latitude, longitude, ...(waypoint ? {waypoint} : {})};
+    });
+}
+
+export function serviceCableRouteLength(points) {
+    if (!Array.isArray(points) || points.length < 2) return null;
+    const radians = value => value * Math.PI / 180;
+    return points.slice(1).reduce((length, point, index) => {
+        const previous = points[index];
+        const a = Math.sin(radians(point.latitude - previous.latitude) / 2) ** 2
+            + Math.cos(radians(previous.latitude)) * Math.cos(radians(point.latitude))
+            * Math.sin(radians(point.longitude - previous.longitude) / 2) ** 2;
+        return length + 6371008.8 * 2 * Math.atan2(Math.sqrt(Math.min(1, a)), Math.sqrt(Math.max(0, 1 - a)));
+    }, 0);
+}
+
 export function installServiceCableEntry({active, data, editable, api, accept, isBusy, setBusy, isoDate, displayDate, completeWaypoint, waypointMatches}) {
     const root = document.getElementById('entry-service-cables');
     if (!root) return {render() {}, setBusy() {}};
@@ -30,6 +60,22 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
         $('service-cable-status').className = failed ? 'entry-error-summary' : 'mdb-note';
     };
     const values = () => form ? Object.fromEntries([...form.elements].filter(el => el.name).map(el => [el.name, el.value])) : {};
+    const routeText = points => (Array.isArray(points) ? points : []).map(point => `${point.latitude}, ${point.longitude}${point.waypoint ? ', '+point.waypoint : ''}`).join('\n');
+    function routePreview() {
+        const input = control('route_points');
+        const output = $('service-cable-route-preview');
+        if (!input) return;
+        try {
+            const points = parseServiceCableRoute(input.value);
+            input.setCustomValidity('');
+            if (output) output.textContent = points.length
+                ? `${points.length} recorded route points · ${serviceCableRouteLength(points).toFixed(2)} m along the full route. The server confirms the saved length.`
+                : 'No mapped route recorded. Enter all route points to calculate the actual path; endpoint estimates are excluded from the feeder Excel export.';
+        } catch (error) {
+            input.setCustomValidity(error.message);
+            if (output) output.textContent = error.message;
+        }
+    }
     function options(select, entries, selected = '', empty = 'Choose') {
         if (!select) return;
         select.replaceChildren(new Option(empty, ''));
@@ -81,16 +127,20 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
             && displayDate(r.row_date) === control('row_date').value && Number(r.waypoint_reference) === next)) next++;
         control('waypoint_reference').value = next <= 999 ? String(next).padStart(3, '0') : '';
     }
-    function lengthLabel(measured, pole, meter) {
+    function lengthLabel(measured, pole, meter, routeLength = null) {
+        if (routeLength !== null && routeLength !== undefined && routeLength !== '' && Number.isFinite(Number(routeLength))) return `${Number(routeLength).toFixed(2)} m (mapped route)`;
         if (measured !== null && measured !== undefined && measured !== '' && Number.isFinite(Number(measured))) return `${Number(measured).toFixed(2)} m (measured)`;
         const length = serviceCableDistance(pole, meter);
         return length === null ? 'Estimate unavailable (check E / meter coordinates)' : `${length.toFixed(2)} m (coordinate estimate)`;
     }
     function coordinates() {
+        routePreview();
         const point = (data().waypoints || []).find(p => p.id === Number(control('meter_waypoint_id')?.value));
         const pole = polePoint();
+        let mappedLength = null;
+        try { mappedLength = serviceCableRouteLength(parseServiceCableRoute(control('route_points')?.value)); } catch { /* The route field displays validation feedback. */ }
         $('service-cable-coordinates').textContent = point
-            ? `Meter coordinates from GPX: ${point.latitude}, ${point.longitude}. Service cable length: ${lengthLabel(control('measured_length_m').value, pole, point)}. ${sameLocation(pole, point) ? 'Same location as E (pole-mounted meter); this remains a separate meter waypoint. ' : ''}${control('measured_length_m').value ? 'Recorded measured cable length will be used.' : sameLocation(pole, point) ? 'Coordinate distance is 0 m; enter a measured length if recorded.' : 'Cable distance will be an estimate between the pole and meter coordinates.'}`
+            ? `Meter coordinates from GPX: ${point.latitude}, ${point.longitude}. Service cable length: ${lengthLabel(control('measured_length_m').value, pole, point, mappedLength)}. ${sameLocation(pole, point) ? 'Same location as E (pole-mounted meter); this remains a separate meter waypoint. ' : ''}${mappedLength !== null ? 'The saved mapped route length will be used for the feeder Excel export.' : control('measured_length_m').value ? 'Recorded measured cable length will be used.' : sameLocation(pole, point) ? 'Coordinate distance is 0 m; enter a measured length if recorded.' : 'Endpoint coordinate distance is an estimate and is excluded from the feeder Excel export.'}`
             : 'The suggested waypoint must match an actual imported GPX meter record. Check the survey sheet if no match is available.';
     }
     function seed(row = null) {
@@ -166,9 +216,10 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
             if (confirmed && !advance) {
                 cableId = confirmed.id;
                 if ($('service-cable-editor-title')) $('service-cable-editor-title').textContent = 'Edit service cable';
+                if (control('route_points')) control('route_points').value = routeText(confirmed.route_points);
                 for (const [name,value] of Object.entries(confirmed)) {
                     const input = control(name === 'phase' ? 'recorded_phase' : name);
-                    if (input) input.value = name === 'row_date' ? displayDate(value) : value ?? '';
+                    if (input) input.value = name === 'row_date' ? displayDate(value) : name === 'route_points' ? routeText(value) : value ?? '';
                 }
                 identity();control('meter_waypoint_id').value = confirmed.meter_waypoint_id;coordinates();
             }
@@ -187,7 +238,7 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
             saveFeedback($('service-cable-save-status'),confirmation,'saved',true);
             message(completedPole ? 'All consumer meters for this E pole are saved. Continue with the next pole entry. '+confirmation : confirmation);
         } catch (error) {
-            for (const name of Object.keys(error.errors || {})) control(name === 'phase' ? 'recorded_phase' : name)?.setAttribute('aria-invalid','true');
+            for (const name of Object.keys(error.errors || {})) control(name === 'phase' ? 'recorded_phase' : name.startsWith('route_points') ? 'route_points' : name)?.setAttribute('aria-invalid','true');
             const failure = Object.values(error.errors || {}).flat().join(' ') || error.message;
             message('Not saved. '+failure+' Your entered fields are retained. Use Save to retry.', true);saveFeedback($('service-cable-save-status'),failure,'error',true);
             $('service-cables-enabled').checked = !!active()?.service_cables_enabled;
@@ -237,7 +288,7 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
         if ($('service-cable-next')) $('service-cable-next').disabled = page === pages;
         $('service-cable-list').innerHTML = filtered.length ? '<table class="table"><thead><tr><th>E pole / consumer</th><th>Meter waypoint</th><th>Phase</th><th>Length</th><th>Source</th><th></th></tr></thead><tbody>'+filtered.slice((page-1)*pageSize,page*pageSize).map(c => {
             const row = ends.find(e => e.id === c.entry_row_id);
-            return `<tr><td>${esc(row?.waypoint_reference)} / ${esc(c.category.toUpperCase())} ${c.consumer_number}</td><td>${esc(c.composite_identifier)}</td><td>${esc(c.phase || 'Not recorded')}</td><td>${lengthLabel(c.measured_length_m, polePoint(row), (data().waypoints || []).find(p => p.id === Number(c.meter_waypoint_id)))}</td><td>PDF #${c.source_pdf_id}, page ${c.source_page}<small>${esc(c.source_row)}</small></td><td>${canEdit() ? `<button type="button" class="btn btn-sm btn-light" data-service-edit="${c.id}">Edit</button> <button type="button" class="btn btn-sm btn-light" data-service-delete="${c.id}">Delete</button>` : ''}</td></tr>`;
+            return `<tr><td>${esc(row?.waypoint_reference)} / ${esc(c.category.toUpperCase())} ${c.consumer_number}</td><td>${esc(c.composite_identifier)}</td><td>${esc(c.phase || 'Not recorded')}</td><td>${lengthLabel(c.measured_length_m, polePoint(row), (data().waypoints || []).find(p => p.id === Number(c.meter_waypoint_id)), c.route_length_m)}</td><td>PDF #${c.source_pdf_id}, page ${c.source_page}<small>${esc(c.source_row)}</small></td><td>${canEdit() ? `<button type="button" class="btn btn-sm btn-light" data-service-edit="${c.id}">Edit</button> <button type="button" class="btn btn-sm btn-light" data-service-delete="${c.id}">Delete</button>` : ''}</td></tr>`;
         }).join('')+'</tbody></table>' : '<p>No matching meter waypoints.</p>';
         if (form) {
             const retained = changed ? drafts.get(t.id) : {values:current, cableId};
@@ -265,7 +316,7 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
         event.target.removeAttribute('aria-invalid');
         dirty = true;saveFeedback($('service-cable-save-status'),'Unsaved changes','dirty');
         if (['group_number','row_date','waypoint_reference','gpx_source_id'].includes(event.target.name)) identity();
-        if (event.target.name === 'meter_waypoint_id' || event.target.name === 'measured_length_m') coordinates();
+        if (['meter_waypoint_id', 'measured_length_m', 'route_points'].includes(event.target.name)) coordinates();
     });
     form?.addEventListener('change', event => {
         dirty = true;saveFeedback($('service-cable-save-status'),'Unsaved changes','dirty');
@@ -286,6 +337,7 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
         if (!form.reportValidity()) return;
         advanceAfterSave = event.submitter?.value !== 'stay';
         const body = values();
+        if (control('route_points')) body.route_points = parseServiceCableRoute(body.route_points);
         const duplicate = (active()?.service_cables || []).some(c => c.id !== cableId &&
             (Number(c.meter_waypoint_id) === Number(body.meter_waypoint_id) ||
             (c.entry_row_id === Number(body.entry_row_id) && c.category === body.category && c.consumer_number === Number(body.consumer_number))));
@@ -329,6 +381,17 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
         control('meter_waypoint_id').value = matches[0].id;
         dirty = true; coordinates();
     });
+    $('service-cable-route-endpoints')?.addEventListener('click', () => {
+        if (isBusy() || !control('route_points')) return;
+        const pole = polePoint();
+        const meter = (data().waypoints || []).find(point => point.id === Number(control('meter_waypoint_id')?.value));
+        if (!pole || !meter) {message('Choose a unique starting pole and meter waypoint before filling route endpoints.', true);return;}
+        if (sameLocation(pole, meter)) {message('Pole and meter share coordinates. Record the actual cable route or an evidenced measured length; do not use duplicate route points.', true);return;}
+        if (control('route_points').value.trim() && !window.confirm('Replace the entered route with the pole and meter endpoints?')) return;
+        control('route_points').value = routeText([pole, meter]);
+        dirty = true;coordinates();
+        saveFeedback($('service-cable-save-status'),'Unsaved changes','dirty');
+    });
     root.addEventListener('click', event => {
         const edit = event.target.closest('[data-service-edit]');
         const remove = event.target.closest('[data-service-delete]');
@@ -336,9 +399,10 @@ export function installServiceCableEntry({active, data, editable, api, accept, i
             if (!guardDraft()) return;
             const cable = active().service_cables.find(c => c.id === Number(edit.dataset.serviceEdit));
             cableId = cable.id;
+            if (control('route_points')) control('route_points').value = routeText(cable.route_points);
             for (const [name,value] of Object.entries(cable)) {
                 const input = control(name === 'phase' ? 'recorded_phase' : name);
-                if (input) input.value = name === 'row_date' ? displayDate(value) : value ?? '';
+                if (input) input.value = name === 'row_date' ? displayDate(value) : name === 'route_points' ? routeText(value) : value ?? '';
             }
             identity(); control('meter_waypoint_id').value = cable.meter_waypoint_id;coordinates();
             dirty = false;openEditor();message('Saved cable loaded for editing.');
