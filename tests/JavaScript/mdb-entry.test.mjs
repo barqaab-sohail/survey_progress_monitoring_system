@@ -73,6 +73,54 @@ test('workflow submission requires saved drafts and refreshing a submitted surve
     dom.window.close();delete globalThis.window;delete globalThis.document;
 });
 
+test('saved transformer buttons switch draft entry directly and retain unsaved fields when cancelled',async()=>{
+    const {JSDOM}=await import('../../tmp/mdb-entry-qa/node_modules/jsdom/lib/api.js');
+    const html=await fs.readFile(new URL('../../tmp/mdb-entry-qa/operator-workflow.html',import.meta.url),'utf8');
+    const dom=new JSDOM(html,{url:'http://localhost/mdb-workflow/1',runScripts:'outside-only'});
+    const d=dom.window.document;
+    dom.window.eval([...d.scripts].find(script=>script.textContent.includes('window.mdbEntryBoot')).textContent);
+    const boot=dom.window.mdbEntryBoot;
+    boot.pdfjs_url=pathToFileURL(path.resolve('tmp/mdb-entry-qa/readonly-pdf-stub.mjs')).href;
+    const first=boot.transformers[0],second=structuredClone(first);
+    second.id=first.id+100;second.code='T-SECOND';second.rows=[];
+    second.header={...second.header,pdf_source_id:boot.sources.find(s=>s.kind==='pdf').id,pdf_start_page:6};
+    boot.transformers=[first,second];boot.active_transformer_id=first.id;
+    if(!d.getElementById('entry-transformer-tabs')){
+        const nav=d.createElement('nav');nav.id='entry-transformer-tabs';d.body.prepend(nav);
+    }
+    if(!d.getElementById('entry-transformer-panel')){
+        const panel=d.createElement('details');panel.id='entry-transformer-panel';
+        panel.innerHTML='<summary id="entry-transformer-panel-caption"></summary>';d.body.append(panel);
+    }
+    dom.window.HTMLCanvasElement.prototype.getContext=()=>({});dom.window.Element.prototype.scrollIntoView=()=>{};
+    Object.assign(globalThis,{window:dom.window,document:d,location:dom.window.location,history:dom.window.history,Option:dom.window.Option,localStorage:dom.window.localStorage,ResizeObserver:class{observe(){}}});
+    const settle=async()=>{for(let i=0;i<18;i++)await new Promise(resolve=>setImmediate(resolve));};
+    await import(pathToFileURL(path.resolve('public/js/mdb-entry.js')).href+'?transformer-buttons');await settle();
+    const tabs=d.getElementById('entry-transformer-tabs');
+    const button=id=>tabs.querySelector(`[data-entry-switch-transformer="${id}"]`);
+    assert.equal(tabs.children.length,2);
+    assert.equal(button(first.id).getAttribute('aria-pressed'),'true');
+    d.getElementById('entry-transformer-panel').open=false;
+    button(second.id).click();await settle();
+    assert.equal(d.getElementById('entry-transformer').value,String(second.id));
+    assert.equal(button(second.id).getAttribute('aria-pressed'),'true');
+    assert.equal(d.getElementById('entry-page').value,'6');
+    assert.match(d.getElementById('entry-transformer-panel-caption').textContent,/T-SECOND/);
+    assert.equal(d.getElementById('entry-saved-count').textContent.includes('0'),true);
+    assert.equal(new URL(dom.window.location.href).searchParams.get('transformer_id'),String(second.id));
+    assert.equal(JSON.parse(dom.window.localStorage.getItem(boot.storage_key)).activeId,second.id);
+    const input=d.querySelector('[name="header[location]"]');
+    input.value='Unsaved second transformer';input.dispatchEvent(new dom.window.Event('input',{bubbles:true}));
+    let confirmations=0;dom.window.confirm=()=>{confirmations++;return false;};
+    button(first.id).click();await settle();
+    assert.equal(confirmations,1);assert.equal(input.value,'Unsaved second transformer');
+    assert.equal(button(second.id).getAttribute('aria-pressed'),'true');
+    dom.window.confirm=()=>true;button(first.id).click();await settle();
+    assert.equal(button(first.id).getAttribute('aria-pressed'),'true');
+    assert.equal(d.getElementById('entry-transformer').value,String(first.id));
+    dom.window.close();delete globalThis.window;delete globalThis.document;
+});
+
 test('entered area grows through consecutive rows and stops at gaps or undone markers',()=>{
     const rows=Array.from({length:4},(_,index)=>({row_number:index+1,entered:false,bounds:{x:.1,y:.2+index*.1,width:.8,height:.1}}));
     const empty=pdfPageProgress([]);assert.equal(empty.area,null);assert.equal(empty.enteredArea,null);assert.equal(empty.remaining,0);

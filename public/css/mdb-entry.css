@@ -53,6 +53,9 @@
 @media(max-height:700px){.mdb-entry .entry-document{position:static}#entry-row-panel{scroll-margin-top:76px}}
 
 /* Full-width survey PDF above the transcription form at every screen size. */
+.entry-transformer-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.entry-transformer-tabs[hidden]{display:none}
+.entry-transformer-tabs .btn[aria-pressed=true]{border-color:var(--blue,#1765b0);background:#e6f0fa;color:var(--blue,#1765b0)}
 .entry-workspace-columns{display:block}
 .entry-form-column{min-width:0}
 

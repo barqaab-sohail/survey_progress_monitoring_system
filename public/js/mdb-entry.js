@@ -319,6 +319,7 @@ function initialize(boot) {
         [rowForm, headerForm].filter(Boolean).forEach(form => Array.from(form.elements).forEach(el => el.disabled = value || !editable()));
         document.querySelectorAll('.entry-source-files form input,.entry-source-files form button').forEach(el=>el.disabled=value || !editable());
         $('entry-transformer').disabled = value;
+        document.querySelectorAll('[data-entry-switch-transformer]').forEach(button=>button.disabled=value);
         document.querySelectorAll('[data-entry-delete-transformer]').forEach(button=>button.disabled=value || !boot.can_delete_transformer);
         document.querySelectorAll('[data-entry-add-transformer],#entry-continue,#entry-submit-form button,#entry-transformer-submit,#entry-next-transformer button').forEach(el=>el.disabled=value || !editable() || (el.id==='entry-transformer-submit' && !active()));
         document.querySelectorAll('.entry-copy-bar button').forEach(el=>el.disabled=value || !editable());
@@ -350,6 +351,10 @@ function initialize(boot) {
         select.value = selected;
     }
     function renderLists() {
+        if($('entry-transformer-tabs')){
+            $('entry-transformer-tabs').hidden=!data.transformers.length;
+            $('entry-transformer-tabs').innerHTML=data.transformers.map(t=>`<button type="button" class="btn btn-sm btn-light" data-entry-switch-transformer="${t.id}" aria-pressed="${t.id===Number(activeId)}" ${busy ? 'disabled' : ''}>${esc(t.code)}</button>`).join('');
+        }
         if($('entry-transformer-list')){
             $('entry-transformer-count').textContent=String(data.transformers.length);
             $('entry-transformer-list').innerHTML='<table class="table"><thead><tr><th>Transformer</th><th>Saved rows</th><th>Action</th></tr></thead><tbody>'+(data.transformers.length ? data.transformers.map(t=>`<tr><td>${esc(t.code)}</td><td>${t.rows.length}</td><td><button type="button" class="btn btn-sm btn-danger" data-entry-delete-transformer="${t.id}" aria-label="Delete transformer ${esc(t.code)}" ${busy || !boot.can_delete_transformer ? 'disabled' : ''}>Delete</button></td></tr>`).join('') : '<tr><td colspan="3">No transformers in this batch.</td></tr>')+'</tbody></table>';
@@ -1012,6 +1017,17 @@ function initialize(boot) {
     rowForm?.addEventListener('submit',event=>{event.preventDefault();saveRow(true);});rowForm?.addEventListener('input',event=>markDirty(event,'row'));rowForm?.addEventListener('change',event=>markDirty(event,'row'));
     $('entry-save-draft')?.addEventListener('click',()=>saveRow(false));$('entry-row-new')?.addEventListener('click',()=>{if(allowSwitch()){newRow();status('New draft row.');}});
     $('entry-transformer').addEventListener('change',()=>{if(allowSwitch()){chooseTransformer($('entry-transformer').value);persist();}else $('entry-transformer').value=transformerSelection();});
+    $('entry-transformer-tabs')?.addEventListener('click',async event=>{
+        const button=event.target.closest('[data-entry-switch-transformer]');
+        if(!button || Number(button.dataset.entrySwitchTransformer)===Number(activeId) || !allowSwitch())return;
+        chooseTransformer(button.dataset.entrySwitchTransformer);
+        const header=active()?.header || {}, savedPage=(header.pages || []).find(page=>page.role==='header') || header.pages?.[0];
+        const source=header.pdf_source_id ?? savedPage?.source_pdf_id;
+        if(source && data.sources.some(s=>s.kind==='pdf' && s.id===Number(source)))$('entry-pdf-source').value=String(source);
+        pageNumber=Number(header.pdf_start_page ?? savedPage?.page) || 1;
+        status(`Transformer ${active().code} selected.`);persist();
+        await loadPdf();
+    });
     $('entry-transformer-search').addEventListener('input',e=>filterSelect($('entry-transformer'),e.target.value));document.querySelectorAll('[data-entry-filter]').forEach(input=>input.addEventListener('input',()=>filterSelect($(input.dataset.entryFilter),input.value)));
     $('entry-copy-conductors')?.addEventListener('click',()=>copyValues('conductors'));$('entry-copy-equipment')?.addEventListener('click',()=>copyValues('equipment'));$('entry-copy-both')?.addEventListener('click',()=>copyValues('both'));
     $('entry-paste-apply')?.addEventListener('click',()=>{

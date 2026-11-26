@@ -7,6 +7,7 @@
     <p class="mdb-note">Status: <strong id="entry-batch-status">{{ $batch->workflow_label }}</strong>@if($batch->survey_remarks) &middot; Verification / correction comments: {{ $batch->survey_remarks }}@endif</p>
     @include('mdb-workflow.partials.data-entry-export-button')
     <p class="entry-steps">1. Upload PDF + GPX <span>›</span> 2. Transformer header <span>›</span> 3. S/E rows <span>›</span> 4. Submit Transformer</p>
+    <nav id="entry-transformer-tabs" class="entry-transformer-tabs" aria-label="Saved transformers in this batch"></nav>
     <div class="entry-workspace-columns">
     <section class="card entry-document" aria-label="Survey PDF above the entry form">
         <div class="entry-pdf-toolbar">
